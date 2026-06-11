@@ -1,0 +1,16 @@
+{
+  "SAKURAMOD-SAKURA_MOD.title": "Sakura Kinomoto",
+  "SAKURAMOD-SAKURA_MOD.titleObject": "Sakura Kinomoto",
+  "SAKURAMOD-SAKURA_MOD.description": "A Clear Card character built around Manifest, Release, and Temporary dream cards.",
+  "SAKURAMOD-SAKURA_MOD.pronounSubject": "she",
+  "SAKURAMOD-SAKURA_MOD.pronounObject": "her",
+  "SAKURAMOD-SAKURA_MOD.pronounPossessive": "hers",
+  "SAKURAMOD-SAKURA_MOD.possessiveAdjective": "her",
+  "SAKURAMOD-SAKURA_MOD.goldMonologue": "...",
+  "SAKURAMOD-SAKURA_MOD.eventDeathPrevention": "...",
+  "SAKURAMOD-SAKURA_MOD.aromaPrinciple": "...",
+  "SAKURAMOD-SAKURA_MOD.cardsModifierTitle": "Sakura Cards",
+  "SAKURAMOD-SAKURA_MOD.cardsModifierDescription": "Sakura cards will now appear in rewards and shops.",
+  "SAKURAMOD-SAKURA_MOD.banter.alive.endTurnPing": "...",
+  "SAKURAMOD-SAKURA_MOD.banter.dead.endTurnPing": "..."
+}

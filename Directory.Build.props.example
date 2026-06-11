@@ -1,0 +1,9 @@
+<Project>
+    <PropertyGroup>
+        <!-- Megadot current version is 4.5.1, and the game will not load a .pck exported by a newer Godot version. -->
+        <GodotPath>/path/to/Godot_v4.5.1-stable_mono</GodotPath>
+
+        <!-- Optional override if automatic STS2 discovery fails. -->
+        <!-- <Sts2Path>/path/to/Steam/steamapps/common/Slay the Spire 2</Sts2Path> -->
+    </PropertyGroup>
+</Project>

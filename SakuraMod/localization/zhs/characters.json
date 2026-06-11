@@ -1,0 +1,16 @@
+{
+  "SAKURAMOD-SAKURA_MOD.title": "木之本樱",
+  "SAKURAMOD-SAKURA_MOD.titleObject": "木之本樱",
+  "SAKURAMOD-SAKURA_MOD.description": "绝对没问题的！",
+  "SAKURAMOD-SAKURA_MOD.pronounSubject": "她",
+  "SAKURAMOD-SAKURA_MOD.pronounObject": "她",
+  "SAKURAMOD-SAKURA_MOD.pronounPossessive": "她的",
+  "SAKURAMOD-SAKURA_MOD.possessiveAdjective": "她的",
+  "SAKURAMOD-SAKURA_MOD.goldMonologue": "...",
+  "SAKURAMOD-SAKURA_MOD.eventDeathPrevention": "...",
+  "SAKURAMOD-SAKURA_MOD.aromaPrinciple": "...",
+  "SAKURAMOD-SAKURA_MOD.cardsModifierTitle": "小樱牌池",
+  "SAKURAMOD-SAKURA_MOD.cardsModifierDescription": "小樱的卡牌现在会出现在奖励和商店中。",
+  "SAKURAMOD-SAKURA_MOD.banter.alive.endTurnPing": "...",
+  "SAKURAMOD-SAKURA_MOD.banter.dead.endTurnPing": "..."
+}

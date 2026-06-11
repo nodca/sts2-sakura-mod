@@ -1,0 +1,10 @@
+{
+  "SAKURAMOD-WIND.title": "风",
+  "SAKURAMOD-WIND.description": "元素。小狼的符咒会为本回合打出过的每张风牌抽 1 张牌。",
+  "SAKURAMOD-WATER.title": "水",
+  "SAKURAMOD-WATER.description": "元素。小狼的符咒会为本回合打出过的每张水牌给予 1 层虚弱。",
+  "SAKURAMOD-FIRE.title": "火",
+  "SAKURAMOD-FIRE.description": "元素。小狼的符咒会为本回合打出过的每张火牌再造成 5 点伤害。",
+  "SAKURAMOD-EARTH.title": "地",
+  "SAKURAMOD-EARTH.description": "元素。小狼的符咒会为本回合打出过的每张地牌获得 5 点格挡。"
+}

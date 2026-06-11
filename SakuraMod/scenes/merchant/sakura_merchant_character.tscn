@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/sakura_battle_standee.png" id="1_sakura_standee"]
+
+[node name="Visuals" type="Sprite2D"]
+unique_name_in_owner = true
+position = Vector2(0, -234)
+scale = Vector2(0.28, 0.28)
+texture = ExtResource("1_sakura_standee")

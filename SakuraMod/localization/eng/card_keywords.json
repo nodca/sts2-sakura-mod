@@ -1,0 +1,10 @@
+{
+  "SAKURAMOD-WIND.title": "Wind",
+  "SAKURAMOD-WIND.description": "Element. Syaoran Talisman draws 1 card for each Wind card played this turn.",
+  "SAKURAMOD-WATER.title": "Water",
+  "SAKURAMOD-WATER.description": "Element. Syaoran Talisman applies 1 Weak for each Water card played this turn.",
+  "SAKURAMOD-FIRE.title": "Fire",
+  "SAKURAMOD-FIRE.description": "Element. Syaoran Talisman deals 5 damage again for each Fire card played this turn.",
+  "SAKURAMOD-EARTH.title": "Earth",
+  "SAKURAMOD-EARTH.description": "Element. Syaoran Talisman gains 5 Block for each Earth card played this turn."
+}
