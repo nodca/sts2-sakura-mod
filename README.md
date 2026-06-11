@@ -1,16 +1,30 @@
 # SakuraMod
 
-Slay the Spire 2 character mod scaffold for a Sakura-themed character.
+Slay the Spire 2 character mod for a Sakura-themed character.
 
-This repository is initialized from Alchyr's `alchyrsts2charmod` template and is
-intended to use BaseLib for STS2 content registration.
+## Install
+
+Download the latest release zip from GitHub Releases, then extract the
+`SakuraMod` folder into your Slay the Spire 2 `mods` directory.
+
+The installed folder should contain:
+
+```text
+mods/SakuraMod/SakuraMod.dll
+mods/SakuraMod/SakuraMod.json
+mods/SakuraMod/SakuraMod.pck
+```
+
+This mod requires BaseLib. Install BaseLib first and keep it enabled alongside
+SakuraMod.
 
 ## Local Baseline
 
-- Slay the Spire 2: `v0.103.2` on this machine
+- Slay the Spire 2: `v0.103.3` on this machine
 - Godot: `4.5.1.stable.mono`
 - .NET SDK: `9.0.117`
 - Template package: `Alchyr.Sts2.Templates 2.4.3`
+- BaseLib: `3.2.1`
 - Mod id / assembly: `SakuraMod`
 
 ## Local Setup
@@ -63,14 +77,5 @@ mods/SakuraMod/SakuraMod.pck
 
 - `SakuraModCode/` contains C# runtime code.
 - `SakuraMod/` contains exported resources and localization.
-- `.trellis/spec/` contains the project-specific development guidelines future
-  Trellis tasks should load before implementation.
-
-## Asset Policy
-
-Do not commit copyrighted character art, audio, or text unless the user has
-explicitly supplied or approved the asset source and intended usage.
-
-This public source export intentionally omits runtime image assets. The
-`SakuraMod/images` directories are kept as placeholders so source layout remains
-visible without redistributing private or copyrighted art.
+- Public source exports may keep `SakuraMod/images` as placeholder directories.
+  Release zips include the runtime `.pck` used by the game.
