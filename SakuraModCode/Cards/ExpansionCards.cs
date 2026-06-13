@@ -45,7 +45,7 @@ public class MagicBarrier() : SakuraModCard(1, CardType.Skill, CardRarity.Common
     }
 }
 
-public class BlessingOfTheNamelessBook() : SakuraModCard(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+public class BlessingOfTheNamelessBook() : SakuraModCard(1, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PowerCmd.Apply<BlessingOfTheNamelessBookPower>(

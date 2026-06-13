@@ -12,7 +12,7 @@ public static class SakuraStarterCards
     [
         ModelDb.Card<Gale>().Id,
         ModelDb.Card<Siege>().Id,
-        ModelDb.Card<Flight>().Id,
+        ModelDb.Card<Stabilize>().Id,
         ModelDb.Card<DreamWand>().Id
     ];
 

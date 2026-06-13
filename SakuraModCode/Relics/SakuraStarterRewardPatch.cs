@@ -6,7 +6,6 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Events;
-using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Events;
@@ -146,9 +145,7 @@ internal static class SakuraStarterRewardPatch
     {
         var transformations = owner.Deck.Cards
             .Where(card => SakuraStarterCards.IsStarterCard(card) && card.IsTransformable)
-            .Select(card => new CardTransformation(
-                card,
-                CardFactory.CreateRandomCardForTransform(card, isInCombat: false, owner.RunState.Rng.Niche)))
+            .Select(card => SakuraStarterRelicEffects.CreateSupportTransformation(owner, card))
             .ToList();
 
         var results = (await CardCmd.Transform(transformations, null, CardPreviewStyle.None)).ToList();

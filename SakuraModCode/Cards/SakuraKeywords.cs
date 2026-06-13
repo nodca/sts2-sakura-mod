@@ -20,6 +20,18 @@ public static class SakuraKeywords
     [CustomEnum("EARTH")]
     [KeywordProperties(AutoKeywordPosition.None)]
     public static CardKeyword Earth;
+
+    [CustomEnum("STABILIZE")]
+    [KeywordProperties(AutoKeywordPosition.None)]
+    public static CardKeyword Stabilize;
+
+    [CustomEnum("CATALOG")]
+    [KeywordProperties(AutoKeywordPosition.None)]
+    public static CardKeyword Catalog;
+
+    [CustomEnum("BURN")]
+    [KeywordProperties(AutoKeywordPosition.None)]
+    public static CardKeyword Burn;
 }
 
 public enum SakuraElement

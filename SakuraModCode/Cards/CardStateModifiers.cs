@@ -76,13 +76,11 @@ public sealed class SynchronizedCardPairModifier : CardModifier
 
     public override void ModifyDescriptionPost(MegaCrit.Sts2.Core.Entities.Creatures.Creature? target, ref string description)
     {
-        var partnerNames = _partners
-            .Where(partner => partner != Owner)
-            .Select(SakuraStateText.CardNameWithUpgrade)
-            .Distinct()
-            .ToList();
-        if (partnerNames.Count > 0)
-            description += SakuraStateText.SynchronizedLine(partnerNames);
+        if (Owner is not { } card)
+            return;
+
+        if (SakuraStateText.SynchronizedLine(card) is { } line)
+            description += line;
     }
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
@@ -90,27 +88,36 @@ public sealed class SynchronizedCardPairModifier : CardModifier
         if (play.Card != Owner || Owner is null)
             return;
 
-        foreach (var partner in _partners.ToList())
+        var card = Owner;
+        var partnersToConsume = _partners.ToList();
+        try
         {
-            if (!CanAutoPlay(partner))
-                continue;
-
-            var target = AutoPlayTarget(play, partner);
-            if (target is null)
-                continue;
-
-            var pair = SynchronizedPairKey.Create(Owner, partner);
-            if (!ResolvingPairs.Add(pair))
-                continue;
-
-            try
+            foreach (var partner in partnersToConsume)
             {
-                await CardCmd.AutoPlay(choiceContext, partner, target, AutoPlayType.Default, false, false);
+                if (!CanAutoPlay(partner))
+                    continue;
+
+                var target = AutoPlayTarget(play, partner);
+                if (target is null)
+                    continue;
+
+                var pair = SynchronizedPairKey.Create(card, partner);
+                if (!ResolvingPairs.Add(pair))
+                    continue;
+
+                try
+                {
+                    await CardCmd.AutoPlay(choiceContext, partner, target, AutoPlayType.Default, false, false);
+                }
+                finally
+                {
+                    ResolvingPairs.Remove(pair);
+                }
             }
-            finally
-            {
-                ResolvingPairs.Remove(pair);
-            }
+        }
+        finally
+        {
+            ConsumePairs(card, partnersToConsume);
         }
     }
 
@@ -122,18 +129,69 @@ public sealed class SynchronizedCardPairModifier : CardModifier
         return Task.CompletedTask;
     }
 
+    public IReadOnlyList<CardModel> AutoPlayPartners() =>
+        _partners
+            .Where(CanAutoPlay)
+            .ToList();
+
+    private static void ConsumePairs(CardModel card, IReadOnlyList<CardModel> partners)
+    {
+        foreach (var partner in partners)
+        {
+            RemovePartnerReference(card, partner);
+            RemovePartnerReference(partner, card);
+        }
+    }
+
+    private static void RemovePartnerReference(CardModel card, CardModel partner)
+    {
+        foreach (var modifier in CardModifier.Modifiers(card).OfType<SynchronizedCardPairModifier>().ToArray())
+            modifier.RemovePartner(partner);
+    }
+
+    private void RemovePartner(CardModel partner)
+    {
+        _partners.RemoveAll(card => ReferenceEquals(card, partner));
+        if (_partners.Count == 0 && Owner is not null)
+            CardModifier.RemoveModifier(Owner, this);
+    }
+
     private bool CanAutoPlay(CardModel partner)
     {
         var owner = Owner?.Owner;
         return owner is not null
                && partner.Owner == owner
-               && CardPile.Get(PileType.Hand, owner)!.Cards.Contains(partner);
+               && CardPile.Get(PileType.Hand, owner)?.Cards.Contains(partner) == true;
     }
 
-    private Creature? AutoPlayTarget(CardPlay play, CardModel card) =>
-        card.Type == CardType.Attack
-            ? play.Target ?? card.CombatState?.HittableEnemies.FirstOrDefault()
-            : card.Owner?.Creature;
+    private Creature? AutoPlayTarget(CardPlay play, CardModel card)
+    {
+        return card.TargetType switch
+        {
+            TargetType.AnyEnemy or TargetType.AllEnemies => EnemyTarget(play, card),
+            TargetType.RandomEnemy => RandomEnemyTarget(card),
+            _ => card.Owner?.Creature
+        };
+    }
+
+    private static Creature? EnemyTarget(CardPlay play, CardModel card) =>
+        IsValidEnemyTarget(play.Target, card)
+            ? play.Target
+            : RandomEnemyTarget(card);
+
+    private static Creature? RandomEnemyTarget(CardModel card)
+    {
+        var targets = card.CombatState?.HittableEnemies
+            .Where(enemy => enemy.IsAlive)
+            .ToList();
+        return targets is { Count: > 0 }
+            ? card.Owner?.RunState.Rng.CombatTargets.NextItem(targets)
+            : null;
+    }
+
+    private static bool IsValidEnemyTarget(Creature? target, CardModel card) =>
+        target is { IsAlive: true }
+        && card.CombatState?.HittableEnemies.Contains(target) == true;
 
     private readonly struct SynchronizedPairKey : IEquatable<SynchronizedPairKey>
     {
@@ -237,7 +295,9 @@ public sealed class ElementThisTurnModifier : CardModifier
 
 public sealed class TemporaryModifier : CardModifier
 {
+    private const string DelayedRemovalTurnsKey = "DelayedRemovalTurns";
     private static readonly LocString ResonancePrompt = new("cards", "SAKURAMOD-GENERIC.temporaryCardPrompt");
+    private static readonly ConditionalWeakTable<CombatState, HashSet<Player>> CleanupFinishedByCombat = new();
     private static readonly PileType[] CleanupPileOrder =
     [
         PileType.Hand,
@@ -247,7 +307,23 @@ public sealed class TemporaryModifier : CardModifier
         PileType.Exhaust
     ];
 
+    public int DelayedRemovalTurns { get; private set; }
+
     public override bool ShouldReceiveCombatHooks => true;
+
+    public void DelayRemoval(int turns)
+    {
+        if (turns <= 0)
+            return;
+
+        DelayedRemovalTurns += turns;
+    }
+
+    public override void StoreSaveData(ModifierSave save) =>
+        save.IntProperties[DelayedRemovalTurnsKey] = DelayedRemovalTurns;
+
+    public override void LoadSaveData(ModifierSave save) =>
+        DelayedRemovalTurns = save.IntProperties.GetValueOrDefault(DelayedRemovalTurnsKey);
 
     public override void ModifyDescriptionPost(MegaCrit.Sts2.Core.Entities.Creatures.Creature? target, ref string description)
     {
@@ -266,6 +342,13 @@ public sealed class TemporaryModifier : CardModifier
 
     private static async Task CleanupTemporaryCards(PlayerChoiceContext choiceContext, MegaCrit.Sts2.Core.Entities.Players.Player player)
     {
+        if (player.Creature.CombatState is { } combatState)
+        {
+            var cleanedPlayers = CleanupFinishedByCombat.GetValue(combatState, _ => []);
+            if (!cleanedPlayers.Add(player))
+                return;
+        }
+
         var resonance = player.Creature.GetPower<DreamKeyResonancePower>();
         if (resonance is not null)
             await StabilizeOneTemporaryCard(choiceContext, player);
@@ -273,6 +356,8 @@ public sealed class TemporaryModifier : CardModifier
         foreach (var card in TemporaryCardsInCleanupOrder(player))
         {
             if (card.Pile?.IsCombatPile != true || !card.IsTemporary())
+                continue;
+            if (ConsumeTemporaryRemovalDelay(card))
                 continue;
 
             await RemoveTemporaryCard(choiceContext, card);
@@ -297,7 +382,8 @@ public sealed class TemporaryModifier : CardModifier
                 RequireManualConfirmation = false
             });
 
-        selected.FirstOrDefault()?.Stabilize();
+        if (selected.FirstOrDefault() is { } card)
+            await card.Stabilize(choiceContext);
     }
 
     private static IEnumerable<CardModel> TemporaryCardsInCleanupOrder(MegaCrit.Sts2.Core.Entities.Players.Player player)
@@ -329,6 +415,33 @@ public sealed class TemporaryModifier : CardModifier
             await CardPileCmd.RemoveFromCombat(card, true);
         }
     }
+
+    private static bool ConsumeTemporaryRemovalDelay(CardModel card)
+    {
+        var delayed = false;
+        foreach (var modifier in CardModifier.Modifiers(card).OfType<TemporaryModifier>())
+            delayed |= modifier.ConsumeRemovalDelay();
+
+        return delayed;
+    }
+
+    private bool ConsumeRemovalDelay()
+    {
+        if (DelayedRemovalTurns <= 0)
+            return false;
+
+        DelayedRemovalTurns--;
+        return true;
+    }
+
+    internal static void ResetCleanupForTurn(Player player)
+    {
+        if (player.Creature.CombatState is null
+            || !CleanupFinishedByCombat.TryGetValue(player.Creature.CombatState, out var cleanedPlayers))
+            return;
+
+        cleanedPlayers.Remove(player);
+    }
 }
 
 public sealed class ReplayThisTurnModifier : CardModifier
@@ -356,14 +469,6 @@ public sealed class ReplayThisTurnModifier : CardModifier
     {
         Amount = save.IntProperties.GetValueOrDefault(AmountKey);
         ApplyToOwner();
-    }
-
-    public override Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        if (play.Card == Owner && play.IsLastInSeries)
-            RemoveFromOwner();
-
-        return Task.CompletedTask;
     }
 
     public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
@@ -397,6 +502,8 @@ public sealed class ReplayThisTurnModifier : CardModifier
         _applied = true;
     }
 }
+
+public sealed class ManifestAtlasOriginModifier : CardModifier;
 
 public static class TemporaryCardMemory
 {
@@ -463,6 +570,17 @@ internal static class SakuraStateText
         return IsSimplifiedChinese()
             ? $"\n[gold]同步：[/gold]{names}。"
             : $"\n[gold]Synced:[/gold] {names}.";
+    }
+
+    public static string? SynchronizedLine(CardModel card)
+    {
+        var partnerNames = card.SynchronizedAutoPlayPartners()
+            .Select(CardNameWithUpgrade)
+            .ToList();
+
+        return partnerNames.Count > 0
+            ? SynchronizedLine(partnerNames)
+            : null;
     }
 
     public static string CardNameWithUpgrade(CardModel card)
@@ -563,6 +681,24 @@ public static class SakuraCardStates
     public static bool IsTemporary(this CardModel card) =>
         CardModifier.Modifiers(card).Any(modifier => modifier is TemporaryModifier);
 
+    public static bool DelayTemporaryRemoval(this CardModel card, int turns)
+    {
+        var temporary = CardModifier.Modifiers(card).OfType<TemporaryModifier>().FirstOrDefault();
+        if (temporary is null)
+            return false;
+
+        temporary.DelayRemoval(turns);
+        return true;
+    }
+
+    public static void ResetTemporaryCleanupForTurn(Player player)
+    {
+        TemporaryModifier.ResetCleanupForTurn(player);
+    }
+
+    public static bool IsManifestAtlasOrigin(this CardModel card) =>
+        CardModifier.Modifiers(card).Any(modifier => modifier is ManifestAtlasOriginModifier);
+
     public static void Release(this CardModel card)
     {
         if (HasReleaseState(card, ReleaseStateKind.Permanent))
@@ -572,6 +708,31 @@ public static class SakuraCardStates
         }
 
         AddReleaseState(card, ReleaseStateKind.Permanent);
+    }
+
+    public static void MakeReleasePermanent(this CardModel card)
+    {
+        var deckVersion = DeckVersionOf(card);
+        foreach (var target in PermanentReleaseTargets(card, deckVersion))
+        {
+            target.StabilizeWithoutTrigger();
+            target.Release();
+        }
+    }
+
+    public static async Task MakeReleasePermanent(this CardModel card, PlayerChoiceContext choiceContext)
+    {
+        var stabilized = card.RemoveTemporaryForStabilize();
+        if (stabilized)
+            await SakuraActions.TriggerTemporaryStabilized(choiceContext, card);
+
+        var deckVersion = DeckVersionOf(card);
+        foreach (var target in PermanentReleaseTargets(card, deckVersion))
+        {
+            if (!ReferenceEquals(target, card))
+                target.StabilizeWithoutTrigger();
+            target.Release();
+        }
     }
 
     public static void ReleaseThisTurn(this CardModel card)
@@ -591,10 +752,41 @@ public static class SakuraCardStates
             CardModifier.AddModifier(card, NewModifier<TemporaryModifier>());
     }
 
+    public static void MarkManifestAtlasOrigin(this CardModel card)
+    {
+        if (!card.IsManifestAtlasOrigin())
+            CardModifier.AddModifier(card, NewModifier<ManifestAtlasOriginModifier>());
+    }
+
+    public static void RemoveManifestAtlasOrigin(this CardModel card)
+    {
+        foreach (var modifier in CardModifier.Modifiers(card).OfType<ManifestAtlasOriginModifier>().ToArray())
+            CardModifier.RemoveModifier(card, modifier);
+    }
+
     public static SakuraElementSet TemporaryElementSet(this CardModel card) =>
         CardModifier.Modifiers(card)
             .OfType<ElementThisTurnModifier>()
             .Aggregate(SakuraElementSet.None, (set, modifier) => set | modifier.Elements);
+
+    public static IReadOnlyList<CardModel> SynchronizedAutoPlayPartners(this CardModel card)
+    {
+        List<CardModel> partners = [];
+        HashSet<CardModel> seen = new(ReferenceEqualityComparer.Instance);
+        foreach (var modifier in CardModifier.Modifiers(card).OfType<SynchronizedCardPairModifier>())
+        {
+            foreach (var partner in modifier.AutoPlayPartners())
+            {
+                if (ReferenceEquals(partner, card))
+                    continue;
+
+                if (seen.Add(partner))
+                    partners.Add(partner);
+            }
+        }
+
+        return partners;
+    }
 
     public static SakuraElementSet GrantElementsThisTurn(this CardModel card, SakuraElementSet elements)
     {
@@ -612,13 +804,21 @@ public static class SakuraCardStates
         return modifier.AddElements(missing);
     }
 
-    public static void Stabilize(this CardModel card)
+    public static async Task Stabilize(this CardModel card, PlayerChoiceContext choiceContext)
     {
         if (!card.CanStabilize())
             return;
 
-        foreach (var modifier in CardModifier.Modifiers(card).OfType<TemporaryModifier>().ToArray())
-            CardModifier.RemoveModifier(card, modifier);
+        if (card.RemoveTemporaryForStabilize())
+            await SakuraActions.TriggerTemporaryStabilized(choiceContext, card);
+    }
+
+    public static void StabilizeWithoutTrigger(this CardModel card)
+    {
+        if (!card.CanStabilize())
+            return;
+
+        card.RemoveTemporaryForStabilize();
     }
 
     public static void RemoveRelease(this CardModel card)
@@ -665,9 +865,22 @@ public static class SakuraCardStates
             CardModifier.RemoveModifier(card, modifier);
     }
 
+    private static bool RemoveTemporaryForStabilize(this CardModel card)
+    {
+        var removed = false;
+        foreach (var modifier in CardModifier.Modifiers(card).OfType<TemporaryModifier>().ToArray())
+        {
+            CardModifier.RemoveModifier(card, modifier);
+            removed = true;
+        }
+
+        return removed;
+    }
+
     public static void RemovePlaybackStateExceptRelease(this CardModel card)
     {
         card.RemoveTemporaryForExchange();
+        card.RemoveManifestAtlasOrigin();
         RemoveElementThisTurn(card);
 
         foreach (var modifier in CardModifier.Modifiers(card)
@@ -715,7 +928,7 @@ public static class SakuraCardStates
         card.Owner?.GetRelic<KaitoPocketWatch>() is null;
 
     private static T NewModifier<T>() where T : CardModifier =>
-        CardModifier.Get<T>();
+        (T)CardModifier.Get<T>().MutableClone();
 
     private static SynchronizedCardPairModifier GetOrAddSynchronizedCardPairModifier(CardModel card)
     {
@@ -740,6 +953,42 @@ public static class SakuraCardStates
 
     private static bool IsReleaseStateModifier(CardModifier modifier) =>
         ReleaseStateKindOf(modifier) is not null;
+
+    private static IReadOnlyList<CardModel> PermanentReleaseTargets(CardModel card, CardModel? deckVersion)
+    {
+        List<CardModel> targets = [];
+        HashSet<CardModel> seen = new(ReferenceEqualityComparer.Instance);
+        AddTarget(card);
+        if (deckVersion is not null)
+        {
+            AddTarget(deckVersion);
+            foreach (var combatCard in card.Owner.PlayerCombatState?.AllCards ?? [])
+            {
+                if (DeckVersionOf(combatCard) == deckVersion)
+                    AddTarget(combatCard);
+            }
+        }
+
+        return targets;
+
+        void AddTarget(CardModel target)
+        {
+            if (seen.Add(target))
+                targets.Add(target);
+        }
+    }
+
+    private static CardModel? DeckVersionOf(CardModel card)
+    {
+        HashSet<CardModel> seen = new(ReferenceEqualityComparer.Instance);
+        for (CardModel? current = card; current is not null && seen.Add(current); current = current.CloneOf)
+        {
+            if (current.DeckVersion is { } deckVersion)
+                return deckVersion;
+        }
+
+        return null;
+    }
 
     private static void RemoveElementThisTurn(CardModel card)
     {

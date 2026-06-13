@@ -53,6 +53,7 @@ public abstract class SakuraModCard(int cost, CardType type, CardRarity rarity, 
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
+        await SakuraActions.RememberCatalogCard(choiceContext, play);
         await SakuraActions.RememberPlayedElements(play);
     }
 

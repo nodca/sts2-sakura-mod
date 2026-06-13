@@ -6,5 +6,11 @@
   "SAKURAMOD-FIRE.title": "Fire",
   "SAKURAMOD-FIRE.description": "Element. Syaoran Talisman deals 5 damage again for each Fire card played this turn.",
   "SAKURAMOD-EARTH.title": "Earth",
-  "SAKURAMOD-EARTH.description": "Element. Syaoran Talisman gains 5 Block for each Earth card played this turn."
+  "SAKURAMOD-EARTH.description": "Element. Syaoran Talisman gains 5 Block for each Earth card played this turn.",
+  "SAKURAMOD-STABILIZE.title": "Stabilize",
+  "SAKURAMOD-STABILIZE.description": "Remove Temporary from 1 card in your hand or discard pile.",
+  "SAKURAMOD-CATALOG.title": "Catalog",
+  "SAKURAMOD-CATALOG.description": "The different Transparent Card types you have played this combat.",
+  "SAKURAMOD-BURN.title": "Burn",
+  "SAKURAMOD-BURN.description": "After receiving attack damage from a Fire card, lose HP equal to Burn."
 }

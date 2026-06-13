@@ -71,6 +71,56 @@ public class DreamRibbon : SakuraModRelic
     }
 }
 
+public class StorageRibbon : SakuraModRelic
+{
+    public override RelicRarity Rarity => RelicRarity.Common;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new EnergyVar(1),
+        new CardsVar(1)
+    ];
+
+    private bool _usedThisCombat;
+
+    public override Task BeforeCombatStart()
+    {
+        _usedThisCombat = false;
+        return Task.CompletedTask;
+    }
+
+    public async Task AfterTemporaryStabilized(PlayerChoiceContext choiceContext, CardModel card)
+    {
+        if (_usedThisCombat || card.Owner != Owner)
+            return;
+
+        _usedThisCombat = true;
+        await PlayerCmd.GainEnergy(DynamicVars.Energy.IntValue, Owner);
+        await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
+    }
+
+    public override Task AfterCombatEnd(CombatRoom room)
+    {
+        _usedThisCombat = false;
+        return Task.CompletedTask;
+    }
+}
+
+public class CatalogNewPage : SakuraModRelic
+{
+    public override RelicRarity Rarity => RelicRarity.Common;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(2, ValueProp.Move)];
+
+    public async Task AfterCatalogedClearCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        if (play.Card?.Owner != Owner)
+            return;
+
+        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
+    }
+}
+
 public class KeroCharm : SakuraModRelic
 {
     public override RelicRarity Rarity => RelicRarity.Common;
@@ -89,7 +139,7 @@ public class KeroCharm : SakuraModRelic
             return;
 
         _usedThisCombat = true;
-        var advice = ModelDb.Card<KeroAdvice>().CreateClone();
+        var advice = Owner.RunState.CreateCard<KeroAdvice>(Owner);
         await SakuraActions.AddGeneratedCardToCombat(
             advice,
             new SakuraActions.GeneratedCardOptions
@@ -213,7 +263,7 @@ public class DreamJournal : SakuraModRelic
             return;
 
         _usedThisTurn = true;
-        await SakuraActions.Manifest((SakuraModCard)ModelDb.Card<Appear>(), choiceContext, 1);
+        await SakuraActions.Manifest(Owner, choiceContext, 1);
     }
 }
 
@@ -228,6 +278,15 @@ public class ClearCardCase : SakuraModRelic
 
         await CreatureCmd.GainBlock(Owner.Creature, 2, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, play, false);
     }
+}
+
+public class SakuraIntuition : SakuraModRelic
+{
+    public override RelicRarity Rarity => RelicRarity.Rare;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new IntVar("Choices", 1)];
+
+    public int AdditionalManifestChoices => DynamicVars["Choices"].IntValue;
 }
 
 public class DreamKeyTrueForm : SakuraModRelic
@@ -309,24 +368,24 @@ public class AkihoAliceBook : SakuraModRelic
     protected override string PackedIconOutlinePath => "alice_in_clockland_outline.png".RelicImagePath();
     protected override string BigIconPath => "alice_in_clockland.png".BigRelicImagePath();
 
-    private bool _usedThisCombat;
+    private bool _dazedAddedThisCombat;
+    private bool _releasedThisTurn;
 
     public override Task BeforeCombatStart()
     {
-        _usedThisCombat = false;
+        _dazedAddedThisCombat = false;
+        _releasedThisTurn = false;
         return Task.CompletedTask;
     }
 
     public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, CombatState combatState)
     {
-        if (_usedThisCombat || player != Owner)
+        if (player == Owner)
+            _releasedThisTurn = false;
+        if (_dazedAddedThisCombat || player != Owner)
             return;
 
-        _usedThisCombat = true;
-        foreach (var card in CardPile.GetCards(Owner, PileType.Hand, PileType.Draw, PileType.Discard, PileType.Exhaust)
-                     .Where(SakuraActions.IsManifestableClearCard))
-            card.Release();
-
+        _dazedAddedThisCombat = true;
         var dazed = Enumerable.Range(0, 3)
             .Select(_ => ModelDb.Card<Dazed>().CreateClone())
             .ToList();
@@ -334,9 +393,30 @@ public class AkihoAliceBook : SakuraModRelic
         await CardPileCmd.Shuffle(choiceContext, Owner);
     }
 
+    public override async Task BeforeCardPlayed(CardPlay play)
+    {
+        if (_releasedThisTurn
+            || play.Card?.Owner != Owner
+            || !SakuraActions.IsManifestableClearCard(play.Card))
+            return;
+
+        _releasedThisTurn = true;
+        await SakuraActions.ReleaseThisTurnAndRecord(play.Card);
+        SakuraActions.RememberPlayedReleasedCard(play);
+    }
+
+    public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    {
+        if (Owner.Creature.Side == side)
+            _releasedThisTurn = false;
+
+        return Task.CompletedTask;
+    }
+
     public override Task AfterCombatEnd(CombatRoom room)
     {
-        _usedThisCombat = false;
+        _dazedAddedThisCombat = false;
+        _releasedThisTurn = false;
         return Task.CompletedTask;
     }
 }

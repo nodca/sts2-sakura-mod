@@ -191,6 +191,66 @@ public class SakuraFrostbitePower : SakuraModPower
     }
 }
 
+public class SakuraBurnPower : SakuraModPower
+{
+    public override PowerType Type => PowerType.Debuff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override async Task AfterDamageReceived(
+        PlayerChoiceContext choiceContext,
+        Creature creature,
+        DamageResult damageResult,
+        ValueProp damageProps,
+        Creature? source,
+        CardModel? card)
+    {
+        if (creature != Owner
+            || Amount <= 0
+            || damageResult.TotalDamage <= 0
+            || !damageProps.IsPoweredAttack()
+            || card is null
+            || !SakuraActions.ElementSetOf(card).HasElement(SakuraElement.Fire))
+            return;
+
+        await CreatureCmd.Damage(choiceContext, Owner, Amount, ValueProp.Unblockable, source, null);
+    }
+}
+
+public class SakuraSleepPower : SakuraModPower
+{
+    private const int MaxAmount = 2;
+
+    public override PowerType Type => PowerType.Debuff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override bool TryModifyPowerAmountReceived(PowerModel canonicalPower, Creature target, decimal amount, Creature? applier, out decimal modifiedAmount)
+    {
+        if (target == Owner && canonicalPower is SakuraSleepPower && amount > 0)
+        {
+            modifiedAmount = Math.Max(0m, Math.Min(amount, MaxAmount - Amount));
+            return true;
+        }
+
+        modifiedAmount = amount;
+        return false;
+    }
+
+    public override async Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side, CombatState combatState)
+    {
+        if (Amount <= 0 || side != Owner.Side || !Owner.IsAlive)
+            return;
+
+        await CreatureCmd.Stun(Owner);
+        await PowerCmd.Decrement(this);
+    }
+
+    public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature creature, DamageResult damageResult, ValueProp damageProps, Creature? source, CardModel? card)
+    {
+        if (creature == Owner && damageResult.TotalDamage > 0 && damageProps.IsPoweredAttack())
+            await PowerCmd.Remove(this);
+    }
+}
+
 public abstract class ElementPlayedPowerBase : SakuraModPower
 {
     public override PowerType Type => PowerType.Buff;
@@ -271,9 +331,11 @@ public class DreamCostumePower : SakuraModPower
     }
 }
 
-public class SakuraCostReductionPower : SakuraModPower
+public abstract class SakuraTrackedCostReductionPower : SakuraModPower
 {
     private readonly HashSet<CardModel> _targets = [];
+
+    protected override bool IsVisibleInternal => false;
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
@@ -300,14 +362,39 @@ public class SakuraCostReductionPower : SakuraModPower
         if (play.Card is not null)
             _targets.Remove(play.Card);
 
+        await RemoveIfEmpty();
+    }
+
+    protected void PruneDetachedTargets()
+    {
+        _targets.RemoveWhere(card => card.Pile?.IsCombatPile != true);
+    }
+
+    protected async Task RemoveIfEmpty()
+    {
         if (_targets.Count == 0)
             await PowerCmd.Remove(this);
     }
+}
 
+public class SakuraCostReductionPower : SakuraTrackedCostReductionPower
+{
     public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
     {
         if (Owner.Side == side)
             await PowerCmd.Remove(this);
+    }
+}
+
+public class SakuraCostReductionUntilPlayedPower : SakuraTrackedCostReductionPower
+{
+    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    {
+        if (Owner.Side != side)
+            return;
+
+        PruneDetachedTargets();
+        await RemoveIfEmpty();
     }
 }
 
@@ -366,9 +453,23 @@ public class RecordPower : SakuraModPower
     }
 }
 
+public class SakuraCatalogPower : SakuraModPower
+{
+    private const string TotalKey = "Total";
+
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DynamicVar(TotalKey, SakuraActions.ClearCardModelTypes.Count)
+    ];
+}
+
 public class SakuraManifestedThisTurnPower : SakuraModPower
 {
     protected override string IconFileName => "manifested_this_turn.png";
+    protected override bool IsVisibleInternal => false;
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
@@ -385,6 +486,7 @@ public class SakuraReleaseCountThisTurnPower : SakuraModPower
     private readonly HashSet<CardModel> _countedCards = [];
 
     protected override string IconFileName => "release_count_this_turn.png";
+    protected override bool IsVisibleInternal => false;
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
@@ -543,6 +645,87 @@ public class FalseDailyLifePower : SakuraModPower
     }
 }
 
+public class GrowingMagicPower : SakuraModPower
+{
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public async Task AfterTemporaryStabilized(PlayerChoiceContext choiceContext)
+    {
+        if (Amount > 0)
+            await PowerCmd.Apply<StrengthPower>(Owner, Amount, Owner, null, false);
+    }
+}
+
+public class NewPagePower : SakuraModPower
+{
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public async Task AfterTemporaryStabilized(PlayerChoiceContext choiceContext)
+    {
+        if (Amount > 0 && Owner.Player is not null)
+            await CardPileCmd.Draw(choiceContext, Amount, Owner.Player, false);
+    }
+}
+
+public class NewPageBlockPower : SakuraModPower
+{
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(0, ValueProp.Move)];
+
+    public void AddBlockAmount(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        DynamicVars.Block.BaseValue += amount;
+        InvokeDisplayAmountChanged();
+    }
+
+    public async Task AfterTemporaryStabilized(PlayerChoiceContext choiceContext)
+    {
+        if (Amount > 0 && Owner.Player is not null)
+            await CardPileCmd.Draw(choiceContext, Amount, Owner.Player, false);
+        await CreatureCmd.GainBlock(Owner, DynamicVars.Block.IntValue, ValueProp.Move, null, false);
+    }
+}
+
+public class MagicSurgePower : SakuraModPower
+{
+    private bool _usedThisTurn;
+
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public int ConsumeManifestBonus()
+    {
+        if (_usedThisTurn || Amount <= 0)
+            return 0;
+
+        _usedThisTurn = true;
+        return Amount;
+    }
+
+    public override Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
+    {
+        if (player.Creature == Owner)
+            _usedThisTurn = false;
+
+        return Task.CompletedTask;
+    }
+
+    public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    {
+        if (side == Owner.Side)
+            _usedThisTurn = false;
+
+        return Task.CompletedTask;
+    }
+}
+
 public class KeroBondPower : SakuraModPower, IMaxHandSizeModifier
 {
     private bool _usedThisTurn;
@@ -574,6 +757,25 @@ public class KeroBondPower : SakuraModPower, IMaxHandSizeModifier
     }
 }
 
+public class TomoyoDesignPower : SakuraModPower
+{
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override async Task BeforeCardPlayed(CardPlay play)
+    {
+        var card = play.Card;
+        if (Amount <= 0
+            || card?.Owner?.Creature != Owner
+            || !SakuraActions.IsClearCard(card)
+            || card.IsReleased())
+            return;
+
+        await SakuraActions.ReleaseAndRecord(card);
+        await PowerCmd.Decrement(this);
+    }
+}
+
 public class TomoyoBondPower : SakuraModPower
 {
     private const int ClearCardsPerEnergy = 2;
@@ -598,25 +800,47 @@ public class TomoyoBondPower : SakuraModPower
 
 public class SyaoranBondPower : SakuraModPower
 {
+    public const int WindDraw = 1;
+    public const int WaterWeak = 1;
+    public const int FireDamage = 5;
+    public const int EarthBlock = 5;
+
+    private SakuraElementSet _triggeredThisTurn;
+
     public override PowerType Type => PowerType.Buff;
-    public override PowerStackType StackType => PowerStackType.Counter;
+    public override PowerStackType StackType => PowerStackType.Single;
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (Amount <= 0 || !SakuraPowerTriggers.IsOwnerClearCard(play, Owner))
+        var card = play.Card;
+        if (Amount <= 0 || card?.Owner?.Creature != Owner)
             return;
 
-        if (Owner.CombatState is null || Owner.Player is null)
-            return;
+        var elements = SakuraActions.ElementSetOf(card);
+        foreach (var element in elements.AsElements())
+        {
+            if (_triggeredThisTurn.HasElement(element))
+                continue;
 
-        var targets = Owner.CombatState.HittableEnemies
-            .Where(enemy => enemy.IsAlive)
-            .ToList();
-        var target = Owner.Player.RunState.Rng.CombatCardSelection.NextItem(targets);
-        if (target is null)
-            return;
+            _triggeredThisTurn |= element.ToSet();
+            await SakuraActions.TriggerTalismanEffect(choiceContext, card.Owner, element, play, null);
+        }
+    }
 
-        await CreatureCmd.Damage(choiceContext, target, Amount, ValueProp.Move, Owner, null);
+    public override Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
+    {
+        if (player.Creature == Owner)
+            _triggeredThisTurn = SakuraElementSet.None;
+
+        return Task.CompletedTask;
+    }
+
+    public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    {
+        if (side == Owner.Side)
+            _triggeredThisTurn = SakuraElementSet.None;
+
+        return Task.CompletedTask;
     }
 }
 
@@ -631,6 +855,21 @@ public class SakuraBlockNextTurnPower : SakuraModPower
             return;
 
         await CreatureCmd.GainBlock(Owner, Amount, ValueProp.Move, null, false);
+        await PowerCmd.Remove(this);
+    }
+}
+
+public class SakuraDrawNextTurnPower : SakuraModPower
+{
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, MegaCrit.Sts2.Core.Entities.Players.Player player)
+    {
+        if (player.Creature != Owner)
+            return;
+
+        await CardPileCmd.Draw(choiceContext, Amount, player, false);
         await PowerCmd.Remove(this);
     }
 }
@@ -697,8 +936,10 @@ public class SakuraRegenerationPower : SakuraModPower
 
 public class GravitationHoldPower : SakuraModPower
 {
+    private readonly HashSet<CardModel> _returnedCards = [];
+
     public override PowerType Type => PowerType.Buff;
-    public override PowerStackType StackType => PowerStackType.Single;
+    public override PowerStackType StackType => PowerStackType.Counter;
 
     public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
         CardModel card,
@@ -707,19 +948,17 @@ public class GravitationHoldPower : SakuraModPower
         PileType pileType,
         CardPilePosition position)
     {
-        if (card.Owner?.Creature != Owner || pileType != PileType.Discard)
+        if (Amount <= 0 || card.Owner?.Creature != Owner || pileType != PileType.Discard)
             return (pileType, position);
 
+        _returnedCards.Add(card);
         return (PileType.Hand, CardPilePosition.Bottom);
     }
 
-    public override bool ShouldDraw(MegaCrit.Sts2.Core.Entities.Players.Player player, bool fromHandDraw)
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (player.Creature != Owner)
-            return true;
-
-        Flash();
-        return false;
+        if (Amount > 0 && play.Card is { } card && _returnedCards.Remove(card))
+            await PowerCmd.Decrement(this);
     }
 
     public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
@@ -739,7 +978,6 @@ public class MagicAwakeningPower : SakuraModPower
         if (Amount <= 0 || player.Creature != Owner)
             return;
 
-        await PlayerCmd.GainEnergy(Amount, player);
         await SakuraActions.Manifest(player, choiceContext, Amount);
     }
 }
@@ -775,7 +1013,7 @@ public class StarWandPower : SakuraModPower
 
 public class TimeStopPower : SakuraModPower
 {
-    private bool _preserveResources;
+    private bool _preserveBlock;
     private bool _extraTurnStarted;
 
     protected override string IconFileName => "time_stop.png";
@@ -783,8 +1021,8 @@ public class TimeStopPower : SakuraModPower
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
-    public void PreserveResources() =>
-        _preserveResources = true;
+    public void PreserveBlock() =>
+        _preserveBlock = true;
 
     public override bool ShouldTakeExtraTurn(MegaCrit.Sts2.Core.Entities.Players.Player player) =>
         Amount > 0 && player.Creature == Owner;
@@ -794,20 +1032,20 @@ public class TimeStopPower : SakuraModPower
         if (player.Creature != Owner)
             return;
 
-        if (_preserveResources)
+        if (_preserveBlock)
             _extraTurnStarted = true;
         else
             await PowerCmd.Remove(this);
     }
 
     public override bool ShouldFlush(MegaCrit.Sts2.Core.Entities.Players.Player player) =>
-        !_preserveResources || player.Creature != Owner;
+        true;
 
     public override bool ShouldClearBlock(Creature creature) =>
-        !_preserveResources || creature != Owner;
+        !_preserveBlock || creature != Owner;
 
     public override bool ShouldPlayerResetEnergy(MegaCrit.Sts2.Core.Entities.Players.Player player) =>
-        !_preserveResources || player.Creature != Owner;
+        true;
 
     public override async Task AfterPlayerTurnStartLate(PlayerChoiceContext choiceContext, MegaCrit.Sts2.Core.Entities.Players.Player player)
     {

@@ -8,6 +8,7 @@ internal static class SakuraCardFrameVisuals
 {
     private const string DefaultPortraitFileName = "card.png";
     private const string DreamWandPortraitFileName = "dream_wand.png";
+    private const string SyaoranBondPortraitFileName = "syaoran_bond.png";
     private static readonly Dictionary<string, Texture2D?> PortraitTextureCache = [];
     private static readonly Dictionary<string, Texture2D?> FrameTextureCache = [];
     private static readonly CanvasItemMaterial _plainFrameMaterial = new();
@@ -60,7 +61,12 @@ internal static class SakuraCardFrameVisuals
     }
 
     private static string PortraitFileName(CardModel card) =>
-        card is DreamWand ? DreamWandPortraitFileName : DefaultPortraitFileName;
+        card switch
+        {
+            DreamWand => DreamWandPortraitFileName,
+            SyaoranBond => SyaoranBondPortraitFileName,
+            _ => DefaultPortraitFileName
+        };
 
     private static string FrameDirectory(CardModel card) =>
         SakuraActions.IsPartner(card) ? "partner" : "technique";

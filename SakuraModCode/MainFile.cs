@@ -2,6 +2,7 @@ using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
 
 namespace SakuraMod.SakuraModCode;
 
@@ -21,6 +22,7 @@ public partial class MainFile : Node
         Harmony harmony = new(ModId);
 
         harmony.PatchAll();
+        SakuraCaptureRunHooks.Register();
         ClearCardLayout.PreloadVisualResources();
     }
 }

@@ -15,7 +15,6 @@ using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.Runs;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
-using SakuraSpiralCard = SakuraMod.SakuraModCode.Cards.Spiral;
 using VanillaEvents = MegaCrit.Sts2.Core.Models.Events;
 
 namespace SakuraMod.SakuraModCode.Events;
@@ -34,9 +33,17 @@ internal static class SakuraStarterEventReplacements
     }
 }
 
+internal static class SakuraStarterEventPortraits
+{
+    public const string Amalgamator = "res://images/events/amalgamator.png";
+    public const string WoodCarvings = "res://images/events/wood_carvings.png";
+    public const string SpiralingWhirlpool = "res://images/events/spiraling_whirlpool.png";
+}
+
 public class SakuraAmalgamator : CustomEventModel
 {
     public override ActModel[] Acts => [ModelDb.Act<Hive>()];
+    public override string? CustomInitialPortraitPath => SakuraStarterEventPortraits.Amalgamator;
 
     public SakuraAmalgamator()
     {
@@ -44,8 +51,8 @@ public class SakuraAmalgamator : CustomEventModel
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new StringVar("GaleReward", ModelDb.Card<SakuraSpiralCard>().Title),
-        new StringVar("SiegeReward", ModelDb.Card<Labyrinth>().Title)
+        new StringVar("GaleReward", ModelDb.Card<RollerbladeDash>().Title),
+        new StringVar("SiegeReward", ModelDb.Card<MagicBarrier>().Title)
     ];
 
     public override bool IsAllowed(IRunState runState) =>
@@ -55,24 +62,24 @@ public class SakuraAmalgamator : CustomEventModel
     protected override IReadOnlyList<EventOption> GenerateInitialOptions() =>
     [
         SakuraStarterCards.CountRemovable<Gale>(Owner!) >= 2
-            ? new EventOption(this, CombineGales, SakuraInitialOptionKey("COMBINE_GALES"), HoverTipFactory.FromCardWithCardHoverTips<SakuraSpiralCard>())
-            : new EventOption(this, null, SakuraInitialOptionKey("COMBINE_GALES_LOCKED"), HoverTipFactory.FromCardWithCardHoverTips<SakuraSpiralCard>()),
+            ? new EventOption(this, CombineGales, SakuraInitialOptionKey("COMBINE_GALES"), HoverTipFactory.FromCardWithCardHoverTips<RollerbladeDash>())
+            : new EventOption(this, null, SakuraInitialOptionKey("COMBINE_GALES_LOCKED"), HoverTipFactory.FromCardWithCardHoverTips<RollerbladeDash>()),
         SakuraStarterCards.CountRemovable<Siege>(Owner!) >= 2
-            ? new EventOption(this, CombineSieges, SakuraInitialOptionKey("COMBINE_SIEGES"), HoverTipFactory.FromCardWithCardHoverTips<Labyrinth>())
-            : new EventOption(this, null, SakuraInitialOptionKey("COMBINE_SIEGES_LOCKED"), HoverTipFactory.FromCardWithCardHoverTips<Labyrinth>())
+            ? new EventOption(this, CombineSieges, SakuraInitialOptionKey("COMBINE_SIEGES"), HoverTipFactory.FromCardWithCardHoverTips<MagicBarrier>())
+            : new EventOption(this, null, SakuraInitialOptionKey("COMBINE_SIEGES_LOCKED"), HoverTipFactory.FromCardWithCardHoverTips<MagicBarrier>())
     ];
 
     private async Task CombineGales()
     {
         await RemoveTwo<Gale>();
-        await AddReward<SakuraSpiralCard>();
+        await AddReward<RollerbladeDash>();
         SetEventFinished(L10NLookup($"{Id.Entry}.pages.COMBINE_GALES.description"));
     }
 
     private async Task CombineSieges()
     {
         await RemoveTwo<Siege>();
-        await AddReward<Labyrinth>();
+        await AddReward<MagicBarrier>();
         SetEventFinished(L10NLookup($"{Id.Entry}.pages.COMBINE_SIEGES.description"));
     }
 
@@ -99,6 +106,7 @@ public class SakuraAmalgamator : CustomEventModel
 public class SakuraWoodCarvings : CustomEventModel
 {
     public override ActModel[] Acts => [ModelDb.Act<Overgrowth>()];
+    public override string? CustomInitialPortraitPath => SakuraStarterEventPortraits.WoodCarvings;
 
     public SakuraWoodCarvings()
     {
@@ -110,18 +118,18 @@ public class SakuraWoodCarvings : CustomEventModel
 
     protected override IReadOnlyList<EventOption> GenerateInitialOptions() =>
     [
-        new EventOption(this, Bird, SakuraInitialOptionKey("BIRD"), HoverTipFactory.FromCardWithCardHoverTips<Reflect>()),
+        new EventOption(this, Bird, SakuraInitialOptionKey("BIRD"), HoverTipFactory.FromCardWithCardHoverTips<SilverMoonWing>()),
         Owner!.Deck.Cards.Any(CanRelease)
             ? new EventOption(this, Snake, SakuraInitialOptionKey("SNAKE"))
             : new EventOption(this, null, SakuraInitialOptionKey("SNAKE_LOCKED")),
-        new EventOption(this, Torus, SakuraInitialOptionKey("TORUS"), HoverTipFactory.FromCardWithCardHoverTips<Labyrinth>())
+        new EventOption(this, Torus, SakuraInitialOptionKey("TORUS"), HoverTipFactory.FromCardWithCardHoverTips<SealedBook>())
     ];
 
     private async Task Bird()
     {
         var card = (await SelectStarter(CardSelectorPrefs.TransformSelectionPrompt, SakuraStarterCards.IsTransformableStarterCard)).FirstOrDefault();
         if (card is not null)
-            await CardCmd.TransformTo<Reflect>(card, CardPreviewStyle.EventLayout);
+            await CardCmd.TransformTo<SilverMoonWing>(card, CardPreviewStyle.EventLayout);
 
         SetEventFinished(L10NLookup($"{Id.Entry}.pages.BIRD.description"));
     }
@@ -138,7 +146,7 @@ public class SakuraWoodCarvings : CustomEventModel
     {
         var card = (await SelectStarter(CardSelectorPrefs.TransformSelectionPrompt, SakuraStarterCards.IsTransformableStarterCard)).FirstOrDefault();
         if (card is not null)
-            await CardCmd.TransformTo<Labyrinth>(card, CardPreviewStyle.EventLayout);
+            await CardCmd.TransformTo<SealedBook>(card, CardPreviewStyle.EventLayout);
 
         SetEventFinished(L10NLookup($"{Id.Entry}.pages.TORUS.description"));
     }
@@ -159,6 +167,7 @@ public class SakuraWoodCarvings : CustomEventModel
 public class SakuraSpiralingWhirlpool : CustomEventModel
 {
     public override ActModel[] Acts => [ModelDb.Act<Underdocks>()];
+    public override string? CustomInitialPortraitPath => SakuraStarterEventPortraits.SpiralingWhirlpool;
 
     public SakuraSpiralingWhirlpool()
     {

@@ -254,6 +254,7 @@ internal static class ClearCardLayout
     private static readonly StringName ShadowOutlineSizeName = new("shadow_outline_size");
     private const string HeaderPartSeparator = "  ";
     private const float HeaderPartSeparatorUnits = 1f;
+    private const int MaxDeferredGridCenterAttempts = 4;
 
     private static readonly Color TemporaryHighlightColor = new(0.65f, 0.9f, 1f, 1f);
     private static readonly Color ReleasedHighlightColor = new(1f, 0.88f, 0.58f, 1f);
@@ -299,7 +300,11 @@ internal static class ClearCardLayout
             return;
 
         var allCardsAreClearCards = AllCardsAreClearCards(cards);
-        GridStates.GetOrCreateValue(grid).AllCardsAreClearCards = allCardsAreClearCards;
+        var state = GridStates.GetOrCreateValue(grid);
+        state.AllCardsAreClearCards = allCardsAreClearCards;
+        state.NeedsDeferredCenter = allCardsAreClearCards;
+        state.DeferredCenterAttempts = 0;
+        state.DeferredCenterQueued = false;
         GridCardSizeField.SetValue(grid, allCardsAreClearCards ? Spec.GridCellSize : Spec.DefaultGridCellSize);
     }
 
@@ -307,14 +312,39 @@ internal static class ClearCardLayout
     {
         if (!GridStates.TryGetValue(grid, out var state) || !state.AllCardsAreClearCards)
             return;
+
+        if (!TryCenterGridRows(grid, out var shouldRetry))
+        {
+            if (shouldRetry)
+                ScheduleDeferredGridCenter(grid, state);
+            return;
+        }
+
+        if (state.NeedsDeferredCenter)
+        {
+            ScheduleDeferredGridCenter(grid, state);
+            return;
+        }
+
+        state.DeferredCenterAttempts = 0;
+    }
+
+    private static bool TryCenterGridRows(NCardGrid grid, out bool shouldRetry)
+    {
+        shouldRetry = false;
+        if (!IsGodotInstanceUsable(grid) || !grid.IsInsideTree())
+            return true;
         if (GridCardRowsField?.GetValue(grid) is not List<List<NGridCardHolder>> cardRows)
-            return;
+            return true;
         if (GridScrollContainerField?.GetValue(grid) is not Control scrollContainer)
-            return;
+            return true;
         if (GridCardSizeField?.GetValue(grid) is not Vector2 cardSize)
-            return;
-        if (scrollContainer.Size.X <= 0f)
-            return;
+            return true;
+        if (scrollContainer.Size.X <= 0f || grid.Size.Y <= 0f)
+        {
+            shouldRetry = true;
+            return false;
+        }
 
         Span<int> visibleHolderCounts = cardRows.Count <= 128
             ? stackalloc int[cardRows.Count]
@@ -324,14 +354,14 @@ internal static class ClearCardLayout
         {
             var visibleHolderCount = ClearCardGridRowHolderCount(cardRows[rowIndex]);
             if (visibleHolderCount < 0)
-                return;
+                return true;
             visibleHolderCounts[rowIndex] = visibleHolderCount;
             if (visibleHolderCount > 0)
                 visibleRowCount++;
         }
 
         if (visibleRowCount == 0)
-            return;
+            return true;
 
         var contentHeight = visibleRowCount * cardSize.Y + (visibleRowCount - 1) * Spec.GridCardPadding;
         var shouldCenterVertically = grid.Size.Y > contentHeight;
@@ -366,6 +396,23 @@ internal static class ClearCardLayout
 
             visibleRowIndex++;
         }
+
+        return true;
+    }
+
+    private static void ScheduleDeferredGridCenter(NCardGrid grid, ClearCardGridState state)
+    {
+        if (state.DeferredCenterQueued || state.DeferredCenterAttempts >= MaxDeferredGridCenterAttempts)
+            return;
+
+        state.NeedsDeferredCenter = false;
+        state.DeferredCenterQueued = true;
+        state.DeferredCenterAttempts++;
+        Callable.From(() =>
+        {
+            state.DeferredCenterQueued = false;
+            CenterGridRows(grid);
+        }).CallDeferred();
     }
 
     public static void Apply(NCard card)
@@ -581,8 +628,7 @@ internal static class ClearCardLayout
             art.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
         ApplyBox(art, Spec.ArtBox);
         var texture = ClearCardTexture(card);
-        if (art.Texture != texture)
-            art.Texture = texture;
+        SetTextureIfDifferent(art, texture);
         var visible = art.Texture is not null;
         if (art.Visible != visible)
             art.Visible = visible;
@@ -598,8 +644,7 @@ internal static class ClearCardLayout
         if (highlight.StretchMode != TextureRect.StretchModeEnum.Scale)
             highlight.StretchMode = TextureRect.StretchModeEnum.Scale;
         var texture = ClearCardHighlightTexture();
-        if (highlight.Texture != texture)
-            highlight.Texture = texture;
+        SetTextureIfDifferent(highlight, texture);
         ApplyBox(highlight, box);
         if (highlight.ZIndex != Spec.HighlightZIndex)
             highlight.ZIndex = Spec.HighlightZIndex;
@@ -827,9 +872,13 @@ internal static class ClearCardLayout
             description.MaxFontSize = 18;
     }
 
-    private static string ClearCardDescriptionText(CardModel model, string currentText)
+    private static string ClearCardDescriptionText(CardModel model, string currentText, string? synchronizedLine = null)
     {
         var body = ClearCardDescriptionBody(model, currentText);
+        synchronizedLine ??= SakuraStateText.SynchronizedLine(model);
+        if (!string.IsNullOrEmpty(synchronizedLine))
+            body = AppendDescriptionBodyTextLine(body, synchronizedLine.TrimStart('\r', '\n'));
+
         var header = ClearCardHeaderText(model);
 
         if (body.Length == 0)
@@ -837,6 +886,11 @@ internal static class ClearCardLayout
 
         return CenterText($"{header}\n{body}");
     }
+
+    private static string AppendDescriptionBodyTextLine(string body, string line) =>
+        body.Length == 0
+            ? line
+            : $"{body}\n{line}";
 
     private static string ClearCardDescriptionBody(CardModel model, string currentText)
     {
@@ -865,7 +919,9 @@ internal static class ClearCardLayout
         while (end > start && char.IsWhiteSpace(text[end - 1]))
             end--;
 
-        if (start >= end || IsClearCardHeaderLine(model, text, start, end))
+        if (start >= end
+            || IsClearCardHeaderLine(model, text, start, end)
+            || IsSynchronizedDescriptionLine(text, start, end))
             return;
 
         if (builder.Length > 0)
@@ -1092,6 +1148,13 @@ internal static class ClearCardLayout
         return false;
     }
 
+    private static bool IsSynchronizedDescriptionLine(string text, int start, int end)
+    {
+        var visibleText = RemoveRichTextTags(text, start, end).Trim();
+        return visibleText.StartsWith("同步：", StringComparison.Ordinal)
+               || visibleText.StartsWith("Synced:", StringComparison.Ordinal);
+    }
+
     private static string RemoveRichTextTags(string text) =>
         RemoveRichTextTags(text, 0, text.Length);
 
@@ -1164,10 +1227,25 @@ internal static class ClearCardLayout
     private static Texture2D? ClearCardTexture(NCard card) =>
         ClearCardTexture(card.Model!.GetType());
 
+    private static void SetTextureIfDifferent(TextureRect textureRect, Texture2D? texture)
+    {
+        var currentTexture = textureRect.Texture;
+        if ((currentTexture is null && texture is null)
+            || (IsGodotInstanceUsable(currentTexture) && ReferenceEquals(currentTexture, texture)))
+            return;
+
+        textureRect.Texture = texture;
+    }
+
     private static Texture2D? ClearCardTexture(Type cardType)
     {
         if (ClearCardArtCache.TryGetValue(cardType, out var cachedTexture))
-            return cachedTexture;
+        {
+            if (cachedTexture is null || IsGodotInstanceUsable(cachedTexture))
+                return cachedTexture;
+
+            ClearCardArtCache.Remove(cardType);
+        }
 
         var artPath = ClearCardArtFileName(cardType).ClearCardAssetPath();
         var texture = ResourceLoader.Exists(artPath)
@@ -1179,8 +1257,8 @@ internal static class ClearCardLayout
 
     private static Texture2D ClearCardHighlightTexture()
     {
-        if (ClearCardHighlightTextureCache is not null)
-            return ClearCardHighlightTextureCache;
+        if (ClearCardHighlightTextureCache is { } cachedTexture && IsGodotInstanceUsable(cachedTexture))
+            return cachedTexture;
 
         var box = Spec.HighlightBox;
         var imageScale = Spec.HighlightTextureScale;
@@ -1681,6 +1759,7 @@ internal static class ClearCardLayout
         private bool _released;
         private bool _temporary;
         private SakuraElementSet _elements;
+        private string? _synchronizedLine;
         private string? _text;
 
         public string Text(CardModel model, string currentText)
@@ -1690,6 +1769,7 @@ internal static class ClearCardLayout
             var released = model.IsReleased();
             var temporary = model.IsTemporary();
             var elements = SakuraActions.ElementSetOf(model);
+            var synchronizedLine = SakuraStateText.SynchronizedLine(model);
 
             if (_text is not null
                 && _cardType == cardType
@@ -1697,7 +1777,8 @@ internal static class ClearCardLayout
                 && _language == language
                 && _released == released
                 && _temporary == temporary
-                && _elements == elements)
+                && _elements == elements
+                && _synchronizedLine == synchronizedLine)
                 return _text;
 
             _cardType = cardType;
@@ -1706,7 +1787,8 @@ internal static class ClearCardLayout
             _released = released;
             _temporary = temporary;
             _elements = elements;
-            _text = ClearCardLayout.ClearCardDescriptionText(model, currentText);
+            _synchronizedLine = synchronizedLine;
+            _text = ClearCardLayout.ClearCardDescriptionText(model, currentText, synchronizedLine);
             return _text;
         }
     }
@@ -1837,6 +1919,9 @@ internal static class ClearCardLayout
     private sealed class ClearCardGridState
     {
         public bool AllCardsAreClearCards { get; set; }
+        public bool NeedsDeferredCenter { get; set; }
+        public bool DeferredCenterQueued { get; set; }
+        public int DeferredCenterAttempts { get; set; }
     }
 
     private readonly record struct ClearCardLayoutContext(
@@ -1894,7 +1979,9 @@ internal static class ClearCardLayout
 
     private sealed class ClearCardLayoutSpec
     {
-        public Vector2 RootSize { get; } = new(206f, 450f);
+        private const float SizeScale = 1.05f;
+
+        public Vector2 RootSize { get; } = Scaled(new Vector2(206f, 450f));
         public Vector2 LayoutSize => RootSize;
         public Vector2 DefaultCardSize => NCard.defaultSize;
         public Vector2 DefaultCardCenteredOffset => (DefaultCardSize - RootSize) * 0.5f;
@@ -1904,48 +1991,60 @@ internal static class ClearCardLayout
         public Rect2 DefaultCardCenteredRootBox => new(DefaultCardCenteredOffset, RootSize);
         public Rect2 CenteredRootBox => new(RootSize * -0.5f + HolderVisualOffset, RootSize);
         public Rect2 ArtBox => RootBox;
-        public Vector2 HighlightMargin { get; } = new(32f, 36f);
+        public Vector2 HighlightMargin { get; } = Scaled(new Vector2(32f, 36f));
         public Rect2 HighlightBox => new(-HighlightMargin, RootSize + HighlightMargin * 2f);
         public Rect2 CenteredHighlightBox => new(CenteredRootBox.Position - HighlightMargin, HighlightBox.Size);
-        public Rect2 TitleBox { get; } = new(new Vector2(23f, 8f), new Vector2(160f, 34f));
-        public Rect2 EnglishNameBox { get; } = new(new Vector2(23f, 396f), new Vector2(160f, 30f));
-        public Rect2 DescriptionPanelBox { get; } = new(new Vector2(12f, 230f), new Vector2(182f, 156f));
-        public Rect2 DescriptionBox { get; } = new(new Vector2(20f, 238f), new Vector2(166f, 140f));
-        public Rect2 EnergyCostBox { get; } = new(new Vector2(-14f, -12f), new Vector2(56f, 56f));
-        public Rect2 EnergyCostLabelBox { get; } = new(new Vector2(12f, -2f), new Vector2(44f, 44f));
-        public Rect2 StarCostBox { get; } = new(new Vector2(174f, 16f), new Vector2(44f, 44f));
+        public Rect2 TitleBox { get; } = Scaled(new Rect2(new Vector2(23f, 8f), new Vector2(160f, 34f)));
+        public Rect2 EnglishNameBox { get; } = Scaled(new Rect2(new Vector2(23f, 396f), new Vector2(160f, 30f)));
+        public Rect2 DescriptionPanelBox { get; } = Scaled(new Rect2(new Vector2(12f, 230f), new Vector2(182f, 156f)));
+        public Rect2 DescriptionBox { get; } = Scaled(new Rect2(new Vector2(20f, 238f), new Vector2(166f, 140f)));
+        public Rect2 EnergyCostBox { get; } = Scaled(new Rect2(new Vector2(-14f, -12f), new Vector2(56f, 56f)));
+        public Rect2 EnergyCostLabelBox { get; } = Scaled(new Rect2(new Vector2(12f, -2f), new Vector2(44f, 44f)));
+        public Rect2 StarCostBox { get; } = Scaled(new Rect2(new Vector2(174f, 16f), new Vector2(44f, 44f)));
         public Vector2 DefaultGridCellSize => NCard.defaultSize * NCardHolder.smallScale;
         public Vector2 GridCellSize => new(
             Mathf.Max(DefaultGridCellSize.X, RootSize.X * NCardHolder.smallScale.X),
             Mathf.Max(DefaultGridCellSize.Y, RootSize.Y * NCardHolder.smallScale.Y));
-        public float GridCardPadding { get; } = 40f;
-        public float ClearCardGridVerticalOffset { get; } = -36f;
+        public float GridCardPadding { get; } = Scaled(40f);
+        public float ClearCardGridVerticalOffset { get; } = Scaled(-36f);
         public Color DescriptionPanelColor { get; } = new(0f, 0f, 0f, 0.72f);
         public Color DefaultNameTextColor { get; } = new(1f, 1f, 1f, 1f);
         public Color UpgradedNameTextColor => SakuraCardVisualStyle.UpgradedNameTextColor;
         public Color NameTextOutlineColor { get; } = new(0.03f, 0.03f, 0.03f, 0.95f);
         public Color TitleTextShadowColor { get; } = new(0f, 0f, 0f, 0.1882353f);
-        public float HighlightCornerRadius { get; } = 16f;
-        public float HighlightSdfRange { get; } = 240f;
+        public float HighlightCornerRadius { get; } = Scaled(16f);
+        public float HighlightSdfRange { get; } = Scaled(240f);
         public float HighlightTextureScale { get; } = 2f;
         public float StateHighlightWidth { get; } = 0.12f;
         public float StateHighlightShowDuration { get; } = 0.32f;
-        public float HandClearPairGapAdjustment { get; } = -30f;
-        public float HandMixedPairGapAdjustment { get; } = 22f;
-        public float HandMinimumAdjacentGap { get; } = 96f;
-        public float HeaderLineUnits { get; } = 14f;
-        public int TitleTextFontSize { get; } = 26;
-        public int TitleTextOutlineSize { get; } = 12;
-        public int TitleTextShadowOffset { get; } = 2;
-        public int TitleTextShadowOutlineSize { get; } = 12;
-        public int EnglishNameFontSize { get; } = 22;
-        public int NameTextOutlineSize { get; } = 3;
-        public int DescriptionPanelCornerRadius { get; } = 4;
+        public float HandClearPairGapAdjustment { get; } = Scaled(-30f);
+        public float HandMixedPairGapAdjustment { get; } = Scaled(22f);
+        public float HandMinimumAdjacentGap { get; } = Scaled(96f);
+        public float HeaderLineUnits { get; } = Scaled(14f);
+        public int TitleTextFontSize { get; } = ScaledToInt(26);
+        public int TitleTextOutlineSize { get; } = ScaledToInt(12);
+        public int TitleTextShadowOffset { get; } = ScaledToInt(2);
+        public int TitleTextShadowOutlineSize { get; } = ScaledToInt(12);
+        public int EnglishNameFontSize { get; } = ScaledToInt(22);
+        public int NameTextOutlineSize { get; } = ScaledToInt(3);
+        public int DescriptionPanelCornerRadius { get; } = ScaledToInt(4);
         public int ArtZIndex { get; } = 0;
         public int HighlightZIndex { get; } = -1;
         public int SelectionHighlightZIndex { get; } = 1;
         public int DescriptionPanelZIndex { get; } = 0;
         public int TextZIndex { get; } = 0;
+
+        private static Vector2 Scaled(Vector2 value) =>
+            value * SizeScale;
+
+        private static Rect2 Scaled(Rect2 value) =>
+            new(value.Position * SizeScale, value.Size * SizeScale);
+
+        private static float Scaled(float value) =>
+            value * SizeScale;
+
+        private static int ScaledToInt(int value) =>
+            Mathf.RoundToInt(value * SizeScale);
     }
 
     private readonly record struct SizeSnapshot(
@@ -1986,7 +2085,7 @@ internal static class ClearCardLayout
         ThemeFontSizeSnapshot FontSize,
         TextureRect.ExpandModeEnum? TextureExpandMode,
         TextureRect.StretchModeEnum? TextureStretchMode,
-        Texture2D? Texture)
+        TextureSnapshot? Texture)
     {
         public static ControlSnapshot Capture(Control control) =>
             new(
@@ -2008,7 +2107,9 @@ internal static class ClearCardLayout
                 ThemeFontSizeSnapshot.Capture(control, FontSizeName),
                 (control as TextureRect)?.ExpandMode,
                 (control as TextureRect)?.StretchMode,
-                (control as TextureRect)?.Texture);
+                control is TextureRect textureRect
+                    ? TextureSnapshot.Capture(textureRect.Texture)
+                    : null);
 
         public void Restore(Control control)
         {
@@ -2046,9 +2147,34 @@ internal static class ClearCardLayout
                     textureRect.ExpandMode = TextureExpandMode.Value;
                 if (textureRect.StretchMode != TextureStretchMode.Value)
                     textureRect.StretchMode = TextureStretchMode.Value;
-                if (textureRect.Texture != Texture)
-                    textureRect.Texture = Texture;
+                Texture?.Restore(textureRect);
             }
+        }
+    }
+
+    private readonly record struct TextureSnapshot(Texture2D? Texture, string? ResourcePath)
+    {
+        public static TextureSnapshot Capture(Texture2D? texture)
+        {
+            if (texture is null || !IsGodotInstanceUsable(texture))
+                return new TextureSnapshot(null, null);
+
+            return new TextureSnapshot(texture, texture.ResourcePath);
+        }
+
+        public void Restore(TextureRect textureRect)
+        {
+            SetTextureIfDifferent(textureRect, ResolveTexture());
+        }
+
+        private Texture2D? ResolveTexture()
+        {
+            if (IsGodotInstanceUsable(Texture))
+                return Texture;
+            if (!string.IsNullOrEmpty(ResourcePath) && ResourceLoader.Exists(ResourcePath))
+                return ResourceLoader.Load<Texture2D>(ResourcePath);
+
+            return null;
         }
     }
 

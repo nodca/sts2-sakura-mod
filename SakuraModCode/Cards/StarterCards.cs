@@ -12,7 +12,12 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class Gale() : SakuraModCard(1, CardType.Attack, CardRarity.Basic, TargetType.AnyEnemy), IReleaseable
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(6, ValueProp.Move), new CardsVar(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DamageVar(6, ValueProp.Move),
+        new DamageVar("ReleaseDamage", 4, ValueProp.Move),
+        new CardsVar("ReleaseDraw", 1)
+    ];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -25,8 +30,9 @@ public class Gale() : SakuraModCard(1, CardType.Attack, CardRarity.Basic, Target
     {
         var target = play.Target ?? CombatState?.HittableEnemies.FirstOrDefault();
         if (target is not null)
-            await SakuraActions.Attack(choiceContext, this, target, 6);
-        await CardPileCmd.Draw(choiceContext, 1, Owner, false);
+            await SakuraActions.Attack(choiceContext, this, target, DynamicVars["ReleaseDamage"].IntValue);
+
+        await CardPileCmd.Draw(choiceContext, DynamicVars["ReleaseDraw"].IntValue, Owner, false);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
@@ -54,10 +60,10 @@ public class Reflect() : SakuraModCard(1, CardType.Skill, CardRarity.Common, Tar
     protected override void OnUpgrade() {}
 }
 
-public class Flight() : SakuraModCard(1, CardType.Skill, CardRarity.Basic, TargetType.Self), IReleaseable
+public class Flight() : SakuraModCard(1, CardType.Skill, CardRarity.Common, TargetType.Self), IReleaseable
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(4, ValueProp.Move), new PowerVar<SakuraTemporaryDexterityPower>(2), new EnergyVar(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(4, ValueProp.Move), new PowerVar<SakuraTemporaryDexterityPower>(1), new EnergyVar(1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -72,7 +78,6 @@ public class Flight() : SakuraModCard(1, CardType.Skill, CardRarity.Basic, Targe
     protected override void OnUpgrade()
     {
         DynamicVars.Block.UpgradeValueBy(2);
-        DynamicVars["SakuraTemporaryDexterityPower"].UpgradeValueBy(1);
     }
 }
 

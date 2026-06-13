@@ -88,8 +88,8 @@ internal static class SakuraStarterRelicEffects
 
         var cards = new CardModel[]
         {
-            owner.RunState.CreateCard<Gale>(owner),
-            owner.RunState.CreateCard<Siege>(owner)
+            owner.RunState.CreateCard<KeroAdvice>(owner),
+            owner.RunState.CreateCard<KeroSnackBreak>(owner)
         };
         var results = await CardPileCmd.Add(cards, PileType.Deck);
         CardCmd.PreviewCardPileAdd(results, 2f);
@@ -107,12 +107,26 @@ internal static class SakuraStarterRelicEffects
             await CardCmd.Transform(transformations, owner.PlayerRng.Transformations);
     }
 
+    public static CardTransformation CreateSupportTransformation(Player owner, CardModel source) =>
+        new(source, CreateRandomSupportCard(owner));
+
     private static void AddFirstStarterTransformation<T>(Player owner, ICollection<CardTransformation> transformations)
         where T : CardModel
     {
         var card = owner.Deck.Cards.FirstOrDefault(card =>
             SakuraStarterCards.IsStarterCard<T>(card) && card.IsTransformable);
         if (card is not null)
-            transformations.Add(new CardTransformation(card));
+            transformations.Add(CreateSupportTransformation(owner, card));
+    }
+
+    private static CardModel CreateRandomSupportCard(Player owner)
+    {
+        var supportTemplates = SakuraActions.RewardableSupportCardTemplates(owner);
+        if (supportTemplates.Count == 0)
+            throw new InvalidOperationException("Cannot transform Sakura starter card: support card pool is empty.");
+
+        var template = owner.PlayerRng.Transformations.NextItem(supportTemplates)
+            ?? throw new InvalidOperationException("Cannot transform Sakura starter card: support card selection failed.");
+        return owner.RunState.CreateCard(template, owner);
     }
 }

@@ -47,7 +47,7 @@ public class TrueOrFalseDrawChoice() : SakuraOptionCard(CardType.Skill)
 
 public class TrueOrFalseEnergyChoice() : SakuraOptionCard(CardType.Skill)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(1)];
 
     protected override void OnUpgrade() => DynamicVars.Energy.UpgradeValueBy(1);
 }

@@ -45,7 +45,7 @@ public class SakuraMod : PlaceholderCharacterModel
         ModelDb.Card<Siege>(),
         ModelDb.Card<Siege>(),
         ModelDb.Card<Siege>(),
-        ModelDb.Card<Flight>(),
+        ModelDb.Card<Stabilize>(),
         ModelDb.Card<DreamWand>()
     ];
 
