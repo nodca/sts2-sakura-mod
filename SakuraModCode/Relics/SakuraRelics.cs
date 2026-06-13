@@ -139,7 +139,7 @@ public class KeroCharm : SakuraModRelic
             return;
 
         _usedThisCombat = true;
-        var advice = Owner.RunState.CreateCard<KeroAdvice>(Owner);
+        var advice = combatState.CreateCard<KeroAdvice>(Owner);
         await SakuraActions.AddGeneratedCardToCombat(
             advice,
             new SakuraActions.GeneratedCardOptions

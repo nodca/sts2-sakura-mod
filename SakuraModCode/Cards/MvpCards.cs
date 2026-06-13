@@ -280,7 +280,7 @@ public class DreamCompass() : SakuraModCard(1, CardType.Skill, CardRarity.Uncomm
 
 public class Stabilize() : SakuraModCard(0, CardType.Skill, CardRarity.Basic, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Stabilize];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Stabilize, CardKeyword.Innate];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {

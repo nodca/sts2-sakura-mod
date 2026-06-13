@@ -7,6 +7,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 internal static class SakuraCardFrameVisuals
 {
     private const string DefaultPortraitFileName = "card.png";
+    private const string DreamKeyGlowPortraitFileName = "dream_key_glow.png";
     private const string DreamWandPortraitFileName = "dream_wand.png";
     private const string SyaoranBondPortraitFileName = "syaoran_bond.png";
     private static readonly Dictionary<string, Texture2D?> PortraitTextureCache = [];
@@ -63,6 +64,7 @@ internal static class SakuraCardFrameVisuals
     private static string PortraitFileName(CardModel card) =>
         card switch
         {
+            DreamKeyGlow => DreamKeyGlowPortraitFileName,
             DreamWand => DreamWandPortraitFileName,
             SyaoranBond => SyaoranBondPortraitFileName,
             _ => DefaultPortraitFileName

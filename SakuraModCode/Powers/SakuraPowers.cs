@@ -919,21 +919,6 @@ public class DreamingPower : SakuraModPower
     }
 }
 
-public class SakuraRegenerationPower : SakuraModPower
-{
-    public override PowerType Type => PowerType.Buff;
-    public override PowerStackType StackType => PowerStackType.Counter;
-
-    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, MegaCrit.Sts2.Core.Entities.Players.Player player)
-    {
-        if (player.Creature != Owner || Amount <= 0)
-            return;
-
-        await CreatureCmd.Heal(Owner, Amount);
-        await PowerCmd.Decrement(this);
-    }
-}
-
 public class GravitationHoldPower : SakuraModPower
 {
     private readonly HashSet<CardModel> _returnedCards = [];

@@ -8,7 +8,7 @@
   "SAKURAMOD-EARTH.title": "Earth",
   "SAKURAMOD-EARTH.description": "Element. Syaoran Talisman gains 5 Block for each Earth card played this turn.",
   "SAKURAMOD-STABILIZE.title": "Stabilize",
-  "SAKURAMOD-STABILIZE.description": "Remove Temporary from 1 card in your hand or discard pile.",
+  "SAKURAMOD-STABILIZE.description": "Remove Temporary from 1 card in your hand or discard pile. The first Transparent Card Stabilized each combat is added to card rewards.",
   "SAKURAMOD-CATALOG.title": "Catalog",
   "SAKURAMOD-CATALOG.description": "The different Transparent Card types you have played this combat.",
   "SAKURAMOD-BURN.title": "Burn",

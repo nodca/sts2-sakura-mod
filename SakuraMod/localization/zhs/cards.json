@@ -89,7 +89,7 @@
   "SAKURAMOD-LABYRINTH.title": "迷宫",
   "SAKURAMOD-LABYRINTH.description": "击晕 1 名敌人。\n[gold]解封：[/gold]改为击晕所有敌人。",
   "SAKURAMOD-REPAIR.title": "修复",
-  "SAKURAMOD-REPAIR.description": "获得 {SakuraRegenerationPower:diff()} 层[gold]恢复[/gold]。\n[gold]解封：[/gold]将消耗堆中的 1 张透明牌放到抽牌堆顶部。",
+  "SAKURAMOD-REPAIR.description": "获得 {RegenPower:diff()} 层[gold]再生[/gold]。\n[gold]解封：[/gold]将消耗堆中的 1 张透明牌放到抽牌堆顶部。",
   "SAKURAMOD-REVERSAL.title": "逆转",
   "SAKURAMOD-REVERSAL.description": "交换你的抽牌堆和弃牌堆。抽 {Cards:diff()} 张牌。\n[gold]解封：[/gold]额外抽 {ReleaseDraw:diff()} 张牌。",
   "SAKURAMOD-REWIND.title": "倒流",

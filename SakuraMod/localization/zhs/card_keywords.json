@@ -8,7 +8,7 @@
   "SAKURAMOD-EARTH.title": "地",
   "SAKURAMOD-EARTH.description": "元素。小狼的符咒会为本回合打出过的每张地牌获得 5 点格挡。",
   "SAKURAMOD-STABILIZE.title": "固着",
-  "SAKURAMOD-STABILIZE.description": "移除手牌或弃牌堆中 1 张牌的临时。",
+  "SAKURAMOD-STABILIZE.description": "移除手牌或弃牌堆中 1 张牌的临时。本场战斗第一张被固着的透明牌会加入卡牌奖励。",
   "SAKURAMOD-CATALOG.title": "图鉴",
   "SAKURAMOD-CATALOG.description": "本场战斗中你打出过的不同透明牌种类。",
   "SAKURAMOD-BURN.title": "灼烧",

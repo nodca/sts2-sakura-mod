@@ -89,7 +89,7 @@
   "SAKURAMOD-LABYRINTH.title": "Labyrinth",
   "SAKURAMOD-LABYRINTH.description": "Stun 1 enemy.\n[gold]Release:[/gold] Stun ALL enemies instead.",
   "SAKURAMOD-REPAIR.title": "Repair",
-  "SAKURAMOD-REPAIR.description": "Gain {SakuraRegenerationPower:diff()} [gold]Regeneration[/gold].\n[gold]Release:[/gold] Put an exhausted Clear Card on top of your draw pile.",
+  "SAKURAMOD-REPAIR.description": "Gain {RegenPower:diff()} [gold]Regeneration[/gold].\n[gold]Release:[/gold] Put an exhausted Clear Card on top of your draw pile.",
   "SAKURAMOD-REVERSAL.title": "Reversal",
   "SAKURAMOD-REVERSAL.description": "Exchange your draw pile and discard pile. Draw {Cards:diff()} card.\n[gold]Release:[/gold] Draw {ReleaseDraw:diff()} additional card(s).",
   "SAKURAMOD-REWIND.title": "Rewind",

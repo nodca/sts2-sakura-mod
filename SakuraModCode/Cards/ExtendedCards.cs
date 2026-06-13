@@ -240,11 +240,11 @@ public class Labyrinth() : SakuraModCard(2, CardType.Skill, CardRarity.Rare, Tar
 public class Repair() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self), IReleaseable
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<SakuraRegenerationPower>(4)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<RegenPower>(4)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await PowerCmd.Apply<SakuraRegenerationPower>(Owner.Creature, DynamicVars["SakuraRegenerationPower"].IntValue, Owner.Creature, this, false);
+        await PowerCmd.Apply<RegenPower>(Owner.Creature, DynamicVars["RegenPower"].IntValue, Owner.Creature, this, false);
         await TriggerReleaseEffect(choiceContext, play);
     }
 
@@ -255,7 +255,7 @@ public class Repair() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Ta
             await CardPileCmd.Add(card, PileType.Draw, CardPilePosition.Top, this, true);
     }
 
-    protected override void OnUpgrade() => DynamicVars["SakuraRegenerationPower"].UpgradeValueBy(1);
+    protected override void OnUpgrade() => DynamicVars["RegenPower"].UpgradeValueBy(1);
 }
 
 public class Reversal() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self), IReleaseable
@@ -1200,13 +1200,13 @@ public class Blank() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Tar
 
     public async Task OnReleased(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        foreach (var power in Owner.Creature.Powers.Where(power => power.Type == PowerType.Debuff).ToList())
+        foreach (var power in Owner.Creature.Powers.Where(IsOwnNegativePower).ToList())
             await PowerCmd.Remove(power);
 
         foreach (var enemy in CombatState!.Enemies)
         {
             foreach (var power in enemy.Powers
-                         .Where(power => power.Amount > 0 && power is StrengthPower or DexterityPower or ArtifactPower)
+                         .Where(IsEnemyPositivePower)
                          .ToList())
                 await PowerCmd.Remove(power);
         }
@@ -1214,6 +1214,13 @@ public class Blank() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Tar
         if (_removedCardsThisPlay > 0)
             await CardPileCmd.Draw(choiceContext, _removedCardsThisPlay, Owner, false);
     }
+
+    private static bool IsOwnNegativePower(PowerModel power) =>
+        power.Type == PowerType.Debuff
+        || power.Amount < 0 && power is StrengthPower or DexterityPower;
+
+    private static bool IsEnemyPositivePower(PowerModel power) =>
+        power.Amount > 0 && power is StrengthPower or DexterityPower or ArtifactPower;
 
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
