@@ -19,6 +19,7 @@ public abstract class SakuraOptionCard(CardType type) :
     public override string BetaPortraitPath => SakuraCardFrameVisuals.PortraitPath(this);
     public override Texture2D? CustomFrame => SakuraCardFrameVisuals.CustomFrameTexture(this);
     public override Material? CreateCustomFrameMaterial => SakuraCardFrameVisuals.PlainFrameMaterial;
+    protected override IEnumerable<string> ExtraRunAssetPaths => SakuraCardFrameVisuals.RunAssetPaths(this);
 
     protected override Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
         Task.CompletedTask;
@@ -50,4 +51,12 @@ public class TrueOrFalseEnergyChoice() : SakuraOptionCard(CardType.Skill)
     protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(1)];
 
     protected override void OnUpgrade() => DynamicVars.Energy.UpgradeValueBy(1);
+}
+
+public class SealedBookSealChoice() : SakuraOptionCard(CardType.Skill)
+{
+}
+
+public class SealedBookReleaseChoice() : SakuraOptionCard(CardType.Skill)
+{
 }

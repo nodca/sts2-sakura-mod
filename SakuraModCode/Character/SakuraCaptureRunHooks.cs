@@ -1,14 +1,12 @@
-using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Modding;
+using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using SakuraMod.SakuraModCode.Cards;
-using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -37,8 +35,6 @@ internal static class SakuraCaptureRunHooks
 
 internal sealed class SakuraCaptureHook : AbstractModel
 {
-    private static readonly ConditionalWeakTable<CombatState, HashSet<Player>> RareAtlasManifestedByCombat = new();
-
     public override bool ShouldReceiveCombatHooks => true;
 
     public override IEnumerable<CardModel> ModifyMerchantCardPool(Player player, IEnumerable<CardModel> options)
@@ -63,27 +59,32 @@ internal sealed class SakuraCaptureHook : AbstractModel
         return changed;
     }
 
-    public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, CombatState combatState)
-    {
-        if (!ShouldUseCaptureRules(player)
-            || combatState.RoundNumber != 1
-            || !IsRareAtlasRoom(combatState))
-            return;
-
-        var players = RareAtlasManifestedByCombat.GetValue(combatState, _ => []);
-        if (!players.Add(player))
-            return;
-
-        await SakuraActions.ManifestRareAtlas(player, choiceContext);
-    }
-
     public override Task AfterCombatVictory(CombatRoom room)
     {
         if (!SakuraCaptureRules.CaptureModeEnabled)
             return Task.CompletedTask;
 
         foreach (var player in room.CombatState.Players.Where(SakuraStarterCards.IsSakura))
-            SakuraActions.PrepareCaptureCandidatesForReward(player, room.CombatState);
+        {
+            SakuraManifestLoop.ClearOfferedPendingCaptureCandidates(player);
+            SakuraManifestLoop.PrepareCaptureCandidatesForReward(player, room.CombatState);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public override Task BeforeRewardsOffered(Player player, IReadOnlyList<Reward> rewards)
+    {
+        if (ShouldUseCaptureRules(player))
+            SakuraManifestLoop.RememberPendingCaptureRewardOffers(player, rewards);
+
+        return Task.CompletedTask;
+    }
+
+    public override Task AfterRewardTaken(Player player, Reward reward)
+    {
+        if (ShouldUseCaptureRules(player))
+            SakuraManifestLoop.ClearPendingCaptureCandidatesForReward(player, reward);
 
         return Task.CompletedTask;
     }
@@ -122,17 +123,15 @@ internal sealed class SakuraCaptureHook : AbstractModel
     {
         var existingTypes = options.Select(option => option.Card.GetType()).ToHashSet();
         var changed = false;
-        foreach (var type in SakuraActions.CaptureCandidateTypes(player))
+        foreach (var type in SakuraManifestLoop.CaptureCandidateTypes(player))
         {
             if (!existingTypes.Add(type))
                 continue;
 
-            options.Add(new CardCreationResult(SakuraActions.CreateCleanClearCard(player, type)));
+            options.Add(new CardCreationResult(SakuraManifestLoop.CreateCleanClearCard(player, type)));
             changed = true;
         }
 
-        if (changed)
-            SakuraActions.ClearPendingCaptureCandidates(player);
         return changed;
     }
 
@@ -189,7 +188,4 @@ internal sealed class SakuraCaptureHook : AbstractModel
         while (card.CurrentUpgradeLevel < upgradeLevel && card.IsUpgradable)
             CardCmd.Upgrade(card);
     }
-
-    private static bool IsRareAtlasRoom(CombatState combatState) =>
-        combatState.Encounter?.RoomType is RoomType.Elite or RoomType.Boss;
 }

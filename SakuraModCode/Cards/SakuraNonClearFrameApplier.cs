@@ -14,6 +14,11 @@ internal static class SakuraNonClearFrameApplier
 {
     private static readonly FieldInfo? TitleLabelField = AccessTools.Field(typeof(NCard), "_titleLabel");
     private static readonly FieldInfo? DescriptionLabelField = AccessTools.Field(typeof(NCard), "_descriptionLabel");
+    private static readonly FieldInfo? AncientPortraitField = AccessTools.Field(typeof(NCard), "_ancientPortrait");
+    private static readonly FieldInfo? AncientBorderField = AccessTools.Field(typeof(NCard), "_ancientBorder");
+    private static readonly FieldInfo? AncientBannerField = AccessTools.Field(typeof(NCard), "_ancientBanner");
+    private static readonly FieldInfo? AncientTextBgField = AccessTools.Field(typeof(NCard), "_ancientTextBg");
+    private static readonly FieldInfo? AncientHighlightField = AccessTools.Field(typeof(NCard), "_ancientHighlight");
     private static readonly FieldInfo? PortraitField = AccessTools.Field(typeof(NCard), "_portrait");
     private static readonly FieldInfo? FrameField = AccessTools.Field(typeof(NCard), "_frame");
     private static readonly FieldInfo? PortraitBorderField = AccessTools.Field(typeof(NCard), "_portraitBorder");
@@ -58,7 +63,8 @@ internal static class SakuraNonClearFrameApplier
     public static bool IsSakuraNonClearCard(NCard? card) =>
         card?.Model is { } model
         && model is SakuraModCard or SakuraOptionCard
-        && !SakuraActions.IsClearCard(model);
+        && !SakuraActions.IsClearCard(model)
+        && model.Rarity != CardRarity.Ancient;
 
     public static void Apply(NCard card)
     {
@@ -100,6 +106,7 @@ internal static class SakuraNonClearFrameApplier
 
         var isAncient = model.Rarity == CardRarity.Ancient;
         RestoreCurrentModelPortrait(card, model, isAncient);
+        RestoreCurrentModelAncientVisuals(card, model, isAncient);
         RestoreCurrentModelFrame(card, model, isAncient);
         RestoreCurrentModelBanner(card, model, isAncient);
         RestoreCurrentModelTypePlaque(card, model);
@@ -111,8 +118,8 @@ internal static class SakuraNonClearFrameApplier
         {
             if (portrait.Visible == isAncient)
                 portrait.Visible = !isAncient;
-            if (!isAncient && portrait.Texture != model.Portrait)
-                portrait.Texture = model.Portrait;
+            if (!isAncient)
+                SetTextureIfDifferent(portrait, model.Portrait);
         }
 
         if (FieldValue<TextureRect>(PortraitBorderField, card) is not { } border || !IsGodotInstanceUsable(border))
@@ -123,10 +130,38 @@ internal static class SakuraNonClearFrameApplier
         if (isAncient)
             return;
 
-        if (border.Texture != model.PortraitBorder)
-            border.Texture = model.PortraitBorder;
+        SetTextureIfDifferent(border, model.PortraitBorder);
         if (border.Material != model.BannerMaterial)
             border.Material = model.BannerMaterial;
+    }
+
+    private static void RestoreCurrentModelAncientVisuals(NCard card, CardModel model, bool isAncient)
+    {
+        RestoreAncientTexture(FieldValue<TextureRect>(AncientPortraitField, card), isAncient, isAncient ? model.Portrait : null);
+        RestoreAncientTexture(FieldValue<TextureRect>(AncientTextBgField, card), isAncient, isAncient ? model.AncientTextBg : null);
+        RestoreAncientCanvasItem(FieldValue<CanvasItem>(AncientBorderField, card), isAncient);
+        RestoreAncientCanvasItem(FieldValue<CanvasItem>(AncientBannerField, card), isAncient);
+        RestoreAncientCanvasItem(FieldValue<CanvasItem>(AncientHighlightField, card), isAncient);
+    }
+
+    private static void RestoreAncientTexture(TextureRect? item, bool isAncient, Texture2D? texture)
+    {
+        if (item is null || !IsGodotInstanceUsable(item))
+            return;
+
+        if (item.Visible != isAncient)
+            item.Visible = isAncient;
+        if (isAncient)
+            SetTextureIfDifferent(item, texture);
+    }
+
+    private static void RestoreAncientCanvasItem(CanvasItem? item, bool isAncient)
+    {
+        if (item is null || !IsGodotInstanceUsable(item))
+            return;
+
+        if (item.Visible != isAncient)
+            item.Visible = isAncient;
     }
 
     private static void RestoreCurrentModelFrame(NCard card, CardModel model, bool isAncient)
@@ -136,8 +171,8 @@ internal static class SakuraNonClearFrameApplier
 
         if (frame.Visible == isAncient)
             frame.Visible = !isAncient;
-        if (!isAncient && frame.Texture != model.Frame)
-            frame.Texture = model.Frame;
+        if (!isAncient)
+            SetTextureIfDifferent(frame, model.Frame);
         if (frame.Material != model.FrameMaterial)
             frame.Material = model.FrameMaterial;
     }
@@ -156,8 +191,7 @@ internal static class SakuraNonClearFrameApplier
             return;
         }
 
-        if (banner.Texture != model.BannerTexture)
-            banner.Texture = model.BannerTexture;
+        SetTextureIfDifferent(banner, model.BannerTexture);
         if (banner.Material != model.BannerMaterial)
             banner.Material = model.BannerMaterial;
     }
@@ -168,8 +202,7 @@ internal static class SakuraNonClearFrameApplier
             return;
 
         var vanillaTexture = VanillaTypePlaqueTexture(plaque);
-        if (plaque.Texture != vanillaTexture)
-            plaque.Texture = vanillaTexture;
+        SetTextureIfDifferent(plaque, vanillaTexture);
         if (plaque.Material != model.BannerMaterial)
             plaque.Material = model.BannerMaterial;
     }
@@ -192,9 +225,9 @@ internal static class SakuraNonClearFrameApplier
 
         if (FieldValue<TextureRect>(PortraitField, card) is { } portrait
             && SakuraCardFrameVisuals.PortraitTexture(model) is { } portraitTexture
-            && portrait.Texture != portraitTexture)
+            && !HasTexture(portrait, portraitTexture))
         {
-            portrait.Texture = portraitTexture;
+            SetTextureIfDifferent(portrait, portraitTexture);
         }
 
         ApplyFrameTexture(
@@ -226,8 +259,7 @@ internal static class SakuraNonClearFrameApplier
 
         if (!item.Visible)
             item.Visible = true;
-        if (item.Texture != texture)
-            item.Texture = texture;
+        SetTextureIfDifferent(item, texture);
         if (item.Material != material)
             item.Material = material;
     }
@@ -238,8 +270,7 @@ internal static class SakuraNonClearFrameApplier
             return;
 
         _ = VanillaTypePlaqueTexture(item);
-        if (item.Texture != texture)
-            item.Texture = texture;
+        SetTextureIfDifferent(item, texture);
         if (item.Material is not null)
             item.Material = null;
     }
@@ -295,10 +326,91 @@ internal static class SakuraNonClearFrameApplier
         where T : class =>
         field?.GetValue(instance) as T;
 
-    private static bool IsGodotInstanceUsable(GodotObject? instance) =>
-        instance is not null
-        && GodotObject.IsInstanceValid(instance)
-        && (instance is not Node node || !node.IsQueuedForDeletion());
+    private static bool IsGodotInstanceUsable(GodotObject? instance)
+    {
+        try
+        {
+            return instance is not null
+                && GodotObject.IsInstanceValid(instance)
+                && (instance is not Node node || !node.IsQueuedForDeletion());
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
+    }
+
+    private static bool HasTexture(TextureRect item, Texture2D? texture) =>
+        TryGetTexture(item, out var currentTexture)
+        && ((currentTexture is null && texture is null)
+            || (IsGodotInstanceUsable(currentTexture) && ReferenceEquals(currentTexture, texture)));
+
+    private static void SetTextureIfDifferent(TextureRect item, Texture2D? texture)
+    {
+        if (texture is not null && !IsGodotInstanceUsable(texture))
+            return;
+        if (HasTexture(item, texture))
+            return;
+
+        try
+        {
+            item.Texture = texture;
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+    }
+
+    private static bool HasTexture(NinePatchRect item, Texture2D? texture) =>
+        TryGetTexture(item, out var currentTexture)
+        && ((currentTexture is null && texture is null)
+            || (IsGodotInstanceUsable(currentTexture) && ReferenceEquals(currentTexture, texture)));
+
+    private static void SetTextureIfDifferent(NinePatchRect item, Texture2D? texture)
+    {
+        if (texture is not null && !IsGodotInstanceUsable(texture))
+            return;
+        if (HasTexture(item, texture))
+            return;
+
+        try
+        {
+            item.Texture = texture;
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+    }
+
+    private static bool TryGetTexture(TextureRect item, out Texture2D? texture)
+    {
+        try
+        {
+            texture = item.Texture;
+            return true;
+        }
+        catch (ObjectDisposedException)
+        {
+            texture = null;
+            return false;
+        }
+    }
+
+    private static bool TryGetTexture(NinePatchRect item, out Texture2D? texture)
+    {
+        try
+        {
+            texture = item.Texture;
+            return true;
+        }
+        catch (ObjectDisposedException)
+        {
+            texture = null;
+            return false;
+        }
+    }
 
     private static void ApplyThemeColorOverride(Control? control, StringName name, Color color)
     {
@@ -335,7 +447,9 @@ internal static class SakuraNonClearFrameApplier
     }
 
     private static Texture2D? VanillaTypePlaqueTexture(NinePatchRect plaque) =>
-        TypePlaqueTextureStates.GetValue(plaque, static item => new TypePlaqueTextureState(item.Texture)).Texture;
+        TypePlaqueTextureStates.GetValue(
+            plaque,
+            static item => new TypePlaqueTextureState(TryGetTexture(item, out var texture) ? texture : null)).Texture;
 
     private static Texture2D SakuraNonClearHighlightTexture(Vector2 controlSize)
     {
@@ -344,7 +458,12 @@ internal static class SakuraNonClearFrameApplier
             Mathf.Max(controlSize.Y, NCard.defaultSize.Y));
         var cacheKey = new Vector2I(Mathf.RoundToInt(textureSize.X), Mathf.RoundToInt(textureSize.Y));
         if (SakuraNonClearHighlightTextureCache.TryGetValue(cacheKey, out var cachedTexture))
-            return cachedTexture;
+        {
+            if (IsGodotInstanceUsable(cachedTexture))
+                return cachedTexture;
+
+            SakuraNonClearHighlightTextureCache.Remove(cacheKey);
+        }
 
         var width = Mathf.CeilToInt(textureSize.X * HighlightTextureScale);
         var height = Mathf.CeilToInt(textureSize.Y * HighlightTextureScale);
@@ -469,8 +588,7 @@ internal static class SakuraNonClearFrameApplier
                 return;
 
             Capture(highlight);
-            if (highlight.Texture != texture)
-                highlight.Texture = texture;
+            SetTextureIfDifferent(highlight, texture);
             if (highlight.ExpandMode != TextureRect.ExpandModeEnum.IgnoreSize)
                 highlight.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
             if (highlight.StretchMode != TextureRect.StretchModeEnum.Scale)
@@ -490,8 +608,7 @@ internal static class SakuraNonClearFrameApplier
                 return;
             }
 
-            if (_highlight.Texture != _texture)
-                _highlight.Texture = _texture;
+            SetTextureIfDifferent(_highlight, _texture);
             if (_expandMode is { } expandMode && _highlight.ExpandMode != expandMode)
                 _highlight.ExpandMode = expandMode;
             if (_stretchMode is { } stretchMode && _highlight.StretchMode != stretchMode)
@@ -509,7 +626,7 @@ internal static class SakuraNonClearFrameApplier
 
             Restore();
             _highlight = highlight;
-            _texture = highlight.Texture;
+            _texture = TryGetTexture(highlight, out var texture) ? texture : null;
             _expandMode = highlight.ExpandMode;
             _stretchMode = highlight.StretchMode;
             _mouseFilter = highlight.MouseFilter;

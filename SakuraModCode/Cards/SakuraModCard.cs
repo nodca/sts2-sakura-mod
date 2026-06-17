@@ -39,7 +39,8 @@ public abstract class SakuraModCard(int cost, CardType type, CardRarity rarity, 
     public override string PortraitPath => SakuraCardFrameVisuals.PortraitPath(this);
     public override string BetaPortraitPath => SakuraCardFrameVisuals.PortraitPath(this);
     public override Texture2D? CustomFrame => SakuraCardFrameVisuals.CustomFrameTexture(this);
-    public override Material? CreateCustomFrameMaterial => SakuraCardFrameVisuals.PlainFrameMaterial;
+    public override Material? CreateCustomFrameMaterial => SakuraCardFrameVisuals.CustomFrameMaterial(this);
+    protected override IEnumerable<string> ExtraRunAssetPaths => SakuraCardFrameVisuals.RunAssetPaths(this);
 
     protected bool ShouldRelease => this.IsReleased();
 
@@ -53,7 +54,7 @@ public abstract class SakuraModCard(int cost, CardType type, CardRarity rarity, 
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await SakuraActions.RememberCatalogCard(choiceContext, play);
+        await SakuraManifestLoop.RememberCatalogCard(choiceContext, play);
         await SakuraActions.RememberPlayedElements(play);
     }
 

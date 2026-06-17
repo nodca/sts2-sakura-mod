@@ -142,7 +142,7 @@ public class KeroCharm : SakuraModRelic
         var advice = combatState.CreateCard<KeroAdvice>(Owner);
         await SakuraActions.AddGeneratedCardToCombat(
             advice,
-            new SakuraActions.GeneratedCardOptions
+            new GeneratedCardOptions
             {
                 AddTemporary = true
             },
@@ -188,6 +188,9 @@ public class YueMagicCrystal : SakuraModRelic
 public class BaguaCompass : SakuraModRelic
 {
     public override RelicRarity Rarity => RelicRarity.Uncommon;
+    public override string PackedIconPath => "bagua_compass.png".RelicImagePath();
+    protected override string PackedIconOutlinePath => "bagua_compass_outline.png".RelicImagePath();
+    protected override string BigIconPath => "bagua_compass.png".BigRelicImagePath();
 
     private bool _usedThisTurn;
 
@@ -283,6 +286,9 @@ public class ClearCardCase : SakuraModRelic
 public class SakuraIntuition : SakuraModRelic
 {
     public override RelicRarity Rarity => RelicRarity.Rare;
+    public override string PackedIconPath => "sakura_intuition.png".RelicImagePath();
+    protected override string PackedIconOutlinePath => "sakura_intuition_outline.png".RelicImagePath();
+    protected override string BigIconPath => "sakura_intuition.png".BigRelicImagePath();
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [new IntVar("Choices", 1)];
 
@@ -296,6 +302,9 @@ public class DreamKeyTrueForm : SakuraModRelic
 
     public override RelicRarity Rarity => RelicRarity.Ancient;
     public override bool IsAllowedInShops => false;
+    public override string PackedIconPath => "dream_key.png".RelicImagePath();
+    protected override string PackedIconOutlinePath => "dream_key_outline.png".RelicImagePath();
+    protected override string BigIconPath => "dream_key.png".BigRelicImagePath();
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2)];
 
@@ -324,7 +333,11 @@ public class DreamKeyTrueForm : SakuraModRelic
         {
             var source = Owner.Deck.Cards.OfType<SakuraModCard>().FirstOrDefault();
             if (source is not null)
-                await SakuraActions.Manifest(source, choiceContext, 2);
+                await SakuraActions.Manifest(
+                    source,
+                    choiceContext,
+                    2,
+                    rareAtlasChoices: DreamKey.OpeningRareAtlasChoices(combatState));
 
             OpeningManifestCompleted[this] = true;
         }
@@ -346,6 +359,9 @@ public class KaitoPocketWatch : SakuraModRelic
 {
     public override RelicRarity Rarity => RelicRarity.Ancient;
     public override bool IsAllowedInShops => false;
+    public override string PackedIconPath => "kaito_pocket_watch.png".RelicImagePath();
+    protected override string PackedIconOutlinePath => "kaito_pocket_watch_outline.png".RelicImagePath();
+    protected override string BigIconPath => "kaito_pocket_watch.png".BigRelicImagePath();
 
     public override Task AfterObtained()
     {
@@ -425,4 +441,7 @@ public class NamelessBookTruth : SakuraModRelic
 {
     public override RelicRarity Rarity => RelicRarity.Ancient;
     public override bool IsAllowedInShops => false;
+    public override string PackedIconPath => "nameless_book_truth.png".RelicImagePath();
+    protected override string PackedIconOutlinePath => "nameless_book_truth_outline.png".RelicImagePath();
+    protected override string BigIconPath => "nameless_book_truth.png".BigRelicImagePath();
 }

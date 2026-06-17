@@ -3,6 +3,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.Relics;
 
 namespace SakuraMod.SakuraModCode;
 
@@ -18,6 +19,10 @@ public partial class MainFile : Node
     {
         //If you want to use scripts defined in your mod for Godot scenes, uncomment the following line.
         //Godot.Bridge.ScriptManagerBridge.LookupScriptsInAssembly(Assembly.GetExecutingAssembly());
+
+        SealedBookMemory.Register();
+        SakuraManifestLoop.Register();
+        DreamKey.Register();
 
         Harmony harmony = new(ModId);
 

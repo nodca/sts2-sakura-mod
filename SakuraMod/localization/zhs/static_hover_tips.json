@@ -4,7 +4,7 @@
   "SAKURAMOD-RELEASED.title": "已解封",
   "SAKURAMOD-RELEASED.description": "触发解封效果。",
   "SAKURAMOD-REFLECTION.title": "反射",
-  "SAKURAMOD-REFLECTION.description": "反射被你的格挡抵消的伤害。",
+  "SAKURAMOD-REFLECTION.description": "反射下一次受到的攻击伤害。",
   "SAKURAMOD-STRONG_REFLECTION.title": "反射",
-  "SAKURAMOD-STRONG_REFLECTION.description": "反射被你的格挡抵消的伤害。"
+  "SAKURAMOD-STRONG_REFLECTION.description": "反射下一次受到的攻击伤害。"
 }

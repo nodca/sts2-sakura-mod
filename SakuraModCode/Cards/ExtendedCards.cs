@@ -1,7 +1,9 @@
 using BaseLib.Utils;
+using BaseLib.Patches.Hooks;
 using MegaCrit.Sts2.Core;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization;
@@ -25,7 +27,7 @@ public class Gravitation() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommo
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         SakuraCardPlayVfx.PlayGravitation(CombatState!.HittableEnemies);
-        await PowerCmd.Apply<SakuraTemporaryStrengthPower>(CombatState!.HittableEnemies, -DynamicVars["StrengthLoss"].IntValue, Owner.Creature, this, false);
+        await PowerCmd.Apply<SakuraTemporaryStrengthPower>(CombatState!.HittableEnemies, DynamicVars["StrengthLoss"].IntValue, Owner.Creature, this, false);
         await TriggerReleaseEffect(choiceContext, play);
     }
 
@@ -49,7 +51,7 @@ public class Mirage() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Ta
 
         await SakuraActions.AddGeneratedCardToCombat(
             image,
-            new SakuraActions.GeneratedCardOptions
+            new GeneratedCardOptions
             {
                 AddTemporary = this.IsTemporary(),
                 Pile = ShouldRelease
@@ -151,28 +153,6 @@ public class KeroBond() : SakuraModCard(2, CardType.Power, CardRarity.Rare, Targ
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
-public class TomoyoDesign() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
-{
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(4, ValueProp.Move)];
-
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
-        if (!SakuraActions.Hand(this).Any(CanRelease))
-            return;
-
-        var card = await SakuraActions.SelectHandCard(this, choiceContext, CanRelease, cancelable: false);
-        if (card is not null)
-            await SakuraActions.ReleaseAndRecord(card);
-    }
-
-    private static bool CanRelease(CardModel card) =>
-        SakuraActions.IsClearCard(card) && !card.IsReleased();
-
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(2);
-}
-
 public class MagicAwakening() : SakuraModCard(2, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<MagicAwakeningPower>(1)];
@@ -252,35 +232,49 @@ public class Repair() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Ta
     {
         var card = CardPile.Get(PileType.Exhaust, Owner)!.Cards.FirstOrDefault(card => card is SakuraModCard);
         if (card is not null)
-            await CardPileCmd.Add(card, PileType.Draw, CardPilePosition.Top, this, true);
+            await SakuraActions.MoveExistingCardToPileWithoutVisuals(this, card, PileType.Draw, CardPilePosition.Top);
     }
 
     protected override void OnUpgrade() => DynamicVars["RegenPower"].UpgradeValueBy(1);
 }
 
-public class Reversal() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self), IReleaseable
+public class Reversal() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy), IReleaseable
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new CardsVar("ReleaseDraw", 1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DamageVar(4, ValueProp.Move),
+        new DynamicVar("PileCardsPerDamage", 3),
+        new DamageVar("PileDamage", 1, ValueProp.Move),
+        new CardsVar(1)
+    ];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var drawCards = CardPile.Get(PileType.Draw, Owner)!.Cards.ToList();
         var discardCards = CardPile.Get(PileType.Discard, Owner)!.Cards.ToList();
+        var exchangedCards = drawCards.Count + discardCards.Count;
         PileExchangeVfx.Play(drawCards.Count, discardCards.Count);
 
         foreach (var card in drawCards)
-            await CardPileCmd.Add(card, PileType.Discard, CardPilePosition.Bottom, this, true);
+            await SakuraActions.MoveExistingCardToPileWithoutVisuals(this, card, PileType.Discard, CardPilePosition.Bottom);
         foreach (var card in discardCards)
-            await CardPileCmd.Add(card, PileType.Draw, CardPilePosition.Bottom, this, true);
+            await SakuraActions.MoveExistingCardToPileWithoutVisuals(this, card, PileType.Draw, CardPilePosition.Bottom);
 
+        var pileDamage = exchangedCards / DynamicVars["PileCardsPerDamage"].IntValue * DynamicVars["PileDamage"].IntValue;
+        await SakuraActions.Attack(choiceContext, this, RequiredTarget(play), DynamicVars.Damage.IntValue + pileDamage);
         await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
         await TriggerReleaseEffect(choiceContext, play);
     }
 
-    public async Task OnReleased(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await CardPileCmd.Draw(choiceContext, DynamicVars["ReleaseDraw"].IntValue, Owner, false);
+    public async Task OnReleased(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        var handSize = CardPile.Get(PileType.Hand, Owner)!.Cards.Count;
+        var cardsToDraw = MaxHandSizePatch.GetMaxHandSize(Owner, MaxHandSizePatch.DefaultMaxHandSize) - handSize;
+        if (cardsToDraw > 0)
+            await CardPileCmd.Draw(choiceContext, cardsToDraw, Owner, false);
+    }
 
-    protected override void OnUpgrade() => DynamicVars["ReleaseDraw"].UpgradeValueBy(1);
+    protected override void OnUpgrade() => DynamicVars["PileCardsPerDamage"].UpgradeValueBy(-1);
 }
 
 public class Rewind() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
@@ -345,7 +339,7 @@ public class Spiral() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, T
         await SakuraActions.AddGeneratedCopyToHand(
             this,
             this,
-            new SakuraActions.GeneratedCardOptions
+            new GeneratedCardOptions
             {
                 RemoveRelease = true,
                 RemoveManifestAtlasOrigin = true,
@@ -389,26 +383,6 @@ public class Transfer() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, 
         DynamicVars["EnemyStrengthLoss"].UpgradeValueBy(1);
         DynamicVars["StrengthGain"].UpgradeValueBy(1);
     }
-}
-
-public class AkihoTea() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
-{
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2)];
-
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
-        var discard = await SakuraActions.SelectHandCard(this, choiceContext, card => card != this);
-        if (discard is not null)
-        {
-            var wasClear = discard is SakuraModCard;
-            await CardCmd.Discard(choiceContext, [discard]);
-            if (wasClear)
-                await SakuraActions.Manifest(this, choiceContext, 1);
-        }
-    }
-
-    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
 }
 
 public class AkihoDream() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
@@ -459,10 +433,21 @@ public class ClockCountryAlice() : SakuraModCard(2, CardType.Power, CardRarity.R
     }
 }
 
-public class AliceReading() : SakuraModCard(0, CardType.Skill, CardRarity.Basic, TargetType.AnyEnemy)
+public class AliceReading() : SakuraModCard(1, CardType.Skill, CardRarity.Basic, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DamageVar("StoredDamage", 0, ValueProp.Move),
+        new BlockVar("StoredBlock", 0, ValueProp.Move)
+    ];
+
+    public void SetStoredValues(int damage, int block)
+    {
+        DynamicVars["StoredDamage"].BaseValue = Math.Max(0, damage);
+        DynamicVars["StoredBlock"].BaseValue = Math.Max(0, block);
+        InvokeEnergyCostChanged();
+    }
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -471,11 +456,9 @@ public class AliceReading() : SakuraModCard(0, CardType.Skill, CardRarity.Basic,
             return;
 
         await power.ReleaseStoredValues(choiceContext, this, RequiredTarget(play), play);
-        if (IsUpgraded)
-            await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
     }
 
-    protected override void OnUpgrade() {}
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
 public class ForbiddenMagic() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
@@ -675,32 +658,6 @@ public class CardBookSorting() : SakuraModCard(1, CardType.Skill, CardRarity.Unc
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(1);
 }
 
-public class NewPage() : SakuraModCard(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
-{
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Stabilize];
-
-    protected override IEnumerable<DynamicVar> CanonicalVars =>
-    [
-        new PowerVar<NewPagePower>(1),
-        new BlockVar(2, ValueProp.Move)
-    ];
-
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        if (IsUpgraded)
-        {
-            var power = await PowerCmd.Apply<NewPageBlockPower>(Owner.Creature, DynamicVars["NewPagePower"].IntValue, Owner.Creature, this, false);
-            if (power is not null)
-                power.AddBlockAmount(DynamicVars.Block.IntValue);
-            return;
-        }
-
-        await PowerCmd.Apply<NewPagePower>(Owner.Creature, DynamicVars["NewPagePower"].IntValue, Owner.Creature, this, false);
-    }
-
-    protected override void OnUpgrade() {}
-}
-
 public class NamelessMagic() : SakuraModCard(2, CardType.Attack, CardRarity.Rare, TargetType.AllEnemies)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Catalog];
@@ -727,7 +684,7 @@ public class ChainPhenomenon() : SakuraModCard(1, CardType.Attack, CardRarity.Co
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        var clearCardsPlayed = SakuraActions.CardPlayCountThisTurn(Owner, SakuraActions.IsClearCard, this);
+        var clearCardsPlayed = SakuraActions.DistinctCardTypesPlayedThisTurn(Owner, SakuraActions.IsClearCard, this);
         var damage = DynamicVars.Damage.IntValue + clearCardsPlayed * DynamicVars["ClearDamage"].IntValue;
         await SakuraActions.Attack(choiceContext, this, target, damage);
     }
@@ -846,7 +803,7 @@ public class MeilingComboKick() : SakuraModCard(1, CardType.Attack, CardRarity.C
         await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
         await SakuraActions.AddGeneratedCardToCombat(
             CreateReleasedStruggle(),
-            new SakuraActions.GeneratedCardOptions
+            new GeneratedCardOptions
             {
                 AddTemporary = true,
                 AddRelease = true
@@ -863,18 +820,10 @@ public class MeilingComboKick() : SakuraModCard(1, CardType.Attack, CardRarity.C
 
 public class TalismanCombo() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars =>
-    [
-        new CardsVar("WindDraw", SyaoranBondPower.WindDraw),
-        new PowerVar<WeakPower>(SyaoranBondPower.WaterWeak),
-        new DamageVar("FireDamage", SyaoranBondPower.FireDamage, ValueProp.Move),
-        new BlockVar("EarthBlock", SyaoranBondPower.EarthBlock, ValueProp.Move)
-    ];
-
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        foreach (var element in SakuraActions.PlayedElementTypesThisTurn(Owner))
-            await SakuraActions.TriggerTalismanEffect(choiceContext, Owner, element, play, this);
+        var power = await PowerCmd.Apply<TalismanComboPower>(Owner.Creature, 1, Owner.Creature, this, false);
+        power?.StartAfter(play);
     }
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
@@ -987,34 +936,6 @@ public class YamazakiTallTale() : SakuraModCard(0, CardType.Skill, CardRarity.Un
     protected override void OnUpgrade() {}
 }
 
-public class EriolPhoneCall() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
-{
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
-
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        var cards = await SakuraActions.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
-        foreach (var card in cards)
-        {
-            if (IsUpgraded)
-                card.SetToFreeThisTurn();
-        }
-
-        if (!SakuraActions.Hand(this).Any(CanRelease))
-            return;
-
-        var selected = await SakuraActions.SelectHandCard(this, choiceContext, CanRelease, cancelable: false);
-        if (selected is not null)
-            await SakuraActions.ReleaseAndRecord(selected);
-    }
-
-    private static bool CanRelease(CardModel card) =>
-        SakuraActions.IsClearCard(card) && !card.IsReleased();
-
-    protected override void OnUpgrade() {}
-}
-
 public class FujitakaNote() : SakuraModCard(0, CardType.Skill, CardRarity.Common, TargetType.Self)
 {
     private static readonly LocString SelectionPrompt = new("cards", "SAKURAMOD-FUJITAKA_NOTE.selectionPrompt");
@@ -1030,7 +951,7 @@ public class FujitakaNote() : SakuraModCard(0, CardType.Skill, CardRarity.Common
         var top = CardPile.Get(PileType.Draw, Owner)!.Cards.Take(DynamicVars["Look"].IntValue).ToList();
         var cards = await SakuraActions.SelectUpToFromCardPreviews(this, choiceContext, top, 1, prompt: SelectionPrompt, minSelect: 0);
         if (cards.FirstOrDefault() is { } discarded)
-            await CardPileCmd.Add(discarded, PileType.Discard, CardPilePosition.Random, this, true);
+            await SakuraActions.MoveExistingCardToPileWithoutVisuals(this, discarded, PileType.Discard, CardPilePosition.Random);
 
         await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
     }
@@ -1060,42 +981,16 @@ public class NaokoGhostStory() : SakuraModCard(1, CardType.Skill, CardRarity.Unc
 
 public class SyaoranTalisman() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars =>
-    [
-        new DamageVar(6, ValueProp.Move),
-        new CardsVar("WindDraw", 1),
-        new PowerVar<WeakPower>(1),
-        new DamageVar("FireDamage", 5, ValueProp.Move),
-        new BlockVar("EarthBlock", 5, ValueProp.Move)
-    ];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(6, ValueProp.Move)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var target = RequiredTarget(play);
-        await SakuraActions.Attack(choiceContext, this, target, DynamicVars.Damage.IntValue);
-        foreach (var element in SakuraActions.PlayedElementsThisTurn(Owner))
-        {
-            switch (element)
-            {
-                case SakuraElement.Wind:
-                    await CardPileCmd.Draw(choiceContext, DynamicVars["WindDraw"].IntValue, Owner, false);
-                    break;
-                case SakuraElement.Water:
-                    await PowerCmd.Apply<WeakPower>(target, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
-                    break;
-                case SakuraElement.Fire:
-                    await SakuraActions.Attack(choiceContext, this, target, DynamicVars["FireDamage"].IntValue);
-                    break;
-                case SakuraElement.Earth:
-                    await CreatureCmd.GainBlock(Owner.Creature, DynamicVars["EarthBlock"].IntValue, ValueProp.Move, play, false);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(element), element, null);
-            }
-        }
+        await SakuraActions.Attack(choiceContext, this, RequiredTarget(play), DynamicVars.Damage.IntValue);
+        var power = await PowerCmd.Apply<SyaoranTalismanPower>(Owner.Creature, 1, Owner.Creature, this, false);
+        power?.Ignore(play);
     }
 
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(2);
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
 public class DaoistSupport() : SakuraModCard(0, CardType.Skill, CardRarity.Common, TargetType.Self)
@@ -1119,17 +1014,10 @@ public class DaoistSupport() : SakuraModCard(0, CardType.Skill, CardRarity.Commo
 
 public class SyaoranBond() : SakuraModCard(2, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars =>
-    [
-        new CardsVar("WindDraw", SyaoranBondPower.WindDraw),
-        new PowerVar<WeakPower>(SyaoranBondPower.WaterWeak),
-        new DamageVar("FireDamage", SyaoranBondPower.FireDamage, ValueProp.Move),
-        new BlockVar("EarthBlock", SyaoranBondPower.EarthBlock, ValueProp.Move)
-    ];
-
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await PowerCmd.Apply<SyaoranBondPower>(Owner.Creature, 1, Owner.Creature, this, false);
+        await SakuraActions.PutSyaoranTalismanInHand(Owner, IsUpgraded, this);
     }
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
@@ -1176,6 +1064,21 @@ public class DreamKeyGlow() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, 
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
 
+public class DreamKeyRevelation() : SakuraModCard(1, CardType.Skill, CardRarity.Ancient, TargetType.Self)
+{
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        var cards = await SakuraActions.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
+        foreach (var card in cards)
+            await SakuraActions.ReleaseThisTurnAndRecord(card);
+    }
+
+    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
+}
+
 public class Blank() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self), IReleaseable
 {
     private int _removedCardsThisPlay;
@@ -1217,10 +1120,17 @@ public class Blank() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Tar
 
     private static bool IsOwnNegativePower(PowerModel power) =>
         power.Type == PowerType.Debuff
-        || power.Amount < 0 && power is StrengthPower or DexterityPower;
+        || IsNegativeStatPower(power);
 
     private static bool IsEnemyPositivePower(PowerModel power) =>
-        power.Amount > 0 && power is StrengthPower or DexterityPower or ArtifactPower;
+        IsPositiveStatPower(power)
+        || power is ArtifactPower { Amount: > 0 };
+
+    private static bool IsNegativeStatPower(PowerModel power) =>
+        power.Amount < 0 && power is StrengthPower or DexterityPower;
+
+    private static bool IsPositiveStatPower(PowerModel power) =>
+        power.Amount > 0 && power is StrengthPower or DexterityPower;
 
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
@@ -1378,24 +1288,54 @@ public class StarWand() : SakuraModCard(1, CardType.Power, CardRarity.Uncommon, 
 
 public class SealedBook() : SakuraModCard(2, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, SakuraKeywords.Stabilize];
+    private const string SealedCountVar = "SealedCount";
+
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, CardKeyword.Retain];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (!SakuraActions.Hand(this).Any(CanSeal))
+        var canSeal = SakuraActions.Hand(this).Any(SakuraActions.CanSealIntoSealedBook);
+        var canRelease = SakuraActions.SealedBookCount(Owner) > 0;
+        if (!canSeal && !canRelease)
             return;
 
-        var card = await SakuraActions.SelectHandCard(this, choiceContext, CanSeal, cancelable: false);
+        if (canSeal && canRelease)
+        {
+            var sealChoice = SakuraActions.CloneWithCurrentUpgrade<SealedBookSealChoice>(this);
+            var releaseChoice = SakuraActions.CloneWithCurrentUpgrade<SealedBookReleaseChoice>(this);
+            var choice = await SakuraActions.SelectFromCards(this, choiceContext, [sealChoice, releaseChoice], cancelable: false);
+            if (choice is SealedBookReleaseChoice)
+                await Release(choiceContext);
+            else if (choice is SealedBookSealChoice)
+                await Seal(choiceContext);
+            return;
+        }
+
+        if (canSeal)
+            await Seal(choiceContext);
+        else
+            await Release(choiceContext);
+    }
+
+    protected override void AddExtraArgsToDescription(LocString description) =>
+        description.Add(SealedCountVar, SakuraActions.SealedBookCount(DescriptionOwner()));
+
+    private Player? DescriptionOwner() =>
+        IsMutable ? Owner : null;
+
+    private async Task Seal(PlayerChoiceContext choiceContext)
+    {
+        var card = await SakuraActions.SelectHandCard(this, choiceContext, SakuraActions.CanSealIntoSealedBook, cancelable: false);
         if (card is null)
             return;
 
-        await card.MakeReleasePermanent(choiceContext);
+        await SakuraActions.SealIntoSealedBook(choiceContext, card);
     }
 
-    private static bool CanSeal(CardModel card) =>
-        card.IsReleased();
+    private async Task Release(PlayerChoiceContext choiceContext) =>
+        await SakuraActions.ReleaseFromSealedBook(this, choiceContext);
 
-    protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Retain);
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
 public class DreamKeyResonance() : SakuraModCard(2, CardType.Power, CardRarity.Rare, TargetType.Self)
@@ -1404,6 +1344,139 @@ public class DreamKeyResonance() : SakuraModCard(2, CardType.Power, CardRarity.R
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PowerCmd.Apply<DreamKeyResonancePower>(Owner.Creature, 1, Owner.Creature, this, false);
+
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+}
+
+public class CerberusTrueForm() : SakuraModCard(2, CardType.Attack, CardRarity.Rare, TargetType.AllEnemies)
+{
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DamageVar(9, ValueProp.Move),
+        new PowerVar<SakuraBurnPower>(3)
+    ];
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        var targets = CombatState!.HittableEnemies.ToList();
+        foreach (var enemy in targets)
+        {
+            var damage = DynamicVars.Damage.IntValue;
+            if (enemy.GetPower<SakuraBurnPower>()?.Amount > 0)
+                damage *= 2;
+            await SakuraActions.Attack(choiceContext, this, enemy, damage);
+        }
+
+        await PowerCmd.Apply<SakuraBurnPower>(
+            targets.Where(enemy => enemy.IsAlive).ToList(),
+            DynamicVars["SakuraBurnPower"].IntValue,
+            Owner.Creature,
+            this,
+            false);
+    }
+
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
+}
+
+public class YueTrueForm() : SakuraModCard(2, CardType.Skill, CardRarity.Rare, TargetType.Self)
+{
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(12, ValueProp.Move)];
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
+        await PowerCmd.Apply<StrongReflectionPower>(Owner.Creature, 1, Owner.Creature, this, false);
+    }
+
+    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(6);
+}
+
+public class FourSymbols() : SakuraModCard(2, CardType.Attack, CardRarity.Rare, TargetType.AllEnemies)
+{
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DamageVar(8, ValueProp.Move),
+        new DamageVar("FullDamage", 16, ValueProp.Move),
+        new PowerVar<WeakPower>(2)
+    ];
+
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        var allElements = SakuraActions.PlayedElementTypesThisTurn(Owner).Count >= SakuraElementSets.AllElements.Count;
+        var targets = CombatState!.HittableEnemies.ToList();
+        var damage = allElements ? DynamicVars["FullDamage"].IntValue : DynamicVars.Damage.IntValue;
+        await SakuraActions.Attack(choiceContext, this, targets, damage);
+        if (allElements)
+            await PowerCmd.Apply<WeakPower>(
+                targets.Where(enemy => enemy.IsAlive).ToList(),
+                DynamicVars.Weak.IntValue,
+                Owner.Creature,
+                this,
+                false);
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Damage.UpgradeValueBy(3);
+        DynamicVars["FullDamage"].UpgradeValueBy(4);
+    }
+}
+
+public class DreamsEnd() : SakuraModCard(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+{
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
+        await PowerCmd.Apply<DreamsEndPower>(Owner.Creature, 1, Owner.Creature, this, false);
+
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+}
+
+public class Echo() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+{
+    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        var owned = Owner.Deck.Cards.Where(SakuraActions.IsClearCard).ToList();
+        var chosen = await SelectDeckCard(choiceContext, owned);
+        if (chosen is null)
+            return;
+
+        var source = CreateCombatScopedCopySource(chosen);
+        try
+        {
+            await SakuraActions.AddTemporaryCopyToHand(this, choiceContext, source, release: true, freeThisTurn: true);
+        }
+        finally
+        {
+            if (source.Pile is null)
+                source.CardScope?.RemoveCard(source);
+        }
+    }
+
+    private async Task<CardModel?> SelectDeckCard(PlayerChoiceContext choiceContext, IReadOnlyList<CardModel> cards)
+    {
+        var previews = cards.Select(CreateCombatScopedCopySource).ToList();
+        try
+        {
+            var selected = await SakuraActions.SelectFromCards(this, choiceContext, previews, cancelable: false);
+            if (selected is null)
+                return null;
+
+            var index = previews.IndexOf(selected);
+            return index >= 0 ? cards[index] : null;
+        }
+        finally
+        {
+            foreach (var preview in previews)
+            {
+                if (preview.Pile is null)
+                    preview.CardScope?.RemoveCard(preview);
+            }
+        }
+    }
+
+    private CardModel CreateCombatScopedCopySource(CardModel card) =>
+        Owner.Creature.CombatState?.CloneCard(card)
+        ?? throw new InvalidOperationException($"Cannot copy {card.Id.Entry} without a card scope.");
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }

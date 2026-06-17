@@ -1,6 +1,8 @@
 {
   "SAKURAMOD-DREAM_KEY.title": "Dream Key",
-  "SAKURAMOD-DREAM_KEY.description": "At the start of combat, [gold]Manifest[/gold] 1.",
+  "SAKURAMOD-DREAM_KEY.description": "At the start of combat, [gold]Manifest[/gold] 1. Each combat, record the first Transparent Card in your deck that gains [gold]Release[/gold]. After recording the same name 3 times, 1 card in your deck with that name gains permanent [gold]Release[/gold].{ReleaseProgress}",
+  "SAKURAMOD-DREAM_KEY.progress": "\nCurrent records: {Progress}",
+  "SAKURAMOD-DREAM_KEY.progressSeparator": ", ",
   "SAKURAMOD-DREAM_KEY.flavor": "The key waits for the right dream.",
   "SAKURAMOD-DREAM_BOOK_PAGE.title": "Dream Book Page",
   "SAKURAMOD-DREAM_BOOK_PAGE.description": "The first time each turn you play a [gold]Released[/gold] card, draw 1 card.",

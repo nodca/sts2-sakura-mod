@@ -299,13 +299,16 @@ public class Stabilize() : SakuraModCard(0, CardType.Skill, CardRarity.Basic, Ta
 
 public class KeroAdvice() : SakuraModCard(0, CardType.Skill, CardRarity.Common, TargetType.Self)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new BlockVar(4, ValueProp.Move)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var drawn = await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
-        foreach (var card in drawn.Where(card => card is SakuraModCard).Take(1))
-            card.SetToFreeThisTurn();
+        var freed = drawn.FirstOrDefault(card => card.Type == CardType.Skill);
+        if (freed is not null)
+            freed.SetToFreeThisTurn();
+        else
+            await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
     }
 
     protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
@@ -336,23 +339,6 @@ public class TomoyoCostume() : SakuraModCard(1, CardType.Skill, CardRarity.Rare,
 
     private bool IsTarget(CardModel card) =>
         card != this && SakuraActions.IsClearCard(card) && card.IsTemporary();
-
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(2);
-}
-
-public class CostumePocket() : SakuraModCard(0, CardType.Skill, CardRarity.Common, TargetType.Self)
-{
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(3, ValueProp.Move)];
-
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        var drawn = await CardPileCmd.Draw(choiceContext, 1, Owner, false);
-        var card = drawn.FirstOrDefault();
-        if (card?.Type == CardType.Skill)
-            card.SetToFreeThisTurn();
-        else if (card is not null)
-            await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
-    }
 
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(2);
 }
@@ -468,19 +454,26 @@ public class DreamCostume() : SakuraModCard(1, CardType.Power, CardRarity.Uncomm
 
 public class Blaze() : SakuraModCard(2, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(18, ValueProp.Move), new DamageVar("TemporaryDamage", 5, ValueProp.Move)];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, SakuraKeywords.Burn];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DamageVar(14, ValueProp.Move),
+        new DamageVar("TemporaryDamage", 3, ValueProp.Move),
+        new PowerVar<SakuraBurnPower>(2)
+    ];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var temporaryPlayed = SakuraActions.CardPlayCountThisTurn(Owner, card => card.IsTemporary(), this);
+        var temporaryRemoved = TemporaryCardMemory.CardsRemovedByTemporary(CombatState, Owner).Count;
         var target = RequiredTarget(play);
-        var bonusDamage = temporaryPlayed * DynamicVars["TemporaryDamage"].IntValue;
+        var bonusDamage = temporaryRemoved * DynamicVars["TemporaryDamage"].IntValue;
         if (ShouldRelease)
             bonusDamage *= 2;
 
         SakuraCardPlayVfx.PlayBlaze(target);
         await SakuraActions.Attack(choiceContext, this, target, DynamicVars.Damage.IntValue + bonusDamage);
+        if (target.IsAlive)
+            await PowerCmd.Apply<SakuraBurnPower>(target, DynamicVars["SakuraBurnPower"].IntValue, Owner.Creature, this, false);
     }
 
     protected override void OnUpgrade()

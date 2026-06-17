@@ -4,7 +4,7 @@
   "SAKURAMOD-RELEASED.title": "Released",
   "SAKURAMOD-RELEASED.description": "Triggers Release effects.",
   "SAKURAMOD-REFLECTION.title": "Reflection",
-  "SAKURAMOD-REFLECTION.description": "Reflect damage your Block prevents.",
+  "SAKURAMOD-REFLECTION.description": "Reflect the next enemy attack.",
   "SAKURAMOD-STRONG_REFLECTION.title": "Reflection",
-  "SAKURAMOD-STRONG_REFLECTION.description": "Reflect damage your Block prevents."
+  "SAKURAMOD-STRONG_REFLECTION.description": "Reflect the next enemy attack."
 }

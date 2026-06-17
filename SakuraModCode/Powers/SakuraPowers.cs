@@ -21,7 +21,7 @@ public abstract class ReflectionPowerBase : SakuraModPower
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    protected abstract int CalculateReflectionDamage(int blockedDamage);
+    protected abstract int CalculateReflectionDamage(int attackDamage);
 
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature creature, DamageResult damageResult, ValueProp damageProps, Creature? source, CardModel? card)
     {
@@ -29,10 +29,11 @@ public abstract class ReflectionPowerBase : SakuraModPower
             || creature != Owner
             || source is not { IsAlive: true } attacker
             || attacker.Side == Owner.Side
-            || damageResult.BlockedDamage <= 0)
+            || !damageProps.IsPoweredAttack()
+            || damageResult.TotalDamage <= 0)
             return;
 
-        var reflectionDamage = CalculateReflectionDamage(damageResult.BlockedDamage);
+        var reflectionDamage = CalculateReflectionDamage(damageResult.TotalDamage);
         if (reflectionDamage > 0)
             await CreatureCmd.Damage(choiceContext, attacker, reflectionDamage, ValueProp.Unblockable, Owner, null);
         await PowerCmd.Decrement(this);
@@ -43,14 +44,14 @@ public class ReflectionPower : ReflectionPowerBase
 {
     protected override string IconFileName => "reflection.png";
 
-    protected override int CalculateReflectionDamage(int blockedDamage) => (blockedDamage + 1) / 2;
+    protected override int CalculateReflectionDamage(int attackDamage) => (attackDamage + 1) / 2;
 }
 
 public class StrongReflectionPower : ReflectionPowerBase
 {
     protected override string IconFileName => "reflection_strong.png";
 
-    protected override int CalculateReflectionDamage(int blockedDamage) => blockedDamage;
+    protected override int CalculateReflectionDamage(int attackDamage) => attackDamage;
 }
 
 public class LucidGuardPower : SakuraModPower
@@ -143,14 +144,20 @@ public class MirageImagePower : SakuraModPower
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
+    private bool IsIncomingAttack(ValueProp props, Creature? dealer) =>
+        Amount > 0
+        && dealer is not null
+        && dealer.Side != Owner.Side
+        && props.IsPoweredAttack();
+
     public override decimal ModifyDamageAdditive(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource) =>
-        target == Owner && amount > 0 && props.IsPoweredAttack()
+        target == Owner && amount > 0 && IsIncomingAttack(props, dealer)
             ? -Math.Min(amount, Amount)
             : 0;
 
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature creature, DamageResult damageResult, ValueProp damageProps, Creature? source, CardModel? card)
     {
-        if (creature == Owner && damageResult.TotalDamage > 0 && damageProps.IsPoweredAttack())
+        if (creature == Owner && IsIncomingAttack(damageProps, source))
             await PowerCmd.Remove(this);
     }
 
@@ -193,6 +200,8 @@ public class SakuraFrostbitePower : SakuraModPower
 
 public class SakuraBurnPower : SakuraModPower
 {
+    protected override string IconFileName => "burn.png";
+
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
@@ -256,6 +265,10 @@ public abstract class ElementPlayedPowerBase : SakuraModPower
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
+    // Per-turn element counts are shown on the element compass HUD, so keep these powers off the
+    // character status bar to avoid duplicating the display.
+    protected override bool IsVisibleInternal => false;
+
     public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
     {
         if (side == Owner.Side)
@@ -283,8 +296,14 @@ public class EarthElementPower : ElementPlayedPowerBase
     protected override string IconFileName => "earth_element.png";
 }
 
-public class SakuraTemporaryStrengthPower : CustomTemporaryPowerModelWrapper<StrengthPower, StrengthPower>
+public class SakuraTemporaryStrengthPower : TemporaryStrengthPower, ICustomPower
 {
+    public string? CustomPackedIconPath => ModelDb.Power<StrengthPower>().PackedIconPath;
+    public string? CustomBigIconPath => ModelDb.Power<StrengthPower>().ResolvedBigIconPath;
+    public string? CustomBigBetaIconPath => ModelDb.Power<StrengthPower>().ResolvedBigIconPath;
+    public override AbstractModel OriginModel => ModelDb.Card<Gravitation>();
+    protected override bool IsVisibleInternal => false;
+    protected override bool IsPositive => false;
 }
 
 public class SakuraTemporaryDexterityPower : TemporaryDexterityPower, ICustomPower
@@ -298,6 +317,8 @@ public class SakuraTemporaryDexterityPower : TemporaryDexterityPower, ICustomPow
 public class DreamCostumePower : SakuraModPower
 {
     private bool _usedThisTurn;
+
+    protected override string IconFileName => "dream_costume.png";
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
@@ -403,6 +424,8 @@ public class RecordPower : SakuraModPower
     private const string RecordedHpKey = "RecordedHp";
     private const string RecordedBlockKey = "RecordedBlock";
 
+    protected override string IconFileName => "record.png";
+
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
     public override int DisplayAmount => RecordedHp;
@@ -455,6 +478,8 @@ public class RecordPower : SakuraModPower
 
 public class SakuraCatalogPower : SakuraModPower
 {
+    protected override string IconFileName => "catalog.png";
+
     private const string TotalKey = "Total";
 
     public override PowerType Type => PowerType.Buff;
@@ -557,6 +582,7 @@ public class ClockCountryAlicePower : SakuraModPower
     private int _storedDamage;
     private int _storedBlock;
     private bool _readingQueued;
+    private bool _readingGenerated;
 
     protected override string IconFileName => "clock_country_alice.png";
 
@@ -570,11 +596,25 @@ public class ClockCountryAlicePower : SakuraModPower
     public static int ReadingMode(bool upgradedReading) =>
         upgradedReading ? UpgradedReadingMode : BasicReadingMode;
 
-    public Task AfterTemporaryRemoved(PlayerChoiceContext choiceContext, CardModel card)
+    public override Task AfterDamageGiven(
+        PlayerChoiceContext choiceContext,
+        Creature? dealer,
+        DamageResult result,
+        ValueProp props,
+        Creature target,
+        CardModel? cardSource)
     {
-        _storedDamage += CardPanelDamage(card);
-        _storedBlock += CardPanelBlock(card);
-        _readingQueued = _storedDamage > 0 || _storedBlock > 0;
+        if (dealer == Owner && IsRecordedTemporarySource(cardSource) && result.TotalDamage > 0)
+            AddStoredValues(result.TotalDamage, 0);
+
+        return Task.CompletedTask;
+    }
+
+    public override Task AfterBlockGained(Creature creature, decimal amount, ValueProp props, CardModel? cardSource)
+    {
+        if (creature == Owner && IsRecordedTemporarySource(cardSource) && amount > 0)
+            AddStoredValues(0, (int)amount);
+
         return Task.CompletedTask;
     }
 
@@ -584,9 +624,7 @@ public class ClockCountryAlicePower : SakuraModPower
             await SakuraActions.Attack(choiceContext, source, target, _storedDamage);
         if (_storedBlock > 0)
             await CreatureCmd.GainBlock(Owner, _storedBlock, ValueProp.Move, play, false);
-
-        _storedDamage = 0;
-        _storedBlock = 0;
+        _readingQueued = false;
     }
 
     public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, MegaCrit.Sts2.Core.Entities.Players.Player player)
@@ -595,13 +633,16 @@ public class ClockCountryAlicePower : SakuraModPower
             return;
 
         _readingQueued = false;
-        var reading = ModelDb.Card<AliceReading>().CreateClone();
+        _readingGenerated = true;
+        var reading = Owner.CombatState?.CreateCard(ModelDb.Card<AliceReading>(), player) as AliceReading
+            ?? throw new InvalidOperationException("Cannot create Alice Reading outside combat.");
         if (CreatesUpgradedReading && reading.IsUpgradable)
             reading.UpgradeInternal();
+        SyncReadingValues(reading);
 
         await SakuraActions.AddGeneratedCardToCombat(
             reading,
-            new SakuraActions.GeneratedCardOptions
+            new GeneratedCardOptions
             {
                 Pile = PileType.Hand,
                 Position = CardPilePosition.Random
@@ -609,17 +650,55 @@ public class ClockCountryAlicePower : SakuraModPower
             choiceContext);
     }
 
-    private static int CardPanelDamage(CardModel card) =>
-        card.DynamicVars.ContainsKey("Damage") ? Math.Max(0, card.DynamicVars.Damage.IntValue) : 0;
+    private void AddStoredValues(int damage, int block)
+    {
+        _storedDamage += Math.Max(0, damage);
+        _storedBlock += Math.Max(0, block);
+        if (!_readingGenerated)
+            _readingQueued = _storedDamage > 0 || _storedBlock > 0;
+        SyncReadingValuesInCombat();
+    }
 
-    private static int CardPanelBlock(CardModel card) =>
-        card.DynamicVars.ContainsKey("Block") ? Math.Max(0, card.DynamicVars.Block.IntValue) : 0;
+    private void SyncReadingValuesInCombat()
+    {
+        if (Owner.Player is not { } player)
+            return;
+
+        foreach (var pileType in CombatPileTypes)
+        {
+            var pile = CardPile.Get(pileType, player);
+            if (pile is null)
+                continue;
+
+            foreach (var reading in pile.Cards.OfType<AliceReading>())
+                SyncReadingValues(reading);
+        }
+    }
+
+    private void SyncReadingValues(AliceReading reading)
+    {
+        reading.SetStoredValues(_storedDamage, _storedBlock);
+    }
+
+    private static bool IsRecordedTemporarySource(CardModel? card) =>
+        card is not null && card is not AliceReading && card.IsTemporary();
+
+    private static readonly PileType[] CombatPileTypes =
+    [
+        PileType.Hand,
+        PileType.Play,
+        PileType.Discard,
+        PileType.Draw,
+        PileType.Exhaust
+    ];
 }
 
 public class FalseDailyLifePower : SakuraModPower
 {
     public const int DamageAmount = 6;
     public const int BlockAmount = 2;
+
+    protected override string IconFileName => "false_daily_life.png";
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
@@ -647,55 +726,55 @@ public class FalseDailyLifePower : SakuraModPower
 
 public class GrowingMagicPower : SakuraModPower
 {
+    protected override string IconFileName => "growing_magic.png";
+
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
     public async Task AfterTemporaryStabilized(PlayerChoiceContext choiceContext)
     {
-        if (Amount > 0)
-            await PowerCmd.Apply<StrengthPower>(Owner, Amount, Owner, null, false);
-    }
-}
-
-public class NewPagePower : SakuraModPower
-{
-    public override PowerType Type => PowerType.Buff;
-    public override PowerStackType StackType => PowerStackType.Counter;
-
-    public async Task AfterTemporaryStabilized(PlayerChoiceContext choiceContext)
-    {
-        if (Amount > 0 && Owner.Player is not null)
-            await CardPileCmd.Draw(choiceContext, Amount, Owner.Player, false);
-    }
-}
-
-public class NewPageBlockPower : SakuraModPower
-{
-    public override PowerType Type => PowerType.Buff;
-    public override PowerStackType StackType => PowerStackType.Counter;
-
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(0, ValueProp.Move)];
-
-    public void AddBlockAmount(int amount)
-    {
-        if (amount <= 0)
+        if (Amount <= 0)
             return;
 
-        DynamicVars.Block.BaseValue += amount;
-        InvokeDisplayAmountChanged();
+        await PowerCmd.Apply<StrengthPower>(Owner, Amount, Owner, null, false);
+        if (Owner.Player is not null)
+            await CardPileCmd.Draw(choiceContext, 1, Owner.Player, false);
+    }
+}
+
+public class DreamsEndPower : SakuraModPower
+{
+    private const int MaxDrawPerTurn = 2;
+    private int _drawnThisTurn;
+
+    protected override string IconFileName => "dreams_end.png";
+
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public async Task AfterTemporaryRemoved(PlayerChoiceContext choiceContext)
+    {
+        if (_drawnThisTurn >= MaxDrawPerTurn || Owner.Player is null)
+            return;
+
+        _drawnThisTurn++;
+        await CardPileCmd.Draw(choiceContext, 1, Owner.Player, false);
     }
 
-    public async Task AfterTemporaryStabilized(PlayerChoiceContext choiceContext)
+    public override Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
-        if (Amount > 0 && Owner.Player is not null)
-            await CardPileCmd.Draw(choiceContext, Amount, Owner.Player, false);
-        await CreatureCmd.GainBlock(Owner, DynamicVars.Block.IntValue, ValueProp.Move, null, false);
+        if (player.Creature == Owner)
+            _drawnThisTurn = 0;
+
+        return Task.CompletedTask;
     }
 }
 
 public class MagicSurgePower : SakuraModPower
 {
     private bool _usedThisTurn;
+
+    protected override string IconFileName => "magic_surge.png";
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
@@ -728,6 +807,8 @@ public class MagicSurgePower : SakuraModPower
 
 public class KeroBondPower : SakuraModPower, IMaxHandSizeModifier
 {
+    protected override string IconFileName => "kero_bond.png";
+
     private bool _usedThisTurn;
 
     public override PowerType Type => PowerType.Buff;
@@ -778,6 +859,8 @@ public class TomoyoDesignPower : SakuraModPower
 
 public class TomoyoBondPower : SakuraModPower
 {
+    protected override string IconFileName => "tomoyo_bond.png";
+
     private const int ClearCardsPerEnergy = 2;
     private int _clearCardsPlayed;
 
@@ -800,47 +883,113 @@ public class TomoyoBondPower : SakuraModPower
 
 public class SyaoranBondPower : SakuraModPower
 {
-    public const int WindDraw = 1;
-    public const int WaterWeak = 1;
-    public const int FireDamage = 5;
-    public const int EarthBlock = 5;
+    protected override string IconFileName => "syaoran_bond.png";
 
-    private SakuraElementSet _triggeredThisTurn;
+    public const int WindDraw = 1;
+    public const int WaterDamage = 3;
+    public const int FireDamage = 6;
+    public const int EarthBlock = 5;
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
+    public override Task BeforeCardPlayed(CardPlay play)
+    {
+        var card = play.Card;
+        if (Amount <= 0
+            || card?.Owner?.Creature != Owner
+            || !SakuraActions.IsClearCard(card)
+            || !SakuraActions.TryRandomMissingElement(card.Owner, card, out var element))
+            return Task.CompletedTask;
+
+        SakuraActions.GrantElementsThisTurn(card, element.ToSet());
+        return Task.CompletedTask;
+    }
+
+}
+
+public class TalismanComboPower : SakuraModPower
+{
+    private SakuraElement? _previousElement;
+    private CardPlay? _ignoredPlay;
+
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public void StartAfter(CardPlay play) =>
+        _ignoredPlay = play;
+
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
+        if (ReferenceEquals(play, _ignoredPlay))
+        {
+            _ignoredPlay = null;
+            return;
+        }
+
         var card = play.Card;
         if (Amount <= 0 || card?.Owner?.Creature != Owner)
             return;
 
-        var elements = SakuraActions.ElementSetOf(card);
-        foreach (var element in elements.AsElements())
-        {
-            if (_triggeredThisTurn.HasElement(element))
-                continue;
-
-            _triggeredThisTurn |= element.ToSet();
-            await SakuraActions.TriggerTalismanEffect(choiceContext, card.Owner, element, play, null);
-        }
+        foreach (var element in SakuraActions.ElementSetOf(card).AsElements())
+            await ResolveElement(choiceContext, card.Owner, play, element);
     }
 
-    public override Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
-    {
-        if (player.Creature == Owner)
-            _triggeredThisTurn = SakuraElementSet.None;
-
-        return Task.CompletedTask;
-    }
-
-    public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
     {
         if (side == Owner.Side)
-            _triggeredThisTurn = SakuraElementSet.None;
+            await PowerCmd.Remove(this);
+    }
 
-        return Task.CompletedTask;
+    private async Task ResolveElement(PlayerChoiceContext choiceContext, Player owner, CardPlay play, SakuraElement element)
+    {
+        if (_previousElement is not { } previous)
+        {
+            _previousElement = element;
+            return;
+        }
+
+        if (previous == element)
+        {
+            await CardPileCmd.Draw(choiceContext, 1, owner, false);
+            return;
+        }
+
+        await SakuraActions.TriggerTalismanEffect(choiceContext, owner, previous, play, null);
+        _previousElement = element;
+    }
+}
+
+public class SyaoranTalismanPower : SakuraModPower
+{
+    private CardPlay? _ignoredPlay;
+
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public void Ignore(CardPlay play) =>
+        _ignoredPlay = play;
+
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        if (ReferenceEquals(play, _ignoredPlay))
+        {
+            _ignoredPlay = null;
+            return;
+        }
+
+        var card = play.Card;
+        if (Amount <= 0 || card?.Owner?.Creature != Owner)
+            return;
+
+        foreach (var element in SakuraActions.ElementSetOf(card).AsElements())
+            await SakuraActions.TriggerTalismanEffect(choiceContext, card.Owner, element, play, null);
+    }
+
+    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    {
+        if (side == Owner.Side)
+            await PowerCmd.Remove(this);
     }
 }
 
@@ -876,6 +1025,8 @@ public class SakuraDrawNextTurnPower : SakuraModPower
 
 public class PromiseManifestPower : SakuraModPower
 {
+    protected override string IconFileName => "promise_manifest.png";
+
     private bool _lostHp;
 
     public override PowerType Type => PowerType.Buff;
@@ -903,6 +1054,8 @@ public class PromiseManifestPower : SakuraModPower
 
 public class DreamingPower : SakuraModPower
 {
+    protected override string IconFileName => "dreaming.png";
+
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
@@ -955,6 +1108,8 @@ public class GravitationHoldPower : SakuraModPower
 
 public class MagicAwakeningPower : SakuraModPower
 {
+    protected override string IconFileName => "magic_awakening.png";
+
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 

@@ -281,6 +281,9 @@ internal static class ClearCardLayout
         _ = ClearCardHighlightTexture();
     }
 
+    public static string CardArtPath(Type cardType) =>
+        ClearCardArtFileName(cardType).ClearCardAssetPath();
+
     public static void RestoreCardIfTracked(NCard card)
     {
         if (CardStates.TryGetValue(card, out var existingState))
@@ -1247,7 +1250,7 @@ internal static class ClearCardLayout
             ClearCardArtCache.Remove(cardType);
         }
 
-        var artPath = ClearCardArtFileName(cardType).ClearCardAssetPath();
+        var artPath = CardArtPath(cardType);
         var texture = ResourceLoader.Exists(artPath)
             ? ResourceLoader.Load<Texture2D>(artPath)
             : null;

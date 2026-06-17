@@ -22,7 +22,9 @@ public class Gale() : SakuraModCard(1, CardType.Attack, CardRarity.Basic, Target
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        await SakuraActions.AttackCommand(this, target, vfx: "vfx/vfx_attack_slash").Execute(choiceContext);
+        await SakuraActions.AttackCommand(this, target, DynamicVars.Damage.IntValue, DynamicVars.Damage.Props)
+            .WithHitVfxNode(target => SakuraCardPlayVfx.CreateGaleWindBlade(Owner.Creature, target))
+            .Execute(choiceContext);
         await TriggerReleaseEffect(choiceContext, play);
     }
 
@@ -30,7 +32,12 @@ public class Gale() : SakuraModCard(1, CardType.Attack, CardRarity.Basic, Target
     {
         var target = play.Target ?? CombatState?.HittableEnemies.FirstOrDefault();
         if (target is not null)
-            await SakuraActions.Attack(choiceContext, this, target, DynamicVars["ReleaseDamage"].IntValue);
+        {
+            await SakuraActions.AttackCommand(this, target, damage: DynamicVars["ReleaseDamage"].IntValue)
+                .WithHitVfxNode(target => SakuraCardPlayVfx.CreateGaleWindBlade(Owner.Creature, target, releaseFollowUp: true))
+                .WithNoAttackerAnim()
+                .Execute(choiceContext);
+        }
 
         await CardPileCmd.Draw(choiceContext, DynamicVars["ReleaseDraw"].IntValue, Owner, false);
     }

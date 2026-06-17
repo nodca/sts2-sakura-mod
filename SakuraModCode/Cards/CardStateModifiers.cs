@@ -161,8 +161,12 @@ public sealed class SynchronizedCardPairModifier : CardModifier
         var owner = Owner?.Owner;
         return owner is not null
                && partner.Owner == owner
-               && CardPile.Get(PileType.Hand, owner)?.Cards.Contains(partner) == true;
+               && IsInSynchronizedAutoPlayPile(partner, owner);
     }
+
+    private static bool IsInSynchronizedAutoPlayPile(CardModel card, Player owner) =>
+        CardPile.Get(PileType.Hand, owner)?.Cards.Contains(card) == true
+        || CardPile.Get(PileType.Discard, owner)?.Cards.Contains(card) == true;
 
     private Creature? AutoPlayTarget(CardPlay play, CardModel card)
     {
@@ -360,7 +364,7 @@ public sealed class TemporaryModifier : CardModifier
             if (ConsumeTemporaryRemovalDelay(card))
                 continue;
 
-            await RemoveTemporaryCard(choiceContext, card);
+            await RemoveTemporaryFromCombat(choiceContext, card);
         }
     }
 
@@ -402,15 +406,15 @@ public sealed class TemporaryModifier : CardModifier
         }
     }
 
-    private static async Task RemoveTemporaryCard(PlayerChoiceContext choiceContext, CardModel card)
+    public static async Task RemoveTemporaryFromCombat(PlayerChoiceContext choiceContext, CardModel card)
     {
         if (card.Pile?.IsCombatPile == true)
         {
             TemporaryCardMemory.Remember(card);
-            if (card.Owner?.Creature.GetPower<ClockCountryAlicePower>() is { } alice)
-                await alice.AfterTemporaryRemoved(choiceContext, card);
             if (card.Owner?.Creature.GetPower<FalseDailyLifePower>() is { } falseDailyLife)
                 await falseDailyLife.AfterTemporaryRemoved(choiceContext);
+            if (card.Owner?.Creature.GetPower<DreamsEndPower>() is { } dreamsEnd)
+                await dreamsEnd.AfterTemporaryRemoved(choiceContext);
             TemporaryDissolveVfx.Play(card);
             await CardPileCmd.RemoveFromCombat(card, true);
         }
@@ -712,7 +716,7 @@ public static class SakuraCardStates
 
     public static void MakeReleasePermanent(this CardModel card)
     {
-        var deckVersion = DeckVersionOf(card);
+        var deckVersion = PermanentReleaseSourceOf(card, allowDeckFallback: !card.IsTemporary());
         foreach (var target in PermanentReleaseTargets(card, deckVersion))
         {
             target.StabilizeWithoutTrigger();
@@ -722,11 +726,11 @@ public static class SakuraCardStates
 
     public static async Task MakeReleasePermanent(this CardModel card, PlayerChoiceContext choiceContext)
     {
+        var deckVersion = PermanentReleaseSourceOf(card, allowDeckFallback: !card.IsTemporary());
         var stabilized = card.RemoveTemporaryForStabilize();
         if (stabilized)
-            await SakuraActions.TriggerTemporaryStabilized(choiceContext, card);
+            await SakuraManifestLoop.OnTemporaryStabilized(choiceContext, card);
 
-        var deckVersion = DeckVersionOf(card);
         foreach (var target in PermanentReleaseTargets(card, deckVersion))
         {
             if (!ReferenceEquals(target, card))
@@ -810,7 +814,7 @@ public static class SakuraCardStates
             return;
 
         if (card.RemoveTemporaryForStabilize())
-            await SakuraActions.TriggerTemporaryStabilized(choiceContext, card);
+            await SakuraManifestLoop.OnTemporaryStabilized(choiceContext, card);
     }
 
     public static void StabilizeWithoutTrigger(this CardModel card)
@@ -988,6 +992,32 @@ public static class SakuraCardStates
         }
 
         return null;
+    }
+
+    private static CardModel? PermanentReleaseSourceOf(CardModel card, bool allowDeckFallback)
+    {
+        if (card.Pile?.Type == PileType.Deck)
+            return card;
+
+        if (DeckVersionOf(card) is { } deckVersion)
+            return deckVersion;
+
+        return allowDeckFallback ? SingleMatchingDeckCard(card) : null;
+    }
+
+    private static CardModel? SingleMatchingDeckCard(CardModel card)
+    {
+        if (card.Owner is not { } owner)
+            return null;
+
+        var matches = owner.Deck.Cards
+            .Where(deckCard =>
+                !ReferenceEquals(deckCard, card)
+                && deckCard.Id == card.Id
+                && deckCard.CurrentUpgradeLevel == card.CurrentUpgradeLevel)
+            .ToList();
+
+        return matches.Count == 1 ? matches[0] : null;
     }
 
     private static void RemoveElementThisTurn(CardModel card)

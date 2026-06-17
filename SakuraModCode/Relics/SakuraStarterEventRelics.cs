@@ -12,12 +12,16 @@ using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.Extensions;
 
 namespace SakuraMod.SakuraModCode.Relics;
 
 public class KeroSnackBox : SakuraModRelic
 {
     public override RelicRarity Rarity => RelicRarity.Ancient;
+    public override string PackedIconPath => "kero_snack_box.png".RelicImagePath();
+    protected override string PackedIconOutlinePath => "kero_snack_box_outline.png".RelicImagePath();
+    protected override string BigIconPath => "kero_snack_box.png".BigRelicImagePath();
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [new IntVar("Relics", 2)];
 

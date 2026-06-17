@@ -1,6 +1,8 @@
 {
   "SAKURAMOD-DREAM_KEY.title": "梦之钥",
-  "SAKURAMOD-DREAM_KEY.description": "战斗开始时，[gold]显现[/gold] 1。",
+  "SAKURAMOD-DREAM_KEY.description": "战斗开始时，[gold]显现[/gold] 1。每场战斗，记录你牌组中首个获得[gold]解封[/gold]的透明牌；同名牌记录 3 次后，使牌组中 1 张同名牌永久[gold]解封[/gold]。{ReleaseProgress}",
+  "SAKURAMOD-DREAM_KEY.progress": "\n当前记录：{Progress}",
+  "SAKURAMOD-DREAM_KEY.progressSeparator": "，",
   "SAKURAMOD-DREAM_KEY.flavor": "钥匙等待与梦境相遇的那一刻。",
   "SAKURAMOD-DREAM_BOOK_PAGE.title": "梦之书书页",
   "SAKURAMOD-DREAM_BOOK_PAGE.description": "每回合第一次打出[gold]已解封[/gold]牌时，抽 1 张牌。",
