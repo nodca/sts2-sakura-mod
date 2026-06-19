@@ -20,11 +20,11 @@ SakuraMod.
 
 ## Local Baseline
 
-- Slay the Spire 2: `v0.103.3` on this machine
+- Slay the Spire 2: `v0.107.1` on this machine
 - Godot: `4.5.1.stable.mono`
 - .NET SDK: `9.0.117`
 - Template package: `Alchyr.Sts2.Templates 2.4.3`
-- BaseLib: `3.2.1`
+- Runtime BaseLib: `3.3.0`
 - Mod id / assembly: `SakuraMod`
 
 ## Local Setup
