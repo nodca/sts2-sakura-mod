@@ -2,6 +2,7 @@ using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Relics;
 
@@ -27,6 +28,7 @@ public partial class MainFile : Node
         Harmony harmony = new(ModId);
 
         harmony.PatchAll();
+        ClassicSakuraRunHooks.Register();
         SakuraCaptureRunHooks.Register();
         ClearCardLayout.PreloadVisualResources();
     }

@@ -52,7 +52,7 @@ public class Appear() : SakuraModCard(1, CardType.Skill, CardRarity.Common, Targ
             return;
 
         foreach (var card in manifested)
-            await SakuraActions.ReduceCostThisTurn(this, card, DynamicVars["ReleaseDiscount"].IntValue);
+            await SakuraActions.ReduceCostThisTurn(choiceContext, this, card, DynamicVars["ReleaseDiscount"].IntValue);
     }
 
     protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
@@ -83,10 +83,10 @@ public class Aqua() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, Tar
 
             await SakuraActions.Attack(choiceContext, this, enemy, damage);
             if (ShouldRelease && enemy.IsAlive && frostbiteAmount > 0 && frostbite is not null)
-                await PowerCmd.ModifyAmount(frostbite, frostbiteAmount, Owner.Creature, this, false);
+                await PowerCmd.ModifyAmount(choiceContext, frostbite, frostbiteAmount, Owner.Creature, this, false);
         }
 
-        await PowerCmd.Apply<WeakPower>(targets, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
+        await PowerCmd.Apply<WeakPower>(choiceContext, targets, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
     }
 
     protected override void OnUpgrade()
@@ -153,7 +153,7 @@ public class Hail() : SakuraModCard(1, CardType.Attack, CardRarity.Common, Targe
         SakuraCardPlayVfx.PlayHail(target);
         await SakuraActions.Attack(choiceContext, this, target, DynamicVars.Damage.IntValue);
         if (target.IsAlive)
-            await PowerCmd.Apply<SakuraFrostbitePower>(target, DynamicVars["SakuraFrostbitePower"].IntValue, Owner.Creature, this, false);
+            await PowerCmd.Apply<SakuraFrostbitePower>(choiceContext, target, DynamicVars["SakuraFrostbitePower"].IntValue, Owner.Creature, this, false);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(1);
@@ -174,7 +174,7 @@ public class Lucid() : SakuraModCard(0, CardType.Skill, CardRarity.Common, Targe
     }
 
     public async Task OnReleased(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await PowerCmd.Apply<LucidPiercePower>(Owner.Creature, 1, Owner.Creature, this, false);
+        await PowerCmd.Apply<LucidPiercePower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
 
     protected override void OnUpgrade() => DynamicVars["Look"].UpgradeValueBy(1);
 }
@@ -187,12 +187,12 @@ public class Shade() : SakuraModCard(2, CardType.Skill, CardRarity.Common, Targe
     {
         await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
         var target = RequiredTarget(play);
-        await PowerCmd.Apply<WeakPower>(target, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
+        await PowerCmd.Apply<WeakPower>(choiceContext, target, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
         await TriggerReleaseEffect(choiceContext, play);
     }
 
     public async Task OnReleased(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await PowerCmd.Apply<BlurPower>(Owner.Creature, 1, Owner.Creature, this, false);
+        await PowerCmd.Apply<BlurPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
 
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(4);
 }
@@ -217,7 +217,7 @@ public class Siege() : SakuraModCard(1, CardType.Skill, CardRarity.Basic, Target
     public async Task OnReleased(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await CreatureCmd.GainBlock(Owner.Creature, DynamicVars["ReleaseBlock"].IntValue, ValueProp.Move, play, false);
-        await PowerCmd.Apply<WeakPower>(CombatState!.HittableEnemies.ToList(), DynamicVars.Weak.IntValue, Owner.Creature, this, false);
+        await PowerCmd.Apply<WeakPower>(choiceContext, CombatState!.HittableEnemies.ToList(), DynamicVars.Weak.IntValue, Owner.Creature, this, false);
     }
 
     protected override void OnUpgrade()
@@ -240,7 +240,7 @@ public class Swing() : SakuraModCard(2, CardType.Attack, CardRarity.Uncommon, Ta
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var targets = CombatState!.HittableEnemies.ToList();
-        await PowerCmd.Apply<WeakPower>(targets, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
+        await PowerCmd.Apply<WeakPower>(choiceContext, targets, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
 
         foreach (var enemy in targets.Where(enemy => enemy.IsAlive))
         {
@@ -273,7 +273,7 @@ public class DreamCompass() : SakuraModCard(1, CardType.Skill, CardRarity.Uncomm
             return;
 
         if (IsUpgraded)
-            await SakuraActions.ReleaseThisTurnAndRecord(card);
+            await SakuraActions.ReleaseThisTurnAndRecord(choiceContext, card);
         await SakuraActions.MoveExistingCardToHand(this, card);
     }
 }
@@ -284,16 +284,18 @@ public class Stabilize() : SakuraModCard(0, CardType.Skill, CardRarity.Basic, Ta
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
+        await CardPileCmd.Draw(choiceContext, 1, Owner, false);
+
         if (Owner.GetRelic<KaitoPocketWatch>() is null)
         {
             var card = await SakuraActions.SelectStabilizeCandidate(this, choiceContext);
             if (card is not null)
+            {
                 await card.Stabilize(choiceContext);
-            if (IsUpgraded)
-                card?.SetToFreeThisTurn();
+                if (IsUpgraded)
+                    card.EnergyCost.SetThisTurnOrUntilPlayed(0, true);
+            }
         }
-
-        await CardPileCmd.Draw(choiceContext, 1, Owner, false);
     }
 }
 
@@ -367,8 +369,8 @@ public class Break() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, Ta
             return;
 
         if (target.HasPower<ArtifactPower>())
-            await PowerCmd.Apply<ArtifactPower>(target, -1, Owner.Creature, this, false);
-        await PowerCmd.Apply<VulnerablePower>(target, DynamicVars.Vulnerable.IntValue, Owner.Creature, this, false);
+            await PowerCmd.Apply<ArtifactPower>(choiceContext, target, -1, Owner.Creature, this, false);
+        await PowerCmd.Apply<VulnerablePower>(choiceContext, target, DynamicVars.Vulnerable.IntValue, Owner.Creature, this, false);
     }
 
     protected override void OnUpgrade()
@@ -415,11 +417,11 @@ public class Promise() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, T
     {
         await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
         var amount = DynamicVars.Cards.IntValue + (ShouldRelease ? DynamicVars["ReleaseCards"].IntValue : 0);
-        await PowerCmd.Apply<PromiseManifestPower>(Owner.Creature, amount, Owner.Creature, this, false);
+        await PowerCmd.Apply<PromiseManifestPower>(choiceContext, Owner.Creature, amount, Owner.Creature, this, false);
     }
 
     public async Task OnReleased(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await PowerCmd.Apply<PromiseManifestPower>(Owner.Creature, DynamicVars["ReleaseCards"].IntValue, Owner.Creature, this, false);
+        await PowerCmd.Apply<PromiseManifestPower>(choiceContext, Owner.Creature, DynamicVars["ReleaseCards"].IntValue, Owner.Creature, this, false);
 
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
@@ -447,7 +449,7 @@ public class Struggle() : SakuraModCard(0, CardType.Attack, CardRarity.Uncommon,
 public class DreamCostume() : SakuraModCard(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
 {
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await PowerCmd.Apply<DreamCostumePower>(Owner.Creature, 1, Owner.Creature, this, false);
+        await PowerCmd.Apply<DreamCostumePower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
 
     protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Innate);
 }
@@ -473,7 +475,7 @@ public class Blaze() : SakuraModCard(2, CardType.Attack, CardRarity.Rare, Target
         SakuraCardPlayVfx.PlayBlaze(target);
         await SakuraActions.Attack(choiceContext, this, target, DynamicVars.Damage.IntValue + bonusDamage);
         if (target.IsAlive)
-            await PowerCmd.Apply<SakuraBurnPower>(target, DynamicVars["SakuraBurnPower"].IntValue, Owner.Creature, this, false);
+            await PowerCmd.Apply<SakuraBurnPower>(choiceContext, target, DynamicVars["SakuraBurnPower"].IntValue, Owner.Creature, this, false);
     }
 
     protected override void OnUpgrade()
@@ -487,7 +489,7 @@ public class Dreaming() : SakuraModCard(2, CardType.Power, CardRarity.Rare, Targ
 {
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await PowerCmd.Apply<DreamingPower>(Owner.Creature, 1, Owner.Creature, this, false);
+        await PowerCmd.Apply<DreamingPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
         await TriggerReleaseEffect(choiceContext, play);
     }
 

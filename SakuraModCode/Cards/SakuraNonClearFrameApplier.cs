@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.addons.mega_text;
+using SakuraMod.SakuraModCode.Classic.Cards;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -25,6 +26,7 @@ internal static class SakuraNonClearFrameApplier
     private static readonly FieldInfo? BannerField = AccessTools.Field(typeof(NCard), "_banner");
     private static readonly FieldInfo? TypeLabelField = AccessTools.Field(typeof(NCard), "_typeLabel");
     private static readonly FieldInfo? TypePlaqueField = AccessTools.Field(typeof(NCard), "_typePlaque");
+    private static readonly FieldInfo? EnergyIconField = AccessTools.Field(typeof(NCard), "_energyIcon");
     private static readonly FieldInfo? EnergyLabelField = AccessTools.Field(typeof(NCard), "_energyLabel");
 
     private static readonly StringName FontColorName = new("font_color");
@@ -61,45 +63,55 @@ internal static class SakuraNonClearFrameApplier
     private static readonly Dictionary<Vector2I, Texture2D> SakuraNonClearHighlightTextureCache = [];
 
     public static bool IsSakuraNonClearCard(NCard? card) =>
-        card?.Model is { } model
-        && model is SakuraModCard or SakuraOptionCard
-        && !SakuraActions.IsClearCard(model)
-        && model.Rarity != CardRarity.Ancient;
+        SakuraCardVisualFamilies.IsKinomoto(card)
+        && card?.Model?.Rarity != CardRarity.Ancient;
 
     public static void Apply(NCard card)
     {
+        Apply(card, applyCostLayout: true);
+    }
+
+    public static void ApplyTextureRecovery(NCard card)
+    {
+        Apply(card, applyCostLayout: false);
+    }
+
+    private static void Apply(NCard card, bool applyCostLayout)
+    {
         if (!IsSakuraNonClearCard(card))
         {
-            RestoreNonSakuraCardVisuals(card);
+            RestoreIfTracked(card);
             return;
         }
 
-        ApplyCostLayout(card);
+        if (applyCostLayout)
+            ApplyCostLayout(card);
         ApplyVisuals(card);
     }
 
-    public static void RestoreIfTracked(NCard card)
+    public static bool RestoreIfTracked(NCard card)
     {
+        var restored = false;
         if (CostLabelStates.TryGetValue(card, out var costState))
-            costState.Restore();
+            restored |= costState.Restore();
         if (DescriptionStates.TryGetValue(card, out var descriptionState))
-            descriptionState.Restore();
+            restored |= descriptionState.Restore();
         if (HighlightStates.TryGetValue(card, out var highlightState))
-            highlightState.Restore();
+            restored |= highlightState.Restore();
         if (StyleStates.TryGetValue(card, out var styleState))
-            styleState.Restore(card);
+            restored |= styleState.Restore(card);
+
+        return restored;
     }
 
-    public static void RestoreNonSakuraCardVisuals(NCard? card)
+    public static bool RestoreTrackedAndCurrentModelVisuals(NCard card)
     {
-        if (card is null || IsSakuraNonClearCard(card))
-            return;
-
-        RestoreIfTracked(card);
+        var restored = RestoreIfTracked(card);
         RestoreCurrentModelVisuals(card);
+        return restored;
     }
 
-    private static void RestoreCurrentModelVisuals(NCard card)
+    public static void RestoreCurrentModelVisuals(NCard card)
     {
         if (card.Model is not { } model)
             return;
@@ -110,6 +122,7 @@ internal static class SakuraNonClearFrameApplier
         RestoreCurrentModelFrame(card, model, isAncient);
         RestoreCurrentModelBanner(card, model, isAncient);
         RestoreCurrentModelTypePlaque(card, model);
+        RestoreCurrentModelCost(card, model);
     }
 
     private static void RestoreCurrentModelPortrait(NCard card, CardModel model, bool isAncient)
@@ -207,6 +220,33 @@ internal static class SakuraNonClearFrameApplier
             plaque.Material = model.BannerMaterial;
     }
 
+    private static void RestoreCurrentModelCost(NCard card, CardModel model)
+    {
+        RestoreCurrentModelEnergyIcon(FieldValue<TextureRect>(EnergyIconField, card), model.EnergyIcon);
+        RestoreCurrentModelEnergyLabel(FieldValue<MegaLabel>(EnergyLabelField, card));
+    }
+
+    private static void RestoreCurrentModelEnergyIcon(TextureRect? icon, Texture2D? texture)
+    {
+        if (icon is null || !IsGodotInstanceUsable(icon))
+            return;
+
+        SetTextureIfDifferent(icon, texture);
+    }
+
+    private static void RestoreCurrentModelEnergyLabel(MegaLabel? label)
+    {
+        if (label is null || !IsGodotInstanceUsable(label))
+            return;
+
+        if (!label.Visible)
+            label.Visible = true;
+        if (label.Modulate != Colors.White)
+            label.Modulate = Colors.White;
+        if (label.SelfModulate != Colors.White)
+            label.SelfModulate = Colors.White;
+    }
+
     private static void ApplyCostLayout(NCard card)
     {
         if (FieldValue<MegaLabel>(EnergyLabelField, card) is not { } label)
@@ -247,9 +287,11 @@ internal static class SakuraNonClearFrameApplier
             SakuraCardFrameVisuals.FrameTexture(model, SakuraFramePart.TypePlaque));
         ApplyHighlightTexture(card, card.CardHighlight);
         var isPartner = SakuraActions.IsPartner(model);
+        var styleState = StyleStates.GetOrCreateValue(card);
+        styleState.Capture(card);
         ApplyDescriptionCategory(card, isPartner);
         ApplyTextStyle(card, isPartner);
-        StyleStates.GetOrCreateValue(card).MarkApplied();
+        styleState.MarkApplied();
     }
 
     private static void ApplyFrameTexture(TextureRect? item, Texture2D texture, Material? material)
@@ -509,24 +551,6 @@ internal static class SakuraNonClearFrameApplier
         return outside.Length() + Mathf.Min(Mathf.Max(q.X, q.Y), 0f) - cornerRadius;
     }
 
-    private static void RemoveTextStyle(NCard card)
-    {
-        var titleLabel = FieldValue<Control>(TitleLabelField, card);
-        RemoveThemeColorOverride(titleLabel, FontColorName);
-        RemoveThemeColorOverride(titleLabel, FontOutlineColorName);
-        RemoveThemeConstantOverride(titleLabel, OutlineSizeName);
-
-        var descriptionLabel = FieldValue<Control>(DescriptionLabelField, card);
-        RemoveThemeColorOverride(descriptionLabel, FontColorName);
-        RemoveThemeColorOverride(descriptionLabel, DefaultColorName);
-        RemoveThemeColorOverride(descriptionLabel, FontOutlineColorName);
-        RemoveThemeConstantOverride(descriptionLabel, OutlineSizeName);
-
-        var typeLabel = FieldValue<Control>(TypeLabelField, card);
-        RemoveThemeColorOverride(typeLabel, FontColorName);
-        RemoveThemeColorOverride(typeLabel, FontOutlineColorName);
-    }
-
     private sealed class SakuraCostLabelState
     {
         private MegaLabel? _label;
@@ -546,20 +570,21 @@ internal static class SakuraNonClearFrameApplier
             }
         }
 
-        public void Restore()
+        public bool Restore()
         {
             if (_label is null)
-                return;
+                return false;
 
             if (!IsGodotInstanceUsable(_label))
             {
                 _label = null;
                 _position = null;
-                return;
+                return false;
             }
 
             if (_position is { } position && _label.Position != position)
                 _label.Position = position;
+            return true;
         }
 
         private void Capture(MegaLabel label)
@@ -597,15 +622,15 @@ internal static class SakuraNonClearFrameApplier
                 highlight.MouseFilter = Control.MouseFilterEnum.Ignore;
         }
 
-        public void Restore()
+        public bool Restore()
         {
             if (!_captured || _highlight is null)
-                return;
+                return false;
 
             if (!IsGodotInstanceUsable(_highlight))
             {
                 Clear();
-                return;
+                return false;
             }
 
             SetTextureIfDifferent(_highlight, _texture);
@@ -617,6 +642,7 @@ internal static class SakuraNonClearFrameApplier
                 _highlight.MouseFilter = mouseFilter;
 
             Clear();
+            return true;
         }
 
         private void Capture(NCardHighlight highlight)
@@ -667,21 +693,22 @@ internal static class SakuraNonClearFrameApplier
                 label.SetTextAutoSize(text);
         }
 
-        public void Restore()
+        public bool Restore()
         {
             if (_label is null)
-                return;
+                return false;
 
             if (!IsGodotInstanceUsable(_label))
             {
                 Clear();
-                return;
+                return false;
             }
 
             if (_sourceText is not null && _label.Text == _appliedText)
                 _label.SetTextAutoSize(_sourceText);
 
             Clear();
+            return true;
         }
 
         private void Capture(MegaRichTextLabel label)
@@ -887,17 +914,164 @@ internal static class SakuraNonClearFrameApplier
 
     private sealed class SakuraNonClearStyleState
     {
+        private ControlTextStyleSnapshot? _titleSnapshot;
+        private Control? _titleLabel;
+        private ControlTextStyleSnapshot? _descriptionSnapshot;
+        private Control? _descriptionLabel;
+        private ControlTextStyleSnapshot? _typeSnapshot;
+        private Control? _typeLabel;
+        private bool _captured;
         private bool _isApplied;
+
+        public void Capture(NCard card)
+        {
+            if (_captured)
+                return;
+
+            _titleLabel = FieldValue<Control>(TitleLabelField, card);
+            _descriptionLabel = FieldValue<Control>(DescriptionLabelField, card);
+            _typeLabel = FieldValue<Control>(TypeLabelField, card);
+
+            _titleSnapshot = Capture(
+                _titleLabel,
+                [FontColorName, FontOutlineColorName],
+                [OutlineSizeName]);
+            _descriptionSnapshot = Capture(
+                _descriptionLabel,
+                [FontColorName, DefaultColorName, FontOutlineColorName],
+                [OutlineSizeName]);
+            _typeSnapshot = Capture(
+                _typeLabel,
+                [FontColorName, FontOutlineColorName],
+                []);
+            _captured = true;
+        }
 
         public void MarkApplied() => _isApplied = true;
 
-        public void Restore(NCard card)
+        public bool Restore(NCard card)
         {
-            if (!_isApplied)
+            if (!_captured && !_isApplied)
+                return false;
+
+            Restore(_titleLabel, _titleSnapshot);
+            Restore(_descriptionLabel, _descriptionSnapshot);
+            Restore(_typeLabel, _typeSnapshot);
+            Clear();
+            return true;
+        }
+
+        private static ControlTextStyleSnapshot? Capture(
+            Control? control,
+            StringName[] colorNames,
+            StringName[] constantNames)
+        {
+            if (control is null || !IsGodotInstanceUsable(control))
+                return null;
+
+            return ControlTextStyleSnapshot.Capture(control, colorNames, constantNames);
+        }
+
+        private static void Restore(Control? control, ControlTextStyleSnapshot? snapshot)
+        {
+            if (control is null || !IsGodotInstanceUsable(control) || snapshot is not { } captured)
                 return;
 
-            RemoveTextStyle(card);
+            captured.Restore(control);
+        }
+
+        private void Clear()
+        {
+            _titleSnapshot = null;
+            _titleLabel = null;
+            _descriptionSnapshot = null;
+            _descriptionLabel = null;
+            _typeSnapshot = null;
+            _typeLabel = null;
+            _captured = false;
             _isApplied = false;
+        }
+    }
+
+    private sealed class ControlTextStyleSnapshot
+    {
+        private readonly ThemeColorSnapshot[] _colors;
+        private readonly ThemeConstantSnapshot[] _constants;
+
+        private ControlTextStyleSnapshot(ThemeColorSnapshot[] colors, ThemeConstantSnapshot[] constants)
+        {
+            _colors = colors;
+            _constants = constants;
+        }
+
+        public static ControlTextStyleSnapshot Capture(
+            Control control,
+            IReadOnlyList<StringName> colorNames,
+            IReadOnlyList<StringName> constantNames)
+        {
+            var colors = new ThemeColorSnapshot[colorNames.Count];
+            for (var index = 0; index < colorNames.Count; index++)
+                colors[index] = ThemeColorSnapshot.Capture(control, colorNames[index]);
+
+            var constants = new ThemeConstantSnapshot[constantNames.Count];
+            for (var index = 0; index < constantNames.Count; index++)
+                constants[index] = ThemeConstantSnapshot.Capture(control, constantNames[index]);
+
+            return new ControlTextStyleSnapshot(colors, constants);
+        }
+
+        public void Restore(Control control)
+        {
+            foreach (var color in _colors)
+                color.Restore(control);
+            foreach (var constant in _constants)
+                constant.Restore(control);
+        }
+    }
+
+    private readonly record struct ThemeColorSnapshot(
+        StringName Name,
+        bool HadOverride,
+        Color Color)
+    {
+        public static ThemeColorSnapshot Capture(Control control, StringName name) =>
+            new(
+                name,
+                control.HasThemeColorOverride(name),
+                control.HasThemeColorOverride(name) ? control.GetThemeColor(name) : default);
+
+        public void Restore(Control control)
+        {
+            if (!HadOverride)
+            {
+                RemoveThemeColorOverride(control, Name);
+                return;
+            }
+
+            ApplyThemeColorOverride(control, Name, Color);
+        }
+    }
+
+    private readonly record struct ThemeConstantSnapshot(
+        StringName Name,
+        bool HadOverride,
+        int Value)
+    {
+        public static ThemeConstantSnapshot Capture(Control control, StringName name) =>
+            new(
+                name,
+                control.HasThemeConstantOverride(name),
+                control.HasThemeConstantOverride(name) ? control.GetThemeConstant(name) : default);
+
+        public void Restore(Control control)
+        {
+            if (!HadOverride)
+            {
+                RemoveThemeConstantOverride(control, Name);
+                return;
+            }
+
+            ApplyThemeConstantOverride(control, Name, Value);
         }
     }
 

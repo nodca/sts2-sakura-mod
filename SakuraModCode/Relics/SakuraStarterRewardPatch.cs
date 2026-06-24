@@ -3,7 +3,6 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Cards;
-using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Events;
 using MegaCrit.Sts2.Core.Localization;
@@ -87,26 +86,6 @@ internal static class SakuraStarterRewardPatch
             __instance.Owner,
             __instance.DynamicVars.MaxHp.BaseValue);
         return false;
-    }
-
-    [HarmonyPatch(typeof(FakeMerchant), "BeforeEventStarted")]
-    [HarmonyPostfix]
-    private static void ReplaceSakuraFakeMerchantRelics(FakeMerchant __instance)
-    {
-        if (__instance.Owner is null || !SakuraStarterCards.IsSakura(__instance.Owner))
-            return;
-
-        var entries = (List<MerchantRelicEntry>?)AccessTools
-            .Field(typeof(MerchantInventory), "_relicEntries")
-            .GetValue(__instance.Inventory);
-        if (entries is null)
-            return;
-
-        for (var i = 0; i < entries.Count; i++)
-        {
-            if (entries[i].Model is FakeStrikeDummy)
-                entries[i] = new MerchantRelicEntry(ModelDb.Relic<TomoyoGalePlushie>().ToMutable(), __instance.Owner);
-        }
     }
 
     [HarmonyPatch(typeof(TouchOfOrobas), nameof(TouchOfOrobas.GetUpgradedStarterRelic))]

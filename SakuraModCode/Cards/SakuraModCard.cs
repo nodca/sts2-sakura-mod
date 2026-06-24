@@ -29,22 +29,32 @@ public abstract class SakuraModCard(int cost, CardType type, CardRarity rarity, 
     //Image size:
     //Normal art: 1000x760 (Using 500x380 should also work, it will simply be scaled.)
     //Full art: 606x852
-    public override string CustomPortraitPath => SakuraCardFrameVisuals.BigPortraitPath(this);
+    public override string CustomPortraitPath =>
+        UsesClearCardPortrait
+            ? ClearCardPortraitPath
+            : SakuraCardFrameVisuals.BigPortraitPath(this);
 
     //Smaller variants of card images for efficiency:
     //Smaller variant of fullart: 250x350
     //Smaller variant of normalart: 250x190
 
     //Uses card_portraits/card_name.png as image path. These should be smaller images.
-    public override string PortraitPath => SakuraCardFrameVisuals.PortraitPath(this);
-    public override string BetaPortraitPath => SakuraCardFrameVisuals.PortraitPath(this);
+    public override string PortraitPath =>
+        UsesClearCardPortrait
+            ? ClearCardPortraitPath
+            : SakuraCardFrameVisuals.PortraitPath(this);
+    public override string BetaPortraitPath => PortraitPath;
     public override Texture2D? CustomFrame => SakuraCardFrameVisuals.CustomFrameTexture(this);
     public override Material? CreateCustomFrameMaterial => SakuraCardFrameVisuals.CustomFrameMaterial(this);
     protected override IEnumerable<string> ExtraRunAssetPaths => SakuraCardFrameVisuals.RunAssetPaths(this);
 
     protected bool ShouldRelease => this.IsReleased();
 
-    public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, CombatState combatState)
+    private bool UsesClearCardPortrait => SakuraCardVisualFamilies.IsClear(this);
+
+    private string ClearCardPortraitPath => ClearCardLayout.CardArtPath(GetType());
+
+    public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
     {
         if (player == Owner)
             SakuraActions.BeginPlayerTurn(player, combatState);
@@ -55,12 +65,12 @@ public abstract class SakuraModCard(int cost, CardType type, CardRarity rarity, 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await SakuraManifestLoop.RememberCatalogCard(choiceContext, play);
-        await SakuraActions.RememberPlayedElements(play);
+        await SakuraActions.RememberPlayedElements(choiceContext, play);
     }
 
-    public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Creature.Side == side)
+        if (Owner.Creature.Side == side && participants.Contains(Owner.Creature))
             SakuraActions.EndPlayerTurn(Owner);
 
         return Task.CompletedTask;

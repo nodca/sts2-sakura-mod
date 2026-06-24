@@ -12,5 +12,19 @@
   "SAKURAMOD-SAKURA_MOD.cardsModifierTitle": "小樱牌池",
   "SAKURAMOD-SAKURA_MOD.cardsModifierDescription": "小樱的卡牌现在会出现在奖励和商店中。",
   "SAKURAMOD-SAKURA_MOD.banter.alive.endTurnPing": "...",
-  "SAKURAMOD-SAKURA_MOD.banter.dead.endTurnPing": "..."
+  "SAKURAMOD-SAKURA_MOD.banter.dead.endTurnPing": "...",
+  "SAKURAMOD-CLASSIC_SAKURA.title": "经典小樱",
+  "SAKURAMOD-CLASSIC_SAKURA.titleObject": "经典小樱",
+  "SAKURAMOD-CLASSIC_SAKURA.description": "以封印、解封、变换和小樱牌转换为核心的库洛牌角色。",
+  "SAKURAMOD-CLASSIC_SAKURA.pronounSubject": "她",
+  "SAKURAMOD-CLASSIC_SAKURA.pronounObject": "她",
+  "SAKURAMOD-CLASSIC_SAKURA.pronounPossessive": "她的",
+  "SAKURAMOD-CLASSIC_SAKURA.possessiveAdjective": "她的",
+  "SAKURAMOD-CLASSIC_SAKURA.goldMonologue": "...",
+  "SAKURAMOD-CLASSIC_SAKURA.eventDeathPrevention": "...",
+  "SAKURAMOD-CLASSIC_SAKURA.aromaPrinciple": "...",
+  "SAKURAMOD-CLASSIC_SAKURA.cardsModifierTitle": "经典小樱牌池",
+  "SAKURAMOD-CLASSIC_SAKURA.cardsModifierDescription": "经典小樱的卡牌现在会出现在奖励和商店中。",
+  "SAKURAMOD-CLASSIC_SAKURA.banter.alive.endTurnPing": "...",
+  "SAKURAMOD-CLASSIC_SAKURA.banter.dead.endTurnPing": "..."
 }

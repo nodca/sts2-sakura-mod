@@ -21,7 +21,7 @@ public class RollerbladeDash() : SakuraModCard(1, CardType.Skill, CardRarity.Com
             return;
         }
 
-        await PowerCmd.Apply<DuplicationPower>(Owner.Creature, 1, Owner.Creature, this, false);
+        await PowerCmd.Apply<DuplicationPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
     }
 
     protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Innate);
@@ -49,6 +49,7 @@ public class BlessingOfTheNamelessBook() : SakuraModCard(1, CardType.Power, Card
 {
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PowerCmd.Apply<BlessingOfTheNamelessBookPower>(
+            choiceContext,
             Owner.Creature,
             BlessingOfTheNamelessBookPower.Mode(IsUpgraded),
             Owner.Creature,

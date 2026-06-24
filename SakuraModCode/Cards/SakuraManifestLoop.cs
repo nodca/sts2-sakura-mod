@@ -223,8 +223,8 @@ public static class SakuraManifestLoop
     private static readonly LocString ManifestPrompt = new("cards", "SAKURAMOD-GENERIC.manifestPrompt");
     private static readonly SavedSpireField<Player, string> PendingCaptureCandidateCardId =
         new(() => "", "SakuraMod_PendingCaptureCandidateCardId");
-    private static readonly ConditionalWeakTable<CombatState, Dictionary<Player, HashSet<Type>>> CatalogedClearCardsByCombat = new();
-    private static readonly ConditionalWeakTable<CombatState, Dictionary<Player, Type>> CaptureCandidatesByCombat = new();
+    private static readonly ConditionalWeakTable<ICombatState, Dictionary<Player, HashSet<Type>>> CatalogedClearCardsByCombat = new();
+    private static readonly ConditionalWeakTable<ICombatState, Dictionary<Player, Type>> CaptureCandidatesByCombat = new();
     private static readonly ConditionalWeakTable<Player, Type> PendingCaptureCandidatesByPlayer = new();
     private static readonly ConditionalWeakTable<Player, PendingCaptureRewardMarker> PendingCaptureOffersByPlayer = new();
     private static readonly ConditionalWeakTable<CardReward, PendingCaptureRewardMarker> PendingCaptureRewardOffers = new();
@@ -297,7 +297,7 @@ public static class SakuraManifestLoop
         }
 
         if (manifested.Count > 0)
-            await PowerCmd.Apply<SakuraManifestedThisTurnPower>(owner.Creature, 1, owner.Creature, null, false);
+            await PowerCmd.Apply<SakuraManifestedThisTurnPower>(context, owner.Creature, 1, owner.Creature, null, false);
 
         return manifested;
     }
@@ -317,7 +317,7 @@ public static class SakuraManifestLoop
 
         if (cards.Add(card.GetType()))
         {
-            await SyncCatalogPower(owner);
+            await SyncCatalogPower(context, owner);
             await TriggerCatalogedClearCard(context, play);
         }
     }
@@ -390,7 +390,7 @@ public static class SakuraManifestLoop
         return combatState is null ? [] : CaptureCandidateTypes(combatState, owner);
     }
 
-    public static void PrepareCaptureCandidatesForReward(Player owner, CombatState combatState)
+    public static void PrepareCaptureCandidatesForReward(Player owner, ICombatState combatState)
     {
         PendingCaptureCandidatesByPlayer.Remove(owner);
 
@@ -491,6 +491,22 @@ public static class SakuraManifestLoop
                 FreeThisTurn = freeThisTurn
             });
 
+    public static async Task<CardModel?> AddTemporaryRememberedCopyToHand(
+        SakuraModCard source,
+        PlayerChoiceContext context,
+        CardModel card,
+        bool freeThisTurn) =>
+        await AddGeneratedCopyToHand(
+            source,
+            card,
+            new GeneratedCardOptions
+            {
+                RemoveTemporary = true,
+                AddTemporary = true,
+                FreeThisTurn = freeThisTurn
+            },
+            context);
+
     public static async Task<CardModel?> AddGeneratedCopyToHand(
         SakuraModCard source,
         CardModel card,
@@ -548,7 +564,7 @@ public static class SakuraManifestLoop
             await CardPileCmd.AddGeneratedCardToCombat(
                 card,
                 options.Pile ?? PileType.Hand,
-                true,
+                card.Owner,
                 options.Position ?? CardPilePosition.Random);
             timing?.Mark("card-pile-add-generated");
 
@@ -557,7 +573,7 @@ public static class SakuraManifestLoop
             timing?.Mark("temporary-granted-observers");
 
             if (options.AddRelease)
-                await SakuraActions.ReleaseAndRecord(card);
+                await SakuraActions.ReleaseAndRecord(context ?? new ThrowingPlayerChoiceContext(), card);
             timing?.Mark("release-recording");
 
             timing?.Finish("completed");
@@ -568,6 +584,36 @@ public static class SakuraManifestLoop
             timing?.Finish("failed");
             throw;
         }
+    }
+
+    public static async Task<CardModel?> AddRandomUncatalogedTemporaryClearCardToHand(
+        SakuraModCard source,
+        PlayerChoiceContext context)
+    {
+        var candidates = SakuraCardCatalog.DefaultManifestAtlasTypes
+            .Where(type => !HasCatalogedClearCard(source.Owner, SakuraCardCatalog.CardTemplate(type)))
+            .Select(SakuraCardCatalog.CardTemplate)
+            .ToList();
+
+        if (candidates.Count == 0)
+            candidates = SakuraCardCatalog.DefaultManifestAtlasTypes
+                .Select(SakuraCardCatalog.CardTemplate)
+                .ToList();
+
+        var template = source.Owner.RunState.Rng.CombatCardSelection.NextItem(candidates);
+        if (template is null)
+            return null;
+
+        var card = CreateCombatCardFromTemplate(source.Owner, template);
+        await AddGeneratedCardToCombat(
+            card,
+            new GeneratedCardOptions
+            {
+                AddTemporary = true,
+                AddManifestAtlasOrigin = true
+            },
+            context);
+        return card;
     }
 
     public static async Task<CardModel?> DiscoverGenerated(
@@ -591,7 +637,8 @@ public static class SakuraManifestLoop
                 new GeneratedCardOptions
                 {
                     FreeThisTurn = freeThisTurn
-                });
+                },
+                context);
             return chosen;
         }
         finally
@@ -600,7 +647,7 @@ public static class SakuraManifestLoop
         }
     }
 
-    private static IReadOnlyList<Type> CaptureCandidateTypes(CombatState combatState, Player owner)
+    private static IReadOnlyList<Type> CaptureCandidateTypes(ICombatState combatState, Player owner)
     {
         if (!CaptureCandidatesByCombat.TryGetValue(combatState, out var cardsByOwner)
             || !cardsByOwner.TryGetValue(owner, out var type))
@@ -750,7 +797,7 @@ public static class SakuraManifestLoop
             await catalogNewPage.AfterCatalogedClearCard(context, play);
     }
 
-    private static async Task SyncCatalogPower(Player owner)
+    private static async Task SyncCatalogPower(PlayerChoiceContext context, Player owner)
     {
         var count = CatalogCount(owner);
         if (count <= 0)
@@ -759,11 +806,16 @@ public static class SakuraManifestLoop
         var power = owner.Creature.GetPower<SakuraCatalogPower>();
         if (power is null)
         {
-            await PowerCmd.Apply<SakuraCatalogPower>(owner.Creature, count, owner.Creature, null, false);
-            return;
+            power = await PowerCmd.Apply<SakuraCatalogPower>(
+                context,
+                owner.Creature,
+                SakuraCatalogPower.PresenceAmount,
+                owner.Creature,
+                null,
+                false);
         }
 
-        await PowerCmd.ModifyAmount(power, count - power.Amount, owner.Creature, null, false);
+        power?.SetCatalogCount(count);
     }
 
     private static async Task TriggerTemporaryGranted(PlayerChoiceContext context, CardModel card)

@@ -269,7 +269,10 @@ internal static class ClearCardLayout
     private static readonly ConditionalWeakTable<NCardGrid, ClearCardGridState> GridStates = new();
 
     public static bool IsClearCard(NCard? card) =>
-        card?.Model is not null && SakuraActions.IsClearCard(card.Model);
+        SakuraCardVisualFamilies.IsClear(card);
+
+    private static bool IsSakuraNonClearVisualCard(NCard? card) =>
+        SakuraCardVisualFamilies.IsKinomoto(card);
 
     public static Vector2 CurrentSize(NCard card) =>
         Spec.LayoutSize * card.Scale;
@@ -428,10 +431,8 @@ internal static class ClearCardLayout
                 ApplyParentHolder(card);
             }
 
-            if (SakuraNonClearFrameApplier.IsSakuraNonClearCard(card))
+            if (IsSakuraNonClearVisualCard(card))
                 SakuraNonClearFrameApplier.Apply(card);
-            else
-                SakuraNonClearFrameApplier.RestoreNonSakuraCardVisuals(card);
 
             return;
         }
@@ -453,7 +454,6 @@ internal static class ClearCardLayout
         {
             if (HolderStates.TryGetValue(holder, out var existingState))
                 existingState.Restore(holder);
-            SakuraNonClearFrameApplier.RestoreNonSakuraCardVisuals(holder.CardNode);
             return;
         }
 
@@ -541,7 +541,7 @@ internal static class ClearCardLayout
             var holder = row[i];
             if (!IsVisibleGridCardHolder(holder))
                 continue;
-            if (!SakuraActions.IsClearCard(holder.CardModel!))
+            if (!SakuraCardVisualFamilies.IsClear(holder.CardModel))
                 return -1;
 
             count++;
@@ -572,7 +572,7 @@ internal static class ClearCardLayout
 
         for (var i = 0; i < cards.Count; i++)
         {
-            if (!SakuraActions.IsClearCard(cards[i]))
+            if (!SakuraCardVisualFamilies.IsClear(cards[i]))
                 return false;
         }
 
@@ -583,6 +583,8 @@ internal static class ClearCardLayout
     {
         var model = card.Model;
         if (model is null)
+            return;
+        if (!IsGodotInstanceUsable(card.Body))
             return;
 
         var highlight = card.CardHighlight;
@@ -610,7 +612,8 @@ internal static class ClearCardLayout
             nodes.EnergyLabel,
             nodes.UnplayableEnergyIcon,
             Spec.EnergyCostBox,
-            Spec.EnergyCostLabelBox);
+            Spec.EnergyCostLabelBox,
+            model.EnergyIcon);
         ApplyCostLayout(
             nodes.StarIcon,
             nodes.StarLabel,
@@ -1195,7 +1198,8 @@ internal static class ClearCardLayout
         MegaLabel? label,
         TextureRect? unplayableIcon,
         Rect2 box,
-        Rect2? labelBox = null)
+        Rect2? labelBox = null,
+        Texture2D? iconTexture = null)
     {
         ApplyTopLeftAnchors(icon);
         ApplyTopLeftAnchors(label);
@@ -1210,6 +1214,17 @@ internal static class ClearCardLayout
                 icon.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
             if (icon.StretchMode != TextureRect.StretchModeEnum.Scale)
                 icon.StretchMode = TextureRect.StretchModeEnum.Scale;
+            if (iconTexture is not null)
+                SetTextureIfDifferent(icon, iconTexture);
+        }
+
+        if (unplayableIcon is not null && iconTexture is not null)
+        {
+            if (unplayableIcon.ExpandMode != TextureRect.ExpandModeEnum.IgnoreSize)
+                unplayableIcon.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+            if (unplayableIcon.StretchMode != TextureRect.StretchModeEnum.Scale)
+                unplayableIcon.StretchMode = TextureRect.StretchModeEnum.Scale;
+            SetTextureIfDifferent(unplayableIcon, iconTexture);
         }
 
         if (label is null)
@@ -1217,6 +1232,9 @@ internal static class ClearCardLayout
 
         if (!label.Visible)
             label.Visible = true;
+        ApplyTextCanvasColor(label);
+        if (label.ZIndex != Spec.TextZIndex)
+            label.ZIndex = Spec.TextZIndex;
         if (label.HorizontalAlignment != HorizontalAlignment.Center)
             label.HorizontalAlignment = HorizontalAlignment.Center;
         if (label.VerticalAlignment != VerticalAlignment.Center)
@@ -1232,12 +1250,39 @@ internal static class ClearCardLayout
 
     private static void SetTextureIfDifferent(TextureRect textureRect, Texture2D? texture)
     {
-        var currentTexture = textureRect.Texture;
-        if ((currentTexture is null && texture is null)
-            || (IsGodotInstanceUsable(currentTexture) && ReferenceEquals(currentTexture, texture)))
+        if (!IsGodotInstanceUsable(textureRect) || (texture is not null && !IsGodotInstanceUsable(texture)))
             return;
 
-        textureRect.Texture = texture;
+        if (HasTexture(textureRect, texture))
+            return;
+
+        try
+        {
+            textureRect.Texture = texture;
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+    }
+
+    private static bool HasTexture(TextureRect textureRect, Texture2D? texture) =>
+        TryGetTexture(textureRect, out var currentTexture)
+        && ((currentTexture is null && texture is null)
+            || (IsGodotInstanceUsable(currentTexture) && ReferenceEquals(currentTexture, texture)));
+
+    private static bool TryGetTexture(TextureRect textureRect, out Texture2D? texture)
+    {
+        try
+        {
+            texture = textureRect.Texture;
+            return true;
+        }
+        catch (ObjectDisposedException)
+        {
+            texture = null;
+            return false;
+        }
     }
 
     private static Texture2D? ClearCardTexture(Type cardType)
@@ -1471,10 +1516,51 @@ internal static class ClearCardLayout
             canvasItem.Visible = false;
     }
 
-    private static bool IsGodotInstanceUsable(GodotObject? instance) =>
-        instance is not null
-        && GodotObject.IsInstanceValid(instance)
-        && (instance is not Node node || !node.IsQueuedForDeletion());
+    private static bool IsGodotInstanceUsable(GodotObject? instance)
+    {
+        try
+        {
+            return instance is not null
+                && GodotObject.IsInstanceValid(instance)
+                && (instance is not Node node || !node.IsQueuedForDeletion());
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryGetOwnedBodyChild<T>(NCard card, T? node, int? childIndex, out T result)
+        where T : Node
+    {
+        result = null!;
+        if (!IsGodotInstanceUsable(card.Body) || !IsGodotInstanceUsable(node))
+            return false;
+
+        result = node!;
+        AttachOwnedBodyChild(card, result, childIndex);
+        return true;
+    }
+
+    private static void AttachOwnedBodyChild(NCard card, Node node, int? childIndex = null)
+    {
+        if (!IsGodotInstanceUsable(card.Body) || !IsGodotInstanceUsable(node))
+            return;
+
+        var parent = node.GetParent();
+        if (!ReferenceEquals(parent, card.Body))
+        {
+            if (parent is not null && IsGodotInstanceUsable(parent))
+                parent.RemoveChild(node);
+            card.Body.AddChild(node);
+        }
+
+        if (childIndex is not { } index)
+            return;
+
+        var maxIndex = Mathf.Max(card.Body.GetChildCount() - 1, 0);
+        card.Body.MoveChild(node, Mathf.Clamp(index, 0, maxIndex));
+    }
 
     public static void ApplySelectionHighlightLayer(NCardHighlight highlight, bool selected)
     {
@@ -1674,8 +1760,8 @@ internal static class ClearCardLayout
 
         public TextureRect GetOrCreateArt(NCard card)
         {
-            if (_art is not null)
-                return _art;
+            if (TryGetOwnedBodyChild(card, _art, 0, out var existingArt))
+                return existingArt;
 
             _art = new TextureRect
             {
@@ -1683,15 +1769,14 @@ internal static class ClearCardLayout
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
 
-            card.Body.AddChild(_art);
-            card.Body.MoveChild(_art, 0);
+            AttachOwnedBodyChild(card, _art, 0);
             return _art;
         }
 
         public Label GetOrCreateEnglishNameLabel(NCard card)
         {
-            if (_englishNameLabel is not null)
-                return _englishNameLabel;
+            if (TryGetOwnedBodyChild(card, _englishNameLabel, null, out var existingLabel))
+                return existingLabel;
 
             _englishNameLabel = new Label
             {
@@ -1699,21 +1784,21 @@ internal static class ClearCardLayout
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
 
-            card.Body.AddChild(_englishNameLabel);
+            AttachOwnedBodyChild(card, _englishNameLabel);
             return _englishNameLabel;
         }
 
         public Panel GetOrCreateDescriptionPanel(NCard card)
         {
-            if (_descriptionPanel is not null)
-                return _descriptionPanel;
+            var childIndex = Mathf.Min(2, Mathf.Max(card.Body.GetChildCount() - 1, 0));
+            if (TryGetOwnedBodyChild(card, _descriptionPanel, childIndex, out var existingPanel))
+                return existingPanel;
 
             _descriptionPanel = CreatePanel(
                 "SakuraClearCardDescriptionPanel",
                 Spec.DescriptionPanelColor,
                 Spec.DescriptionPanelCornerRadius);
-            card.Body.AddChild(_descriptionPanel);
-            card.Body.MoveChild(_descriptionPanel, Mathf.Min(2, card.Body.GetChildCount() - 1));
+            AttachOwnedBodyChild(card, _descriptionPanel, childIndex);
             return _descriptionPanel;
         }
 
@@ -2175,7 +2260,7 @@ internal static class ClearCardLayout
             if (IsGodotInstanceUsable(Texture))
                 return Texture;
             if (!string.IsNullOrEmpty(ResourcePath) && ResourceLoader.Exists(ResourcePath))
-                return ResourceLoader.Load<Texture2D>(ResourcePath);
+                return ResourceLoader.Load<Texture2D>(ResourcePath, null, ResourceLoader.CacheMode.Reuse);
 
             return null;
         }

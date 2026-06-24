@@ -12,5 +12,19 @@
   "SAKURAMOD-SAKURA_MOD.cardsModifierTitle": "Sakura Cards",
   "SAKURAMOD-SAKURA_MOD.cardsModifierDescription": "Sakura cards will now appear in rewards and shops.",
   "SAKURAMOD-SAKURA_MOD.banter.alive.endTurnPing": "...",
-  "SAKURAMOD-SAKURA_MOD.banter.dead.endTurnPing": "..."
+  "SAKURAMOD-SAKURA_MOD.banter.dead.endTurnPing": "...",
+  "SAKURAMOD-CLASSIC_SAKURA.title": "Classic Sakura",
+  "SAKURAMOD-CLASSIC_SAKURA.titleObject": "Classic Sakura",
+  "SAKURAMOD-CLASSIC_SAKURA.description": "A Clow Card character built around Seal, Release, Turn, and Sakura conversions.",
+  "SAKURAMOD-CLASSIC_SAKURA.pronounSubject": "she",
+  "SAKURAMOD-CLASSIC_SAKURA.pronounObject": "her",
+  "SAKURAMOD-CLASSIC_SAKURA.pronounPossessive": "hers",
+  "SAKURAMOD-CLASSIC_SAKURA.possessiveAdjective": "her",
+  "SAKURAMOD-CLASSIC_SAKURA.goldMonologue": "...",
+  "SAKURAMOD-CLASSIC_SAKURA.eventDeathPrevention": "...",
+  "SAKURAMOD-CLASSIC_SAKURA.aromaPrinciple": "...",
+  "SAKURAMOD-CLASSIC_SAKURA.cardsModifierTitle": "Classic Sakura Cards",
+  "SAKURAMOD-CLASSIC_SAKURA.cardsModifierDescription": "Classic Sakura cards will now appear in rewards and shops.",
+  "SAKURAMOD-CLASSIC_SAKURA.banter.alive.endTurnPing": "...",
+  "SAKURAMOD-CLASSIC_SAKURA.banter.dead.endTurnPing": "..."
 }

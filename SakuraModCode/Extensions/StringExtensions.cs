@@ -42,6 +42,12 @@ public static class StringExtensions
         return Path.Join(MainFile.ResPath, "images", "cards", "clear_cards", path);
     }
 
+    public static string ClassicCardUiImagePath(this string path) =>
+        ResolveRequiredTexturePath(Path.Join(MainFile.ResPath, "images", "cards", "classic", "cardui", path));
+
+    public static string ClassicFullFaceImagePath(this string path) =>
+        ResolveRequiredTexturePath(Path.Join(MainFile.ResPath, "images", "cards", "classic", "full_faces", path));
+
     public static string PowerImagePath(this string path) =>
         ResolveCached(
             Path.Join(MainFile.ResPath, "images", "powers", path),
@@ -100,6 +106,18 @@ public static class StringExtensions
     private static string ResolveDefaultTexturePath(string path)
     {
         return TryResolveTexturePath(path, out var resolvedPath) ? resolvedPath : path;
+    }
+
+    private static string ResolveRequiredTexturePath(string path)
+    {
+        if (ResolvedPathCache.TryGetValue(path, out var cached))
+            return cached;
+
+        if (!TryResolveTexturePath(path, out var resolvedPath))
+            throw new InvalidOperationException($"Could not find required image path: {path}");
+
+        ResolvedPathCache[path] = resolvedPath;
+        return resolvedPath;
     }
 
     private static bool TryResolveTexturePath(string path, out string resolvedPath)

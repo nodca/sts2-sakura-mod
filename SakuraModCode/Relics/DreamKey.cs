@@ -48,7 +48,7 @@ public class DreamKey : SakuraModRelic
     public override RelicModel GetUpgradeReplacement() =>
         ModelDb.Relic<DreamKeyTrueForm>();
 
-    internal static int OpeningRareAtlasChoices(CombatState combatState) =>
+    internal static int OpeningRareAtlasChoices(ICombatState combatState) =>
         combatState.Encounter?.RoomType is RoomType.Elite or RoomType.Boss ? 1 : 0;
 
     private bool _openingManifestInProgress;
@@ -82,7 +82,7 @@ public class DreamKey : SakuraModRelic
         return Task.CompletedTask;
     }
 
-    public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, CombatState combatState)
+    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
         if (OpeningManifestCompleted[this] || _openingManifestInProgress || player != Owner)
             return;
@@ -90,6 +90,10 @@ public class DreamKey : SakuraModRelic
         _openingManifestInProgress = true;
         try
         {
+            var combatState = player.Creature.CombatState;
+            if (combatState is null)
+                return;
+
             var source = Owner.Deck.Cards.OfType<SakuraModCard>().FirstOrDefault();
             if (source is not null)
                 await SakuraActions.Manifest(

@@ -72,9 +72,9 @@ public class LucidGuardPower : SakuraModPower
             await PowerCmd.Remove(this);
     }
 
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Side == side)
+        if (Owner.Side == side && participants.Contains(Owner))
             await PowerCmd.Remove(this);
     }
 }
@@ -113,9 +113,9 @@ public abstract class NextAttackPowerBase : SakuraModPower
 
 public abstract class NextAttackThisTurnPowerBase : NextAttackPowerBase
 {
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Side == side)
+        if (Owner.Side == side && participants.Contains(Owner))
             await PowerCmd.Remove(this);
     }
 }
@@ -160,12 +160,6 @@ public class MirageImagePower : SakuraModPower
         if (creature == Owner && IsIncomingAttack(damageProps, source))
             await PowerCmd.Remove(this);
     }
-
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
-    {
-        if (Owner.Side == side)
-            await PowerCmd.Remove(this);
-    }
 }
 
 public class SakuraFrostbitePower : SakuraModPower
@@ -182,9 +176,9 @@ public class SakuraFrostbitePower : SakuraModPower
             ? 1m + Amount / 100m
             : 1m;
 
-    public override async Task AfterSideTurnStart(CombatSide side, CombatState combatState)
+    public override async Task AfterSideTurnStart(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
     {
-        if (side != Owner.Side)
+        if (side != Owner.Side || !participants.Contains(Owner))
             return;
 
         var nextAmount = Amount / 2;
@@ -194,7 +188,7 @@ public class SakuraFrostbitePower : SakuraModPower
             return;
         }
 
-        await PowerCmd.ModifyAmount(this, nextAmount - Amount, Applier, null, false);
+        await PowerCmd.ModifyAmount(new ThrowingPlayerChoiceContext(), this, nextAmount - Amount, Applier, null, false);
     }
 }
 
@@ -244,9 +238,9 @@ public class SakuraSleepPower : SakuraModPower
         return false;
     }
 
-    public override async Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side, CombatState combatState)
+    public override async Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
     {
-        if (Amount <= 0 || side != Owner.Side || !Owner.IsAlive)
+        if (Amount <= 0 || side != Owner.Side || !participants.Contains(Owner) || !Owner.IsAlive)
             return;
 
         await CreatureCmd.Stun(Owner);
@@ -269,9 +263,9 @@ public abstract class ElementPlayedPowerBase : SakuraModPower
     // character status bar to avoid duplicating the display.
     protected override bool IsVisibleInternal => false;
 
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (side == Owner.Side)
+        if (side == Owner.Side && participants.Contains(Owner))
             await PowerCmd.Remove(this);
     }
 }
@@ -400,23 +394,29 @@ public abstract class SakuraTrackedCostReductionPower : SakuraModPower
 
 public class SakuraCostReductionPower : SakuraTrackedCostReductionPower
 {
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Side == side)
+        if (Owner.Side == side && participants.Contains(Owner))
             await PowerCmd.Remove(this);
     }
 }
 
 public class SakuraCostReductionUntilPlayedPower : SakuraTrackedCostReductionPower
 {
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Side != side)
+        if (Owner.Side != side || !participants.Contains(Owner))
             return;
 
         PruneDetachedTargets();
         await RemoveIfEmpty();
     }
+}
+
+public enum RecordResult
+{
+    Recorded,
+    Restored
 }
 
 public class RecordPower : SakuraModPower
@@ -439,16 +439,17 @@ public class RecordPower : SakuraModPower
     private int RecordedHp => DynamicVars[RecordedHpKey].IntValue;
     private int RecordedBlock => DynamicVars[RecordedBlockKey].IntValue;
 
-    public static async Task RecordOrRestore(Creature owner, CardModel source)
+    public static async Task<RecordResult> RecordOrRestore(PlayerChoiceContext choiceContext, Creature owner, CardModel source)
     {
         if (owner.GetPower<RecordPower>() is { } record)
         {
             await record.RestoreRecordedValues();
-            return;
+            return RecordResult.Restored;
         }
 
-        var power = await PowerCmd.Apply<RecordPower>(owner, 1, owner, source, false);
+        var power = await PowerCmd.Apply<RecordPower>(choiceContext, owner, 1, owner, source, false);
         power?.StoreCurrentValues(owner);
+        return RecordResult.Recorded;
     }
 
     private void StoreCurrentValues(Creature creature)
@@ -478,17 +479,32 @@ public class RecordPower : SakuraModPower
 
 public class SakuraCatalogPower : SakuraModPower
 {
+    public const int PresenceAmount = 1;
+
     protected override string IconFileName => "catalog.png";
 
+    private const string CatalogKey = "Catalog";
     private const string TotalKey = "Total";
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
+    public override int DisplayAmount => CatalogCount;
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
+        new DynamicVar(CatalogKey, 0),
         new DynamicVar(TotalKey, SakuraActions.ClearCardModelTypes.Count)
     ];
+
+    public void SetCatalogCount(int count)
+    {
+        var catalogCount = Math.Max(0, count);
+        DynamicVars[CatalogKey].BaseValue = catalogCount;
+        SetAmount(PresenceAmount + catalogCount, true);
+        InvokeDisplayAmountChanged();
+    }
+
+    private int CatalogCount => Math.Max(0, Amount - PresenceAmount);
 }
 
 public class SakuraManifestedThisTurnPower : SakuraModPower
@@ -499,9 +515,9 @@ public class SakuraManifestedThisTurnPower : SakuraModPower
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Side == side)
+        if (Owner.Side == side && participants.Contains(Owner))
             await PowerCmd.Remove(this);
     }
 }
@@ -519,10 +535,28 @@ public class SakuraReleaseCountThisTurnPower : SakuraModPower
     public bool TryMarkCounted(CardModel card) =>
         _countedCards.Add(card);
 
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Side == side)
+        if (Owner.Side == side && participants.Contains(Owner))
             await PowerCmd.Remove(this);
+    }
+}
+
+public class RepairRegenerationPower : SakuraModPower
+{
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public override bool TryModifyPowerAmountReceived(PowerModel canonicalPower, Creature target, decimal amount, Creature? applier, out decimal modifiedAmount)
+    {
+        if (target == Owner && canonicalPower is RegenPower && amount == -1 && applier is null)
+        {
+            modifiedAmount = 0;
+            return true;
+        }
+
+        modifiedAmount = amount;
+        return false;
     }
 }
 
@@ -570,7 +604,7 @@ public class BlessingOfTheNamelessBookPower : SakuraModPower
             Owner.Player,
             choose: Amount >= ChooseReleaseMode);
         if (card is not null)
-            await SakuraActions.ReleaseThisTurnAndRecord(card);
+            await SakuraActions.ReleaseThisTurnAndRecord(choiceContext, card);
     }
 }
 
@@ -736,7 +770,7 @@ public class GrowingMagicPower : SakuraModPower
         if (Amount <= 0)
             return;
 
-        await PowerCmd.Apply<StrengthPower>(Owner, Amount, Owner, null, false);
+        await PowerCmd.Apply<StrengthPower>(choiceContext, Owner, Amount, Owner, null, false);
         if (Owner.Player is not null)
             await CardPileCmd.Draw(choiceContext, 1, Owner.Player, false);
     }
@@ -796,9 +830,9 @@ public class MagicSurgePower : SakuraModPower
         return Task.CompletedTask;
     }
 
-    public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (side == Owner.Side)
+        if (side == Owner.Side && participants.Contains(Owner))
             _usedThisTurn = false;
 
         return Task.CompletedTask;
@@ -852,7 +886,7 @@ public class TomoyoDesignPower : SakuraModPower
             || card.IsReleased())
             return;
 
-        await SakuraActions.ReleaseAndRecord(card);
+        await SakuraActions.ReleaseAndRecord(new ThrowingPlayerChoiceContext(), card);
         await PowerCmd.Decrement(this);
     }
 }
@@ -935,9 +969,9 @@ public class TalismanComboPower : SakuraModPower
             await ResolveElement(choiceContext, card.Owner, play, element);
     }
 
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (side == Owner.Side)
+        if (side == Owner.Side && participants.Contains(Owner))
             await PowerCmd.Remove(this);
     }
 
@@ -986,9 +1020,9 @@ public class SyaoranTalismanPower : SakuraModPower
             await SakuraActions.TriggerTalismanEffect(choiceContext, card.Owner, element, play, null);
     }
 
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (side == Owner.Side)
+        if (side == Owner.Side && participants.Contains(Owner))
             await PowerCmd.Remove(this);
     }
 }
@@ -1099,9 +1133,9 @@ public class GravitationHoldPower : SakuraModPower
             await PowerCmd.Decrement(this);
     }
 
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (side == Owner.Side)
+        if (side == Owner.Side && participants.Contains(Owner))
             await PowerCmd.Remove(this);
     }
 }
@@ -1124,30 +1158,35 @@ public class MagicAwakeningPower : SakuraModPower
 
 public class StarWandPower : SakuraModPower
 {
+    public const int BootstrapAmount = 1;
+
     private const int StarThreshold = 2;
 
     protected override string IconFileName => "star_wand.png";
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
+    public override int DisplayAmount => Amount;
+
+    public void ResetStars() => SetStars(0);
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (play.Card?.IsReleased() != true)
+        if (play.Card?.Owner?.Creature != Owner || play.Card.IsReleased() != true)
             return;
 
-        var nextAmount = Amount + 1;
-        await PowerCmd.Apply<StarWandPower>(Owner, 1, Owner, null, false);
-        if (nextAmount < StarThreshold)
+        SetStars(Amount + 1);
+        if (Amount < StarThreshold)
             return;
 
         await CardPileCmd.Draw(choiceContext, 1, Owner.Player!, false);
         await PlayerCmd.GainEnergy(1, Owner.Player!);
+        SetStars(Amount - StarThreshold);
+    }
 
-        if (Owner.GetPower<StarWandPower>() is { } power)
-            await PowerCmd.ModifyAmount(power, -StarThreshold, Owner, null, false);
-        if (Owner.GetPower<StarWandPower>() is null)
-            await PowerCmd.Apply<StarWandPower>(Owner, 0, Owner, null, false);
+    private void SetStars(int amount)
+    {
+        SetAmount(Math.Max(0, amount), true);
     }
 }
 

@@ -29,8 +29,8 @@ public static class SakuraActions
 {
     private static readonly LocString HandPrompt = new("cards", "SAKURAMOD-GENERIC.handPrompt");
     private static readonly LocString CardPrompt = new("cards", "SAKURAMOD-GENERIC.cardPrompt");
-    private static readonly ConditionalWeakTable<CombatState, Dictionary<Player, List<PlayedElementEntry>>> PlayedElementsByCombat = new();
-    private static readonly ConditionalWeakTable<CombatState, Dictionary<Player, CardPlaybackMemory>> PlayedCardsByCombat = new();
+    private static readonly ConditionalWeakTable<ICombatState, Dictionary<Player, List<PlayedElementEntry>>> PlayedElementsByCombat = new();
+    private static readonly ConditionalWeakTable<ICombatState, Dictionary<Player, CardPlaybackMemory>> PlayedCardsByCombat = new();
 
     public static IReadOnlyList<Type> ClearCardModelTypes => SakuraCardCatalog.TransparentCardTypes;
 
@@ -61,7 +61,7 @@ public static class SakuraActions
         && cardsByOwner.TryGetValue(owner, out var memory)
         && memory.PlayedReleasedThisTurn;
 
-    public static void BeginPlayerTurn(Player player, CombatState combatState)
+    public static void BeginPlayerTurn(Player player, ICombatState combatState)
     {
         ClearPlayedElements(player);
 
@@ -130,7 +130,7 @@ public static class SakuraActions
     public static IReadOnlyList<Type> CaptureCandidateTypes(Player owner) =>
         SakuraManifestLoop.CaptureCandidateTypes(owner);
 
-    public static void PrepareCaptureCandidatesForReward(Player owner, CombatState combatState) =>
+    public static void PrepareCaptureCandidatesForReward(Player owner, ICombatState combatState) =>
         SakuraManifestLoop.PrepareCaptureCandidatesForReward(owner, combatState);
 
     public static IReadOnlyList<CardModel> CaptureCandidateTemplates(Player owner) =>
@@ -149,7 +149,7 @@ public static class SakuraActions
         Type? excludedType = null) =>
         SakuraManifestLoop.SelectCatalogedClearCard(source, context, cancelable, excludedType);
 
-    public static IReadOnlyList<CardModel> CardsPlayedLastTurn(CombatState? combatState, Player? owner)
+    public static IReadOnlyList<CardModel> CardsPlayedLastTurn(ICombatState? combatState, Player? owner)
     {
         if (combatState is null || owner is null)
             return [];
@@ -249,7 +249,7 @@ public static class SakuraActions
             .Where(card => card != excludedCard);
     }
 
-    public static async Task RecordReleaseGainThisTurn(CardModel card)
+    public static async Task RecordReleaseGainThisTurn(PlayerChoiceContext choiceContext, CardModel card)
     {
         if (card.Owner is not { } owner)
             return;
@@ -257,33 +257,33 @@ public static class SakuraActions
         var power = owner.Creature.GetPower<SakuraReleaseCountThisTurnPower>();
         if (power is null)
         {
-            power = await PowerCmd.Apply<SakuraReleaseCountThisTurnPower>(owner.Creature, 1, owner.Creature, null, false);
+            power = await PowerCmd.Apply<SakuraReleaseCountThisTurnPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
             power?.TryMarkCounted(card);
             return;
         }
 
         if (power.TryMarkCounted(card))
-            await PowerCmd.Apply<SakuraReleaseCountThisTurnPower>(owner.Creature, 1, owner.Creature, null, false);
+            await PowerCmd.Apply<SakuraReleaseCountThisTurnPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
     }
 
-    public static async Task ReleaseThisTurnAndRecord(CardModel card)
+    public static async Task ReleaseThisTurnAndRecord(PlayerChoiceContext choiceContext, CardModel card)
     {
         var wasReleased = card.IsReleased();
         card.ReleaseThisTurn();
         if (!wasReleased)
         {
-            await RecordReleaseGainThisTurn(card);
+            await RecordReleaseGainThisTurn(choiceContext, card);
             DreamKey.RecordReleasedCard(card);
         }
     }
 
-    public static async Task ReleaseAndRecord(CardModel card)
+    public static async Task ReleaseAndRecord(PlayerChoiceContext choiceContext, CardModel card)
     {
         var wasReleased = card.IsReleased();
         card.Release();
         if (!wasReleased)
         {
-            await RecordReleaseGainThisTurn(card);
+            await RecordReleaseGainThisTurn(choiceContext, card);
             DreamKey.RecordReleasedCard(card);
         }
     }
@@ -315,23 +315,23 @@ public static class SakuraActions
         return selected.FirstOrDefault();
     }
 
-    public static async Task ReduceCostThisTurn(SakuraModCard source, CardModel card, int amount = 1)
+    public static async Task ReduceCostThisTurn(PlayerChoiceContext choiceContext, SakuraModCard source, CardModel card, int amount = 1)
     {
         if (amount <= 0)
             return;
 
         var power = source.Owner.Creature.GetPower<SakuraCostReductionPower>()
-                    ?? await PowerCmd.Apply<SakuraCostReductionPower>(source.Owner.Creature, amount, source.Owner.Creature, source, false);
+                    ?? await PowerCmd.Apply<SakuraCostReductionPower>(choiceContext, source.Owner.Creature, amount, source.Owner.Creature, source, false);
         power?.AddTarget(card);
     }
 
-    public static async Task ReduceCostUntilPlayed(SakuraModCard source, CardModel card, int amount = 1)
+    public static async Task ReduceCostUntilPlayed(PlayerChoiceContext choiceContext, SakuraModCard source, CardModel card, int amount = 1)
     {
         if (amount <= 0)
             return;
 
         var power = source.Owner.Creature.GetPower<SakuraCostReductionUntilPlayedPower>()
-                    ?? await PowerCmd.Apply<SakuraCostReductionUntilPlayedPower>(source.Owner.Creature, amount, source.Owner.Creature, source, false);
+                    ?? await PowerCmd.Apply<SakuraCostReductionUntilPlayedPower>(choiceContext, source.Owner.Creature, amount, source.Owner.Creature, source, false);
         power?.AddTarget(card);
     }
 
@@ -502,7 +502,7 @@ public static class SakuraActions
             : null;
     }
 
-    public static async Task RememberPlayedElements(CardPlay play)
+    public static async Task RememberPlayedElements(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var card = play.Card;
         if (card?.Owner is not { } owner || card.CombatState is null)
@@ -530,12 +530,12 @@ public static class SakuraActions
             existing.LastElement = LastElementOf(addedElements);
             entries.Remove(existing);
             entries.Add(existing);
-            await ApplyPlayedElementPowers(owner, addedElements);
+            await ApplyPlayedElementPowers(choiceContext, owner, addedElements);
             return;
         }
 
         entries.Add(new PlayedElementEntry(play, card, elements, LastElementOf(elements)));
-        await ApplyPlayedElementPowers(owner, elements);
+        await ApplyPlayedElementPowers(choiceContext, owner, elements);
     }
 
     public static void ClearPlayedElements(Player owner)
@@ -611,21 +611,32 @@ public static class SakuraActions
     public static int PlayedElementCount(Player owner, SakuraElement element) =>
         PlayedElementAmount(owner, element);
 
-    private static async Task ApplyPlayedElementPowers(Player owner, SakuraElementSet elements)
+    public static async Task GainElementCountThisTurn(PlayerChoiceContext choiceContext, Player owner, SakuraElement element, int amount)
     {
-        foreach (var element in elements.AsElements())
-            await ApplyPlayedElementPower(owner, element);
+        if (amount <= 0)
+            return;
+
+        for (var i = 0; i < amount; i++)
+            await ApplyPlayedElementPower(choiceContext, owner, element);
 
         SakuraElementCompass.OnElementsPlayed(owner);
     }
 
-    private static Task ApplyPlayedElementPower(Player owner, SakuraElement element) =>
+    private static async Task ApplyPlayedElementPowers(PlayerChoiceContext choiceContext, Player owner, SakuraElementSet elements)
+    {
+        foreach (var element in elements.AsElements())
+            await ApplyPlayedElementPower(choiceContext, owner, element);
+
+        SakuraElementCompass.OnElementsPlayed(owner);
+    }
+
+    private static Task ApplyPlayedElementPower(PlayerChoiceContext choiceContext, Player owner, SakuraElement element) =>
         element switch
         {
-            SakuraElement.Wind => PowerCmd.Apply<WindElementPower>(owner.Creature, 1, owner.Creature, null, false),
-            SakuraElement.Water => PowerCmd.Apply<WaterElementPower>(owner.Creature, 1, owner.Creature, null, false),
-            SakuraElement.Fire => PowerCmd.Apply<FireElementPower>(owner.Creature, 1, owner.Creature, null, false),
-            SakuraElement.Earth => PowerCmd.Apply<EarthElementPower>(owner.Creature, 1, owner.Creature, null, false),
+            SakuraElement.Wind => PowerCmd.Apply<WindElementPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false),
+            SakuraElement.Water => PowerCmd.Apply<WaterElementPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false),
+            SakuraElement.Fire => PowerCmd.Apply<FireElementPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false),
+            SakuraElement.Earth => PowerCmd.Apply<EarthElementPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false),
             _ => Task.CompletedTask
         };
 
@@ -985,6 +996,13 @@ public static class SakuraActions
     public static Task<CardModel?> AddRememberedCopyToHand(SakuraModCard source, CardModel card, bool freeThisTurn) =>
         SakuraManifestLoop.AddRememberedCopyToHand(source, card, freeThisTurn);
 
+    public static Task<CardModel?> AddTemporaryRememberedCopyToHand(
+        SakuraModCard source,
+        PlayerChoiceContext context,
+        CardModel card,
+        bool freeThisTurn) =>
+        SakuraManifestLoop.AddTemporaryRememberedCopyToHand(source, context, card, freeThisTurn);
+
     public static Task<CardModel?> AddGeneratedCopyToHand(
         SakuraModCard source,
         CardModel card,
@@ -1004,6 +1022,11 @@ public static class SakuraActions
         GeneratedCardOptions options = default,
         PlayerChoiceContext? context = null) =>
         SakuraManifestLoop.AddGeneratedCardToCombat(card, options, context);
+
+    public static Task<CardModel?> AddRandomUncatalogedTemporaryClearCardToHand(
+        SakuraModCard source,
+        PlayerChoiceContext context) =>
+        SakuraManifestLoop.AddRandomUncatalogedTemporaryClearCardToHand(source, context);
 
     public static Task<CardModel?> DiscoverGenerated(
         SakuraModCard source,
@@ -1044,7 +1067,7 @@ public static class SakuraActions
         public bool TurnOpen { get; set; }
     }
 
-    private static CardPlaybackMemory GetCardPlaybackMemory(CombatState combatState, Player owner)
+    private static CardPlaybackMemory GetCardPlaybackMemory(ICombatState combatState, Player owner)
     {
         var cardsByOwner = PlayedCardsByCombat.GetValue(combatState, _ => []);
         if (!cardsByOwner.TryGetValue(owner, out var memory))

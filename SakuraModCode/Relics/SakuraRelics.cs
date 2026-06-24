@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -17,59 +18,6 @@ using SakuraMod.SakuraModCode.Events;
 using SakuraMod.SakuraModCode.Extensions;
 
 namespace SakuraMod.SakuraModCode.Relics;
-
-public class DreamBookPage : SakuraModRelic
-{
-    public override RelicRarity Rarity => RelicRarity.Common;
-
-    private bool _usedThisTurn;
-
-    public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, CombatState combatState)
-    {
-        if (player == Owner)
-            _usedThisTurn = false;
-
-        return Task.CompletedTask;
-    }
-
-    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        if (_usedThisTurn || play.Card?.Owner != Owner || play.Card.IsReleased() != true)
-            return;
-
-        _usedThisTurn = true;
-        await CardPileCmd.Draw(choiceContext, 1, Owner, false);
-    }
-}
-
-public class DreamRibbon : SakuraModRelic
-{
-    public override RelicRarity Rarity => RelicRarity.Common;
-
-    private bool _usedThisCombat;
-
-    public override Task BeforeCombatStart()
-    {
-        _usedThisCombat = false;
-        return Task.CompletedTask;
-    }
-
-    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        if (_usedThisCombat || play.Card?.Owner != Owner || play.Card.IsTemporary() != true)
-            return;
-
-        _usedThisCombat = true;
-        await PlayerCmd.GainEnergy(1, Owner);
-        await CardPileCmd.Draw(choiceContext, 1, Owner, false);
-    }
-
-    public override Task AfterCombatEnd(CombatRoom room)
-    {
-        _usedThisCombat = false;
-        return Task.CompletedTask;
-    }
-}
 
 public class StorageRibbon : SakuraModRelic
 {
@@ -112,47 +60,25 @@ public class CatalogNewPage : SakuraModRelic
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(2, ValueProp.Move)];
 
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        if (play.Card?.Owner != Owner || !SakuraActions.IsManifestableClearCard(play.Card) || !play.Card.IsTemporary())
+            return;
+
+        await GainPageBlock(choiceContext, play);
+    }
+
     public async Task AfterCatalogedClearCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         if (play.Card?.Owner != Owner)
             return;
 
+        await GainPageBlock(choiceContext, play);
+    }
+
+    private async Task GainPageBlock(PlayerChoiceContext choiceContext, CardPlay play)
+    {
         await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
-    }
-}
-
-public class KeroCharm : SakuraModRelic
-{
-    public override RelicRarity Rarity => RelicRarity.Common;
-
-    private bool _usedThisCombat;
-
-    public override Task BeforeCombatStart()
-    {
-        _usedThisCombat = false;
-        return Task.CompletedTask;
-    }
-
-    public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, CombatState combatState)
-    {
-        if (_usedThisCombat || player != Owner)
-            return;
-
-        _usedThisCombat = true;
-        var advice = combatState.CreateCard<KeroAdvice>(Owner);
-        await SakuraActions.AddGeneratedCardToCombat(
-            advice,
-            new GeneratedCardOptions
-            {
-                AddTemporary = true
-            },
-            choiceContext);
-    }
-
-    public override Task AfterCombatEnd(CombatRoom room)
-    {
-        _usedThisCombat = false;
-        return Task.CompletedTask;
     }
 }
 
@@ -194,7 +120,7 @@ public class BaguaCompass : SakuraModRelic
 
     private bool _usedThisTurn;
 
-    public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, CombatState combatState)
+    public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
     {
         if (player == Owner)
         {
@@ -213,7 +139,7 @@ public class BaguaCompass : SakuraModRelic
         _usedThisTurn = true;
         var element = SakuraActions.RandomElement(Owner);
         SakuraActions.GrantElementsThisTurn(play.Card, element.ToSet());
-        await SakuraActions.RememberPlayedElements(play);
+        await SakuraActions.RememberPlayedElements(choiceContext, play);
     }
 }
 
@@ -225,7 +151,7 @@ public class TomoyoSewingKit : SakuraModRelic
 
     private bool _usedThisTurn;
 
-    public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, CombatState combatState)
+    public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
     {
         if (player == Owner)
             _usedThisTurn = false;
@@ -250,9 +176,11 @@ public class DreamJournal : SakuraModRelic
 {
     public override RelicRarity Rarity => RelicRarity.Rare;
 
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
+
     private bool _usedThisTurn;
 
-    public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, CombatState combatState)
+    public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
     {
         if (player == Owner)
             _usedThisTurn = false;
@@ -266,20 +194,8 @@ public class DreamJournal : SakuraModRelic
             return;
 
         _usedThisTurn = true;
+        await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
         await SakuraActions.Manifest(Owner, choiceContext, 1);
-    }
-}
-
-public class ClearCardCase : SakuraModRelic
-{
-    public override RelicRarity Rarity => RelicRarity.Rare;
-
-    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        if (play.Card?.Owner != Owner || !SakuraActions.IsManifestableClearCard(play.Card) || !play.Card.IsTemporary())
-            return;
-
-        await CreatureCmd.GainBlock(Owner.Creature, 2, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, play, false);
     }
 }
 
@@ -323,7 +239,7 @@ public class DreamKeyTrueForm : SakuraModRelic
         return Task.CompletedTask;
     }
 
-    public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, CombatState combatState)
+    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
         if (OpeningManifestCompleted[this] || _openingManifestInProgress || player != Owner)
             return;
@@ -331,6 +247,10 @@ public class DreamKeyTrueForm : SakuraModRelic
         _openingManifestInProgress = true;
         try
         {
+            var combatState = player.Creature.CombatState;
+            if (combatState is null)
+                return;
+
             var source = Owner.Deck.Cards.OfType<SakuraModCard>().FirstOrDefault();
             if (source is not null)
                 await SakuraActions.Manifest(
@@ -394,7 +314,7 @@ public class AkihoAliceBook : SakuraModRelic
         return Task.CompletedTask;
     }
 
-    public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, CombatState combatState)
+    public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
     {
         if (player == Owner)
             _releasedThisTurn = false;
@@ -405,7 +325,7 @@ public class AkihoAliceBook : SakuraModRelic
         var dazed = Enumerable.Range(0, 3)
             .Select(_ => ModelDb.Card<Dazed>().CreateClone())
             .ToList();
-        await CardPileCmd.AddGeneratedCardsToCombat(dazed, PileType.Draw, true, CardPilePosition.Random);
+        await CardPileCmd.AddGeneratedCardsToCombat(dazed, PileType.Draw, Owner, CardPilePosition.Random);
         await CardPileCmd.Shuffle(choiceContext, Owner);
     }
 
@@ -417,13 +337,13 @@ public class AkihoAliceBook : SakuraModRelic
             return;
 
         _releasedThisTurn = true;
-        await SakuraActions.ReleaseThisTurnAndRecord(play.Card);
+        await SakuraActions.ReleaseThisTurnAndRecord(new ThrowingPlayerChoiceContext(), play.Card);
         SakuraActions.RememberPlayedReleasedCard(play);
     }
 
-    public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Creature.Side == side)
+        if (Owner.Creature.Side == side && participants.Contains(Owner.Creature))
             _releasedThisTurn = false;
 
         return Task.CompletedTask;

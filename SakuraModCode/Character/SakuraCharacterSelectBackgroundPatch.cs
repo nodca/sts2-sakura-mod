@@ -3,19 +3,19 @@ using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using SakuraMod.SakuraModCode.Classic.Character;
 
 namespace SakuraMod.SakuraModCode.Character;
 
 [HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.SelectCharacter))]
 internal static class SakuraCharacterSelectBackgroundPatch
 {
-    private const string BackgroundNodeName = "Background";
     private static readonly FieldInfo BgContainerField = AccessTools.Field(typeof(NCharacterSelectScreen), "_bgContainer");
 
     [HarmonyPostfix]
     private static void SelectCharacterPostfix(NCharacterSelectScreen __instance, CharacterModel characterModel)
     {
-        if (characterModel is not SakuraMod)
+        if (characterModel is not SakuraMod and not ClassicSakura)
             return;
 
         Apply(__instance, characterModel);
@@ -31,20 +31,25 @@ internal static class SakuraCharacterSelectBackgroundPatch
         if (root is null)
             return;
 
-        if (root.GetNodeOrNull<TextureRect>(BackgroundNodeName) is not { } background)
-            return;
-
-        var textureSize = background.Texture?.GetSize() ?? Vector2.Zero;
-        if (textureSize.X <= 0f || textureSize.Y <= 0f)
-            return;
+        var hasSizedBackground = false;
 
         var globalTarget = root.GetViewport().GetVisibleRect();
         var localTarget = ToLocalRect(bgContainer, globalTarget);
 
         ApplyTopLeftRect(root, localTarget);
-        ApplyFullRect(background);
-        background.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-        background.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+        foreach (var background in Backgrounds(root))
+        {
+            var textureSize = background.Texture?.GetSize() ?? Vector2.Zero;
+            if (textureSize.X <= 0f || textureSize.Y <= 0f)
+                continue;
+
+            ApplyFullRect(background);
+            background.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+            hasSizedBackground = true;
+        }
+
+        if (!hasSizedBackground)
+            return;
     }
 
     private static Rect2 ToLocalRect(Control parent, Rect2 globalRect)
@@ -81,6 +86,15 @@ internal static class SakuraCharacterSelectBackgroundPatch
         control.OffsetBottom = 0f;
         control.Scale = Vector2.One;
         control.PivotOffset = Vector2.Zero;
+    }
+
+    private static IEnumerable<TextureRect> Backgrounds(Control root)
+    {
+        foreach (var child in root.GetChildren())
+        {
+            if (child is TextureRect textureRect)
+                yield return textureRect;
+        }
     }
 
     private static Control? LastControlChild(Control parent)

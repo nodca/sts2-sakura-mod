@@ -11,14 +11,22 @@ internal static class SakuraCardFrameVisuals
     private const string BigBrotherSensePortraitFileName = "big_brother_sense.png";
     private const string CerberusTrueFormPortraitFileName = "cerberus_true_form.png";
     private const string ClockCountryAlicePortraitFileName = "clock_country_alice.png";
+    private const string DWatchPortraitFileName = "d_watch.png";
     private const string DreamKeyGlowPortraitFileName = "dream_key_glow.png";
     private const string DreamWandPortraitFileName = "dream_wand.png";
+    private const string FujitakaNotePortraitFileName = "fujitaka_note.png";
     private const string KeroBondPortraitFileName = "kero_bond.png";
     private const string KeroSnackBreakPortraitFileName = "kero_snack_break.png";
+    private const string MagicSurgePortraitFileName = "magic_surge.png";
+    private const string RollerbladeDashPortraitFileName = "rollerblade_dash.png";
+    private const string SealedBookPortraitFileName = "sealed_book.png";
+    private const string StabilizePortraitFileName = "stabilize.png";
     private const string SyaoranBondPortraitFileName = "syaoran_bond.png";
+    private const string ThunderEmperorSummonPortraitFileName = "thunder_emperor_summon.png";
     private const string TomoyoBondPortraitFileName = "tomoyo_bond.png";
     private const string TomoyoCameraPortraitFileName = "tomoyo_camera.png";
     private const string YamazakiTallTalePortraitFileName = "yamazaki_tall_tale.png";
+    private const string YueTrueFormPortraitFileName = "yue_true_form.png";
     private static readonly Dictionary<string, Texture2D?> PortraitTextureCache = [];
     private static readonly Dictionary<string, Texture2D?> FrameTextureCache = [];
     private static readonly CanvasItemMaterial _plainFrameMaterial = new();
@@ -96,7 +104,7 @@ internal static class SakuraCardFrameVisuals
     }
 
     private static Texture2D? LoadTexture(string path) =>
-        ResourceLoader.Load<Texture2D>(path, null, ResourceLoader.CacheMode.Ignore);
+        ResourceLoader.Load<Texture2D>(path, null, ResourceLoader.CacheMode.Reuse);
 
     private static bool IsGodotInstanceUsable(GodotObject? instance)
     {
@@ -127,14 +135,22 @@ internal static class SakuraCardFrameVisuals
             BigBrotherSense => BigBrotherSensePortraitFileName,
             CerberusTrueForm => CerberusTrueFormPortraitFileName,
             ClockCountryAlice => ClockCountryAlicePortraitFileName,
+            DWatch => DWatchPortraitFileName,
             DreamKeyGlow => DreamKeyGlowPortraitFileName,
             DreamWand => DreamWandPortraitFileName,
+            FujitakaNote => FujitakaNotePortraitFileName,
             KeroBond => KeroBondPortraitFileName,
             KeroSnackBreak => KeroSnackBreakPortraitFileName,
+            MagicSurge => MagicSurgePortraitFileName,
+            RollerbladeDash => RollerbladeDashPortraitFileName,
+            SealedBook => SealedBookPortraitFileName,
+            Stabilize => StabilizePortraitFileName,
             SyaoranBond => SyaoranBondPortraitFileName,
+            ThunderEmperorSummon => ThunderEmperorSummonPortraitFileName,
             TomoyoBond => TomoyoBondPortraitFileName,
             TomoyoCamera => TomoyoCameraPortraitFileName,
             YamazakiTallTale => YamazakiTallTalePortraitFileName,
+            YueTrueForm => YueTrueFormPortraitFileName,
             _ => DefaultPortraitFileName
         };
 

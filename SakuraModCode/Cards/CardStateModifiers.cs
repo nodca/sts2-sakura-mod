@@ -46,9 +46,11 @@ public sealed class ReleaseThisTurnModifier : CardModifier
             description += SakuraStateText.ReleaseLine();
     }
 
-    public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner?.Owner?.Creature.Side == side)
+        if (Owner?.Owner?.Creature is { } ownerCreature
+            && ownerCreature.Side == side
+            && participants.Contains(ownerCreature))
         {
             var card = Owner;
             CardModifier.RemoveModifier(card, this);
@@ -121,9 +123,11 @@ public sealed class SynchronizedCardPairModifier : CardModifier
         }
     }
 
-    public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner?.Owner?.Creature.Side == side)
+        if (Owner?.Owner?.Creature is { } ownerCreature
+            && ownerCreature.Side == side
+            && participants.Contains(ownerCreature))
             CardModifier.RemoveModifier(Owner, this);
 
         return Task.CompletedTask;
@@ -259,9 +263,11 @@ public sealed class ElementThisTurnModifier : CardModifier
     public override void OnInitialApplication() =>
         ApplyKeywords(Elements);
 
-    public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner?.Owner?.Creature.Side == side)
+        if (Owner?.Owner?.Creature is { } ownerCreature
+            && ownerCreature.Side == side
+            && participants.Contains(ownerCreature))
             RemoveFromOwner();
 
         return Task.CompletedTask;
@@ -301,7 +307,7 @@ public sealed class TemporaryModifier : CardModifier
 {
     private const string DelayedRemovalTurnsKey = "DelayedRemovalTurns";
     private static readonly LocString ResonancePrompt = new("cards", "SAKURAMOD-GENERIC.temporaryCardPrompt");
-    private static readonly ConditionalWeakTable<CombatState, HashSet<Player>> CleanupFinishedByCombat = new();
+    private static readonly ConditionalWeakTable<ICombatState, HashSet<Player>> CleanupFinishedByCombat = new();
     private static readonly PileType[] CleanupPileOrder =
     [
         PileType.Hand,
@@ -335,10 +341,12 @@ public sealed class TemporaryModifier : CardModifier
             description += SakuraStateText.TemporaryLine();
     }
 
-    public override async Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
         var player = Owner?.Owner;
-        if (player?.Creature.Side != side)
+        if (player?.Creature is not { } ownerCreature
+            || ownerCreature.Side != side
+            || !participants.Contains(ownerCreature))
             return;
 
         await CleanupTemporaryCards(choiceContext, player);
@@ -475,9 +483,11 @@ public sealed class ReplayThisTurnModifier : CardModifier
         ApplyToOwner();
     }
 
-    public override Task AfterTurnEnd(PlayerChoiceContext choiceContext, CombatSide side)
+    public override Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner?.Owner?.Creature.Side == side)
+        if (Owner?.Owner?.Creature is { } ownerCreature
+            && ownerCreature.Side == side
+            && participants.Contains(ownerCreature))
             RemoveFromOwner();
 
         return Task.CompletedTask;
@@ -511,7 +521,7 @@ public sealed class ManifestAtlasOriginModifier : CardModifier;
 
 public static class TemporaryCardMemory
 {
-    private static readonly ConditionalWeakTable<CombatState, Dictionary<Player, List<CardModel>>> CardsByCombat = new();
+    private static readonly ConditionalWeakTable<ICombatState, Dictionary<Player, List<CardModel>>> CardsByCombat = new();
 
     public static void Remember(CardModel card)
     {
@@ -531,7 +541,7 @@ public static class TemporaryCardMemory
         cards.Add(copy);
     }
 
-    public static IReadOnlyList<CardModel> CardsRemovedByTemporary(CombatState? combatState, Player? player)
+    public static IReadOnlyList<CardModel> CardsRemovedByTemporary(ICombatState? combatState, Player? player)
     {
         if (combatState is null || player is null)
             return [];

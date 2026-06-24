@@ -161,7 +161,7 @@ internal static class SealedBookMemory
     }
 
     private static ICardScope CombatScope(SakuraModCard source) =>
-        source.Owner.Creature.CombatState
+        source.Owner.Creature.CombatState as ICardScope
         ?? throw new InvalidOperationException("Sealed Book can only release cards during combat.");
 
     private static void SanitizeSnapshotCard(CardModel card)

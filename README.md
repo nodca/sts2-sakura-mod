@@ -24,7 +24,7 @@ SakuraMod.
 - Godot: `4.5.1.stable.mono`
 - .NET SDK: `9.0.117`
 - Template package: `Alchyr.Sts2.Templates 2.4.3`
-- Runtime BaseLib: `3.3.0`
+- Runtime BaseLib: `3.3.0+` minimum; built against `3.3.2`
 - Mod id / assembly: `SakuraMod`
 
 ## Local Setup

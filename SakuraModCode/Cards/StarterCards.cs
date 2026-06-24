@@ -59,9 +59,9 @@ public class Reflect() : SakuraModCard(1, CardType.Skill, CardRarity.Common, Tar
             await CreatureCmd.GainBlock(Owner.Creature, DynamicVars["UpgradeBlock"].IntValue, ValueProp.Move, play, false);
 
         if (ShouldRelease)
-            await PowerCmd.Apply<StrongReflectionPower>(Owner.Creature, 1, Owner.Creature, this, false);
+            await PowerCmd.Apply<StrongReflectionPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
         else
-            await PowerCmd.Apply<ReflectionPower>(Owner.Creature, 1, Owner.Creature, this, false);
+            await PowerCmd.Apply<ReflectionPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
     }
 
     protected override void OnUpgrade() {}
@@ -75,7 +75,7 @@ public class Flight() : SakuraModCard(1, CardType.Skill, CardRarity.Common, Targ
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await CommonActions.CardBlock(this, play);
-        await PowerCmd.Apply<SakuraTemporaryDexterityPower>(Owner.Creature, DynamicVars["SakuraTemporaryDexterityPower"].IntValue, Owner.Creature, this, false);
+        await PowerCmd.Apply<SakuraTemporaryDexterityPower>(choiceContext, Owner.Creature, DynamicVars["SakuraTemporaryDexterityPower"].IntValue, Owner.Creature, this, false);
         await TriggerReleaseEffect(choiceContext, play);
     }
 
@@ -103,8 +103,8 @@ public class DreamWand() : SakuraModCard(1, CardType.Skill, CardRarity.Basic, Ta
             cancelable: false);
         foreach (var card in selected)
         {
-            await SakuraActions.ReleaseThisTurnAndRecord(card);
-            await SakuraActions.ReduceCostThisTurn(this, card);
+            await SakuraActions.ReleaseThisTurnAndRecord(choiceContext, card);
+            await SakuraActions.ReduceCostThisTurn(choiceContext, this, card);
         }
     }
 

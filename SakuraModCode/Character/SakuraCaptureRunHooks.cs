@@ -73,12 +73,12 @@ internal sealed class SakuraCaptureHook : AbstractModel
         return Task.CompletedTask;
     }
 
-    public override Task BeforeRewardsOffered(Player player, IReadOnlyList<Reward> rewards)
+    public override bool TryModifyRewards(Player player, List<Reward> rewards, AbstractRoom? room)
     {
         if (ShouldUseCaptureRules(player))
             SakuraManifestLoop.RememberPendingCaptureRewardOffers(player, rewards);
 
-        return Task.CompletedTask;
+        return false;
     }
 
     public override Task AfterRewardTaken(Player player, Reward reward)
