@@ -24,7 +24,7 @@ public class KeroSnackBox : SakuraModRelic
     protected override IEnumerable<DynamicVar> CanonicalVars => [new IntVar("Relics", 2)];
 
     public override bool IsAllowed(IRunState runState) =>
-        SakuraStarterCards.IsSakuraRun(runState);
+        SakuraStarterCompatibility.IsSakuraRun(runState);
 
     public override async Task AfterObtained() =>
         await SakuraStarterRelicEffects.ApplyKeroSnackBox(Owner, DynamicVars["Relics"].IntValue);
@@ -39,8 +39,7 @@ public class BrokenClockGear : SakuraModRelic
     protected override IEnumerable<IHoverTip> ExtraHoverTips =>
         [HoverTipFactory.Static(StaticHoverTip.Transform)];
 
-    public override bool IsAllowed(IRunState runState) =>
-        SakuraStarterCards.IsSakuraRun(runState);
+    public override bool IsAllowed(IRunState runState) => false;
 
     public override async Task AfterObtained() =>
         await SakuraStarterRelicEffects.ApplyBrokenClockGear(Owner, DynamicVars.MaxHp.BaseValue);
@@ -84,14 +83,14 @@ internal static class SakuraStarterRelicEffects
         where T : CardModel
     {
         var card = owner.Deck.Cards.FirstOrDefault(card =>
-            SakuraStarterCards.IsStarterCard<T>(card) && card.IsTransformable);
+            SakuraStarterCompatibility.IsStarterCard<T>(card) && card.IsTransformable);
         if (card is not null)
             transformations.Add(CreateSupportTransformation(owner, card));
     }
 
     private static CardModel CreateRandomSupportCard(Player owner)
     {
-        var supportTemplates = SakuraActions.RewardableSupportCardTemplates(owner);
+        var supportTemplates = SakuraCardCatalog.RewardableSupportCardTemplates(owner);
         if (supportTemplates.Count == 0)
             throw new InvalidOperationException("Cannot transform Sakura starter card: support card pool is empty.");
 

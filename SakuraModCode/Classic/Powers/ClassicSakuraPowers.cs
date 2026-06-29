@@ -9,11 +9,13 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
+using SakuraMod.SakuraModCode;
 using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Relics;
 using SakuraMod.SakuraModCode.Extensions;
@@ -69,21 +71,16 @@ public class ClassicReturnPower : ClassicSakuraPower
             return;
         }
 
-        foreach (var power in Owner.Powers.Where(power => power != this).ToList())
-            await PowerCmd.Remove(power);
         await PowerCmd.Remove(this);
     }
 
     public override async Task AfterRemoved(Creature oldOwner)
     {
-        foreach (var (power, amount) in _recordedPowers)
-        {
-            await PowerCmd.Apply(new ThrowingPlayerChoiceContext(), power, oldOwner, amount, oldOwner, null, false);
-            power.SetAmount(amount);
-        }
+        await RemovePowersAddedAfterSnapshot(oldOwner);
+        RestoreRecordedPowerAmounts(oldOwner);
 
-        await CreatureCmd.SetCurrentHp(oldOwner, Math.Clamp(_recordedHp, 0, oldOwner.MaxHp));
-        await SetBlock(oldOwner, _recordedBlock);
+        await SakuraCreatureState.RestoreHp(oldOwner, _recordedHp);
+        SakuraCreatureState.RestoreBlock(oldOwner, _recordedBlock);
     }
 
     private void CaptureSnapshot()
@@ -96,13 +93,22 @@ public class ClassicReturnPower : ClassicSakuraPower
         _recordedBlock = Owner.Block;
     }
 
-    private static async Task SetBlock(Creature creature, int block)
+    private async Task RemovePowersAddedAfterSnapshot(Creature creature)
     {
-        if (creature.Block > 0)
-            await CreatureCmd.LoseBlock(creature, creature.Block);
-        if (block > 0)
-            await CreatureCmd.GainBlock(creature, block, ValueProp.Move, null, false);
+        while (creature.Powers.FirstOrDefault(power => !_recordedPowers.ContainsKey(power)) is { } power)
+            await PowerCmd.Remove(power);
     }
+
+    private void RestoreRecordedPowerAmounts(Creature creature)
+    {
+        var currentPowers = creature.Powers.ToHashSet();
+        foreach (var (power, amount) in _recordedPowers)
+        {
+            if (currentPowers.Contains(power))
+                power.SetAmount(amount);
+        }
+    }
+
 }
 
 public class ClassicDreamPower : ClassicSakuraPower
@@ -110,32 +116,26 @@ public class ClassicDreamPower : ClassicSakuraPower
     private readonly List<DreamSwap> _swaps = [];
 
     protected override string IconFileName => "power.png";
+    protected override bool IsVisibleInternal => false;
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
-    public override Task AfterApplied(Creature? applier, CardModel? cardSource)
-    {
+    public override Task AfterApplied(Creature? applier, CardModel? cardSource) =>
         ConvertCurrentHand();
-        return Task.CompletedTask;
-    }
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
         if (Owner.Side != side || !participants.Contains(Owner))
             return;
 
-        ReturnOriginalClowCards();
+        await ReturnOriginalClowCards();
         await PowerCmd.Remove(this);
     }
 
-    public void ConvertCurrentHand()
+    public async Task ConvertCurrentHand()
     {
         if (Owner.Player is not { } player)
             return;
-
-        var existingSakura = ExistingSakuraIdentities(player);
-        foreach (var swap in _swaps)
-            existingSakura.Add(swap.Identity);
 
         var hand = CardPile.Get(PileType.Hand, player);
         if (hand is null)
@@ -144,25 +144,24 @@ public class ClassicDreamPower : ClassicSakuraPower
         foreach (var original in hand.Cards.ToList().OfType<ClassicClowCard>())
         {
             if (original.Identity is not { } identity
-                || !existingSakura.Add(identity)
                 || ClassicSakuraCardCatalog.SakuraTypeFor(identity) is not { } sakuraType)
                 continue;
 
             var template = Owner.CombatState!.CreateCard(
                 ModelDb.GetById<CardModel>(ModelDb.GetId(sakuraType)),
                 player);
-            ReplaceInPile(hand, original, template);
-            _swaps.Add(new DreamSwap(identity, original, template));
+            if (await ReplaceInPile(hand, original, template))
+                _swaps.Add(new DreamSwap(identity, original, template));
         }
     }
 
-    private void ReturnOriginalClowCards()
+    private async Task ReturnOriginalClowCards()
     {
         foreach (var swap in _swaps.ToList())
         {
             if (swap.Template.Pile is { Type: PileType.Hand or PileType.Draw or PileType.Discard or PileType.Exhaust } pile)
             {
-                ReplaceInPile(pile, swap.Template, swap.Original);
+                await ReplaceInPile(pile, swap.Template, swap.Original);
                 swap.Template.CardScope?.RemoveCard(swap.Template);
                 continue;
             }
@@ -174,21 +173,14 @@ public class ClassicDreamPower : ClassicSakuraPower
         _swaps.Clear();
     }
 
-    private static HashSet<ClassicCardIdentity> ExistingSakuraIdentities(Player player) =>
-        CardPile.GetCards(player, PileType.Hand, PileType.Draw, PileType.Discard, PileType.Exhaust)
-            .OfType<ClassicSakuraConversionCard>()
-            .Where(static card => card.Identity is not null)
-            .Select(static card => card.Identity!.Value)
-            .ToHashSet();
-
-    private static void ReplaceInPile(CardPile pile, CardModel oldCard, CardModel newCard)
+    private async Task<bool> ReplaceInPile(CardPile pile, CardModel oldCard, CardModel newCard)
     {
-        var index = pile.Cards.ToList().IndexOf(oldCard);
-        if (index < 0)
-            return;
+        if (!pile.Cards.Contains(oldCard))
+            return false;
 
-        oldCard.RemoveFromCurrentPile();
-        pile.AddInternal(newCard, index);
+        await CardPileCmd.RemoveFromCombat(oldCard, skipVisuals: false);
+        await CardPileCmd.Add(newCard, pile, CardPilePosition.Random, this, skipVisuals: false);
+        return true;
     }
 
     private sealed record DreamSwap(ClassicCardIdentity Identity, CardModel Original, CardModel Template);
@@ -635,6 +627,7 @@ public class ClassicLightPower : ClassicSakuraPower, IMaxHandSizeModifier
 {
     private const int ExtraHandSize = 2;
     private bool _upgraded;
+    private CardModel? _playedVoid;
 
     protected override string IconFileName => "light_power.png";
     public override PowerType Type => PowerType.Buff;
@@ -676,10 +669,21 @@ public class ClassicLightPower : ClassicSakuraPower, IMaxHandSizeModifier
             ? (PileType.Exhaust, position)
             : (pileType, position);
 
-    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    public override Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
         if (_upgraded && IsOwnedVoid(play.Card))
+            _playedVoid = play.Card;
+
+        return Task.CompletedTask;
+    }
+
+    public override async Task AfterCardExhausted(PlayerChoiceContext choiceContext, CardModel card, bool causedByEthereal)
+    {
+        if (card == _playedVoid)
+        {
+            _playedVoid = null;
             await CardPileCmd.Draw(choiceContext, 1, Owner.Player!, false);
+        }
     }
 
     private bool IsOwnedVoid(CardModel? card) =>
@@ -977,6 +981,191 @@ public class ClassicCerberusMarkPower : ClassicSakuraPower
     {
         if (Owner.Side == side && participants.Contains(Owner))
             await PowerCmd.Remove(this);
+    }
+}
+
+public class ClassicNothingPower : ClassicSakuraPower
+{
+    private int _damage = 4;
+    private int _block = 3;
+    private bool _upgraded;
+
+    protected override string IconFileName => "power.png";
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DynamicVar("Damage", _damage),
+        new DynamicVar("Block", _block)
+    ];
+
+    public void SetValues(int damage, int block, bool upgraded)
+    {
+        if (_upgraded)
+            return;
+
+        _damage = damage;
+        _block = block;
+        _upgraded = upgraded;
+        DynamicVars["Damage"].BaseValue = _damage;
+        DynamicVars["Block"].BaseValue = _block;
+        InvokeDisplayAmountChanged();
+        RefreshKnownMagicCardCosts();
+    }
+
+    public override Task AfterApplied(Creature? applier, CardModel? cardSource)
+    {
+        RefreshKnownMagicCardCosts();
+        return Task.CompletedTask;
+    }
+
+    public override bool TryModifyEnergyCostInCombat(CardModel card, decimal currentCost, out decimal newCost)
+    {
+        if (IsCostedOwnedMagic(card) && currentCost > 0)
+        {
+            newCost = 0;
+            return true;
+        }
+
+        newCost = currentCost;
+        return false;
+    }
+
+    public override bool TryModifyKeywordsInCombat(CardModel card, ISet<CardKeyword> keywords)
+    {
+        if (!IsOwnedClowOrSakura(card))
+            return false;
+
+        return keywords.Add(CardKeyword.Exhaust);
+    }
+
+    public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
+        CardModel card,
+        bool isAutoPlay,
+        ResourceInfo resources,
+        PileType pileType,
+        CardPilePosition position) =>
+        IsOwnedClowOrSakura(card)
+            ? (PileType.Exhaust, position)
+            : (pileType, position);
+
+    public override Task AfterCardDrawn(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
+    {
+        RefreshCost(card);
+        return Task.CompletedTask;
+    }
+
+    public override Task AfterCardGeneratedForCombat(CardModel card, Player? creator)
+    {
+        if (creator?.Creature == Owner)
+            RefreshCost(card);
+
+        return Task.CompletedTask;
+    }
+
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        if (!IsOwnedClowOrSakura(play.Card))
+            return;
+
+        await CreatureCmd.GainBlock(Owner, _block, ValueProp.Move, play, false);
+
+        var combatState = Owner.CombatState
+            ?? throw new InvalidOperationException("Classic Nothing requires an active combat.");
+        foreach (var enemy in combatState.HittableEnemies.ToList())
+            await CreatureCmd.Damage(choiceContext, enemy, _damage, ValueProp.Unblockable | ValueProp.Unpowered, Owner, play.Card);
+    }
+
+    public override async Task AfterCombatEnd(CombatRoom room)
+    {
+        if (_upgraded || Owner.Player is not { } player)
+            return;
+
+        var candidates = player.Deck.Cards
+            .Where(static card => card is not ClowNothing)
+            .ToList();
+        var swallowed = player.RunState.Rng.CombatCardSelection.NextItem(candidates);
+        if (swallowed is not null)
+            await CardPileCmd.RemoveFromDeck(swallowed, showPreview: true);
+    }
+
+    private void RefreshKnownMagicCardCosts()
+    {
+        if (Owner.Player is not { } player)
+            return;
+
+        foreach (var card in CardPile.GetCards(player, PileType.Hand, PileType.Draw, PileType.Discard, PileType.Exhaust))
+            RefreshCost(card);
+    }
+
+    private static void RefreshCost(CardModel card)
+    {
+        if (IsCostedMagic(card))
+            card.InvokeEnergyCostChanged();
+    }
+
+    private bool IsCostedOwnedMagic(CardModel card) =>
+        card.Owner?.Creature == Owner && IsCostedMagic(card);
+
+    private static bool IsCostedMagic(CardModel card) =>
+        card is ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura }
+        && !card.EnergyCost.CostsX
+        && card.EnergyCost.GetWithModifiers(CostModifiers.Local) > 0;
+
+    private bool IsOwnedClowOrSakura(CardModel? card) =>
+        card?.Owner?.Creature == Owner
+        && card is ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura };
+}
+
+public class ClassicHopePower : ClassicSakuraPower
+{
+    private const decimal Multiplier = 2m;
+
+    protected override string IconFileName => "glow_power_sakuracard.png";
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public override decimal ModifyDamageMultiplicative(
+        Creature? target,
+        decimal amount,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource) =>
+        Amount > 0 && dealer == Owner && props.IsPoweredAttack()
+            ? Multiplier
+            : 1m;
+
+    public override decimal ModifyBlockMultiplicative(Creature target, decimal block, ValueProp props, CardModel? cardSource, CardPlay? cardPlay) =>
+        Amount > 0 && target == Owner && props.HasFlag(ValueProp.Move) && !props.HasFlag(ValueProp.Unpowered)
+            ? Multiplier
+            : 1m;
+}
+
+public class ClassicNothingMonsterPower : ClassicSakuraPower
+{
+    private const int ExhaustChance = 10;
+
+    protected override string IconFileName => "power.png";
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Chance", ExhaustChance)];
+
+    public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
+        CardModel card,
+        bool isAutoPlay,
+        ResourceInfo resources,
+        PileType pileType,
+        CardPilePosition position)
+    {
+        if (card.Owner?.Creature != Owner || card is not ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura })
+            return (pileType, position);
+
+        var roll = Owner.Player?.RunState.Rng.CombatCardSelection.NextInt(100) ?? 100;
+        return roll < ExhaustChance
+            ? (PileType.Exhaust, position)
+            : (pileType, position);
     }
 }
 

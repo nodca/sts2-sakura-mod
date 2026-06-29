@@ -1,3 +1,4 @@
+using Godot;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
@@ -63,5 +64,34 @@ internal static class SakuraCardVisualFamilies
         card is SakuraModCard or SakuraOptionCard;
 
     private static bool IsClassicCard(CardModel card) =>
-        card is ClassicSakuraCard;
+        card is ClassicSakuraCard and not SakuraLegacy;
+}
+
+internal static class SakuraCardVisualGrid
+{
+    public static Vector2 CardSizeFor(IReadOnlyList<CardModel> cards, Vector2 defaultSize)
+    {
+        var cardSize = defaultSize;
+
+        if (ContainsFamily(cards, SakuraCardVisualFamily.Clear))
+            cardSize = Max(cardSize, ClearCardLayout.GridCellSize);
+        if (ContainsFamily(cards, SakuraCardVisualFamily.Classic))
+            cardSize = Max(cardSize, ClassicSakuraCardLayout.GridCellSize);
+
+        return cardSize;
+    }
+
+    private static bool ContainsFamily(IReadOnlyList<CardModel> cards, SakuraCardVisualFamily family)
+    {
+        for (var i = 0; i < cards.Count; i++)
+        {
+            if (SakuraCardVisualFamilies.Family(cards[i]) == family)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static Vector2 Max(Vector2 left, Vector2 right) =>
+        new(Mathf.Max(left.X, right.X), Mathf.Max(left.Y, right.Y));
 }

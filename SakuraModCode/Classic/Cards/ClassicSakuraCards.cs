@@ -17,6 +17,7 @@ using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
+using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Classic.Relics;
 
@@ -125,6 +126,7 @@ public class SakuraArrow() : ClassicSakuraConversionCard(1, CardType.Attack, Tar
 public class ClowSword() : ClassicClowCard(1, CardType.Attack, CardRarity.Basic, TargetType.AnyEnemy, ClassicCardIdentity.Sword)
 {
     public override ClassicElement Element => ClassicElement.Firey;
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Loner];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicDamageVar(6, ValueProp.Move, ClassicCardIdentity.Sword)];
     protected override HashSet<CardTag> CanonicalTags => [CardTag.Strike];
 
@@ -159,6 +161,7 @@ public class SakuraSword() : ClassicSakuraConversionCard(1, CardType.Attack, Tar
 public class ClowShield() : ClassicClowCard(1, CardType.Skill, CardRarity.Basic, TargetType.None, ClassicCardIdentity.Shield)
 {
     public override ClassicElement Element => ClassicElement.Firey;
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Loner];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicBlockVar(5, ValueProp.Move, ClassicCardIdentity.Shield)];
     protected override HashSet<CardTag> CanonicalTags => [CardTag.Defend];
 
@@ -934,7 +937,7 @@ public class SakuraDream() : ClassicSakuraConversionCard(1, CardType.Skill, Targ
     {
         if (Owner.Creature.GetPower<ClassicDreamPower>() is { } existing)
         {
-            existing.ConvertCurrentHand();
+            await existing.ConvertCurrentHand();
             return;
         }
 

@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.addons.mega_text;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -26,29 +27,28 @@ public static class ClearCardVisualPatch
     [HarmonyPatch(nameof(NCard.UpdateVisuals))]
     public static void UpdateVisualsPrefix(NCard __instance)
     {
-        ClearCardLayout.RestoreCardIfTracked(__instance);
+        SakuraCardVisualDispatcher.BeforeClearCardUpdateVisuals(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(NCard.UpdateVisuals))]
     public static void UpdateVisualsPostfix(NCard __instance)
     {
-        ClearCardLayout.Apply(__instance);
+        SakuraCardVisualDispatcher.AfterClearCardUpdateVisuals(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(NCard.ActivateRewardScreenGlow))]
     public static void ActivateRewardScreenGlowPostfix(NCard __instance)
     {
-        ClearCardLayout.Apply(__instance);
+        SakuraCardVisualDispatcher.AfterClearCardRewardGlow(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(NCard.GetCurrentSize))]
     public static void GetCurrentSizePostfix(NCard __instance, ref Vector2 __result)
     {
-        if (ClearCardLayout.IsClearCard(__instance))
-            __result = ClearCardLayout.CurrentSize(__instance);
+        SakuraCardVisualDispatcher.OverrideClearCurrentSize(__instance, ref __result);
     }
 }
 
@@ -59,28 +59,28 @@ public static class ClearCardHolderPatch
     [HarmonyPatch("SetCard")]
     public static void SetCardPrefix(NCardHolder __instance)
     {
-        ClearCardLayout.RestoreHolderIfTracked(__instance);
+        SakuraCardVisualDispatcher.BeforeClearHolderCardChanged(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch("SetCard")]
     public static void SetCardPostfix(NCardHolder __instance)
     {
-        ClearCardLayout.Apply(__instance);
+        SakuraCardVisualDispatcher.AfterClearHolderCardChanged(__instance);
     }
 
     [HarmonyPrefix]
     [HarmonyPatch("OnCardReassigned")]
     public static void OnCardReassignedPrefix(NCardHolder __instance)
     {
-        ClearCardLayout.RestoreHolderIfTracked(__instance);
+        SakuraCardVisualDispatcher.BeforeClearHolderCardChanged(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch("OnCardReassigned")]
     public static void OnCardReassignedPostfix(NCardHolder __instance)
     {
-        ClearCardLayout.Apply(__instance);
+        SakuraCardVisualDispatcher.AfterClearHolderCardChanged(__instance);
     }
 }
 
@@ -91,15 +91,14 @@ public static class ClearCardPlayerHandPatch
     [HarmonyPatch("RefreshLayout")]
     public static void RefreshLayoutPrefix(NPlayerHand __instance)
     {
-        ClearCardLayout.Apply(__instance.ActiveHolders);
+        SakuraCardVisualDispatcher.BeforeClearHandRefreshLayout(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch("RefreshLayout")]
     public static void RefreshLayoutPostfix(NPlayerHand __instance)
     {
-        ClearCardLayout.Apply(__instance.ActiveHolders);
-        ClearCardLayout.ApplyHandSpacing(__instance);
+        SakuraCardVisualDispatcher.AfterClearHandRefreshLayout(__instance);
     }
 }
 
@@ -110,21 +109,21 @@ public static class ClearCardHandHolderPatch
     [HarmonyPatch(nameof(NHandCardHolder._Ready))]
     public static void ReadyPostfix(NHandCardHolder __instance)
     {
-        ClearCardLayout.Apply(__instance);
+        SakuraCardVisualDispatcher.AfterClearHandHolderUpdated(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(NHandCardHolder.UpdateCard))]
     public static void UpdateCardPostfix(NHandCardHolder __instance)
     {
-        ClearCardLayout.Apply(__instance);
+        SakuraCardVisualDispatcher.AfterClearHandHolderUpdated(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(NHandCardHolder.SetDefaultTargets))]
     public static void SetDefaultTargetsPostfix(NHandCardHolder __instance)
     {
-        ClearCardLayout.Apply(__instance);
+        SakuraCardVisualDispatcher.AfterClearHandHolderUpdated(__instance);
     }
 }
 
@@ -135,14 +134,14 @@ public static class ClearCardPreviewHolderPatch
     [HarmonyPatch(nameof(NPreviewCardHolder._Ready))]
     public static void ReadyPostfix(NPreviewCardHolder __instance)
     {
-        ClearCardLayout.Apply(__instance);
+        SakuraCardVisualDispatcher.AfterClearPreviewHolderUpdated(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(NPreviewCardHolder.SetCardScale))]
     public static void SetCardScalePostfix(NPreviewCardHolder __instance)
     {
-        ClearCardLayout.Apply(__instance);
+        SakuraCardVisualDispatcher.AfterClearPreviewHolderUpdated(__instance);
     }
 }
 
@@ -153,14 +152,14 @@ public static class ClearCardGridPatch
     [HarmonyPatch(nameof(NCardGrid.SetCards))]
     public static void SetCardsPrefix(NCardGrid __instance, IReadOnlyList<CardModel> cardsToDisplay)
     {
-        ClearCardLayout.ApplyGridCardSize(__instance, cardsToDisplay);
+        SakuraCardVisualDispatcher.BeforeClearGridSetCards(__instance, cardsToDisplay);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch("UpdateGridPositions")]
     public static void UpdateGridPositionsPostfix(NCardGrid __instance)
     {
-        ClearCardLayout.CenterGridRows(__instance);
+        SakuraCardVisualDispatcher.AfterClearGridPositionsUpdated(__instance);
     }
 }
 
@@ -171,21 +170,21 @@ public static class ClearCardSelectionHighlightPatch
     [HarmonyPatch(nameof(NCardHighlight.AnimShow))]
     public static void AnimShowPostfix(NCardHighlight __instance)
     {
-        ClearCardLayout.ApplySelectionHighlightLayer(__instance, selected: true);
+        SakuraCardVisualDispatcher.AfterClearSelectionHighlightChanged(__instance, selected: true);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(NCardHighlight.AnimHide))]
     public static void AnimHidePostfix(NCardHighlight __instance)
     {
-        ClearCardLayout.ApplySelectionHighlightLayer(__instance, selected: false);
+        SakuraCardVisualDispatcher.AfterClearSelectionHighlightChanged(__instance, selected: false);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(nameof(NCardHighlight.AnimHideInstantly))]
     public static void AnimHideInstantlyPostfix(NCardHighlight __instance)
     {
-        ClearCardLayout.ApplySelectionHighlightLayer(__instance, selected: false);
+        SakuraCardVisualDispatcher.AfterClearSelectionHighlightChanged(__instance, selected: false);
     }
 }
 
@@ -243,7 +242,6 @@ internal static class ClearCardLayout
     private static readonly FieldInfo? GridScrollContainerField = AccessTools.Field(typeof(NCardGrid), "_scrollContainer");
     private static readonly FieldInfo? HighlightCurrentTweenField = AccessTools.Field(typeof(NCardHighlight), "_curTween");
     private static readonly StringName HighlightWidthParameterName = new("width");
-    private static readonly StringName PanelStyleName = new("panel");
     private static readonly StringName FontColorName = new("font_color");
     private static readonly StringName FontOutlineColorName = new("font_outline_color");
     private static readonly StringName FontSizeName = new("font_size");
@@ -264,6 +262,7 @@ internal static class ClearCardLayout
     private static readonly Dictionary<(string Language, SakuraElement Element), string> ElementTitleCache = [];
     private static readonly Dictionary<string, (string ClearCard, string Released, string Temporary)> ClearCardStatusTextCache = [];
     private static Texture2D? ClearCardHighlightTextureCache;
+    private static Texture2D? DefaultHighlightTextureCache;
     private static readonly ConditionalWeakTable<NCard, ClearCardState> CardStates = new();
     private static readonly ConditionalWeakTable<NCardHolder, ClearCardHolderState> HolderStates = new();
     private static readonly ConditionalWeakTable<NCardGrid, ClearCardGridState> GridStates = new();
@@ -277,9 +276,11 @@ internal static class ClearCardLayout
     public static Vector2 CurrentSize(NCard card) =>
         Spec.LayoutSize * card.Scale;
 
+    public static Vector2 GridCellSize => Spec.GridCellSize;
+
     public static void PreloadVisualResources()
     {
-        foreach (var cardType in SakuraActions.ClearCardModelTypes)
+        foreach (var cardType in SakuraCardCatalog.TransparentCardTypes)
             _ = ClearCardTexture(cardType);
         _ = ClearCardHighlightTexture();
     }
@@ -311,7 +312,7 @@ internal static class ClearCardLayout
         state.NeedsDeferredCenter = allCardsAreClearCards;
         state.DeferredCenterAttempts = 0;
         state.DeferredCenterQueued = false;
-        GridCardSizeField.SetValue(grid, allCardsAreClearCards ? Spec.GridCellSize : Spec.DefaultGridCellSize);
+        GridCardSizeField.SetValue(grid, SakuraCardVisualGrid.CardSizeFor(cards, Spec.DefaultGridCellSize));
     }
 
     public static void CenterGridRows(NCardGrid grid)
@@ -660,35 +661,37 @@ internal static class ClearCardLayout
 
     private static void ApplyTopLeftAnchors(Control? control)
     {
+        SakuraCardVisualInfrastructure.ApplyTopLeftAnchors(control);
+    }
+
+    private static void ApplyCenteredAnchors(Control? control)
+    {
         if (control is null)
             return;
 
-        if (control.AnchorLeft != 0f)
-            control.AnchorLeft = 0f;
-        if (control.AnchorTop != 0f)
-            control.AnchorTop = 0f;
-        if (control.AnchorRight != 0f)
-            control.AnchorRight = 0f;
-        if (control.AnchorBottom != 0f)
-            control.AnchorBottom = 0f;
+        if (control.AnchorLeft != 0.5f)
+            control.AnchorLeft = 0.5f;
+        if (control.AnchorTop != 0.5f)
+            control.AnchorTop = 0.5f;
+        if (control.AnchorRight != 0.5f)
+            control.AnchorRight = 0.5f;
+        if (control.AnchorBottom != 0.5f)
+            control.AnchorBottom = 0.5f;
     }
 
     private static void ApplyThemeColorOverride(Control control, StringName name, Color color)
     {
-        if (!control.HasThemeColorOverride(name) || control.GetThemeColor(name) != color)
-            control.AddThemeColorOverride(name, color);
+        SakuraCardVisualInfrastructure.ApplyThemeColorOverride(control, name, color);
     }
 
     private static void ApplyThemeConstantOverride(Control control, StringName name, int value)
     {
-        if (!control.HasThemeConstantOverride(name) || control.GetThemeConstant(name) != value)
-            control.AddThemeConstantOverride(name, value);
+        SakuraCardVisualInfrastructure.ApplyThemeConstantOverride(control, name, value);
     }
 
     private static void ApplyThemeFontSizeOverride(Control control, StringName name, int value)
     {
-        if (!control.HasThemeFontSizeOverride(name) || control.GetThemeFontSize(name) != value)
-            control.AddThemeFontSizeOverride(name, value);
+        SakuraCardVisualInfrastructure.ApplyThemeFontSizeOverride(control, name, value);
     }
 
     private static void ApplyPanelLayout(Panel panel, Rect2 box, int zIndex)
@@ -1250,39 +1253,15 @@ internal static class ClearCardLayout
 
     private static void SetTextureIfDifferent(TextureRect textureRect, Texture2D? texture)
     {
-        if (!IsGodotInstanceUsable(textureRect) || (texture is not null && !IsGodotInstanceUsable(texture)))
-            return;
-
-        if (HasTexture(textureRect, texture))
-            return;
-
-        try
-        {
-            textureRect.Texture = texture;
-        }
-        catch (ObjectDisposedException)
-        {
-            return;
-        }
+        SakuraCardVisualInfrastructure.SetTextureIfDifferent(textureRect, texture);
     }
 
     private static bool HasTexture(TextureRect textureRect, Texture2D? texture) =>
-        TryGetTexture(textureRect, out var currentTexture)
-        && ((currentTexture is null && texture is null)
-            || (IsGodotInstanceUsable(currentTexture) && ReferenceEquals(currentTexture, texture)));
+        SakuraCardVisualInfrastructure.HasTexture(textureRect, texture);
 
     private static bool TryGetTexture(TextureRect textureRect, out Texture2D? texture)
     {
-        try
-        {
-            texture = textureRect.Texture;
-            return true;
-        }
-        catch (ObjectDisposedException)
-        {
-            texture = null;
-            return false;
-        }
+        return SakuraCardVisualInfrastructure.TryGetTexture(textureRect, out texture);
     }
 
     private static Texture2D? ClearCardTexture(Type cardType)
@@ -1331,12 +1310,22 @@ internal static class ClearCardLayout
         return ClearCardHighlightTextureCache;
     }
 
+    private static Texture2D? DefaultHighlightTexture()
+    {
+        if (DefaultHighlightTextureCache is { } cachedTexture && IsGodotInstanceUsable(cachedTexture))
+            return cachedTexture;
+
+        const string path = "res://images/packed/card_template/card_frame_sdf.exr";
+        if (!ResourceLoader.Exists(path))
+            return null;
+
+        DefaultHighlightTextureCache = ResourceLoader.Load<Texture2D>(path, null, ResourceLoader.CacheMode.Reuse);
+        return DefaultHighlightTextureCache;
+    }
+
     private static float RoundedRectDistance(Vector2 point, Vector2 halfSize, float radius)
     {
-        var cornerRadius = Mathf.Min(radius, Mathf.Min(halfSize.X, halfSize.Y));
-        var q = point.Abs() - (halfSize - Vector2.One * cornerRadius);
-        var outside = new Vector2(Mathf.Max(q.X, 0f), Mathf.Max(q.Y, 0f));
-        return outside.Length() + Mathf.Min(Mathf.Max(q.X, q.Y), 0f) - cornerRadius;
+        return SakuraCardVisualInfrastructure.RoundedRectDistance(point, halfSize, radius);
     }
 
     private static string ClearCardArtFileName(Type cardType)
@@ -1371,39 +1360,17 @@ internal static class ClearCardLayout
 
     private static void ApplySize(Control? control, Vector2 size)
     {
-        ApplySize(control, size, size * 0.5f);
+        SakuraCardVisualInfrastructure.ApplySize(control, size);
     }
 
     private static void ApplySize(Control? control, Vector2 size, Vector2 pivotOffset)
     {
-        if (control is null)
-            return;
-
-        if (control.CustomMinimumSize != size)
-            control.CustomMinimumSize = size;
-        if (control.Size != size)
-            control.Size = size;
-        if (control.PivotOffset != pivotOffset)
-            control.PivotOffset = pivotOffset;
+        SakuraCardVisualInfrastructure.ApplySize(control, size, pivotOffset);
     }
 
     private static void ApplyBox(Control? control, Rect2 box)
     {
-        if (control is null)
-            return;
-
-        if (control.Position != box.Position)
-            control.Position = box.Position;
-        if (control.CustomMinimumSize != box.Size)
-            control.CustomMinimumSize = box.Size;
-        if (control.Size != box.Size)
-            control.Size = box.Size;
-        if (control.Scale != Vector2.One)
-            control.Scale = Vector2.One;
-
-        var pivotOffset = box.Size * 0.5f;
-        if (control.PivotOffset != pivotOffset)
-            control.PivotOffset = pivotOffset;
+        SakuraCardVisualInfrastructure.ApplyBox(control, box);
     }
 
     private static string CurrentLanguageKey() =>
@@ -1518,16 +1485,7 @@ internal static class ClearCardLayout
 
     private static bool IsGodotInstanceUsable(GodotObject? instance)
     {
-        try
-        {
-            return instance is not null
-                && GodotObject.IsInstanceValid(instance)
-                && (instance is not Node node || !node.IsQueuedForDeletion());
-        }
-        catch (ObjectDisposedException)
-        {
-            return false;
-        }
+        return SakuraCardVisualInfrastructure.IsGodotInstanceUsable(instance);
     }
 
     private static bool TryGetOwnedBodyChild<T>(NCard card, T? node, int? childIndex, out T result)
@@ -1738,6 +1696,7 @@ internal static class ClearCardLayout
             Hide(_art);
             Hide(_englishNameLabel);
             Hide(_descriptionPanel);
+            RestoreVanillaHighlightDefaultsIfSakuraTextureLeaked(card);
             _rootSnapshot = null;
             _controlSnapshots.Clear();
             _visibilitySnapshots.Clear();
@@ -1818,24 +1777,50 @@ internal static class ClearCardLayout
             _visibilitySnapshots[canvasItem] = canvasItem.Visible;
         }
 
+        private static void RestoreVanillaHighlightDefaultsIfSakuraTextureLeaked(NCard card)
+        {
+            if (!SakuraCardVisualFamilies.IsVanilla(card))
+                return;
+            if (!IsGodotInstanceUsable(card.CardHighlight))
+                return;
+
+            var highlight = card.CardHighlight!;
+            if (!IsSakuraRuntimeTexture(highlight.Texture))
+                return;
+
+            ApplyCenteredAnchors(highlight);
+            if (highlight.Position != Spec.DefaultHighlightPosition)
+                highlight.Position = Spec.DefaultHighlightPosition;
+            if (highlight.Size != Spec.DefaultHighlightSize)
+                highlight.Size = Spec.DefaultHighlightSize;
+            if (highlight.CustomMinimumSize != Vector2.Zero)
+                highlight.CustomMinimumSize = Vector2.Zero;
+            if (highlight.Scale != Vector2.One)
+                highlight.Scale = Vector2.One;
+            if (highlight.PivotOffset != Spec.DefaultHighlightPivotOffset)
+                highlight.PivotOffset = Spec.DefaultHighlightPivotOffset;
+            if (highlight.ExpandMode != TextureRect.ExpandModeEnum.FitHeight)
+                highlight.ExpandMode = TextureRect.ExpandModeEnum.FitHeight;
+            if (highlight.StretchMode != TextureRect.StretchModeEnum.KeepAspectCentered)
+                highlight.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+            if (highlight.ZIndex != 0)
+                highlight.ZIndex = 0;
+            if (highlight.MouseFilter != Control.MouseFilterEnum.Ignore)
+                highlight.MouseFilter = Control.MouseFilterEnum.Ignore;
+            SetTextureIfDifferent(highlight, DefaultHighlightTexture());
+        }
+
+        private static bool IsSakuraRuntimeTexture(Texture2D? texture)
+        {
+            if (!IsGodotInstanceUsable(texture))
+                return true;
+
+            return string.IsNullOrEmpty(texture!.ResourcePath);
+        }
+
         private static Panel CreatePanel(string name, Color color, int cornerRadius)
         {
-            var style = new StyleBoxFlat
-            {
-                BgColor = color,
-                CornerRadiusTopLeft = cornerRadius,
-                CornerRadiusTopRight = cornerRadius,
-                CornerRadiusBottomRight = cornerRadius,
-                CornerRadiusBottomLeft = cornerRadius
-            };
-
-            var panel = new Panel
-            {
-                Name = name,
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            panel.AddThemeStyleboxOverride(PanelStyleName, style);
-            return panel;
+            return SakuraCardVisualInfrastructure.CreatePanel(name, color, cornerRadius);
         }
     }
 
@@ -2109,6 +2094,9 @@ internal static class ClearCardLayout
         public float HandMixedPairGapAdjustment { get; } = Scaled(22f);
         public float HandMinimumAdjacentGap { get; } = Scaled(96f);
         public float HeaderLineUnits { get; } = Scaled(14f);
+        public Vector2 DefaultHighlightPosition { get; } = new(-381f, -475f);
+        public Vector2 DefaultHighlightSize { get; } = new(759f, 951f);
+        public Vector2 DefaultHighlightPivotOffset { get; } = new(150f, 211f);
         public int TitleTextFontSize { get; } = ScaledToInt(26);
         public int TitleTextOutlineSize { get; } = ScaledToInt(12);
         public int TitleTextShadowOffset { get; } = ScaledToInt(2);
@@ -2257,10 +2245,10 @@ internal static class ClearCardLayout
 
         private Texture2D? ResolveTexture()
         {
-            if (IsGodotInstanceUsable(Texture))
-                return Texture;
             if (!string.IsNullOrEmpty(ResourcePath) && ResourceLoader.Exists(ResourcePath))
                 return ResourceLoader.Load<Texture2D>(ResourcePath, null, ResourceLoader.CacheMode.Reuse);
+            if (IsGodotInstanceUsable(Texture) && !string.IsNullOrEmpty(Texture!.ResourcePath))
+                return Texture;
 
             return null;
         }

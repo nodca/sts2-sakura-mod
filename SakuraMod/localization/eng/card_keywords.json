@@ -12,5 +12,7 @@
   "SAKURAMOD-CATALOG.title": "Catalog",
   "SAKURAMOD-CATALOG.description": "The different Transparent Card types you have played this combat.",
   "SAKURAMOD-BURN.title": "Burn",
-  "SAKURAMOD-BURN.description": "After receiving attack damage from a Fire card, lose HP equal to Burn."
+  "SAKURAMOD-BURN.description": "After receiving attack damage from a Fire card, lose HP equal to Burn.",
+  "SAKURAMOD-LONER.title": "Loner",
+  "SAKURAMOD-LONER.description": "For each missing copy of this card in your deck, its value increases by 20%."
 }

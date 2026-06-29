@@ -17,7 +17,7 @@ public class RollerbladeDash() : SakuraModCard(1, CardType.Skill, CardRarity.Com
     {
         if (!SakuraActions.HasManifestedThisTurn(Owner))
         {
-            await SakuraActions.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
+            await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
             return;
         }
 

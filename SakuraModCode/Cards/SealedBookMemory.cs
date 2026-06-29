@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves.Runs;
+using SakuraMod.SakuraModCode.Character;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -30,7 +31,7 @@ internal static class SealedBookMemory
         owner is null ? 0 : Cards(owner).Count;
 
     public static bool CanSeal(CardModel card) =>
-        SakuraActions.IsClearCard(card)
+        SakuraCardCatalog.IsTransparentCard(card)
         && card.IsTemporary()
         && card.Pile?.Type == PileType.Hand;
 
@@ -116,16 +117,7 @@ internal static class SealedBookMemory
             released = LoadSnapshot(source, snapshot);
             SanitizeSnapshotCard(released);
             RemoveSnapshot(sealedCards, index, snapshot);
-            await SakuraActions.AddGeneratedCardToCombat(
-                released,
-                new GeneratedCardOptions
-                {
-                    RemoveTemporary = true,
-                    AddRelease = true,
-                    FreeThisTurn = true,
-                    Pile = PileType.Hand
-                },
-                context);
+            await SakuraManifestLoop.AddRestoredReleasedCardToHand(released, context, freeThisTurn: true);
             return released;
         }
         catch

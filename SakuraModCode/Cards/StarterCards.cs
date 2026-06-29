@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.Cards;
@@ -95,10 +96,12 @@ public class DreamWand() : SakuraModCard(1, CardType.Skill, CardRarity.Basic, Ta
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
+        SakuraVoicePlayback.TryPlay(SakuraVoiceTrigger.DreamWand, CombatState);
+
         var selected = await SakuraActions.SelectUpToHandCards(
             this,
             choiceContext,
-            card => SakuraActions.IsClearCard(card) && !card.IsReleased(),
+            card => SakuraCardCatalog.IsTransparentCard(card) && !card.IsReleased(),
             DynamicVars.Cards.IntValue,
             cancelable: false);
         foreach (var card in selected)

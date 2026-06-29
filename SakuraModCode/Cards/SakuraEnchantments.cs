@@ -19,7 +19,7 @@ public class SakuraSpiral : CustomEnchantmentModel
     public override bool CanEnchant(CardModel card) =>
         base.CanEnchant(card)
         && card.Rarity == CardRarity.Basic
-        && (SakuraStarterCards.IsStarterCard<Gale>(card) || SakuraStarterCards.IsStarterCard<Siege>(card));
+        && (SakuraStarterCompatibility.IsStarterCard<Gale>(card) || SakuraStarterCompatibility.IsStarterCard<Siege>(card));
 
     public override int EnchantPlayCount(int originalPlayCount) =>
         originalPlayCount + DynamicVars["Times"].IntValue;

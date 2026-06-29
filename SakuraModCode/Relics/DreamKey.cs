@@ -13,7 +13,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 using MegaCrit.Sts2.Core.Rooms;
 using SakuraMod.SakuraModCode.Cards;
-using SakuraMod.SakuraModCode.Events;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
 
 namespace SakuraMod.SakuraModCode.Relics;
@@ -70,7 +70,7 @@ public class DreamKey : SakuraModRelic
 
     public override Task AfterMapGenerated(ActMap map, int actIndex)
     {
-        SakuraStarterEventReplacements.RemoveVanillaEventsFromAct(Owner?.RunState, actIndex);
+        SakuraStarterCompatibility.RemoveIncompatibleVanillaStarterEvents(Owner?.RunState, actIndex);
         return Task.CompletedTask;
     }
 
@@ -96,7 +96,7 @@ public class DreamKey : SakuraModRelic
 
             var source = Owner.Deck.Cards.OfType<SakuraModCard>().FirstOrDefault();
             if (source is not null)
-                await SakuraActions.Manifest(
+                await SakuraManifestLoop.Manifest(
                     source,
                     choiceContext,
                     1,
@@ -123,11 +123,11 @@ public class DreamKey : SakuraModRelic
         if (_releaseProgressRecordedThisCombat)
             return;
 
-        if (releasedCard.Owner != Owner || !SakuraActions.IsClearCard(releasedCard))
+        if (releasedCard.Owner != Owner || !SakuraCardCatalog.IsTransparentCard(releasedCard))
             return;
 
         var deckCard = DirectDeckCardSourceOf(releasedCard);
-        if (deckCard is null || deckCard.Owner != Owner || !SakuraActions.IsClearCard(deckCard))
+        if (deckCard is null || deckCard.Owner != Owner || !SakuraCardCatalog.IsTransparentCard(deckCard))
             return;
 
         var clearCardType = deckCard.GetType();
@@ -160,7 +160,7 @@ public class DreamKey : SakuraModRelic
 
     private List<CardModel> UnreleasedDeckCards(Type clearCardType) =>
         Owner.Deck.Cards
-            .Where(card => card.GetType() == clearCardType && SakuraActions.IsClearCard(card) && !card.IsReleased())
+            .Where(card => card.GetType() == clearCardType && SakuraCardCatalog.IsTransparentCard(card) && !card.IsReleased())
             .ToList();
 
     private void PermanentlyReleaseNextDeckCard(Type clearCardType)
@@ -236,7 +236,7 @@ public class DreamKey : SakuraModRelic
 
     private static string CardTitleFor(string cardId)
     {
-        foreach (var type in SakuraActions.ClearCardModelTypes)
+        foreach (var type in SakuraCardCatalog.TransparentCardTypes)
         {
             var template = ModelDb.GetById<CardModel>(ModelDb.GetId(type));
             if (template.Id.Entry == cardId)

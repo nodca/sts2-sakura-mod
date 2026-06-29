@@ -210,6 +210,16 @@ public static class SakuraCardCatalog
     public static bool IsStarterCard<T>(CardModel card) where T : CardModel =>
         card.GetType() == typeof(T);
 
+    public static bool IsStrikeEquivalentStarterCard(CardModel card) =>
+        IsStarterCard<Gale>(card);
+
+    public static bool IsDefendEquivalentStarterCard(CardModel card) =>
+        IsStarterCard<Siege>(card);
+
+    public static bool IsBasicStrikeOrDefendEquivalent(CardModel card) =>
+        card.Rarity == CardRarity.Basic
+        && (IsStrikeEquivalentStarterCard(card) || IsDefendEquivalentStarterCard(card));
+
     public static bool IsRemovableStarterCard(CardModel card) =>
         IsStarterCard(card) && card.IsRemovable;
 

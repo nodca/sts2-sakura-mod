@@ -12,5 +12,7 @@
   "SAKURAMOD-CATALOG.title": "图鉴",
   "SAKURAMOD-CATALOG.description": "本场战斗中你打出过的不同透明牌种类。",
   "SAKURAMOD-BURN.title": "灼烧",
-  "SAKURAMOD-BURN.description": "受到火属性牌造成的攻击伤害后，额外失去等同于灼烧层数的生命。"
+  "SAKURAMOD-BURN.description": "受到火属性牌造成的攻击伤害后，额外失去等同于灼烧层数的生命。",
+  "SAKURAMOD-LONER.title": "独行",
+  "SAKURAMOD-LONER.description": "牌组中每少 1 张同名牌，其数值提高20%。"
 }

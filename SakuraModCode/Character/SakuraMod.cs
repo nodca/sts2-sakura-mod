@@ -79,4 +79,9 @@ public class SakuraMod : PlaceholderCharacterModel
             : "charui/empty_energy_counter_layer.png".ImagePath(),
         new Color("24343d"),
         new Color("d9edf2"));
+
+    protected override IEnumerable<string> ExtraAssetPaths =>
+    [
+        "charui/text_energy.png".ImagePath()
+    ];
 }

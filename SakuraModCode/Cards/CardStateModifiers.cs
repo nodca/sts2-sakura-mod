@@ -823,8 +823,11 @@ public static class SakuraCardStates
         if (!card.CanStabilize())
             return;
 
-        if (card.RemoveTemporaryForStabilize())
-            await SakuraManifestLoop.OnTemporaryStabilized(choiceContext, card);
+        if (!card.RemoveTemporaryForStabilize())
+            return;
+
+        SakuraVoicePlayback.TryPlay(SakuraVoiceTrigger.Stabilize, card.CombatState);
+        await SakuraManifestLoop.OnTemporaryStabilized(choiceContext, card);
     }
 
     public static void StabilizeWithoutTrigger(this CardModel card)

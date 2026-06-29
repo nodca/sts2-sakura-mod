@@ -1,6 +1,7 @@
 using Godot;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
 
 namespace SakuraMod.SakuraModCode.Cards;
@@ -8,13 +9,18 @@ namespace SakuraMod.SakuraModCode.Cards;
 internal static class SakuraCardFrameVisuals
 {
     private const string DefaultPortraitFileName = "card.png";
+    private const string AliceReadingPortraitFileName = "alice_reading.png";
     private const string BigBrotherSensePortraitFileName = "big_brother_sense.png";
+    private const string CardBookSortingPortraitFileName = "card_book_sorting.png";
     private const string CerberusTrueFormPortraitFileName = "cerberus_true_form.png";
     private const string ClockCountryAlicePortraitFileName = "clock_country_alice.png";
     private const string DWatchPortraitFileName = "d_watch.png";
+    private const string DreamCompassPortraitFileName = "dream_compass.png";
     private const string DreamKeyGlowPortraitFileName = "dream_key_glow.png";
     private const string DreamWandPortraitFileName = "dream_wand.png";
+    private const string FourSymbolsPortraitFileName = "four_symbols.png";
     private const string FujitakaNotePortraitFileName = "fujitaka_note.png";
+    private const string GrowingMagicPortraitFileName = "growing_magic.png";
     private const string KeroBondPortraitFileName = "kero_bond.png";
     private const string KeroSnackBreakPortraitFileName = "kero_snack_break.png";
     private const string MagicSurgePortraitFileName = "magic_surge.png";
@@ -39,7 +45,7 @@ internal static class SakuraCardFrameVisuals
 
     public static IEnumerable<string> RunAssetPaths(CardModel card)
     {
-        if (SakuraActions.IsClearCard(card))
+        if (SakuraCardCatalog.IsTransparentCard(card))
         {
             yield return ClearCardLayout.CardArtPath(card.GetType());
             yield break;
@@ -127,18 +133,23 @@ internal static class SakuraCardFrameVisuals
     }
 
     private static bool ShouldUseVanillaFrame(CardModel card) =>
-        SakuraActions.IsClearCard(card) || card.Rarity == CardRarity.Ancient;
+        SakuraCardCatalog.IsTransparentCard(card) || card.Rarity == CardRarity.Ancient;
 
     private static string PortraitFileName(CardModel card) =>
         card switch
         {
+            AliceReading => AliceReadingPortraitFileName,
             BigBrotherSense => BigBrotherSensePortraitFileName,
+            CardBookSorting => CardBookSortingPortraitFileName,
             CerberusTrueForm => CerberusTrueFormPortraitFileName,
             ClockCountryAlice => ClockCountryAlicePortraitFileName,
             DWatch => DWatchPortraitFileName,
+            DreamCompass => DreamCompassPortraitFileName,
             DreamKeyGlow => DreamKeyGlowPortraitFileName,
             DreamWand => DreamWandPortraitFileName,
+            FourSymbols => FourSymbolsPortraitFileName,
             FujitakaNote => FujitakaNotePortraitFileName,
+            GrowingMagic => GrowingMagicPortraitFileName,
             KeroBond => KeroBondPortraitFileName,
             KeroSnackBreak => KeroSnackBreakPortraitFileName,
             MagicSurge => MagicSurgePortraitFileName,
@@ -155,7 +166,7 @@ internal static class SakuraCardFrameVisuals
         };
 
     private static string FrameDirectory(CardModel card) =>
-        SakuraActions.IsPartner(card) ? "partner" : "technique";
+        SakuraCardCatalog.IsPartnerCard(card) ? "partner" : "technique";
 
     private static string FramePartFileName(SakuraFramePart part) =>
         part switch

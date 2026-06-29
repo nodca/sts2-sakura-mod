@@ -87,7 +87,7 @@ internal static class SakuraElementCompass
             return;
 
         var me = LocalContext.GetMe(state);
-        if (me is null || !SakuraStarterCards.IsSakura(me))
+        if (me is null || !SakuraStarterCompatibility.IsSakura(me))
             return;
 
         Unmount();

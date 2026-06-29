@@ -12,7 +12,9 @@ using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
+using SakuraMod.SakuraModCode;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
@@ -461,19 +463,9 @@ public class RecordPower : SakuraModPower
 
     private async Task RestoreRecordedValues()
     {
-        await CreatureCmd.SetCurrentHp(Owner, RecordedHp);
-        SetBlock(Owner, RecordedBlock);
+        await SakuraCreatureState.RestoreHp(Owner, RecordedHp);
+        SakuraCreatureState.RestoreBlock(Owner, RecordedBlock);
         await PowerCmd.Remove(this);
-    }
-
-    private static void SetBlock(Creature creature, int block)
-    {
-        var targetBlock = Math.Clamp(block, 0, 999);
-        var delta = targetBlock - creature.Block;
-        if (delta > 0)
-            creature.GainBlockInternal(delta);
-        else if (delta < 0)
-            creature.LoseBlockInternal(-delta);
     }
 }
 
@@ -493,7 +485,7 @@ public class SakuraCatalogPower : SakuraModPower
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DynamicVar(CatalogKey, 0),
-        new DynamicVar(TotalKey, SakuraActions.ClearCardModelTypes.Count)
+        new DynamicVar(TotalKey, SakuraCardCatalog.TransparentCardTypes.Count)
     ];
 
     public void SetCatalogCount(int count)
@@ -674,14 +666,7 @@ public class ClockCountryAlicePower : SakuraModPower
             reading.UpgradeInternal();
         SyncReadingValues(reading);
 
-        await SakuraActions.AddGeneratedCardToCombat(
-            reading,
-            new GeneratedCardOptions
-            {
-                Pile = PileType.Hand,
-                Position = CardPilePosition.Random
-            },
-            choiceContext);
+        await SakuraManifestLoop.AddGeneratedCardToHand(reading, choiceContext);
     }
 
     private void AddStoredValues(int damage, int block)
@@ -778,29 +763,30 @@ public class GrowingMagicPower : SakuraModPower
 
 public class DreamsEndPower : SakuraModPower
 {
-    private const int MaxDrawPerTurn = 2;
-    private int _drawnThisTurn;
+    private int _nextTurnDraws;
 
     protected override string IconFileName => "dreams_end.png";
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
-    public async Task AfterTemporaryRemoved(PlayerChoiceContext choiceContext)
-    {
-        if (_drawnThisTurn >= MaxDrawPerTurn || Owner.Player is null)
-            return;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
 
-        _drawnThisTurn++;
-        await CardPileCmd.Draw(choiceContext, 1, Owner.Player, false);
+    public Task AfterTemporaryRemoved(PlayerChoiceContext choiceContext)
+    {
+        if (Owner.Player is not null)
+            _nextTurnDraws += DynamicVars.Cards.IntValue;
+        return Task.CompletedTask;
     }
 
-    public override Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
+    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
-        if (player.Creature == Owner)
-            _drawnThisTurn = 0;
+        if (player.Creature != Owner || _nextTurnDraws <= 0)
+            return;
 
-        return Task.CompletedTask;
+        var draws = _nextTurnDraws;
+        _nextTurnDraws = 0;
+        await CardPileCmd.Draw(choiceContext, draws, player, false);
     }
 }
 
@@ -882,7 +868,7 @@ public class TomoyoDesignPower : SakuraModPower
         var card = play.Card;
         if (Amount <= 0
             || card?.Owner?.Creature != Owner
-            || !SakuraActions.IsClearCard(card)
+            || !SakuraCardCatalog.IsTransparentCard(card)
             || card.IsReleased())
             return;
 
@@ -932,7 +918,7 @@ public class SyaoranBondPower : SakuraModPower
         var card = play.Card;
         if (Amount <= 0
             || card?.Owner?.Creature != Owner
-            || !SakuraActions.IsClearCard(card)
+            || !SakuraCardCatalog.IsTransparentCard(card)
             || !SakuraActions.TryRandomMissingElement(card.Owner, card, out var element))
             return Task.CompletedTask;
 
@@ -1080,7 +1066,7 @@ public class PromiseManifestPower : SakuraModPower
             return;
 
         if (!_lostHp)
-            await SakuraActions.Manifest(player, choiceContext, Amount);
+            await SakuraManifestLoop.Manifest(player, choiceContext, Amount);
 
         await PowerCmd.Remove(this);
     }
@@ -1101,7 +1087,7 @@ public class DreamingPower : SakuraModPower
                 .OfType<SakuraModCard>()
                 .FirstOrDefault();
             if (source is not null)
-                await SakuraActions.Manifest(source, choiceContext, Math.Max(1, Amount));
+                await SakuraManifestLoop.Manifest(source, choiceContext, Math.Max(1, Amount));
         }
     }
 }
@@ -1152,7 +1138,7 @@ public class MagicAwakeningPower : SakuraModPower
         if (Amount <= 0 || player.Creature != Owner)
             return;
 
-        await SakuraActions.Manifest(player, choiceContext, Amount);
+        await SakuraManifestLoop.Manifest(player, choiceContext, Amount);
     }
 }
 
@@ -1246,5 +1232,5 @@ internal static class SakuraPowerTriggers
     public static bool IsOwnerClearCard(CardPlay play, Creature owner) =>
         play.Card is { } card
         && card.Owner?.Creature == owner
-        && SakuraActions.IsClearCard(card);
+        && SakuraCardCatalog.IsTransparentCard(card);
 }

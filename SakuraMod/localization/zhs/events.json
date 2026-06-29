@@ -35,5 +35,29 @@
   "SAKURAMOD-SAKURA_SPIRALING_WHIRLPOOL.pages.INITIAL.options.DRINK.title": "饮下水流。",
   "SAKURAMOD-SAKURA_SPIRALING_WHIRLPOOL.pages.INITIAL.options.DRINK.description": "回复最大生命值 33% 的生命。",
   "SAKURAMOD-SAKURA_SPIRALING_WHIRLPOOL.pages.OBSERVE.description": "你凝视漩涡，直到那道纹路安静地落在卡牌之上。",
-  "SAKURAMOD-SAKURA_SPIRALING_WHIRLPOOL.pages.DRINK.description": "水流冰冷而陌生，却意外地恢复了体力。"
+  "SAKURAMOD-SAKURA_SPIRALING_WHIRLPOOL.pages.DRINK.description": "水流冰冷而陌生，却意外地恢复了体力。",
+
+  "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.title": "小狼的心意",
+  "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.description": "小狼站在路边，带着尴尬而坚定的神情。他递来一枚小小的护符，其中藏着安静的温度。",
+  "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.options.ACCEPT.title": "接受护符。",
+  "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.options.ACCEPT.description": "获得爱牌。",
+  "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.options.REJECT.title": "温柔拒绝。",
+  "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.options.REJECT.description": "回复至满生命。",
+  "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.ACCEPT.description": "护符化作爱牌，落入你的牌组。",
+  "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.REJECT.description": "你将护符留在原处，但这场谈话让你重新稳定下来。",
+
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.title": "被封印的卡牌",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.INITIAL.description": "空气中张开一片空白。那不是静默，也不是黑暗，而是二者之下的缺失。无牌正在等待。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.INITIAL.options.FIGHT_WITHOUT_LOVE.title": "面对无牌。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.INITIAL.options.FIGHT_WITHOUT_LOVE.description": "与无牌战斗。奖励：金币和无牌。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.INITIAL.options.FIGHT_WITHOUT_LOVE_LOCKED.title": "锁定：爱牌改变了这场战斗。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.INITIAL.options.FIGHT_WITHOUT_LOVE_LOCKED.description": "爱牌在你的牌组中。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.INITIAL.options.FIGHT_WITH_LOVE.title": "带着爱牌面对无牌。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.INITIAL.options.FIGHT_WITH_LOVE.description": "与无牌战斗。爱牌将被移除。奖励：金币和希望牌。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.INITIAL.options.FIGHT_WITH_LOVE_LOCKED.title": "锁定：需要爱牌。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.INITIAL.options.FIGHT_WITH_LOVE_LOCKED.description": "你没有爱牌。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.INITIAL.options.ESCAPE.title": "逃离。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.INITIAL.options.ESCAPE.description": "失去最大生命值 20% 的生命。从牌组中随机移除 2 张牌。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.ESCAPE.description": "你从那片缺失中挣脱出来。它带走了你的一部分，也带走了两段记忆。",
+  "SAKURAMOD-CLASSIC_THE_SEALED_CARD_EVENT.pages.DONE.description": "空白的压力碎裂开来。留下的是一张牌，以及回应它的形状。"
 }

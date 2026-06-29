@@ -18,12 +18,15 @@ public static class SakuraStandeeVisuals
     private static readonly Vector2 CombatVisualTopLeft = new(-132f, -468f);
     private static readonly Vector2 CombatVisualCenter = new(0f, -234f);
 
-    public static NCreatureVisuals Create(string visualPath, string label)
+    public static NCreatureVisuals Create(string visualPath, string label) =>
+        Create(visualPath, label, CombatVisualScale);
+
+    public static NCreatureVisuals Create(string visualPath, string label, float combatVisualScale)
     {
         try
         {
             var visuals = NodeFactory<NCreatureVisuals>.CreateFromResource(visualPath);
-            ApplyCombatVisualLayout(visuals);
+            ApplyCombatVisualLayout(visuals, combatVisualScale);
             var body = visuals.GetNode<Node2D>("%Visuals");
             StartCombatStandeeAnimation(body);
             return visuals;
@@ -35,13 +38,13 @@ public static class SakuraStandeeVisuals
         }
     }
 
-    private static void ApplyCombatVisualLayout(NCreatureVisuals visuals)
+    private static void ApplyCombatVisualLayout(NCreatureVisuals visuals, float combatVisualScale)
     {
         var body = visuals.GetNode<Node2D>("%Visuals");
         body.Visible = true;
         body.Modulate = Colors.White;
         body.Position = CombatVisualCenter;
-        body.Scale = Vector2.One * CombatVisualScale;
+        body.Scale = Vector2.One * combatVisualScale;
 
         var bounds = visuals.GetNode<Control>("%Bounds");
         bounds.Position = CombatVisualTopLeft;

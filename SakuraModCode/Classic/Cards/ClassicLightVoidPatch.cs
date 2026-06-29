@@ -9,6 +9,12 @@ namespace SakuraMod.SakuraModCode.Classic.Cards;
 internal static class ClassicLightVoidPatch
 {
     [HarmonyPrefix]
-    private static bool SkipVoidEnergyLossWhenLightIsActive(StsVoid __instance, CardModel card) =>
-        card != __instance || __instance.Owner?.Creature.GetPower<ClassicLightPower>() is null;
+    private static bool SkipVoidEnergyLossWhenLightIsActive(StsVoid __instance, CardModel card, ref Task __result)
+    {
+        if (card != __instance || __instance.Owner?.Creature.GetPower<ClassicLightPower>() is null)
+            return true;
+
+        __result = Task.CompletedTask;
+        return false;
+    }
 }

@@ -62,11 +62,11 @@ public class ClassicSakura : PlaceholderCharacterModel
         }
     }
 
-    public override string CustomIconTexturePath => "character_icon_char_name.png".CharacterUiPath();
-    public override string CustomCharacterSelectIconPath => "char_select_char_name.png".CharacterUiPath();
-    public override string CustomCharacterSelectLockedIconPath => "char_select_char_name_locked.png".CharacterUiPath();
-    public override string CustomMapMarkerPath => "map_marker_char_name.png".CharacterUiPath();
-    public override string CustomVisualPath => "charui/sakura_battle_standee.png".ImagePath();
+    public override string CustomIconTexturePath => "classic_character_icon_char_name.png".CharacterUiPath();
+    public override string CustomCharacterSelectIconPath => "classic_char_select_char_name.png".CharacterUiPath();
+    public override string CustomCharacterSelectLockedIconPath => "classic_char_select_char_name_locked.png".CharacterUiPath();
+    public override string CustomMapMarkerPath => "classic_map_marker_char_name.png".CharacterUiPath();
+    public override string CustomVisualPath => "charui/classic_sakura_battle_standee.png".ImagePath();
 
     public override NCreatureVisuals CreateCustomVisuals() =>
         SakuraStandeeVisuals.Create(CustomVisualPath, "Classic Sakura");
@@ -76,8 +76,14 @@ public class ClassicSakura : PlaceholderCharacterModel
 
     public override CustomEnergyCounter? CustomEnergyCounter => new(
         layer => layer == 1
-            ? "charui/combat_energy_counter_badge.png".ImagePath()
+            ? "charui/classic_combat_energy_counter_badge.png".ImagePath()
             : "charui/empty_energy_counter_layer.png".ImagePath(),
         new Color("322a22"),
         new Color("f4e1a3"));
+
+    protected override IEnumerable<string> ExtraAssetPaths =>
+    [
+        ClassicSakuraEnergyIcon.ClowTextPath,
+        ClassicSakuraEnergyIcon.SakuraTextPath
+    ];
 }

@@ -14,7 +14,7 @@ using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
-using SakuraMod.SakuraModCode.Events;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
 
 namespace SakuraMod.SakuraModCode.Relics;
@@ -62,7 +62,7 @@ public class CatalogNewPage : SakuraModRelic
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (play.Card?.Owner != Owner || !SakuraActions.IsManifestableClearCard(play.Card) || !play.Card.IsTemporary())
+        if (play.Card?.Owner != Owner || !SakuraCardCatalog.IsTransparentCard(play.Card) || !play.Card.IsTemporary())
             return;
 
         await GainPageBlock(choiceContext, play);
@@ -96,7 +96,7 @@ public class YueMagicCrystal : SakuraModRelic
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (play.Card?.Owner != Owner || !SakuraActions.IsManifestableClearCard(play.Card))
+        if (play.Card?.Owner != Owner || !SakuraCardCatalog.IsTransparentCard(play.Card))
             return;
 
         _clearCardsPlayed++;
@@ -133,7 +133,7 @@ public class BaguaCompass : SakuraModRelic
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (_usedThisTurn || play.Card?.Owner != Owner || !SakuraActions.IsClearCard(play.Card))
+        if (_usedThisTurn || play.Card?.Owner != Owner || !SakuraCardCatalog.IsTransparentCard(play.Card))
             return;
 
         _usedThisTurn = true;
@@ -161,7 +161,7 @@ public class TomoyoSewingKit : SakuraModRelic
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (_usedThisTurn || play.Card?.Owner != Owner || !SakuraActions.IsPartner(play.Card))
+        if (_usedThisTurn || play.Card?.Owner != Owner || !SakuraCardCatalog.IsPartnerCard(play.Card))
             return;
 
         _usedThisTurn = true;
@@ -195,7 +195,7 @@ public class DreamJournal : SakuraModRelic
 
         _usedThisTurn = true;
         await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
-        await SakuraActions.Manifest(Owner, choiceContext, 1);
+        await SakuraManifestLoop.Manifest(Owner, choiceContext, 1);
     }
 }
 
@@ -228,7 +228,7 @@ public class DreamKeyTrueForm : SakuraModRelic
 
     public override Task AfterMapGenerated(ActMap map, int actIndex)
     {
-        SakuraStarterEventReplacements.RemoveVanillaEventsFromAct(Owner?.RunState, actIndex);
+        SakuraStarterCompatibility.RemoveIncompatibleVanillaStarterEvents(Owner?.RunState, actIndex);
         return Task.CompletedTask;
     }
 
@@ -253,7 +253,7 @@ public class DreamKeyTrueForm : SakuraModRelic
 
             var source = Owner.Deck.Cards.OfType<SakuraModCard>().FirstOrDefault();
             if (source is not null)
-                await SakuraActions.Manifest(
+                await SakuraManifestLoop.Manifest(
                     source,
                     choiceContext,
                     2,
@@ -333,7 +333,7 @@ public class AkihoAliceBook : SakuraModRelic
     {
         if (_releasedThisTurn
             || play.Card?.Owner != Owner
-            || !SakuraActions.IsManifestableClearCard(play.Card))
+            || !SakuraCardCatalog.IsTransparentCard(play.Card))
             return;
 
         _releasedThisTurn = true;

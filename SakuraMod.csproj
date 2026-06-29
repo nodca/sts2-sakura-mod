@@ -28,16 +28,9 @@
         </Reference>
     </ItemGroup>
 
-    <ItemGroup Condition="False"> <!--Allows access to originally private/protected members but may (unlikely to) cause errors.-->
-        <Publicize Include="sts2" IncludeVirtualMembers="false" IncludeCompilerGeneratedMembers="false" />
-    </ItemGroup>
-
     <ItemGroup>
         <PackageReference Include="Alchyr.Sts2.BaseLib" Version="3.3.2" PrivateAssets="All"/>
-        <PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="All"/>
         <PackageReference Include="Alchyr.Sts2.ModAnalyzers" Version="0.1.9" />
-        <!-- Generates a .pck file when building if only using simple assets. May not work on all setups. Uncomment to test. -->
-        <!-- <PackageReference Include="BSchneppe.StS2.PckPacker" Version="0.1.1" PrivateAssets="All" /> -->
         <AdditionalFiles Include="SakuraMod/localization/**/*.json"/> <!-- Used by analyzer -->
     </ItemGroup>
 
@@ -46,10 +39,13 @@
         <Compile Remove="materials/**" />
         <Compile Remove="shaders/**" />
         <Compile Remove="images/**" />
+        <Compile Remove="SakuraMod.Tests/**" />
         <EmbeddedResource Remove="SakuraMod/**" />
         <EmbeddedResource Remove="materials/**" />
         <EmbeddedResource Remove="shaders/**" />
         <EmbeddedResource Remove="images/**" />
+        <EmbeddedResource Remove="SakuraMod.Tests/**" />
+        <None Remove="SakuraMod.Tests/**" />
     </ItemGroup>
 
     <ItemGroup>
@@ -79,12 +75,6 @@
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
     </Target>
 
-    <Target Name="CopyQuickPck" AfterTargets="PackPck" Condition="Exists('$(PckPackerOutputPath)') And '$(PckPackerSkipped)' != 'true'">
-        <Message Text="Copying quick .pck to mods folder." Importance="high"/>
-        <Copy SourceFiles="$(PckPackerOutputPath)"
-              DestinationFolder="$(ModsPath)/$(MSBuildProjectName)" />
-    </Target>
-    
     <Target Name="NeedGodotForPublish" BeforeTargets="Publish">
         <Error Text=" Godot path must be set up before publishing; Godot not found at path '$(GodotPath)'. Check Directory.Build.props file."
                Condition="'$(GodotPath)' == '' or !Exists('$(GodotPath)')"/>

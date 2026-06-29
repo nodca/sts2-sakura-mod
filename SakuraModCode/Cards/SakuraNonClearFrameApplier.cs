@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.addons.mega_text;
 using SakuraMod.SakuraModCode.Classic.Cards;
+using SakuraMod.SakuraModCode.Character;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -286,7 +287,7 @@ internal static class SakuraNonClearFrameApplier
             FieldValue<NinePatchRect>(TypePlaqueField, card),
             SakuraCardFrameVisuals.FrameTexture(model, SakuraFramePart.TypePlaque));
         ApplyHighlightTexture(card, card.CardHighlight);
-        var isPartner = SakuraActions.IsPartner(model);
+        var isPartner = SakuraCardCatalog.IsPartnerCard(model);
         var styleState = StyleStates.GetOrCreateValue(card);
         styleState.Capture(card);
         ApplyDescriptionCategory(card, isPartner);
@@ -370,122 +371,53 @@ internal static class SakuraNonClearFrameApplier
 
     private static bool IsGodotInstanceUsable(GodotObject? instance)
     {
-        try
-        {
-            return instance is not null
-                && GodotObject.IsInstanceValid(instance)
-                && (instance is not Node node || !node.IsQueuedForDeletion());
-        }
-        catch (ObjectDisposedException)
-        {
-            return false;
-        }
+        return SakuraCardVisualInfrastructure.IsGodotInstanceUsable(instance);
     }
 
     private static bool HasTexture(TextureRect item, Texture2D? texture) =>
-        TryGetTexture(item, out var currentTexture)
-        && ((currentTexture is null && texture is null)
-            || (IsGodotInstanceUsable(currentTexture) && ReferenceEquals(currentTexture, texture)));
+        SakuraCardVisualInfrastructure.HasTexture(item, texture);
 
     private static void SetTextureIfDifferent(TextureRect item, Texture2D? texture)
     {
-        if (texture is not null && !IsGodotInstanceUsable(texture))
-            return;
-        if (HasTexture(item, texture))
-            return;
-
-        try
-        {
-            item.Texture = texture;
-        }
-        catch (ObjectDisposedException)
-        {
-            return;
-        }
+        SakuraCardVisualInfrastructure.SetTextureIfDifferent(item, texture);
     }
 
     private static bool HasTexture(NinePatchRect item, Texture2D? texture) =>
-        TryGetTexture(item, out var currentTexture)
-        && ((currentTexture is null && texture is null)
-            || (IsGodotInstanceUsable(currentTexture) && ReferenceEquals(currentTexture, texture)));
+        SakuraCardVisualInfrastructure.HasTexture(item, texture);
 
     private static void SetTextureIfDifferent(NinePatchRect item, Texture2D? texture)
     {
-        if (texture is not null && !IsGodotInstanceUsable(texture))
-            return;
-        if (HasTexture(item, texture))
-            return;
-
-        try
-        {
-            item.Texture = texture;
-        }
-        catch (ObjectDisposedException)
-        {
-            return;
-        }
+        SakuraCardVisualInfrastructure.SetTextureIfDifferent(item, texture);
     }
 
     private static bool TryGetTexture(TextureRect item, out Texture2D? texture)
     {
-        try
-        {
-            texture = item.Texture;
-            return true;
-        }
-        catch (ObjectDisposedException)
-        {
-            texture = null;
-            return false;
-        }
+        return SakuraCardVisualInfrastructure.TryGetTexture(item, out texture);
     }
 
     private static bool TryGetTexture(NinePatchRect item, out Texture2D? texture)
     {
-        try
-        {
-            texture = item.Texture;
-            return true;
-        }
-        catch (ObjectDisposedException)
-        {
-            texture = null;
-            return false;
-        }
+        return SakuraCardVisualInfrastructure.TryGetTexture(item, out texture);
     }
 
     private static void ApplyThemeColorOverride(Control? control, StringName name, Color color)
     {
-        if (control is null || !IsGodotInstanceUsable(control))
-            return;
-
-        if (!control.HasThemeColorOverride(name) || control.GetThemeColor(name) != color)
-            control.AddThemeColorOverride(name, color);
+        SakuraCardVisualInfrastructure.ApplyThemeColorOverride(control, name, color);
     }
 
     private static void ApplyThemeConstantOverride(Control? control, StringName name, int value)
     {
-        if (control is null || !IsGodotInstanceUsable(control))
-            return;
-
-        if (!control.HasThemeConstantOverride(name) || control.GetThemeConstant(name) != value)
-            control.AddThemeConstantOverride(name, value);
+        SakuraCardVisualInfrastructure.ApplyThemeConstantOverride(control, name, value);
     }
 
     private static void RemoveThemeColorOverride(Control? control, StringName name)
     {
-        if (control is null || !IsGodotInstanceUsable(control) || !control.HasThemeColorOverride(name))
-            return;
-
-        control.RemoveThemeColorOverride(name);
+        SakuraCardVisualInfrastructure.RemoveThemeColorOverride(control, name);
     }
 
     private static void RemoveThemeConstantOverride(Control? control, StringName name)
     {
-        if (control is null || !IsGodotInstanceUsable(control) || !control.HasThemeConstantOverride(name))
-            return;
-
-        control.RemoveThemeConstantOverride(name);
+        SakuraCardVisualInfrastructure.RemoveThemeConstantOverride(control, name);
     }
 
     private static Texture2D? VanillaTypePlaqueTexture(NinePatchRect plaque) =>
@@ -545,10 +477,7 @@ internal static class SakuraNonClearFrameApplier
 
     private static float RoundedRectDistance(Vector2 point, Vector2 halfSize, float radius)
     {
-        var cornerRadius = Mathf.Min(radius, Mathf.Min(halfSize.X, halfSize.Y));
-        var q = point.Abs() - (halfSize - Vector2.One * cornerRadius);
-        var outside = new Vector2(Mathf.Max(q.X, 0f), Mathf.Max(q.Y, 0f));
-        return outside.Length() + Mathf.Min(Mathf.Max(q.X, q.Y), 0f) - cornerRadius;
+        return SakuraCardVisualInfrastructure.RoundedRectDistance(point, halfSize, radius);
     }
 
     private sealed class SakuraCostLabelState

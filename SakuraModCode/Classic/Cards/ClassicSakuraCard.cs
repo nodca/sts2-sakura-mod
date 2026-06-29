@@ -242,6 +242,15 @@ public abstract class ClassicSakuraConversionCard(
         ClassicSakuraCardCatalog.ArtStem(GetType()).BigClassicSakuraArtPath();
 }
 
+public abstract class ClassicSpecialSakuraCard(int cost, CardType type, TargetType target) :
+    ClassicSakuraCard(cost, type, CardRarity.Event, target, ClassicSakuraCardFamily.Sakura)
+{
+    public override int MaxUpgradeLevel => 0;
+
+    protected override string BigPortraitPath =>
+        ClassicSakuraCardCatalog.ArtStem(GetType()).BigClassicSakuraArtPath();
+}
+
 public abstract class ClassicSpellCard(int cost, CardType type, CardRarity rarity, TargetType target) :
     ClassicSakuraCard(cost, type, rarity, target, ClassicSakuraCardFamily.Spell)
 {
@@ -382,6 +391,18 @@ internal static class ClassicSakuraCardCatalog
         typeof(SakuraWood)
     ];
 
+    private static readonly Type[] SpecialCardTypes =
+    [
+        typeof(ClowNothing),
+        typeof(SakuraLove),
+        typeof(SakuraHope)
+    ];
+
+    private static readonly Type[] AncientCardTypes =
+    [
+        typeof(SakuraLegacy)
+    ];
+
     private static readonly Type[] SpellCardTypes =
     [
         typeof(SpellSeal),
@@ -505,7 +526,8 @@ internal static class ClassicSakuraCardCatalog
             [ClassicCardIdentity.Watery] = typeof(ClowWatery),
             [ClassicCardIdentity.Wave] = typeof(ClowWave),
             [ClassicCardIdentity.Windy] = typeof(ClowWindy),
-            [ClassicCardIdentity.Wood] = typeof(ClowWood)
+            [ClassicCardIdentity.Wood] = typeof(ClowWood),
+            [ClassicCardIdentity.Nothing] = typeof(ClowNothing)
         };
 
     private static readonly IReadOnlyDictionary<Type, string> ArtStems = new Dictionary<Type, string>
@@ -562,6 +584,7 @@ internal static class ClassicSakuraCardCatalog
         [typeof(ClowWave)] = "the_wave_p.png",
         [typeof(ClowWindy)] = "the_windy_p.png",
         [typeof(ClowWood)] = "the_wood_p.png",
+        [typeof(ClowNothing)] = "the_nothing_p.png",
         [typeof(SakuraArrow)] = "the_arrow_p.png",
         [typeof(SakuraEarthy)] = "the_earthy_p.png",
         [typeof(SakuraErase)] = "the_erase_p.png",
@@ -614,6 +637,8 @@ internal static class ClassicSakuraCardCatalog
         [typeof(SakuraWave)] = "the_wave_p.png",
         [typeof(SakuraWindy)] = "the_windy_p.png",
         [typeof(SakuraWood)] = "the_wood_p.png",
+        [typeof(SakuraLove)] = "the_love_p.png",
+        [typeof(SakuraHope)] = "the_hope_p.png",
         [typeof(SpellSeal)] = "default_card_p.png",
         [typeof(SpellRelease)] = "default_card_p.png",
         [typeof(SpellTurn)] = "default_card_p.png",
@@ -629,6 +654,8 @@ internal static class ClassicSakuraCardCatalog
         ..StarterClowCardTypes.Select(TypeToCard),
         ..RewardableClowCardTypes.Select(TypeToCard),
         ..SakuraCardTypes.Select(TypeToCard),
+        ..SpecialCardTypes.Select(TypeToCard),
+        ..AncientCardTypes.Select(TypeToCard),
         ..SpellCardTypes.Select(TypeToCard)
     ];
 
@@ -673,6 +700,12 @@ internal static class ClassicSakuraCardCatalog
 
     public static CardModel CreateMirrorCopySource(CardModel source)
     {
+        if (source is SakuraLove)
+            return CreateCombatCardFromType<SpellEmptySpell>(source);
+
+        if (source is SakuraHope)
+            return CreateCombatCardFromType<ClowNothing>(source);
+
         if (source is ClassicSakuraConversionCard { Identity: { } identity } && HasSakuraIdentity(source.Owner, identity))
         {
             var clowType = ClowTypeFor(identity)
@@ -685,6 +718,9 @@ internal static class ClassicSakuraCardCatalog
 
         return source.CreateClone();
     }
+
+    public static bool HasSpecialCard<T>(Player owner) where T : CardModel =>
+        CardsInAllKnownPiles(owner).OfType<T>().Any();
 
     public static int ConvertedSakuraCount(Player owner) =>
         owner.Deck.Cards.OfType<ClassicSakuraConversionCard>().Select(card => card.Identity).Distinct().Count()
@@ -706,6 +742,12 @@ internal static class ClassicSakuraCardCatalog
 
     private static CardModel TypeToCard(Type type) =>
         ModelDb.GetById<CardModel>(ModelDb.GetId(type));
+
+    private static CardModel CreateCombatCardFromType<T>(CardModel source) where T : CardModel
+    {
+        var canonical = ModelDb.GetById<CardModel>(ModelDb.GetId(typeof(T)));
+        return source.CombatState!.CreateCard(canonical, source.Owner);
+    }
 
     private static CardRarity RollDarkClowRarity(Player owner)
     {

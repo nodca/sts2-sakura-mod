@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Relics;
 
@@ -26,7 +27,7 @@ public class Action() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Ta
         if (card is not null)
             await CardCmd.Exhaust(choiceContext, card);
 
-        var manifested = await SakuraActions.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
+        var manifested = await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
         foreach (var copy in manifested)
             copy.SetToFreeThisTurn();
 
@@ -47,7 +48,7 @@ public class Appear() : SakuraModCard(1, CardType.Skill, CardRarity.Common, Targ
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var manifested = await SakuraActions.Manifest(this, choiceContext, DynamicVars.Cards.IntValue, excludedType: typeof(Appear));
+        var manifested = await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars.Cards.IntValue, excludedType: typeof(Appear));
         if (!ShouldRelease)
             return;
 
@@ -265,7 +266,7 @@ public class DreamCompass() : SakuraModCard(1, CardType.Skill, CardRarity.Uncomm
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var choices = CardPile.Get(PileType.Draw, Owner)!.Cards
-            .Where(SakuraActions.IsClearCard)
+            .Where(SakuraCardCatalog.IsTransparentCard)
             .ToList();
         var card = await SakuraActions.SelectFromCardPreviews(this, choiceContext, choices, cancelable: false);
 
@@ -340,7 +341,7 @@ public class TomoyoCostume() : SakuraModCard(1, CardType.Skill, CardRarity.Rare,
     }
 
     private bool IsTarget(CardModel card) =>
-        card != this && SakuraActions.IsClearCard(card) && card.IsTemporary();
+        card != this && SakuraCardCatalog.IsTransparentCard(card) && card.IsTemporary();
 
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(2);
 }
@@ -400,7 +401,7 @@ public class Choice() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, Ta
     private async Task Manifest(PlayerChoiceContext choiceContext, int repeats)
     {
         for (var i = 0; i < repeats; i++)
-            await SakuraActions.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
+            await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
     }
 
     private async Task Draw(PlayerChoiceContext choiceContext, int repeats) =>
@@ -494,7 +495,7 @@ public class Dreaming() : SakuraModCard(2, CardType.Power, CardRarity.Rare, Targ
     }
 
     public async Task OnReleased(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await SakuraActions.Manifest(this, choiceContext, 1);
+        await SakuraManifestLoop.Manifest(this, choiceContext, 1);
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }

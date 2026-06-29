@@ -32,6 +32,10 @@ public static class SakuraKeywords
     [CustomEnum("BURN")]
     [KeywordProperties(AutoKeywordPosition.None)]
     public static CardKeyword Burn;
+
+    [CustomEnum("LONER")]
+    [KeywordProperties(AutoKeywordPosition.After)]
+    public static CardKeyword Loner;
 }
 
 public enum SakuraElement

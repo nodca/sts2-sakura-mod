@@ -1,0 +1,290 @@
+using BaseLib.Extensions;
+using BaseLib.Utils;
+using MegaCrit.Sts2.Core;
+using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Models;
+using SakuraMod.SakuraModCode.Powers;
+
+namespace SakuraMod.SakuraModCode.Cards;
+
+public readonly record struct GeneratedCardOptions
+{
+    public PileType? Pile { get; init; }
+    public CardPilePosition? Position { get; init; }
+    public bool RemoveRelease { get; init; }
+    public bool RemoveTemporary { get; init; }
+    public bool RemoveManifestAtlasOrigin { get; init; }
+    public bool AddTemporary { get; init; }
+    public bool AddRelease { get; init; }
+    public bool AddManifestAtlasOrigin { get; init; }
+    public bool FreeThisTurn { get; init; }
+}
+
+internal static class SakuraGeneratedCardLifecycle
+{
+    public static async Task<bool> GrantTemporary(PlayerChoiceContext context, CardModel card)
+    {
+        if (card.IsTemporary())
+            return false;
+
+        card.MakeTemporary();
+        await TriggerTemporaryGranted(context, card);
+        return true;
+    }
+
+    public static async Task<CardModel?> AddTemporaryCopyToHand(
+        CardModel card,
+        bool release,
+        bool freeThisTurn,
+        bool preserveRelease,
+        PlayerChoiceContext context) =>
+        await AddGeneratedCopyToHand(
+            card,
+            TemporaryCopyOptions(release, freeThisTurn, preserveRelease),
+            context);
+
+    public static async Task<CardModel?> AddRememberedCopyToHand(CardModel card, bool freeThisTurn) =>
+        await AddGeneratedCopyToHand(
+            card,
+            RememberedCopyOptions(freeThisTurn, addTemporary: false));
+
+    public static async Task<CardModel?> AddTemporaryRememberedCopyToHand(
+        CardModel card,
+        bool freeThisTurn,
+        PlayerChoiceContext context) =>
+        await AddGeneratedCopyToHand(
+            card,
+            RememberedCopyOptions(freeThisTurn, addTemporary: true),
+            context);
+
+    public static Task<CardModel> AddGeneratedCardToHand(
+        CardModel card,
+        PlayerChoiceContext? context = null,
+        CardPilePosition position = CardPilePosition.Random) =>
+        AddGeneratedCardToCombat(card, GeneratedCardToHandOptions(position), context);
+
+    public static Task<CardModel> AddTemporaryReleasedCardToCombat(
+        CardModel card,
+        PlayerChoiceContext context,
+        PileType pile = PileType.Hand,
+        CardPilePosition position = CardPilePosition.Random) =>
+        AddGeneratedCardToCombat(card, TemporaryReleasedCardOptions(pile, position), context);
+
+    public static Task<CardModel> AddRestoredReleasedCardToHand(
+        CardModel card,
+        PlayerChoiceContext context,
+        bool freeThisTurn) =>
+        AddGeneratedCardToCombat(card, RestoredReleasedCardToHandOptions(freeThisTurn), context);
+
+    public static async Task<CardModel?> AddGeneratedCopyToHand(
+        CardModel card,
+        GeneratedCardOptions options,
+        PlayerChoiceContext? context = null) =>
+        await AddGeneratedCopy(
+            card,
+            options with
+            {
+                Pile = PileType.Hand
+            },
+            context);
+
+    public static async Task<CardModel?> AddGeneratedCopy(
+        CardModel card,
+        GeneratedCardOptions options,
+        PlayerChoiceContext? context = null)
+    {
+        var copy = card.CreateClone();
+        copy.RemoveManifestAtlasOrigin();
+        await AddGeneratedCardToCombat(copy, options, context);
+        return copy;
+    }
+
+    public static async Task<CardModel> AddGeneratedCardToCombat(
+        CardModel card,
+        GeneratedCardOptions options = default,
+        PlayerChoiceContext? context = null)
+    {
+        if (options.RemoveRelease)
+            card.RemoveRelease();
+        if (options.RemoveTemporary)
+            card.RemoveTemporaryForExchange();
+        if (options.RemoveManifestAtlasOrigin)
+            card.RemoveManifestAtlasOrigin();
+
+        var temporaryGranted = false;
+        if (options.AddTemporary)
+        {
+            var hadTemporary = card.IsTemporary();
+            card.MakeTemporary();
+            temporaryGranted = !hadTemporary;
+        }
+
+        if (options.FreeThisTurn)
+            card.SetToFreeThisTurn();
+        if (options.AddManifestAtlasOrigin)
+            card.MarkManifestAtlasOrigin();
+
+        await CardPileCmd.AddGeneratedCardToCombat(
+            card,
+            options.Pile ?? PileType.Hand,
+            card.Owner,
+            options.Position ?? CardPilePosition.Random);
+
+        if (temporaryGranted && context is not null)
+            await TriggerTemporaryGranted(context, card);
+
+        if (options.AddRelease)
+            await SakuraActions.ReleaseAndRecord(context ?? new ThrowingPlayerChoiceContext(), card);
+
+        return card;
+    }
+
+    public static CardModel CreateManifestChoice(Player owner, CardModel source)
+    {
+        var copy = source.IsCanonical
+            ? CreateCombatCardFromTemplate(owner, source)
+            : CloneToUpgradeLevel(source, source.CurrentUpgradeLevel);
+        UpgradeToLevel(copy, source.CurrentUpgradeLevel);
+        return copy;
+    }
+
+    public static Task<CardModel> AddManifestChoiceToCombat(
+        CardModel card,
+        PlayerChoiceContext context,
+        bool addTemporary,
+        bool captureEligible) =>
+        AddGeneratedCardToCombat(card, ManifestChoiceOptions(addTemporary, captureEligible), context);
+
+    public static Task<CardModel> AddManifestAtlasTemporaryCardToCombat(
+        CardModel card,
+        PlayerChoiceContext context) =>
+        AddGeneratedCardToCombat(card, ManifestAtlasTemporaryCardOptions(), context);
+
+    public static Task<CardModel> AddDiscoveredChoiceToCombat(
+        CardModel card,
+        PlayerChoiceContext context,
+        bool freeThisTurn) =>
+        AddGeneratedCardToCombat(card, DiscoveredChoiceOptions(freeThisTurn), context);
+
+    public static CardModel CreateCombatCardFromTemplate(Player owner, CardModel source)
+    {
+        var scope = owner.Creature.CombatState
+            ?? throw new InvalidOperationException($"Cannot create manifest choice {source.Id.Entry} outside combat.");
+        return scope.CreateCard(source, owner);
+    }
+
+    public static CardModel CreateGeneratedChoice(SakuraModCard source, CardModel card, bool upgraded)
+    {
+        var targetUpgradeLevel = upgraded
+            ? Math.Max(1, card.CurrentUpgradeLevel)
+            : card.CurrentUpgradeLevel;
+        var choice = card.IsCanonical
+            ? CreateCardFromTemplate(source, card)
+            : CloneToUpgradeLevel(card, targetUpgradeLevel);
+        UpgradeToLevel(choice, targetUpgradeLevel);
+        return choice;
+    }
+
+    public static CardModel CloneToUpgradeLevel(CardModel source, int upgradeLevel)
+    {
+        var copy = source.CreateClone();
+        UpgradeToLevel(copy, upgradeLevel);
+        return copy;
+    }
+
+    public static void UpgradeToLevel(CardModel card, int upgradeLevel)
+    {
+        while (card.CurrentUpgradeLevel < upgradeLevel && card.IsUpgradable)
+            card.UpgradeInternal();
+    }
+
+    public static void RemoveDetachedGeneratedChoices(IEnumerable<CardModel> choices)
+    {
+        foreach (var choice in choices)
+        {
+            if (choice.Pile is not null)
+                continue;
+
+            choice.CardScope?.RemoveCard(choice);
+        }
+    }
+
+    internal static GeneratedCardOptions TemporaryCopyOptions(bool release, bool freeThisTurn, bool preserveRelease) =>
+        new()
+        {
+            RemoveRelease = !preserveRelease,
+            AddTemporary = true,
+            AddRelease = release,
+            FreeThisTurn = freeThisTurn
+        };
+
+    internal static GeneratedCardOptions RememberedCopyOptions(bool freeThisTurn, bool addTemporary) =>
+        new()
+        {
+            RemoveTemporary = true,
+            AddTemporary = addTemporary,
+            FreeThisTurn = freeThisTurn
+        };
+
+    internal static GeneratedCardOptions RestoredReleasedCardToHandOptions(bool freeThisTurn) =>
+        new()
+        {
+            Pile = PileType.Hand,
+            RemoveTemporary = true,
+            AddRelease = true,
+            FreeThisTurn = freeThisTurn
+        };
+
+    private static GeneratedCardOptions ManifestChoiceOptions(bool addTemporary, bool captureEligible) =>
+        new()
+        {
+            RemoveRelease = true,
+            AddTemporary = addTemporary,
+            AddManifestAtlasOrigin = captureEligible
+        };
+
+    private static GeneratedCardOptions GeneratedCardToHandOptions(CardPilePosition position) =>
+        new()
+        {
+            Pile = PileType.Hand,
+            Position = position
+        };
+
+    private static GeneratedCardOptions TemporaryReleasedCardOptions(PileType pile, CardPilePosition position) =>
+        new()
+        {
+            Pile = pile,
+            Position = position,
+            AddTemporary = true,
+            AddRelease = true
+        };
+
+    private static GeneratedCardOptions ManifestAtlasTemporaryCardOptions() =>
+        new()
+        {
+            AddTemporary = true,
+            AddManifestAtlasOrigin = true
+        };
+
+    private static GeneratedCardOptions DiscoveredChoiceOptions(bool freeThisTurn) =>
+        new()
+        {
+            FreeThisTurn = freeThisTurn
+        };
+
+    private static CardModel CreateCardFromTemplate(SakuraModCard source, CardModel card)
+    {
+        var scope = source.CardScope
+            ?? throw new InvalidOperationException($"Cannot create generated {card.Id.Entry} without a card scope.");
+        return scope.CreateCard(card, source.Owner);
+    }
+
+    private static async Task TriggerTemporaryGranted(PlayerChoiceContext context, CardModel card)
+    {
+        if (card.Owner?.Creature.GetPower<FalseDailyLifePower>() is { } falseDailyLife)
+            await falseDailyLife.AfterTemporaryGranted(context);
+    }
+}

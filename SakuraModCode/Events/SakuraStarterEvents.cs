@@ -15,23 +15,8 @@ using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.Runs;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
-using VanillaEvents = MegaCrit.Sts2.Core.Models.Events;
 
 namespace SakuraMod.SakuraModCode.Events;
-
-internal static class SakuraStarterEventReplacements
-{
-    public static void RemoveVanillaEventsFromAct(IRunState? runState, int actIndex)
-    {
-        if (runState is null || !SakuraStarterCards.IsSakuraRun(runState) || actIndex < 0 || actIndex >= runState.Acts.Count)
-            return;
-
-        var act = runState.Acts[actIndex];
-        act.RemoveEventFromSet(ModelDb.Event<VanillaEvents.Amalgamator>());
-        act.RemoveEventFromSet(ModelDb.Event<VanillaEvents.WoodCarvings>());
-        act.RemoveEventFromSet(ModelDb.Event<VanillaEvents.SpiralingWhirlpool>());
-    }
-}
 
 internal static class SakuraStarterEventPortraits
 {
@@ -56,15 +41,15 @@ public class SakuraAmalgamator : CustomEventModel
     ];
 
     public override bool IsAllowed(IRunState runState) =>
-        SakuraStarterCards.IsSakuraRun(runState)
-        && runState.Players.All(SakuraStarterCards.CanReplaceStrikeOrDefendPair);
+        SakuraStarterCompatibility.IsSakuraRun(runState)
+        && runState.Players.All(SakuraStarterCompatibility.CanReplaceStrikeOrDefendPair);
 
     protected override IReadOnlyList<EventOption> GenerateInitialOptions() =>
     [
-        SakuraStarterCards.CountRemovable<Gale>(Owner!) >= 2
+        SakuraStarterCompatibility.CountRemovable<Gale>(Owner!) >= 2
             ? new EventOption(this, CombineGales, SakuraInitialOptionKey("COMBINE_GALES"), HoverTipFactory.FromCardWithCardHoverTips<RollerbladeDash>())
             : new EventOption(this, null, SakuraInitialOptionKey("COMBINE_GALES_LOCKED"), HoverTipFactory.FromCardWithCardHoverTips<RollerbladeDash>()),
-        SakuraStarterCards.CountRemovable<Siege>(Owner!) >= 2
+        SakuraStarterCompatibility.CountRemovable<Siege>(Owner!) >= 2
             ? new EventOption(this, CombineSieges, SakuraInitialOptionKey("COMBINE_SIEGES"), HoverTipFactory.FromCardWithCardHoverTips<MagicBarrier>())
             : new EventOption(this, null, SakuraInitialOptionKey("COMBINE_SIEGES_LOCKED"), HoverTipFactory.FromCardWithCardHoverTips<MagicBarrier>())
     ];
@@ -88,7 +73,7 @@ public class SakuraAmalgamator : CustomEventModel
         var cards = (await CardSelectCmd.FromDeckForRemoval(
             Owner!,
             new CardSelectorPrefs(CardSelectorPrefs.RemoveSelectionPrompt, 2),
-            card => SakuraStarterCards.IsStarterCard<T>(card) && card.IsRemovable)).ToList();
+            card => SakuraStarterCompatibility.IsStarterCard<T>(card) && card.IsRemovable)).ToList();
 
         await CardPileCmd.RemoveFromDeck(cards);
     }
@@ -113,8 +98,8 @@ public class SakuraWoodCarvings : CustomEventModel
     }
 
     public override bool IsAllowed(IRunState runState) =>
-        SakuraStarterCards.IsSakuraRun(runState)
-        && runState.Players.All(player => player.Deck.Cards.Any(SakuraStarterCards.IsTransformableStarterCard));
+        SakuraStarterCompatibility.IsSakuraRun(runState)
+        && runState.Players.All(player => player.Deck.Cards.Any(SakuraStarterCompatibility.IsTransformableStarterCard));
 
     protected override IReadOnlyList<EventOption> GenerateInitialOptions() =>
     [
@@ -127,7 +112,7 @@ public class SakuraWoodCarvings : CustomEventModel
 
     private async Task Bird()
     {
-        var card = (await SelectStarter(CardSelectorPrefs.TransformSelectionPrompt, SakuraStarterCards.IsTransformableStarterCard)).FirstOrDefault();
+        var card = (await SelectStarter(CardSelectorPrefs.TransformSelectionPrompt, SakuraStarterCompatibility.IsTransformableStarterCard)).FirstOrDefault();
         if (card is not null)
             await CardCmd.TransformTo<SilverMoonWing>(card, CardPreviewStyle.EventLayout);
 
@@ -144,7 +129,7 @@ public class SakuraWoodCarvings : CustomEventModel
 
     private async Task Torus()
     {
-        var card = (await SelectStarter(CardSelectorPrefs.TransformSelectionPrompt, SakuraStarterCards.IsTransformableStarterCard)).FirstOrDefault();
+        var card = (await SelectStarter(CardSelectorPrefs.TransformSelectionPrompt, SakuraStarterCompatibility.IsTransformableStarterCard)).FirstOrDefault();
         if (card is not null)
             await CardCmd.TransformTo<SealedBook>(card, CardPreviewStyle.EventLayout);
 
@@ -158,7 +143,7 @@ public class SakuraWoodCarvings : CustomEventModel
             filter);
 
     private static bool CanRelease(CardModel card) =>
-        SakuraStarterCards.IsStarterCard(card) && !card.IsReleased();
+        SakuraStarterCompatibility.IsStarterCard(card) && !card.IsReleased();
 
     private string SakuraInitialOptionKey(string optionName) =>
         $"{Id.Entry}.pages.INITIAL.options.{optionName}";
@@ -181,7 +166,7 @@ public class SakuraSpiralingWhirlpool : CustomEventModel
     }
 
     public override bool IsAllowed(IRunState runState) =>
-        SakuraStarterCards.IsSakuraRun(runState)
+        SakuraStarterCompatibility.IsSakuraRun(runState)
         && runState.Players.All(player => player.Deck.Cards.Any(ModelDb.Enchantment<SakuraSpiral>().CanEnchant));
 
     protected override IReadOnlyList<EventOption> GenerateInitialOptions()
