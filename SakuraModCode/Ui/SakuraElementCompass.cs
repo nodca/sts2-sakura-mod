@@ -282,7 +282,12 @@ internal static class SakuraElementCompass
         // Use the 256px "big" icons so they stay crisp at HUD size.
         var path = IconFileName(element).BigPowerImagePath();
         if (IconCache.TryGetValue(path, out var cached))
-            return cached;
+        {
+            if (cached is null || GodotObject.IsInstanceValid(cached))
+                return cached;
+
+            IconCache.Remove(path);
+        }
 
         var texture = ResourceLoader.Exists(path) ? ResourceLoader.Load<Texture2D>(path) : null;
         IconCache[path] = texture;

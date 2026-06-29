@@ -63,10 +63,10 @@ public class LucidGuardPower : SakuraModPower
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override decimal ModifyDamageCap(Creature? creature, ValueProp damageProps, Creature? source, CardModel? card) =>
-        creature == Owner && Amount > 0 && damageProps.IsPoweredAttack()
+    public override decimal ModifyDamageCap(Creature? creature, ValueProp props, Creature? source, CardModel? card) =>
+        creature == Owner && Amount > 0 && props.IsPoweredAttack()
             ? Math.Max(0, Amount)
-            : base.ModifyDamageCap(creature, damageProps, source, card);
+            : base.ModifyDamageCap(creature, props, source, card);
 
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature creature, DamageResult damageResult, ValueProp damageProps, Creature? source, CardModel? card)
     {
