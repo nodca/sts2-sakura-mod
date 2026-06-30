@@ -1712,8 +1712,8 @@ internal static class ClassicSakuraCardLayout
         public int EnglishNameFontSize { get; } = 22;
         public int EnglishNameOutlineSize { get; } = 3;
         public int DescriptionPanelCornerRadius { get; } = 3;
-        public int DescriptionMinFontSize { get; } = 10;
-        public int DescriptionMaxFontSize { get; } = 15;
+        public int DescriptionMinFontSize { get; } = 12;
+        public int DescriptionMaxFontSize { get; } = 18;
         public int DescriptionOutlineSize { get; } = 2;
         public int CostMinFontSize { get; } = 22;
         public int CostMaxFontSize { get; } = 36;

@@ -256,6 +256,7 @@ internal static class ClearCardLayout
 
     private static readonly Color TemporaryHighlightColor = new(0.65f, 0.9f, 1f, 1f);
     private static readonly Color ReleasedHighlightColor = new(1f, 0.88f, 0.58f, 1f);
+    private const string InactiveReleaseTextColor = "#b8b0a3";
 
     private static readonly Dictionary<Type, Texture2D?> ClearCardArtCache = [];
     private static readonly Dictionary<Type, string> ClearCardEnglishNameCache = [];
@@ -875,8 +876,8 @@ internal static class ClearCardLayout
             description.IsHorizontallyBound = true;
         if (!description.IsVerticallyBound)
             description.IsVerticallyBound = true;
-        if (description.MinFontSize != 10)
-            description.MinFontSize = 10;
+        if (description.MinFontSize != 12)
+            description.MinFontSize = 12;
         if (description.MaxFontSize != 18)
             description.MaxFontSize = 18;
     }
@@ -935,7 +936,11 @@ internal static class ClearCardLayout
 
         if (builder.Length > 0)
             builder.Append('\n');
-        builder.Append(text, start, end - start);
+
+        if (!model.IsReleased() && IsReleaseEffectDescriptionLine(text, start, end))
+            builder.Append(InactiveReleaseEffectLine(text, start, end));
+        else
+            builder.Append(text, start, end - start);
     }
 
     private static string ClearCardHeaderText(CardModel model) =>
@@ -1162,6 +1167,24 @@ internal static class ClearCardLayout
         var visibleText = RemoveRichTextTags(text, start, end).Trim();
         return visibleText.StartsWith("同步：", StringComparison.Ordinal)
                || visibleText.StartsWith("Synced:", StringComparison.Ordinal);
+    }
+
+    private static bool IsReleaseEffectDescriptionLine(string text, int start, int end)
+    {
+        var visibleText = RemoveRichTextTags(text, start, end).TrimStart();
+        return visibleText.StartsWith("解封：", StringComparison.Ordinal)
+               || visibleText.StartsWith("Release:", StringComparison.Ordinal);
+    }
+
+    private static string InactiveReleaseEffectLine(string text, int start, int end)
+    {
+        while (start < end && char.IsWhiteSpace(text[start]))
+            start++;
+        while (end > start && char.IsWhiteSpace(text[end - 1]))
+            end--;
+
+        var visibleText = RemoveRichTextTags(text, start, end).Trim();
+        return $"[color={InactiveReleaseTextColor}]{visibleText}[/color]";
     }
 
     private static string RemoveRichTextTags(string text) =>
@@ -2070,7 +2093,7 @@ internal static class ClearCardLayout
         public Rect2 TitleBox { get; } = Scaled(new Rect2(new Vector2(23f, 8f), new Vector2(160f, 34f)));
         public Rect2 EnglishNameBox { get; } = Scaled(new Rect2(new Vector2(23f, 396f), new Vector2(160f, 30f)));
         public Rect2 DescriptionPanelBox { get; } = Scaled(new Rect2(new Vector2(12f, 230f), new Vector2(182f, 156f)));
-        public Rect2 DescriptionBox { get; } = Scaled(new Rect2(new Vector2(20f, 238f), new Vector2(166f, 140f)));
+        public Rect2 DescriptionBox { get; } = Scaled(new Rect2(new Vector2(16f, 238f), new Vector2(174f, 140f)));
         public Rect2 EnergyCostBox { get; } = Scaled(new Rect2(new Vector2(-14f, -12f), new Vector2(56f, 56f)));
         public Rect2 EnergyCostLabelBox { get; } = Scaled(new Rect2(new Vector2(12f, -2f), new Vector2(44f, 44f)));
         public Rect2 StarCostBox { get; } = Scaled(new Rect2(new Vector2(174f, 16f), new Vector2(44f, 44f)));

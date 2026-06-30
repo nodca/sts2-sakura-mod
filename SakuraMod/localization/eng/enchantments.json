@@ -1,4 +1,7 @@
 {
   "SAKURAMOD-SAKURA_SPIRAL.title": "Spiral",
-  "SAKURAMOD-SAKURA_SPIRAL.description": "This card is played 1 additional time."
+  "SAKURAMOD-SAKURA_SPIRAL.description": "This card is played 1 additional time.",
+  "SAKURAMOD-SAKURA_GOOPY.title": "Goopy",
+  "SAKURAMOD-SAKURA_GOOPY.description": "Gains {Amount} Block each time this card is played.",
+  "SAKURAMOD-SAKURA_GOOPY.extraCardText": "Goopy: {Amount} Block."
 }

@@ -1,8 +1,10 @@
 using BaseLib.Abstracts;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Enchantments;
 using SakuraMod.SakuraModCode.Character;
 
 namespace SakuraMod.SakuraModCode.Cards;
@@ -23,4 +25,41 @@ public class SakuraSpiral : CustomEnchantmentModel
 
     public override int EnchantPlayCount(int originalPlayCount) =>
         originalPlayCount + DynamicVars["Times"].IntValue;
+}
+
+public class SakuraGoopy : CustomEnchantmentModel
+{
+    protected override string? CustomIconPath => ModelDb.Enchantment<Goopy>().IconPath;
+
+    public override bool HasExtraCardText => true;
+
+    protected override IEnumerable<IHoverTip> ExtraHoverTips =>
+    [
+        HoverTipFactory.FromKeyword(CardKeyword.Exhaust)
+    ];
+
+    public override bool CanEnchant(CardModel card) =>
+        base.CanEnchant(card)
+        && (SakuraStarterCompatibility.IsStarterCard<Siege>(card) || card is MagicBarrier);
+
+    protected override void OnEnchant()
+    {
+        base.Card.AddKeyword(CardKeyword.Exhaust);
+    }
+
+    public override Task AfterCardPlayed(PlayerChoiceContext context, CardPlay cardPlay)
+    {
+        if (cardPlay.Card != base.Card)
+            return Task.CompletedTask;
+
+        var card = base.Card;
+        base.Amount++;
+        if (card.DeckVersion?.Enchantment is { } deckEnchantment)
+            deckEnchantment.Amount++;
+
+        return Task.CompletedTask;
+    }
+
+    public override decimal EnchantBlockAdditive(decimal originalBlock) =>
+        base.Amount - 1;
 }

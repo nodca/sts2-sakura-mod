@@ -49,7 +49,7 @@
   "SAKURAMOD-CLASSIC_SEALED_BOOK_RELIC.description": "打出库洛牌或小樱牌时获得魔力充能：通常获得 1 点，能力牌获得 2 点。达到 10 点充能时，下一张符合条件的牌消耗 10 点充能并触发额外效果。",
   "SAKURAMOD-CLASSIC_SEALED_BOOK_RELIC.flavor": "库洛牌在封印的书页中等待。",
   "SAKURAMOD-CLASSIC_SEALED_WAND_RELIC.title": "封印之杖",
-  "SAKURAMOD-CLASSIC_SEALED_WAND_RELIC.description": "非附属敌人死亡时，获得 3 点充能。精英和首领房间额外获得 2 点充能；若由封印造成致命伤害，再额外获得 2 点充能。回合开始时，消耗 40 + 每张已转换小樱牌 20 点充能，将变换加入手牌。",
+  "SAKURAMOD-CLASSIC_SEALED_WAND_RELIC.description": "每次击败非爪牙敌人时，获得 3 点充能，精英和首领额外获得 2 点充能；若由封印造成致命伤害，再额外获得 2 点充能。当充能达到所需数量后的第一个回合开始阶段，消耗所需充能，将 1 张转牌加入手牌。牌组中每有 1 张小樱牌或转牌，下次获得转牌所需充能增加 20 点。",
   "SAKURAMOD-CLASSIC_SEALED_WAND_RELIC.flavor": "钥匙形的魔杖汇聚光芒，将库洛牌转为小樱牌。",
   "SAKURAMOD-CLASSIC_SWORD_JADE_RELIC.title": "剑之玉",
   "SAKURAMOD-CLASSIC_SWORD_JADE_RELIC.description": "解封使一张牌的非伤害、非格挡数值提高 100%，而不是 50%。",
@@ -82,6 +82,6 @@
   "SAKURAMOD-CLASSIC_YUE_RELIC.description": "每回合每打出第 3 张有属性的库洛牌或小樱牌，若拥有封印之书，获得 1 点魔力充能。回合开始时，升级 1 张随机手牌。",
   "SAKURAMOD-CLASSIC_YUE_RELIC.flavor": "月光只回应经受过审判的心。",
   "SAKURAMOD-CLASSIC_MOON_BELL_RELIC.title": "月之铃",
-  "SAKURAMOD-CLASSIC_MOON_BELL_RELIC.description": "每当你打出基础耗能不低于 2 的牌，回复 1 点生命。第一次将要死亡时，改为回复最大生命 30% 的生命，并将变换加入手牌和牌组，然后此遗物被使用。",
+  "SAKURAMOD-CLASSIC_MOON_BELL_RELIC.description": "每当你打出基础耗能不低于 2 的牌，回复 1 点生命。第一次将要死亡时，改为回复最大生命 30% 的生命，并将转牌加入手牌和牌组，然后此遗物被使用。",
   "SAKURAMOD-CLASSIC_MOON_BELL_RELIC.flavor": "来自月峰神社的铃铛，只在失去的边缘响起。"
 }

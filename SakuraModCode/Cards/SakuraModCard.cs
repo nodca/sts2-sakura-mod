@@ -48,6 +48,8 @@ public abstract class SakuraModCard(int cost, CardType type, CardRarity rarity, 
     public override Material? CreateCustomFrameMaterial => SakuraCardFrameVisuals.CustomFrameMaterial(this);
     protected override IEnumerable<string> ExtraRunAssetPaths => SakuraCardFrameVisuals.RunAssetPaths(this);
 
+    internal virtual IEnumerable<CardKeyword> ReferencedKeywords => [];
+
     protected bool ShouldRelease => this.IsReleased();
 
     private bool UsesClearCardPortrait => SakuraCardVisualFamilies.IsClear(this);

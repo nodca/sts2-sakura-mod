@@ -27,6 +27,7 @@ public abstract class SakuraOptionCard(CardType type) :
 
 public class ChoiceManifestChoice() : SakuraOptionCard(CardType.Skill)
 {
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
 
     protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);

@@ -1,4 +1,7 @@
 {
   "SAKURAMOD-SAKURA_SPIRAL.title": "螺旋",
-  "SAKURAMOD-SAKURA_SPIRAL.description": "这张牌额外打出 1 次。"
+  "SAKURAMOD-SAKURA_SPIRAL.description": "这张牌额外打出 1 次。",
+  "SAKURAMOD-SAKURA_GOOPY.title": "黏糊",
+  "SAKURAMOD-SAKURA_GOOPY.description": "每次打出这张牌时，获得 {Amount} 点格挡。",
+  "SAKURAMOD-SAKURA_GOOPY.extraCardText": "黏糊：{Amount} 点格挡。"
 }

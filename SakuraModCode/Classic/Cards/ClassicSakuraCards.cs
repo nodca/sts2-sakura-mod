@@ -316,13 +316,13 @@ public class SakuraMist() : ClassicSakuraConversionCard(1, CardType.Power, Targe
 public class ClowRain() : ClassicClowCard(2, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Rain)
 {
     public override ClassicElement Element => ClassicElement.Watery;
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
 
     protected override PileType GetResultPileTypeForCardPlay()
     {
-        var result = base.GetResultPileTypeForCardPlay();
-        return result == PileType.Discard && !ClassicSakuraMagic.CanUseExtraEffect(Owner)
-            ? PileType.Exhaust
-            : result;
+        return ClassicSakuraMagic.CanUseExtraEffect(Owner)
+            ? PileType.Discard
+            : base.GetResultPileTypeForCardPlay();
     }
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)

@@ -184,6 +184,7 @@ public class KeroBond() : SakuraModCard(2, CardType.Power, CardRarity.Rare, Targ
 
 public class MagicAwakening() : SakuraModCard(2, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<MagicAwakeningPower>(1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -405,6 +406,7 @@ public class Transfer() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, 
 
 public class AkihoDream() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -630,6 +632,7 @@ public class ReleaseChant() : SakuraModCard(1, CardType.Skill, CardRarity.Common
 public class CardBookSorting() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Burn];
+    internal override IEnumerable<CardKeyword> ReferencedKeywords => [SakuraKeywords.Fire];
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
@@ -696,6 +699,7 @@ public class ChainPhenomenon() : SakuraModCard(1, CardType.Attack, CardRarity.Co
 
 public class MagicSurge() : SakuraModCard(2, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<MagicSurgePower>(1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -929,6 +933,7 @@ public class YamazakiTallTale() : SakuraModCard(0, CardType.Skill, CardRarity.Un
 
 public class FujitakaNote() : SakuraModCard(1, CardType.Skill, CardRarity.Common, TargetType.AllEnemies)
 {
+    internal override IEnumerable<CardKeyword> ReferencedKeywords => [SakuraKeywords.Water];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<SakuraFrostbitePower>()];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
@@ -1063,6 +1068,7 @@ public class TomoyoBond() : SakuraModCard(2, CardType.Power, CardRarity.Rare, Ta
 
 public class DreamKeyGlow() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(5, ValueProp.Move), new CardsVar(1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -1078,7 +1084,7 @@ public class DreamKeyGlow() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, 
 
 public class DreamKeyRevelation() : SakuraModCard(1, CardType.Skill, CardRarity.Ancient, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
