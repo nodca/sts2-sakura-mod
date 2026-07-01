@@ -127,6 +127,17 @@ public static class SakuraManifestLoop
         return cards.Count;
     }
 
+    public static IReadOnlyList<Type> CatalogedClearCardTypes(Player owner)
+    {
+        var combatState = owner.Creature.CombatState;
+        if (combatState is null
+            || !CatalogedClearCardsByCombat.TryGetValue(combatState, out var cardsByOwner)
+            || !cardsByOwner.TryGetValue(owner, out var cards))
+            return [];
+
+        return cards.ToList();
+    }
+
     public static bool HasCatalogedClearCard(Player owner, CardModel card)
     {
         var combatState = owner.Creature.CombatState;

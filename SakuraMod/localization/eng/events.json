@@ -37,6 +37,15 @@
   "SAKURAMOD-SAKURA_SPIRALING_WHIRLPOOL.pages.OBSERVE.description": "You watch until the whirlpool's pattern settles onto a card.",
   "SAKURAMOD-SAKURA_SPIRALING_WHIRLPOOL.pages.DRINK.description": "The water is cold, strange, and unexpectedly restorative.",
 
+  "SAKURAMOD-ANOTHER_ME_EVENT.title": "Another Me",
+  "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.description": "A ruined city hangs in a gray-violet dream. Across the broken street, a girl with Sakura's face stands beneath a torn white cloak, watching as if she has already lost the words for this meeting.",
+  "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.options.ACCEPT_ENCOUNTER.title": "Reach toward the other Sakura.",
+  "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.options.ACCEPT_ENCOUNTER.description": "Obtain Memory Fracture. Choose up to 3 Tsubasa Cards.",
+  "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.options.LEAVE_THE_DREAM.title": "Leave the dream.",
+  "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.options.LEAVE_THE_DREAM.description": "Heal 6 HP. Gain 25 gold.",
+  "SAKURAMOD-ANOTHER_ME_EVENT.pages.ACCEPT_ENCOUNTER.description": "The figure's silence breaks into warm feathers and a fractured memory. The dream does not follow you, but some of its cards do.",
+  "SAKURAMOD-ANOTHER_ME_EVENT.pages.LEAVE_THE_DREAM.description": "You step back before the dream can answer. The ruined street dissolves, leaving only a steadier heartbeat and a few bright coins in your hand.",
+
   "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.title": "Xiao Lang's Feelings",
   "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.description": "Xiao Lang stands beside the road, stiff with embarrassment and resolve. He offers a small charm that carries a quiet warmth.",
   "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.options.ACCEPT.title": "Accept the charm.",

@@ -10,6 +10,7 @@ internal static class SakuraCardFrameVisuals
 {
     private const string DefaultPortraitFileName = "card.png";
     private const string AliceReadingPortraitFileName = "alice_reading.png";
+    private const string ArchivePortraitFileName = "archive.png";
     private const string BigBrotherSensePortraitFileName = "big_brother_sense.png";
     private const string CardBookSortingPortraitFileName = "card_book_sorting.png";
     private const string CerberusTrueFormPortraitFileName = "cerberus_true_form.png";
@@ -31,6 +32,7 @@ internal static class SakuraCardFrameVisuals
     private const string ThunderEmperorSummonPortraitFileName = "thunder_emperor_summon.png";
     private const string TomoyoBondPortraitFileName = "tomoyo_bond.png";
     private const string TomoyoCameraPortraitFileName = "tomoyo_camera.png";
+    private const string TomoyoCostumePortraitFileName = "tomoyo_costume.png";
     private const string YamazakiTallTalePortraitFileName = "yamazaki_tall_tale.png";
     private const string YueTrueFormPortraitFileName = "yue_true_form.png";
     private static readonly Dictionary<string, Texture2D?> PortraitTextureCache = [];
@@ -139,6 +141,7 @@ internal static class SakuraCardFrameVisuals
         card switch
         {
             AliceReading => AliceReadingPortraitFileName,
+            Archive => ArchivePortraitFileName,
             BigBrotherSense => BigBrotherSensePortraitFileName,
             CardBookSorting => CardBookSortingPortraitFileName,
             CerberusTrueForm => CerberusTrueFormPortraitFileName,
@@ -160,6 +163,7 @@ internal static class SakuraCardFrameVisuals
             ThunderEmperorSummon => ThunderEmperorSummonPortraitFileName,
             TomoyoBond => TomoyoBondPortraitFileName,
             TomoyoCamera => TomoyoCameraPortraitFileName,
+            TomoyoCostume => TomoyoCostumePortraitFileName,
             YamazakiTallTale => YamazakiTallTalePortraitFileName,
             YueTrueForm => YueTrueFormPortraitFileName,
             _ => DefaultPortraitFileName

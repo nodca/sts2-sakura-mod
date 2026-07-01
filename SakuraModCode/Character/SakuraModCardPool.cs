@@ -2,6 +2,7 @@
 using SakuraMod.SakuraModCode.Extensions;
 using Godot;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Unlocks;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -23,4 +24,8 @@ public class SakuraModCardPool : CustomCardPoolModel
 
     protected override CardModel[] GenerateAllCards() =>
         SakuraCardCatalog.AllCardTemplates();
+
+    protected override IEnumerable<CardModel> FilterThroughEpochs(UnlockState unlockState, IEnumerable<CardModel> cards) =>
+        base.FilterThroughEpochs(unlockState, cards)
+            .Where(card => !SakuraCardCatalog.IsEventOnlyCard(card));
 }

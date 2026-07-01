@@ -33,6 +33,10 @@ public static class SakuraKeywords
     [KeywordProperties(AutoKeywordPosition.None)]
     public static CardKeyword Manifest;
 
+    [CustomEnum("SAKURA_CARD")]
+    [KeywordProperties(AutoKeywordPosition.None)]
+    public static CardKeyword SakuraCard;
+
     [CustomEnum("BURN")]
     [KeywordProperties(AutoKeywordPosition.None)]
     public static CardKeyword Burn;

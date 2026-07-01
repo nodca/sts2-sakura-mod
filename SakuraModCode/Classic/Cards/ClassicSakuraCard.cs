@@ -111,6 +111,7 @@ public abstract class ClassicSakuraCard(
     protected virtual bool HasMagicChargeExtraEffect => false;
     protected virtual bool GrantsMagicCharge => Family is ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura;
     protected virtual bool AddsVoidOnNormalSakuraPlay => Family == ClassicSakuraCardFamily.Sakura;
+    internal bool ShowsSakuraCardVoidTip => AddsVoidOnNormalSakuraPlay;
 
     public override string CustomPortraitPath => "card.png".BigCardImagePath();
     public override string PortraitPath => "card.png".CardImagePath();
@@ -223,10 +224,19 @@ public abstract class ClassicClowCard(
     ClassicCardIdentity identity) :
     ClassicSakuraCard(cost, type, rarity, target, ClassicSakuraCardFamily.Clow, identity)
 {
-    protected override bool HasMagicChargeExtraEffect => true;
-
     protected override string BigPortraitPath =>
         ClassicSakuraCardCatalog.ArtStem(GetType()).BigClassicClowArtPath();
+}
+
+public abstract class ClassicExtraClowCard(
+    int cost,
+    CardType type,
+    CardRarity rarity,
+    TargetType target,
+    ClassicCardIdentity identity) :
+    ClassicClowCard(cost, type, rarity, target, identity)
+{
+    protected override bool HasMagicChargeExtraEffect => true;
 }
 
 public abstract class ClassicSakuraConversionCard(

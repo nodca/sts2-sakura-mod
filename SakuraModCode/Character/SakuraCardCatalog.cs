@@ -150,6 +150,23 @@ public static class SakuraCardCatalog
         typeof(DreamWand)
     ];
 
+    private static readonly IReadOnlyList<Type> TsubasaCardTypesInternal =
+    [
+        typeof(VoidBond),
+        typeof(TsubasaAnotherMe),
+        typeof(EquivalentExchange),
+        typeof(CopiedSoul),
+        typeof(SleepingWings),
+        typeof(MemoryFeather),
+        typeof(DimensionalDrift)
+    ];
+
+    private static readonly IReadOnlyList<Type> EventOnlyCardTypesInternal =
+    [
+        typeof(MemoryFracture),
+        ..TsubasaCardTypesInternal
+    ];
+
     private static readonly HashSet<Type> TransparentCardTypeSet = TransparentCardTypesInternal.ToHashSet();
     private static readonly HashSet<Type> DefaultManifestExcludedTransparentCardTypeSet =
         DefaultManifestExcludedTransparentCardTypes.ToHashSet();
@@ -160,8 +177,13 @@ public static class SakuraCardCatalog
     private static readonly HashSet<Type> DefaultManifestAtlasTypeSet = DefaultManifestAtlasTypesInternal.ToHashSet();
     private static readonly HashSet<Type> PartnerCardTypeSet = PartnerCardTypesInternal.ToHashSet();
     private static readonly HashSet<Type> StarterCardTypeSet = StarterCardTypesInternal.ToHashSet();
+    private static readonly HashSet<Type> TsubasaCardTypeSet = TsubasaCardTypesInternal.ToHashSet();
+    private static readonly HashSet<Type> EventOnlyCardTypeSet = EventOnlyCardTypesInternal.ToHashSet();
     private static readonly IReadOnlyList<Type> AllCardTypesInternal =
-        TransparentCardTypesInternal.Concat(SupportCardTypesInternal).ToList();
+        TransparentCardTypesInternal
+            .Concat(SupportCardTypesInternal)
+            .Concat(EventOnlyCardTypesInternal)
+            .ToList();
     private static readonly IReadOnlyList<Type> TechniqueCardTypesInternal =
         SupportCardTypesInternal
             .Where(type => !PartnerCardTypeSet.Contains(type))
@@ -174,6 +196,7 @@ public static class SakuraCardCatalog
     public static IReadOnlyList<Type> PartnerCardTypes => PartnerCardTypesInternal;
     public static IReadOnlyList<Type> TechniqueCardTypes => TechniqueCardTypesInternal;
     public static IReadOnlyList<Type> StarterCardTypes => StarterCardTypesInternal;
+    public static IReadOnlyList<Type> TsubasaCardTypes => TsubasaCardTypesInternal;
 
     public static CardModel[] AllCardTemplates() =>
         AllCardTypesInternal
@@ -196,13 +219,19 @@ public static class SakuraCardCatalog
         DefaultManifestAtlasTypeSet.Contains(card.GetType());
 
     public static bool IsSupportCard(CardModel card) =>
-        card is SakuraModCard && !IsTransparentCard(card);
+        card is SakuraModCard && !IsTransparentCard(card) && !IsEventOnlyCard(card);
 
     public static bool IsPartnerCard(CardModel card) =>
         PartnerCardTypeSet.Contains(card.GetType());
 
     public static bool IsTechniqueCard(CardModel card) =>
         card is SakuraModCard && TechniqueCardTypeSet.Contains(card.GetType());
+
+    public static bool IsTsubasaCard(CardModel card) =>
+        TsubasaCardTypeSet.Contains(card.GetType());
+
+    public static bool IsEventOnlyCard(CardModel card) =>
+        EventOnlyCardTypeSet.Contains(card.GetType());
 
     public static bool IsStarterCard(CardModel card) =>
         StarterCardTypeSet.Contains(card.GetType());

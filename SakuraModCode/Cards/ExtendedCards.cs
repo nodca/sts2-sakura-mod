@@ -1483,50 +1483,13 @@ public class DreamsEnd() : SakuraModCard(2, CardType.Power, CardRarity.Uncommon,
 
 public class Echo() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
+
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var owned = Owner.Deck.Cards.Where(SakuraCardCatalog.IsTransparentCard).ToList();
-        var chosen = await SelectDeckCard(choiceContext, owned);
-        if (chosen is null)
-            return;
-
-        var source = CreateCombatScopedCopySource(chosen);
-        try
-        {
-            await SakuraManifestLoop.AddTemporaryCopyToHand(this, choiceContext, source, release: true, freeThisTurn: true);
-        }
-        finally
-        {
-            if (source.Pile is null)
-                source.CardScope?.RemoveCard(source);
-        }
+        await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
+        await PowerCmd.Apply<EchoPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
     }
-
-    private async Task<CardModel?> SelectDeckCard(PlayerChoiceContext choiceContext, IReadOnlyList<CardModel> cards)
-    {
-        var previews = cards.Select(CreateCombatScopedCopySource).ToList();
-        try
-        {
-            var selected = await SakuraActions.SelectFromCards(this, choiceContext, previews, cancelable: false);
-            if (selected is null)
-                return null;
-
-            var index = previews.IndexOf(selected);
-            return index >= 0 ? cards[index] : null;
-        }
-        finally
-        {
-            foreach (var preview in previews)
-            {
-                if (preview.Pile is null)
-                    preview.CardScope?.RemoveCard(preview);
-            }
-        }
-    }
-
-    private CardModel CreateCombatScopedCopySource(CardModel card) =>
-        Owner.Creature.CombatState?.CloneCard(card)
-        ?? throw new InvalidOperationException($"Cannot copy {card.Id.Entry} without a card scope.");
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }

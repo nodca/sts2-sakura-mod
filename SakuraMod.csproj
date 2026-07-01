@@ -54,6 +54,7 @@
         <None Include="SakuraMod.json" />
         <None Include="project.godot"/>
         <None Include="SakuraMod/**" />
+        <SakuraExternalMusic Include="SakuraMod/music/**/*.ogg" />
     </ItemGroup>
 
     <ItemGroup>
@@ -73,6 +74,10 @@
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
         <Copy SourceFiles="$(AssemblyName).json" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
+        <Copy
+            SourceFiles="@(SakuraExternalMusic)"
+            DestinationFiles="@(SakuraExternalMusic->'$(ModsPath)$(MSBuildProjectName)/music/%(RecursiveDir)%(Filename)%(Extension)')"
+            SkipUnchangedFiles="true" />
     </Target>
 
     <Target Name="NeedGodotForPublish" BeforeTargets="Publish">

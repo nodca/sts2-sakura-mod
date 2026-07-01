@@ -2,6 +2,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+using SakuraMod.SakuraModCode.Classic.Cards;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -17,6 +18,7 @@ public static class TemporaryHoverTipPatch
     public static void HoverTipsPostfix(CardModel __instance, ref IEnumerable<IHoverTip> __result)
     {
         __result = AppendElementTips(__instance, __result);
+        __result = AppendClassicSakuraCardTips(__instance, __result);
         __result = AppendReferencedKeywordTips(__instance, __result);
 
         if (__instance.IsTemporary())
@@ -37,6 +39,14 @@ public static class TemporaryHoverTipPatch
         var elements = SakuraActions.ElementSetOf(card) | SakuraActions.StaticElementSetOf(card);
         foreach (var element in elements.AsElements())
             tips = tips.Append(HoverTipFactory.FromKeyword(SakuraActions.KeywordFor(element)));
+
+        return tips;
+    }
+
+    private static IEnumerable<IHoverTip> AppendClassicSakuraCardTips(CardModel card, IEnumerable<IHoverTip> tips)
+    {
+        if (card is ClassicSakuraCard { ShowsSakuraCardVoidTip: true })
+            tips = tips.Append(HoverTipFactory.FromKeyword(SakuraKeywords.SakuraCard));
 
         return tips;
     }

@@ -1,6 +1,7 @@
 using BaseLib.Abstracts;
 using BaseLib.Hooks;
 using BaseLib.Utils;
+using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -8,6 +9,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
@@ -534,6 +536,74 @@ public class SakuraReleaseCountThisTurnPower : SakuraModPower
     }
 }
 
+public class EchoPower : SakuraModPower
+{
+    private static readonly LocString HandPrompt = new("cards", "SAKURAMOD-GENERIC.handPrompt");
+
+    protected override string IconFileName => "release_count_this_turn.png";
+    protected override bool IsVisibleInternal => false;
+
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        if (Amount <= 0
+            || play.Card is not { } playedCard
+            || playedCard.Owner?.Creature != Owner
+            || !SakuraCardCatalog.IsTransparentCard(playedCard)
+            || !playedCard.IsReleased())
+            return;
+
+        await ConsumeEcho(choiceContext);
+        if (Owner.Player is not { } player)
+            return;
+
+        var targetCard = await SelectUnreleasedClearCardInHand(choiceContext, player);
+        if (targetCard is not null)
+            await SakuraActions.ReleaseThisTurnAndRecord(choiceContext, targetCard);
+    }
+
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
+    {
+        if (Owner.Side == side && participants.Contains(Owner))
+            await PowerCmd.Remove(this);
+    }
+
+    private async Task ConsumeEcho(PlayerChoiceContext choiceContext)
+    {
+        if (Amount <= 1)
+        {
+            await PowerCmd.Remove(this);
+            return;
+        }
+
+        await PowerCmd.Decrement(this);
+    }
+
+    private async Task<CardModel?> SelectUnreleasedClearCardInHand(PlayerChoiceContext choiceContext, Player player)
+    {
+        if (!CardPile.GetCards(player, PileType.Hand).Any(CanReleaseByEcho))
+            return null;
+
+        var selected = await CardSelectCmd.FromHand(
+            choiceContext,
+            player,
+            new CardSelectorPrefs(HandPrompt, 1)
+            {
+                Cancelable = false,
+                RequireManualConfirmation = false
+            },
+            CanReleaseByEcho,
+            this);
+
+        return selected.FirstOrDefault();
+    }
+
+    private static bool CanReleaseByEcho(CardModel card) =>
+        SakuraCardCatalog.IsTransparentCard(card) && !card.IsReleased();
+}
+
 public class RepairRegenerationPower : SakuraModPower
 {
     public override PowerType Type => PowerType.Buff;
@@ -758,6 +828,100 @@ public class GrowingMagicPower : SakuraModPower
         await PowerCmd.Apply<StrengthPower>(choiceContext, Owner, Amount, Owner, null, false);
         if (Owner.Player is not null)
             await CardPileCmd.Draw(choiceContext, 1, Owner.Player, false);
+    }
+}
+
+public class AnotherMePower : SakuraModPower
+{
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        if (play.Card is null
+            || play.Card is TsubasaAnotherMe
+            || play.Card.Owner?.Creature != Owner
+            || !SakuraCardCatalog.IsTsubasaCard(play.Card)
+            || Owner.Player is not { } player
+            || Owner.CombatState is not { } combatState)
+            return;
+
+        var catalog = SakuraManifestLoop.CatalogedClearCardTypes(player);
+        var pickedType = player.RunState.Rng.CombatCardSelection.NextItem(catalog);
+        if (pickedType is null)
+            return;
+
+        var template = SakuraCardCatalog.CardTemplate(pickedType);
+        var card = combatState.CreateCard(template, player);
+        await CardCmd.AutoPlay(choiceContext, card, null, AutoPlayType.Default, skipXCapture: false);
+    }
+}
+
+public class SleepingWingsPower : SakuraModPower
+{
+    private int _partnerExhaustsThisTurn;
+
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
+    {
+        if (player.Creature != Owner)
+            return;
+
+        _partnerExhaustsThisTurn = 0;
+        if (CardPile.Get(PileType.Hand, player)!.Cards.Any(SakuraCardCatalog.IsPartnerCard))
+            return;
+
+        await CardPileCmd.Draw(choiceContext, 1, player, false);
+        await PlayerCmd.GainEnergy(1, player);
+    }
+
+    public override async Task AfterCardExhausted(PlayerChoiceContext choiceContext, CardModel card, bool causedByEthereal)
+    {
+        if (Amount <= 0
+            || _partnerExhaustsThisTurn >= Amount
+            || card.Owner?.Creature != Owner
+            || !SakuraCardCatalog.IsPartnerCard(card)
+            || Owner.Player is not { } player)
+            return;
+
+        _partnerExhaustsThisTurn++;
+        await PlayerCmd.GainEnergy(1, player);
+    }
+}
+
+public class MemoryFeatherPower : SakuraModPower
+{
+    private readonly HashSet<CardModel> _targets = [];
+
+    protected override bool IsVisibleInternal => false;
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public void AddTarget(CardModel card)
+    {
+        _targets.Add(card);
+    }
+
+    public override decimal ModifyDamageMultiplicative(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource) =>
+        cardSource is not null && _targets.Contains(cardSource) ? 2m : 1m;
+
+    public override decimal ModifyBlockMultiplicative(Creature target, decimal block, ValueProp props, CardModel? cardSource, CardPlay? cardPlay) =>
+        cardSource is not null && _targets.Contains(cardSource) ? 2m : 1m;
+
+    public override Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        if (play.Card is not null)
+            _targets.Remove(play.Card);
+
+        return Task.CompletedTask;
+    }
+
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
+    {
+        if (Owner.Side == side && participants.Contains(Owner))
+            await PowerCmd.Remove(this);
     }
 }
 

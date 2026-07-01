@@ -23,7 +23,7 @@ using SakuraMod.SakuraModCode.Classic.Relics;
 
 namespace SakuraMod.SakuraModCode.Classic.Cards;
 
-public class ClowArrow() : ClassicClowCard(0, CardType.Attack, CardRarity.Common, TargetType.None, ClassicCardIdentity.Arrow)
+public class ClowArrow() : ClassicExtraClowCard(0, CardType.Attack, CardRarity.Common, TargetType.None, ClassicCardIdentity.Arrow)
 {
     public override ClassicElement Element => ClassicElement.Firey;
     public override TargetType TargetType =>
@@ -123,7 +123,7 @@ public class SakuraArrow() : ClassicSakuraConversionCard(1, CardType.Attack, Tar
     }
 }
 
-public class ClowSword() : ClassicClowCard(1, CardType.Attack, CardRarity.Basic, TargetType.AnyEnemy, ClassicCardIdentity.Sword)
+public class ClowSword() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.Basic, TargetType.AnyEnemy, ClassicCardIdentity.Sword)
 {
     public override ClassicElement Element => ClassicElement.Firey;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Loner];
@@ -158,7 +158,7 @@ public class SakuraSword() : ClassicSakuraConversionCard(1, CardType.Attack, Tar
     }
 }
 
-public class ClowShield() : ClassicClowCard(1, CardType.Skill, CardRarity.Basic, TargetType.None, ClassicCardIdentity.Shield)
+public class ClowShield() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Basic, TargetType.None, ClassicCardIdentity.Shield)
 {
     public override ClassicElement Element => ClassicElement.Firey;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Loner];
@@ -193,7 +193,7 @@ public class SakuraShield() : ClassicSakuraConversionCard(1, CardType.Skill, Tar
     }
 }
 
-public class ClowJump() : ClassicClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None, ClassicCardIdentity.Jump)
+public class ClowJump() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None, ClassicCardIdentity.Jump)
 {
     public override ClassicElement Element => ClassicElement.Windy;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
@@ -238,7 +238,7 @@ public class SakuraJump() : ClassicSakuraConversionCard(1, CardType.Power, Targe
         await ApplyPower<ClassicJumpPower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
 
-public class ClowIllusion() : ClassicClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Illusion)
+public class ClowIllusion() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Illusion)
 {
     public override ClassicElement Element => ClassicElement.Windy;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicBlockVar(7, ValueProp.Move), new DynamicVar("Magic", 2)];
@@ -276,7 +276,7 @@ public class SakuraIllusion() : ClassicSakuraConversionCard(0, CardType.Skill, T
     }
 }
 
-public class ClowMist() : ClassicClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Mist)
+public class ClowMist() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Mist)
 {
     public override ClassicElement Element => ClassicElement.Earthy;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PoisonPower>(4)];
@@ -313,7 +313,7 @@ public class SakuraMist() : ClassicSakuraConversionCard(1, CardType.Power, Targe
     }
 }
 
-public class ClowRain() : ClassicClowCard(2, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Rain)
+public class ClowRain() : ClassicExtraClowCard(2, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Rain)
 {
     public override ClassicElement Element => ClassicElement.Watery;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
@@ -378,7 +378,7 @@ public class SakuraRain() : ClassicSakuraConversionCard(0, CardType.Skill, Targe
     }
 }
 
-public class ClowSweet() : ClassicClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None, ClassicCardIdentity.Sweet)
+public class ClowSweet() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None, ClassicCardIdentity.Sweet)
 {
     public override ClassicElement Element => ClassicElement.Firey;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
@@ -402,7 +402,7 @@ public class SakuraSweet() : ClassicSakuraConversionCard(2, CardType.Power, Targ
         await ApplyPower<ClassicSweetPower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
 
-public class ClowVoice() : ClassicClowCard(0, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Voice)
+public class ClowVoice() : ClassicExtraClowCard(0, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Voice)
 {
     public override ClassicElement Element => ClassicElement.Windy;
     public override bool HasTurnEndInHandEffect => true;
@@ -451,7 +451,7 @@ public class SakuraVoice() : ClassicSakuraConversionCard(1, CardType.Power, Targ
         await ApplyPower<ClassicVoicePower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
 
-public class ClowCloud() : ClassicClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Cloud)
+public class ClowCloud() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Cloud)
 {
     public override ClassicElement Element => ClassicElement.Watery;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicBlockVar(5, ValueProp.Move)];
@@ -488,7 +488,7 @@ public class SakuraCloud() : ClassicSakuraConversionCard(1, CardType.Skill, Targ
     }
 }
 
-public class ClowFlower() : ClassicClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None, ClassicCardIdentity.Flower)
+public class ClowFlower() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None, ClassicCardIdentity.Flower)
 {
     public override ClassicElement Element => ClassicElement.Earthy;
     public override IEnumerable<CardKeyword> CanonicalKeywords => IsUpgraded ? [] : [CardKeyword.Exhaust];
@@ -672,7 +672,7 @@ public class SakuraBig() : ClassicSakuraConversionCard(1, CardType.Power, Target
         await ApplyPower<ClassicBigPower>(choiceContext, Owner.Creature, 1);
 }
 
-public class ClowBubbles() : ClassicClowCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, ClassicCardIdentity.Bubbles)
+public class ClowBubbles() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, ClassicCardIdentity.Bubbles)
 {
     public override ClassicElement Element => ClassicElement.Watery;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicDamageVar(5, ValueProp.Move), new DynamicVar("Magic", 2)];
@@ -900,7 +900,7 @@ public class SakuraReturn() : ClassicSakuraConversionCard(0, CardType.Power, Tar
     }
 }
 
-public class ClowDream() : ClassicClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Dream)
+public class ClowDream() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Dream)
 {
     private const int Cards = 1;
     private const int ExtraCards = 1;
@@ -965,7 +965,7 @@ public class SakuraDark() : ClassicSakuraConversionCard(1, CardType.Power, Targe
         await ApplyPower<ClassicDarkSakuraPower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
 
-public class ClowMirror() : ClassicClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Mirror)
+public class ClowMirror() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Mirror)
 {
     private static readonly LocString Prompt = new("cards", "SAKURAMOD-CLOW_MIRROR.selectionPrompt");
 
@@ -1126,7 +1126,7 @@ public class SakuraLight() : ClassicSakuraConversionCard(1, CardType.Skill, Targ
     }
 }
 
-public class ClowLock() : ClassicClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Lock)
+public class ClowLock() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Lock)
 {
     public override ClassicElement Element => ClassicElement.Firey;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, CardKeyword.Ethereal];
@@ -1199,7 +1199,7 @@ public class SakuraLoop() : ClassicSakuraConversionCard(1, CardType.Power, Targe
         await ApplyPower<ClassicLoopSakuraPower>(choiceContext, Owner.Creature, ReleasedValue("Cards"));
 }
 
-public class ClowPower() : ClassicClowCard(2, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, ClassicCardIdentity.Power)
+public class ClowPower() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, ClassicCardIdentity.Power)
 {
     private const int ExtraHpLoss = 15;
 
@@ -1230,7 +1230,7 @@ public class SakuraPower() : ClassicSakuraConversionCard(2, CardType.Power, Targ
         await ApplyPower<StrengthPower>(choiceContext, Owner.Creature, ReleasedValue("StrengthPower"));
 }
 
-public class ClowMaze() : ClassicClowCard(2, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Maze)
+public class ClowMaze() : ClassicExtraClowCard(2, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Maze)
 {
     private const int ExtraBlock = 14;
 
@@ -1261,7 +1261,7 @@ public class SakuraMaze() : ClassicSakuraConversionCard(1, CardType.Skill, Targe
     }
 }
 
-public class ClowSand() : ClassicClowCard(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, ClassicCardIdentity.Sand)
+public class ClowSand() : ClassicExtraClowCard(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, ClassicCardIdentity.Sand)
 {
     private const int ExtraPoison = 7;
 
@@ -1302,7 +1302,7 @@ public class SakuraSand() : ClassicSakuraConversionCard(0, CardType.Attack, Targ
     }
 }
 
-public class ClowShot() : ClassicClowCard(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, ClassicCardIdentity.Shot)
+public class ClowShot() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, ClassicCardIdentity.Shot)
 {
     private const int Hits = 2;
     private const int ExtraVulnerable = 3;
@@ -1346,7 +1346,7 @@ public class SakuraShot() : ClassicSakuraConversionCard(1, CardType.Attack, Targ
     }
 }
 
-public class ClowShadow() : ClassicClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Shadow)
+public class ClowShadow() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Shadow)
 {
     private const int ExtraBlur = 2;
 
@@ -1381,7 +1381,7 @@ public class SakuraShadow() : ClassicSakuraConversionCard(1, CardType.Skill, Tar
     }
 }
 
-public class ClowDash() : ClassicClowCard(0, CardType.Skill, CardRarity.Rare, TargetType.None, ClassicCardIdentity.Dash)
+public class ClowDash() : ClassicExtraClowCard(0, CardType.Skill, CardRarity.Rare, TargetType.None, ClassicCardIdentity.Dash)
 {
     private const int ExtraDraw = 2;
 
@@ -1407,7 +1407,7 @@ public class SakuraDash() : ClassicSakuraConversionCard(0, CardType.Skill, Targe
         await CardPileCmd.Draw(choiceContext, 99, Owner, false);
 }
 
-public class ClowFly() : ClassicClowCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.None, ClassicCardIdentity.Fly)
+public class ClowFly() : ClassicExtraClowCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.None, ClassicCardIdentity.Fly)
 {
     private const int MagicChargeCost = 3;
     private const int ExtraDraw = 2;
@@ -1462,7 +1462,7 @@ public class SakuraGlow() : ClassicSakuraConversionCard(1, CardType.Power, Targe
         await ApplyPower<ClassicGlowPower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
 
-public class ClowLibra() : ClassicClowCard(0, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Libra)
+public class ClowLibra() : ClassicExtraClowCard(0, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Libra)
 {
     private const int ExtraBlock = 12;
 
@@ -1506,7 +1506,7 @@ public class SakuraLibra() : ClassicSakuraConversionCard(1, CardType.Skill, Targ
     }
 }
 
-public class ClowChange() : ClassicClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Change)
+public class ClowChange() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Change)
 {
     private const int ExtraDraw = 2;
 
@@ -1564,7 +1564,7 @@ public class SakuraChange() : ClassicSakuraConversionCard(0, CardType.Skill, Tar
     }
 }
 
-public class ClowMove() : ClassicClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None, ClassicCardIdentity.Move)
+public class ClowMove() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None, ClassicCardIdentity.Move)
 {
     private const int ExtraEmptySpells = 2;
 
@@ -1590,7 +1590,7 @@ public class SakuraMove() : ClassicSakuraConversionCard(0, CardType.Skill, Targe
         await ApplyPower<ClassicMovePower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
 
-public class ClowFight() : ClassicClowCard(1, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy, ClassicCardIdentity.Fight)
+public class ClowFight() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy, ClassicCardIdentity.Fight)
 {
     private const int ExtraStrength = 2;
 
@@ -1668,7 +1668,7 @@ internal static class ClassicFreezeRules
         target.IsMonster && target.CombatState?.Encounter?.RoomType is not (RoomType.Elite or RoomType.Boss);
 }
 
-public class ClowFreeze() : ClassicClowCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, ClassicCardIdentity.Freeze)
+public class ClowFreeze() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, ClassicCardIdentity.Freeze)
 {
     public override ClassicElement Element => ClassicElement.Watery;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicDamageVar(16, ValueProp.Move), new ClassicBlockVar(6, ValueProp.Move)];
@@ -1716,7 +1716,7 @@ public class SakuraFreeze() : ClassicSakuraConversionCard(2, CardType.Attack, Ta
     }
 }
 
-public class ClowStorm() : ClassicClowCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, ClassicCardIdentity.Storm)
+public class ClowStorm() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy, ClassicCardIdentity.Storm)
 {
     private const int Hits = 5;
 
@@ -1766,7 +1766,7 @@ public class SakuraStorm() : ClassicSakuraConversionCard(1, CardType.Attack, Tar
     }
 }
 
-public class ClowThrough() : ClassicClowCard(1, CardType.Attack, CardRarity.Rare, TargetType.None, ClassicCardIdentity.Through)
+public class ClowThrough() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.Rare, TargetType.None, ClassicCardIdentity.Through)
 {
     private const int ExtraMaxHpRate = 20;
 
@@ -1845,7 +1845,7 @@ internal static class ClassicEnemyRules
         target.CombatState?.Encounter?.RoomType is RoomType.Boss;
 }
 
-public class ClowErase() : ClassicClowCard(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, ClassicCardIdentity.Erase)
+public class ClowErase() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy, ClassicCardIdentity.Erase)
 {
     private const int NormalKillHpPercent = 33;
     private const int ExtraKillHpPercent = 66;
@@ -1897,7 +1897,7 @@ public class SakuraErase() : ClassicSakuraConversionCard(3, CardType.Attack, Tar
     }
 }
 
-public class ClowSilent() : ClassicClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Silent)
+public class ClowSilent() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Silent)
 {
     public override ClassicElement Element => ClassicElement.Watery;
 
@@ -1923,7 +1923,7 @@ public class SakuraSilent() : ClassicSakuraConversionCard(1, CardType.Skill, Tar
         await ApplyPower<BufferPower>(choiceContext, Owner.Creature, ReleasedValue("BufferPower"));
 }
 
-public class ClowSleep() : ClassicClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy, ClassicCardIdentity.Sleep)
+public class ClowSleep() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy, ClassicCardIdentity.Sleep)
 {
     public override ClassicElement Element => ClassicElement.Windy;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
@@ -1959,7 +1959,7 @@ public class SakuraSleep() : ClassicSakuraConversionCard(1, CardType.Skill, Targ
     }
 }
 
-public class ClowWood() : ClassicClowCard(1, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy, ClassicCardIdentity.Wood)
+public class ClowWood() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy, ClassicCardIdentity.Wood)
 {
     private const int BasePoisonPercent = 25;
     private const int UpgradedGatheredPoisonPercent = 150;
@@ -2017,7 +2017,7 @@ public class SakuraWood() : ClassicSakuraConversionCard(0, CardType.Skill, Targe
         await ApplyPower<StrengthPower>(choiceContext, RequiredTarget(play), -ReleasedMagic());
 }
 
-public class ClowSong() : ClassicClowCard(0, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies, ClassicCardIdentity.Song)
+public class ClowSong() : ClassicExtraClowCard(0, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies, ClassicCardIdentity.Song)
 {
     private const int ExtraHits = 2;
 
@@ -2128,7 +2128,7 @@ public class SakuraSong() : ClassicSakuraConversionCard(1, CardType.Attack, Targ
             : 1;
 }
 
-public class ClowSnow() : ClassicClowCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies, ClassicCardIdentity.Snow)
+public class ClowSnow() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies, ClassicCardIdentity.Snow)
 {
     private const int ExtraDamage = 9;
 
@@ -2173,7 +2173,7 @@ public class SakuraSnow() : ClassicSakuraConversionCard(1, CardType.Attack, Targ
     }
 }
 
-public class ClowThunder() : ClassicClowCard(3, CardType.Attack, CardRarity.Rare, TargetType.None, ClassicCardIdentity.Thunder)
+public class ClowThunder() : ClassicExtraClowCard(3, CardType.Attack, CardRarity.Rare, TargetType.None, ClassicCardIdentity.Thunder)
 {
     public override ClassicElement Element => ClassicElement.Earthy;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain];
@@ -2231,7 +2231,7 @@ public class SakuraThunder() : ClassicSakuraConversionCard(0, CardType.Attack, T
     }
 }
 
-public class ClowTime() : ClassicClowCard(2, CardType.Skill, CardRarity.Rare, TargetType.AllEnemies, ClassicCardIdentity.Time)
+public class ClowTime() : ClassicExtraClowCard(2, CardType.Skill, CardRarity.Rare, TargetType.AllEnemies, ClassicCardIdentity.Time)
 {
     private const int VoidCount = 2;
 
@@ -2283,10 +2283,13 @@ public class ClowTwin() : ClassicClowCard(3, CardType.Power, CardRarity.Rare, Ta
 
 public class SakuraTwin() : ClassicSakuraConversionCard(1, CardType.Power, TargetType.None, ClassicCardIdentity.Twin)
 {
+    private const int TwinAmount = 1;
+
     public override ClassicElement Element => ClassicElement.Firey | ClassicElement.Watery;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Amount", TwinAmount)];
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await ApplyPower<ClassicTwinSakuraPower>(choiceContext, Owner.Creature, 1);
+        await ApplyPower<ClassicTwinSakuraPower>(choiceContext, Owner.Creature, DynamicVars["Amount"].IntValue);
 }
 
 public class SpellSeal() : ClassicSpellCard(2, CardType.Attack, CardRarity.Basic, TargetType.AnyEnemy)

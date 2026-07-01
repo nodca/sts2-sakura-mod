@@ -731,13 +731,13 @@ public class ClassicTwinSakuraPower : ClassicSakuraPower
     public override PowerStackType StackType => PowerStackType.Counter;
 
     public override int ModifyCardPlayCount(CardModel card, Creature? target, int playCount) =>
-        IsClow(card) && !card.IsClone && !card.IsDupe
+        card.Owner?.Creature == Owner && IsClow(card) && !card.IsClone && !card.IsDupe
             ? playCount + Math.Max(0, Amount)
             : playCount;
 
     public override Task AfterApplied(Creature? applier, CardModel? cardSource)
     {
-        ApplyCostIncreaseToKnownClowCards(Amount);
+        RefreshKnownClowCardCosts();
         return Task.CompletedTask;
     }
 
@@ -748,8 +748,8 @@ public class ClassicTwinSakuraPower : ClassicSakuraPower
         Creature? applier,
         CardModel? cardSource)
     {
-        if (power == this && amount > 0)
-            ApplyCostIncreaseToKnownClowCards((int)amount);
+        if (power == this)
+            RefreshKnownClowCardCosts();
 
         return Task.CompletedTask;
     }
@@ -757,33 +757,54 @@ public class ClassicTwinSakuraPower : ClassicSakuraPower
     public override Task AfterCardGeneratedForCombat(CardModel card, Player? creator)
     {
         if (creator == Owner.Player)
-            ApplyCostIncrease(card, Amount);
+            RefreshCost(card);
 
         return Task.CompletedTask;
     }
 
-    private void ApplyCostIncreaseToKnownClowCards(int amount)
+    public override bool TryModifyEnergyCostInCombat(CardModel card, decimal currentCost, out decimal newCost)
     {
-        if (amount <= 0 || Owner.Player is not { } player)
+        if (card.Owner?.Creature != Owner || Owner.GetPower<ClassicNothingPower>() is not null)
+        {
+            newCost = currentCost;
+            return false;
+        }
+
+        return TryIncreaseClowCardCost(card, Amount, currentCost, out newCost);
+    }
+
+    internal static bool TryIncreaseClowCardCost(CardModel card, int amount, decimal currentCost, out decimal newCost)
+    {
+        var costIncrease = Math.Max(0, amount);
+        if (!IsCostedClow(card, currentCost) || costIncrease <= 0)
+        {
+            newCost = currentCost;
+            return false;
+        }
+
+        newCost = currentCost + costIncrease;
+        return true;
+    }
+
+    private void RefreshKnownClowCardCosts()
+    {
+        if (Owner.Player is not { } player)
             return;
 
         foreach (var card in CardPile.GetCards(player, PileType.Hand, PileType.Draw, PileType.Discard, PileType.Exhaust))
-            ApplyCostIncrease(card, amount);
+            RefreshCost(card);
     }
 
-    private static void ApplyCostIncrease(CardModel card, int amount)
+    private static void RefreshCost(CardModel card)
     {
-        if (!IsCostedClow(card) || amount <= 0)
-            return;
-
-        card.EnergyCost.AddThisCombat(amount);
-        card.InvokeEnergyCostChanged();
+        if (IsCostedClow(card, card.EnergyCost.GetWithModifiers(CostModifiers.Local)))
+            card.InvokeEnergyCostChanged();
     }
 
-    private static bool IsCostedClow(CardModel card) =>
+    private static bool IsCostedClow(CardModel card, decimal currentCost) =>
         IsClow(card)
         && !card.EnergyCost.CostsX
-        && card.EnergyCost.GetWithModifiers(CostModifiers.Local) >= 0;
+        && currentCost >= 0;
 
     private static bool IsClow(CardModel card) =>
         card is ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow };
