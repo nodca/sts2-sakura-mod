@@ -446,12 +446,7 @@ public static class SakuraActions
         if (elements == SakuraElementSet.None)
             return;
 
-        var entriesByOwner = PlayedElementsByCombat.GetValue(card.CombatState, _ => []);
-        if (!entriesByOwner.TryGetValue(owner, out var entries))
-        {
-            entries = [];
-            entriesByOwner[owner] = entries;
-        }
+        var entries = PlayedElementEntries(card.CombatState, owner);
 
         var existing = entries.LastOrDefault(entry => ReferenceEquals(entry.Play, play));
         if (existing is not null)
@@ -468,7 +463,7 @@ public static class SakuraActions
             return;
         }
 
-        entries.Add(new PlayedElementEntry(play, card, elements, LastElementOf(elements)));
+        entries.Add(new PlayedElementEntry(play, elements, LastElementOf(elements)));
         await ApplyPlayedElementPowers(choiceContext, owner, elements);
     }
 
@@ -553,7 +548,28 @@ public static class SakuraActions
         for (var i = 0; i < amount; i++)
             await ApplyPlayedElementPower(choiceContext, owner, element);
 
+        RecordPlayedElement(owner, element);
         SakuraElementCompass.OnElementsPlayed(owner);
+    }
+
+    private static void RecordPlayedElement(Player owner, SakuraElement element)
+    {
+        if (owner.Creature.CombatState is null)
+            return;
+
+        PlayedElementEntries(owner.Creature.CombatState, owner)
+            .Add(new PlayedElementEntry(null, element.ToSet(), element));
+    }
+
+    private static List<PlayedElementEntry> PlayedElementEntries(ICombatState combatState, Player owner)
+    {
+        var entriesByOwner = PlayedElementsByCombat.GetValue(combatState, _ => []);
+        if (entriesByOwner.TryGetValue(owner, out var entries))
+            return entries;
+
+        entries = [];
+        entriesByOwner[owner] = entries;
+        return entries;
     }
 
     private static async Task ApplyPlayedElementPowers(PlayerChoiceContext choiceContext, Player owner, SakuraElementSet elements)
@@ -900,10 +916,9 @@ public static class SakuraActions
         return cost >= 0;
     }
 
-    private sealed class PlayedElementEntry(CardPlay play, CardModel card, SakuraElementSet elements, SakuraElement lastElement)
+    private sealed class PlayedElementEntry(CardPlay? play, SakuraElementSet elements, SakuraElement lastElement)
     {
-        public CardPlay Play { get; } = play;
-        public CardModel Card { get; } = card;
+        public CardPlay? Play { get; } = play;
         public SakuraElementSet Elements { get; set; } = elements;
         public SakuraElement LastElement { get; set; } = lastElement;
     }
