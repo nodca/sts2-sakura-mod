@@ -45,6 +45,7 @@
   "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.options.LEAVE_THE_DREAM.description": "Heal 6 HP. Gain 25 gold.",
   "SAKURAMOD-ANOTHER_ME_EVENT.pages.ACCEPT_ENCOUNTER.description": "The figure's silence breaks into warm feathers and a fractured memory. The dream does not follow you, but some of its cards do.",
   "SAKURAMOD-ANOTHER_ME_EVENT.pages.LEAVE_THE_DREAM.description": "You step back before the dream can answer. The ruined street dissolves, leaving only a steadier heartbeat and a few bright coins in your hand.",
+  "SAKURAMOD-ANOTHER_ME_EVENT.selectionPrompt": "Choose up to {MaxCount} Tsubasa Cards.",
 
   "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.title": "Xiao Lang's Feelings",
   "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.description": "Xiao Lang stands beside the road, stiff with embarrassment and resolve. He offers a small charm that carries a quiet warmth.",

@@ -25,13 +25,11 @@ public class MemoryFracture() : SakuraModCard(-1, CardType.Curse, CardRarity.Cur
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Unplayable];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("HpLoss", HpLoss)];
 
-    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
+    public override async Task BeforeSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        await base.AfterSideTurnEnd(choiceContext, side, participants);
-
-        if (Pile?.Type != PileType.Hand
-            || Owner.Creature.Side != side
-            || !participants.Contains(Owner.Creature))
+        if (Owner.Creature.Side != side
+            || !participants.Contains(Owner.Creature)
+            || Pile?.Type != PileType.Hand)
             return;
 
         var partners = SakuraActions.Hand(this)
@@ -86,7 +84,8 @@ public class VoidBond() : SakuraModCard(2, CardType.Skill, CardRarity.Rare, Targ
 
 public class TsubasaAnotherMe() : SakuraModCard(1, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => IsUpgraded ? [CardKeyword.Innate] : [];
+    public override IEnumerable<CardKeyword> CanonicalKeywords =>
+        IsUpgraded ? [SakuraKeywords.Catalog, CardKeyword.Innate] : [SakuraKeywords.Catalog];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PowerCmd.Apply<AnotherMePower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
@@ -176,20 +175,18 @@ public class CopiedSoul() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon
     protected override void OnUpgrade() => RemoveKeywordIfPresent(CardKeyword.Exhaust);
 }
 
-public class SleepingWings() : SakuraModCard(1, CardType.Power, CardRarity.Uncommon, TargetType.Self)
+public class SleepingWings() : SakuraModCard(2, CardType.Power, CardRarity.Uncommon, TargetType.Self)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<SleepingWingsPower>(1)];
-
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PowerCmd.Apply<SleepingWingsPower>(
             choiceContext,
             Owner.Creature,
-            IsUpgraded ? 2 : DynamicVars["SleepingWingsPower"].IntValue,
+            1,
             Owner.Creature,
             this,
             false);
 
-    protected override void OnUpgrade() => DynamicVars["SleepingWingsPower"].UpgradeValueBy(1);
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
 public class MemoryFeather() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)

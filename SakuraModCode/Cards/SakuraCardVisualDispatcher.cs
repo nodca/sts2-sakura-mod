@@ -29,6 +29,19 @@ internal static class SakuraCardVisualDispatcher
         SakuraCardVisualLifecycle.AfterCardUpdateVisuals(card, SakuraCardVisualFamily.Clear);
     }
 
+    public static void AfterGeneratedTransparentCardUpdateVisuals(NCard card)
+    {
+        if (!SakuraGeneratedCardLifecycle.IsGeneratedTransparentHandVisualCard(card.Model))
+            return;
+
+        SakuraCardVisualLifecycle.AfterCardUpdateVisuals(card, SakuraCardVisualFamily.Clear);
+    }
+
+    public static void BeforeGeneratedTransparentHandHolderSetCard(NCard card)
+    {
+        SakuraGeneratedCardLifecycle.BeforeGeneratedTransparentHandHolderSetCard(card);
+    }
+
     public static void AfterClearCardRewardGlow(NCard card)
     {
         SakuraCardVisualLifecycle.AfterCardRewardGlow(card, SakuraCardVisualFamily.Clear);

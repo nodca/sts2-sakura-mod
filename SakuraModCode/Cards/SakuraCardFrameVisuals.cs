@@ -35,6 +35,7 @@ internal static class SakuraCardFrameVisuals
     private const string TomoyoBondPortraitFileName = "tomoyo_bond.png";
     private const string TomoyoCameraPortraitFileName = "tomoyo_camera.png";
     private const string TomoyoCostumePortraitFileName = "tomoyo_costume.png";
+    private const string TsubasaAnotherMePortraitFileName = "tsubasa_another_me.png";
     private const string YamazakiTallTalePortraitFileName = "yamazaki_tall_tale.png";
     private const string YueTrueFormPortraitFileName = "yue_true_form.png";
     private static readonly Dictionary<string, Texture2D?> PortraitTextureCache = [];
@@ -47,6 +48,14 @@ internal static class SakuraCardFrameVisuals
 
     public static string PortraitPath(CardModel card) => PortraitFileName(card).CardImagePath();
 
+    public static bool UsesCustomNonClearFrame(CardModel card) =>
+        !SakuraCardCatalog.IsTransparentCard(card)
+        && card.Rarity != CardRarity.Ancient
+        && card.Type != CardType.Curse;
+
+    public static bool UsesTsubasaFrame(CardModel card) =>
+        SakuraCardCatalog.IsTsubasaCard(card);
+
     public static IEnumerable<string> RunAssetPaths(CardModel card)
     {
         if (SakuraCardCatalog.IsTransparentCard(card))
@@ -58,7 +67,7 @@ internal static class SakuraCardFrameVisuals
         yield return PortraitPath(card);
         yield return BigPortraitPath(card);
 
-        if (card.Rarity == CardRarity.Ancient)
+        if (!UsesCustomNonClearFrame(card))
             yield break;
 
         foreach (var part in Enum.GetValues<SakuraFramePart>())
@@ -84,14 +93,14 @@ internal static class SakuraCardFrameVisuals
     }
 
     public static Texture2D? CustomFrameTexture(CardModel card) =>
-        ShouldUseVanillaFrame(card)
-            ? null
-            : FrameTexture(card, SakuraFramePart.Frame);
+        UsesCustomNonClearFrame(card)
+            ? FrameTexture(card, SakuraFramePart.Frame)
+            : null;
 
     public static Material? CustomFrameMaterial(CardModel card) =>
-        ShouldUseVanillaFrame(card)
-            ? null
-            : _plainFrameMaterial;
+        UsesCustomNonClearFrame(card)
+            ? _plainFrameMaterial
+            : null;
 
     public static Texture2D FrameTexture(CardModel card, SakuraFramePart part)
     {
@@ -130,14 +139,11 @@ internal static class SakuraCardFrameVisuals
 
     private static string FramePartPath(CardModel card, SakuraFramePart part)
     {
-        if (ShouldUseVanillaFrame(card))
-            throw new ArgumentException("This card uses vanilla card frame textures.", nameof(card));
+        if (!UsesCustomNonClearFrame(card))
+            throw new ArgumentException("This card does not use Sakura custom non-Clear frame textures.", nameof(card));
 
         return Path.Join("cards", FrameDirectory(card), FramePartFileName(part)).ImagePath();
     }
-
-    private static bool ShouldUseVanillaFrame(CardModel card) =>
-        SakuraCardCatalog.IsTransparentCard(card) || card.Rarity == CardRarity.Ancient;
 
     private static string PortraitFileName(CardModel card) =>
         card switch
@@ -168,13 +174,20 @@ internal static class SakuraCardFrameVisuals
             TomoyoBond => TomoyoBondPortraitFileName,
             TomoyoCamera => TomoyoCameraPortraitFileName,
             TomoyoCostume => TomoyoCostumePortraitFileName,
+            VoidBond => DefaultPortraitFileName,
+            TsubasaAnotherMe => TsubasaAnotherMePortraitFileName,
+            EquivalentExchange => DefaultPortraitFileName,
+            CopiedSoul => DefaultPortraitFileName,
+            SleepingWings => DefaultPortraitFileName,
+            MemoryFeather => DefaultPortraitFileName,
+            DimensionalDrift => DefaultPortraitFileName,
             YamazakiTallTale => YamazakiTallTalePortraitFileName,
             YueTrueForm => YueTrueFormPortraitFileName,
             _ => DefaultPortraitFileName
         };
 
     private static string FrameDirectory(CardModel card) =>
-        SakuraCardCatalog.IsTsubasaCard(card) ? "tsubasa"
+        UsesTsubasaFrame(card) ? "tsubasa"
         : SakuraCardCatalog.IsPartnerCard(card) ? "partner" : "technique";
 
     private static string FramePartFileName(SakuraFramePart part) =>

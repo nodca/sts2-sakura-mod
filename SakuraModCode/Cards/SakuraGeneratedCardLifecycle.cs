@@ -1,3 +1,4 @@
+using Godot;
 using BaseLib.Extensions;
 using BaseLib.Utils;
 using MegaCrit.Sts2.Core;
@@ -5,8 +6,15 @@ using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.Cards;
+using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
+using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
+using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -25,6 +33,8 @@ public readonly record struct GeneratedCardOptions
 
 internal static class SakuraGeneratedCardLifecycle
 {
+    private static readonly ConditionalWeakTable<CardModel, GeneratedTransparentHandVisualMarker> GeneratedTransparentHandVisualCards = new();
+
     public static async Task<bool> GrantTemporary(PlayerChoiceContext context, CardModel card)
     {
         if (card.IsTemporary())
@@ -105,7 +115,8 @@ internal static class SakuraGeneratedCardLifecycle
     public static async Task<CardModel> AddGeneratedCardToCombat(
         CardModel card,
         GeneratedCardOptions options = default,
-        PlayerChoiceContext? context = null)
+        PlayerChoiceContext? context = null,
+        bool refreshGeneratedTransparentHandVisual = true)
     {
         if (options.RemoveRelease)
             card.RemoveRelease();
@@ -127,9 +138,11 @@ internal static class SakuraGeneratedCardLifecycle
         if (options.AddManifestAtlasOrigin)
             card.MarkManifestAtlasOrigin();
 
+        var destinationPile = options.Pile ?? PileType.Hand;
+        TrackGeneratedTransparentHandVisualCard(card, destinationPile, refreshGeneratedTransparentHandVisual);
         await CardPileCmd.AddGeneratedCardToCombat(
             card,
-            options.Pile ?? PileType.Hand,
+            destinationPile,
             card.Owner,
             options.Position ?? CardPilePosition.Random);
 
@@ -139,8 +152,93 @@ internal static class SakuraGeneratedCardLifecycle
         if (options.AddRelease)
             await SakuraActions.ReleaseAndRecord(context ?? new ThrowingPlayerChoiceContext(), card);
 
+        if (refreshGeneratedTransparentHandVisual)
+            RefreshGeneratedTransparentHandVisual(card);
         return card;
     }
+
+    private static void RefreshGeneratedTransparentHandVisual(CardModel card)
+    {
+        if (!SakuraCardCatalog.IsTransparentCard(card) || card.Pile?.Type != PileType.Hand)
+            return;
+
+        var node = NCard.FindOnTable(card, PileType.Hand);
+        node?.UpdateVisuals(PileType.Hand, CardPreviewMode.Normal);
+        RefreshGeneratedTransparentHandLayout(card, node);
+    }
+
+    private static void RefreshGeneratedTransparentHandLayout(CardModel card, NCard? node)
+    {
+        if (node is null || NCombatRoom.Instance?.Ui?.Hand is not { } hand)
+            return;
+
+        var holder = hand.GetCardHolder(card) as NHandCardHolder;
+        if (holder is null || !ReferenceEquals(holder.CardNode, node))
+            return;
+
+        hand.ForceRefreshCardIndices();
+        SettleGeneratedTransparentHandHolder(hand, holder, node);
+    }
+
+    internal static bool IsGeneratedTransparentHandVisualCard(CardModel? card) =>
+        card is not null
+        && SakuraCardCatalog.IsTransparentCard(card)
+        && GeneratedTransparentHandVisualCards.TryGetValue(card, out _);
+
+    internal static void BeforeGeneratedTransparentHandHolderSetCard(NCard card)
+    {
+        if (!IsGeneratedTransparentHandVisualCard(card.Model) || card.Scale == Vector2.One)
+            return;
+
+        card.Scale = Vector2.One;
+    }
+
+    private static void SettleGeneratedTransparentHandHolder(NPlayerHand hand, NHandCardHolder holder, NCard card)
+    {
+        var activeHolders = hand.ActiveHolders;
+        var active = false;
+        for (var i = 0; i < activeHolders.Count; i++)
+        {
+            if (!ReferenceEquals(activeHolders[i], holder))
+                continue;
+
+            active = true;
+            break;
+        }
+
+        if (!active)
+            return;
+
+        holder.Position = holder.TargetPosition;
+        holder.SetAngleInstantly(holder.TargetAngle);
+        holder.SetScaleInstantly(HandPosHelper.GetScale(activeHolders.Count));
+
+        if (card.Position != Vector2.Zero)
+            card.Position = Vector2.Zero;
+        if (card.Scale != Vector2.One)
+            card.Scale = Vector2.One;
+    }
+
+    private static void TrackGeneratedTransparentHandVisualCard(
+        CardModel card,
+        PileType destinationPile,
+        bool refreshGeneratedTransparentHandVisual)
+    {
+        if (!refreshGeneratedTransparentHandVisual
+            || destinationPile != PileType.Hand
+            || !SakuraCardCatalog.IsTransparentCard(card))
+            return;
+
+        GeneratedTransparentHandVisualCards.GetOrCreateValue(card);
+    }
+
+    private static string FormatCard(CardModel card) =>
+        $"{card.GetType().Name}/{card.Id.Entry}";
+
+    private static string FormatPile(PileType? pile) =>
+        pile?.ToString() ?? "null";
+
+    private sealed class GeneratedTransparentHandVisualMarker;
 
     public static CardModel CreateManifestChoice(Player owner, CardModel source)
     {
@@ -156,12 +254,20 @@ internal static class SakuraGeneratedCardLifecycle
         PlayerChoiceContext context,
         bool addTemporary,
         bool captureEligible) =>
-        AddGeneratedCardToCombat(card, ManifestChoiceOptions(addTemporary, captureEligible), context);
+        AddGeneratedCardToCombat(
+            card,
+            ManifestChoiceOptions(addTemporary, captureEligible),
+            context,
+            refreshGeneratedTransparentHandVisual: false);
 
     public static Task<CardModel> AddManifestAtlasTemporaryCardToCombat(
         CardModel card,
         PlayerChoiceContext context) =>
-        AddGeneratedCardToCombat(card, ManifestAtlasTemporaryCardOptions(), context);
+        AddGeneratedCardToCombat(
+            card,
+            ManifestAtlasTemporaryCardOptions(),
+            context,
+            refreshGeneratedTransparentHandVisual: false);
 
     public static Task<CardModel> AddDiscoveredChoiceToCombat(
         CardModel card,

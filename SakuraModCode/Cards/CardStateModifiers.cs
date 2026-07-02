@@ -11,6 +11,7 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Relics;
+using SakuraMod.SakuraModCode.Character;
 using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Cards;
@@ -573,6 +574,9 @@ internal static class SakuraStateText
     public static string PartnerCardLabel() =>
         IsSimplifiedChinese() ? "伙伴牌" : "Partner Card";
 
+    public static string TsubasaCardLabel() =>
+        IsSimplifiedChinese() ? "翼牌" : "Tsubasa Card";
+
     public static string TechniqueCardLabel() =>
         IsSimplifiedChinese() ? "技法牌" : "Technique Card";
 
@@ -942,7 +946,8 @@ public static class SakuraCardStates
     }
 
     public static bool CanStabilize(this CardModel card) =>
-        card.Owner?.GetRelic<KaitoPocketWatch>() is null;
+        SakuraCardCatalog.IsTransparentCard(card)
+        && (!card.IsMutable || card.Owner?.GetRelic<KaitoPocketWatch>() is null);
 
     private static T NewModifier<T>() where T : CardModifier =>
         (T)CardModifier.Get<T>().MutableClone();

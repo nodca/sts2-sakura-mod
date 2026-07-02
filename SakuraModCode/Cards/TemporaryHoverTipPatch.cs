@@ -23,7 +23,7 @@ public static class TemporaryHoverTipPatch
         __result = AppendClassicSakuraCardTips(__instance, __result);
         __result = AppendReferencedKeywordTips(__instance, __result);
 
-        if (__instance.IsTemporary())
+        if (__instance.IsTemporary() || ReferencesTemporaryTip(__instance))
             __result = AppendTip(__result, TemporaryTipKey);
         if (__instance.IsReleased())
             __result = AppendTip(__result, ReleasedTipKey);
@@ -80,6 +80,9 @@ public static class TemporaryHoverTipPatch
 
         return tips;
     }
+
+    private static bool ReferencesTemporaryTip(CardModel card) =>
+        card is CopiedSoul or MemoryFeather or DimensionalDrift;
 
     private static IEnumerable<ClassicElement> ClassicElementStatesReferencedBy(ClassicSakuraCard card)
     {

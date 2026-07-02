@@ -859,34 +859,18 @@ public class AnotherMePower : SakuraModPower
 
 public class SleepingWingsPower : SakuraModPower
 {
-    private int _partnerExhaustsThisTurn;
-
     public override PowerType Type => PowerType.Buff;
-    public override PowerStackType StackType => PowerStackType.Counter;
+    public override PowerStackType StackType => PowerStackType.Single;
 
     public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
         if (player.Creature != Owner)
             return;
 
-        _partnerExhaustsThisTurn = 0;
         if (CardPile.Get(PileType.Hand, player)!.Cards.Any(SakuraCardCatalog.IsPartnerCard))
             return;
 
         await CardPileCmd.Draw(choiceContext, 1, player, false);
-        await PlayerCmd.GainEnergy(1, player);
-    }
-
-    public override async Task AfterCardExhausted(PlayerChoiceContext choiceContext, CardModel card, bool causedByEthereal)
-    {
-        if (Amount <= 0
-            || _partnerExhaustsThisTurn >= Amount
-            || card.Owner?.Creature != Owner
-            || !SakuraCardCatalog.IsPartnerCard(card)
-            || Owner.Player is not { } player)
-            return;
-
-        _partnerExhaustsThisTurn++;
         await PlayerCmd.GainEnergy(1, player);
     }
 }

@@ -14,6 +14,7 @@ using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.addons.mega_text;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -110,6 +111,13 @@ public static class ClearCardHandHolderPatch
     public static void ReadyPostfix(NHandCardHolder __instance)
     {
         SakuraCardVisualDispatcher.AfterClearHandHolderUpdated(__instance);
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch("SetCard")]
+    public static void SetCardPrefix(NCard node)
+    {
+        SakuraCardVisualDispatcher.BeforeGeneratedTransparentHandHolderSetCard(node);
     }
 
     [HarmonyPostfix]
@@ -227,6 +235,9 @@ internal static class ClearCardLayout
 
     private static readonly FieldInfo? TitleLabelField = AccessTools.Field(typeof(NCard), "_titleLabel");
     private static readonly FieldInfo? DescriptionLabelField = AccessTools.Field(typeof(NCard), "_descriptionLabel");
+    private static readonly FieldInfo? FrameField = AccessTools.Field(typeof(NCard), "_frame");
+    private static readonly FieldInfo? PortraitField = AccessTools.Field(typeof(NCard), "_portrait");
+    private static readonly FieldInfo? BannerField = AccessTools.Field(typeof(NCard), "_banner");
     private static readonly FieldInfo? EnergyIconField = AccessTools.Field(typeof(NCard), "_energyIcon");
     private static readonly FieldInfo? EnergyLabelField = AccessTools.Field(typeof(NCard), "_energyLabel");
     private static readonly FieldInfo? UnplayableEnergyIconField = AccessTools.Field(typeof(NCard), "_unplayableEnergyIcon");
@@ -278,6 +289,61 @@ internal static class ClearCardLayout
         Spec.LayoutSize * card.Scale;
 
     public static Vector2 GridCellSize => Spec.GridCellSize;
+
+    public static string DescribeCardForDiagnostics(NCard card)
+    {
+        var stateTracked = CardStates.TryGetValue(card, out var state);
+        var art = state?.Art;
+        var expectedArt = card.Model is null ? null : ClearCardTexture(card.Model.GetType());
+        var artMatchesExpected = art is not null
+                                 && IsGodotInstanceUsable(art)
+                                 && expectedArt is not null
+                                 && HasTexture(art, expectedArt);
+
+        return "visual={"
+               + $"family={SakuraCardVisualFamilies.Family(card)},"
+               + $"clear={IsClearCard(card)},"
+               + $"stateTracked={stateTracked},"
+               + $"stateApplied={(stateTracked && state is not null && state.IsApplied)},"
+               + $"displayingPile={card.DisplayingPile},"
+               + $"cardVisible={card.Visible},"
+               + $"cardPos={FormatVector(card.Position)},"
+               + $"cardGlobal={FormatVector(card.GlobalPosition)},"
+               + $"cardScale={FormatVector(card.Scale)},"
+               + $"cardSize={FormatVector(card.Size)},"
+               + $"body={DescribeControl(card.Body)},"
+               + $"bodySelfAlpha={AlphaOf(card.Body)},"
+               + $"art={DescribeTextureRect(art)},"
+               + $"artExpected={artMatchesExpected},"
+               + $"frame={DescribeCanvasItem(FieldValue<CanvasItem>(FrameField, card))},"
+               + $"portrait={DescribeCanvasItem(FieldValue<CanvasItem>(PortraitField, card))},"
+               + $"banner={DescribeCanvasItem(FieldValue<CanvasItem>(BannerField, card))}"
+               + "}";
+    }
+
+    public static string DescribeHolderForDiagnostics(NCardHolder holder)
+    {
+        var hitbox = HolderHitbox(holder);
+        var flash = HandFlash(holder);
+        var targetPosition = holder is NHandCardHolder handHolder
+            ? FormatVector(handHolder.TargetPosition)
+            : "n/a";
+
+        return "holder={"
+               + $"type={holder.GetType().Name},"
+               + $"ready={holder.IsNodeReady()},"
+               + $"insideTree={holder.IsInsideTree()},"
+               + $"visible={holder.Visible},"
+               + $"pos={FormatVector(holder.Position)},"
+               + $"global={FormatVector(holder.GlobalPosition)},"
+               + $"scale={FormatVector(holder.Scale)},"
+               + $"rot={FormatFloat(holder.RotationDegrees)},"
+               + $"target={targetPosition},"
+               + $"targetAngle={(holder is NHandCardHolder angleHolder ? FormatFloat(angleHolder.TargetAngle) : "n/a")},"
+               + $"hitbox={DescribeControl(hitbox)},"
+               + $"flash={DescribeControl(flash)}"
+               + "}";
+    }
 
     public static void PreloadVisualResources()
     {
@@ -1399,6 +1465,53 @@ internal static class ClearCardLayout
     private static string CurrentLanguageKey() =>
         LocManager.Instance?.Language ?? string.Empty;
 
+    private static string FormatVector(Vector2 value) =>
+        $"({FormatFloat(value.X)},{FormatFloat(value.Y)})";
+
+    private static string FormatFloat(float value) =>
+        value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string DescribeControl(Control? control)
+    {
+        if (control is null)
+            return "null";
+        if (!IsGodotInstanceUsable(control))
+            return "invalid";
+
+        return $"visible:{control.Visible};size:{FormatVector(control.Size)};pos:{FormatVector(control.Position)}";
+    }
+
+    private static string DescribeCanvasItem(CanvasItem? item)
+    {
+        if (item is null)
+            return "null";
+        if (!IsGodotInstanceUsable(item))
+            return "invalid";
+
+        return $"visible:{item.Visible};modAlpha:{FormatFloat(item.Modulate.A)};selfAlpha:{FormatFloat(item.SelfModulate.A)}";
+    }
+
+    private static string DescribeTextureRect(TextureRect? textureRect)
+    {
+        if (textureRect is null)
+            return "null";
+        if (!IsGodotInstanceUsable(textureRect))
+            return "invalid";
+
+        var hasTexture = TryGetTexture(textureRect, out var texture)
+                         && texture is not null
+                         && IsGodotInstanceUsable(texture);
+        return $"{DescribeControl(textureRect)};texture={hasTexture};stretch={textureRect.StretchMode}";
+    }
+
+    private static string AlphaOf(CanvasItem? item)
+    {
+        if (item is null || !IsGodotInstanceUsable(item))
+            return "n/a";
+
+        return FormatFloat(item.SelfModulate.A);
+    }
+
     private static IEnumerable<Control?> CardControls(NCard card, ClearCardNodes nodes)
     {
         yield return card.Body;
@@ -2032,14 +2145,15 @@ internal static class ClearCardLayout
                 Spec.DefaultRootPivotOffset,
                 null);
             var priority = 0;
-            if (card.GetParent() is NCardHolder)
+            var parent = card.GetParent();
+            if (parent is NCardHolder || IsGeneratedTransparentHandEntryCard(card, parent))
             {
                 context = ForCenteredOrigin(null);
                 priority = 4;
             }
 
             SubViewport? viewport = null;
-            for (var parent = card.GetParent(); parent is not null; parent = parent.GetParent())
+            for (; parent is not null; parent = parent.GetParent())
             {
                 if (parent is SubViewport subViewport)
                     viewport = subViewport;
@@ -2068,6 +2182,11 @@ internal static class ClearCardLayout
 
             return context;
         }
+
+        private static bool IsGeneratedTransparentHandEntryCard(NCard card, Node? parent) =>
+            parent is NCombatUi
+            && card.DisplayingPile == PileType.Hand
+            && SakuraGeneratedCardLifecycle.IsGeneratedTransparentHandVisualCard(card.Model);
 
         private static ClearCardLayoutContext ForCenteredOrigin(SubViewport? transformVfxViewport) =>
             new(Spec.CenteredRootBox, Spec.DefaultRootPivotOffset, transformVfxViewport);

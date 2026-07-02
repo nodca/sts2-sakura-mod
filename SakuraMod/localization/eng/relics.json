@@ -49,7 +49,7 @@
   "SAKURAMOD-CLASSIC_SEALED_BOOK_RELIC.description": "Clow and Sakura cards grant Magic Charge when played: 1 normally, 2 for Powers. At 10 charge, the next eligible card spends 10 charge for its Extra effect.",
   "SAKURAMOD-CLASSIC_SEALED_BOOK_RELIC.flavor": "The Clow Cards wait in the sealed pages.",
   "SAKURAMOD-CLASSIC_SEALED_WAND_RELIC.title": "Sealed Wand",
-  "SAKURAMOD-CLASSIC_SEALED_WAND_RELIC.description": "When a non-secondary enemy dies, gain 3 charge. Gain 2 additional charge in Elite and Boss rooms, and 2 additional charge if Seal dealt the killing damage. At the start of your turn, spend 40 + 20 per converted Sakura card charge to add Turn to your hand.",
+  "SAKURAMOD-CLASSIC_SEALED_WAND_RELIC.description": "When a non-secondary enemy dies, gain {ChargeGain} charge. Gain {EliteBossExtraGain} additional charge in Elite and Boss rooms, and {SealExtraGain} additional charge if Seal dealt the killing damage.\nAt the start of the first turn after your charge reaches {TriggerThreshold}, spend {TriggerThreshold} charge and add 1 Turn to your hand.\nEach Sakura card or Turn in your deck increases the charge required for your next Turn by {TriggerIncrease}.\nNext convert needs {RemainingCharge} more charge.",
   "SAKURAMOD-CLASSIC_SEALED_WAND_RELIC.flavor": "A key-shaped wand that gathers the light needed to turn Clow into Sakura.",
   "SAKURAMOD-CLASSIC_SWORD_JADE_RELIC.title": "Sword Jade",
   "SAKURAMOD-CLASSIC_SWORD_JADE_RELIC.description": "Release increases a card's non-damage, non-block numbers by 100% instead of 50%.",

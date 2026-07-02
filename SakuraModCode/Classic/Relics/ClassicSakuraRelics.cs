@@ -2,6 +2,7 @@ using BaseLib.Abstracts;
 using BaseLib.Extensions;
 using BaseLib.Patches.Saves;
 using BaseLib.Utils;
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
@@ -45,6 +46,13 @@ public class ClassicSealedBookRelic : ClassicSakuraRelic
 
 public class ClassicSealedWandRelic : ClassicSakuraRelic
 {
+    private const string ChargeGainVar = "ChargeGain";
+    private const string EliteBossExtraGainVar = "EliteBossExtraGain";
+    private const string SealExtraGainVar = "SealExtraGain";
+    private const string TriggerThresholdVar = "TriggerThreshold";
+    private const string TriggerIncreaseVar = "TriggerIncrease";
+    private const string RemainingChargeVar = "RemainingCharge";
+
     private const int BaseTrigger = 40;
     private const int UpdateTrigger = 20;
     private const int BaseChargeGain = 3;
@@ -62,6 +70,16 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
     public override bool ShowCounter => true;
     public override int DisplayAmount => Charge[this];
     public int ReturnRechargeAmount => ReturnRechargeAmountForThreshold(TriggerThreshold());
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DynamicVar(ChargeGainVar, BaseChargeGain),
+        new DynamicVar(EliteBossExtraGainVar, EliteBossExtraGain),
+        new DynamicVar(SealExtraGainVar, SealExtraGain),
+        new SealedWandTriggerThresholdVar(),
+        new DynamicVar(TriggerIncreaseVar, UpdateTrigger),
+        new SealedWandRemainingChargeVar()
+    ];
 
     public override async Task BeforeCombatStart()
     {
@@ -140,7 +158,26 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
     }
 
     private int TriggerThreshold() =>
-        BaseTrigger + UpdateTrigger * ClassicSakuraCardCatalog.ConvertedSakuraCount(Owner);
+        TriggerThreshold(Owner);
+
+    private static int TriggerThreshold(Player owner) =>
+        BaseTrigger + UpdateTrigger * ClassicSakuraCardCatalog.ConvertedSakuraCount(owner);
+
+    private int DisplayTriggerThreshold()
+    {
+        if (!IsMutable || Owner is null)
+            return BaseTrigger;
+
+        return TriggerThreshold(Owner);
+    }
+
+    private int DisplayRemainingCharge()
+    {
+        if (!IsMutable || Owner is null)
+            return BaseTrigger;
+
+        return Math.Max(0, TriggerThreshold(Owner) - Charge[this]);
+    }
 
     public void AddReturnRecharge() =>
         AddCharge(ReturnRechargeAmount);
@@ -180,6 +217,30 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
     {
         Charge[this] += amount;
         InvokeDisplayAmountChanged();
+    }
+
+    private sealed class SealedWandTriggerThresholdVar() : DynamicVar(TriggerThresholdVar, BaseTrigger)
+    {
+        public override string ToString() =>
+            CurrentValue().ToString();
+
+        protected override decimal GetBaseValueForIConvertible() =>
+            CurrentValue();
+
+        private int CurrentValue() =>
+            _owner is ClassicSealedWandRelic relic ? relic.DisplayTriggerThreshold() : BaseTrigger;
+    }
+
+    private sealed class SealedWandRemainingChargeVar() : DynamicVar(RemainingChargeVar, BaseTrigger)
+    {
+        public override string ToString() =>
+            CurrentValue().ToString();
+
+        protected override decimal GetBaseValueForIConvertible() =>
+            CurrentValue();
+
+        private int CurrentValue() =>
+            _owner is ClassicSealedWandRelic relic ? relic.DisplayRemainingCharge() : BaseTrigger;
     }
 }
 

@@ -13,4 +13,12 @@ internal static class SakuraCardVisualIsolationPatch
     {
         SakuraCardVisualDispatcher.BeforeCardUpdateVisualsIsolation(__instance);
     }
+
+    [HarmonyPriority(Priority.Last)]
+    [HarmonyPostfix]
+    [HarmonyPatch(nameof(NCard.UpdateVisuals))]
+    public static void UpdateVisualsPostfix(NCard __instance)
+    {
+        SakuraCardVisualDispatcher.AfterGeneratedTransparentCardUpdateVisuals(__instance);
+    }
 }

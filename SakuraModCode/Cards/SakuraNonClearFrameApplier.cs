@@ -39,6 +39,10 @@ internal static class SakuraNonClearFrameApplier
     private const string PartnerCategoryTextColor = "#ffd6e8";
     private static readonly Color PartnerTitleOutlineColor = new("371720");
     private static readonly Color PartnerDescriptionOutlineColor = new("30181F");
+    private static readonly Color TsubasaTextColor = new(1f, 1f, 1f, 1f);
+    private const string TsubasaCategoryTextColor = "#9B7AE0";
+    private static readonly Color TsubasaTitleOutlineColor = new("2A1D43");
+    private static readonly Color TsubasaDescriptionOutlineColor = new("211A35");
     private static readonly Color TechniqueTextColor = new(1f, 1f, 1f, 1f);
     private const string TechniqueCategoryTextColor = "#9fe7ff";
     private static readonly Color TechniqueTitleOutlineColor = new("152A3A");
@@ -65,7 +69,8 @@ internal static class SakuraNonClearFrameApplier
 
     public static bool IsSakuraNonClearCard(NCard? card) =>
         SakuraCardVisualFamilies.IsKinomoto(card)
-        && card?.Model?.Rarity != CardRarity.Ancient;
+        && card?.Model is { } model
+        && SakuraCardFrameVisuals.UsesCustomNonClearFrame(model);
 
     public static void Apply(NCard card)
     {
@@ -287,11 +292,11 @@ internal static class SakuraNonClearFrameApplier
             FieldValue<NinePatchRect>(TypePlaqueField, card),
             SakuraCardFrameVisuals.FrameTexture(model, SakuraFramePart.TypePlaque));
         ApplyHighlightTexture(card, card.CardHighlight);
-        var isPartner = SakuraCardCatalog.IsPartnerCard(model);
+        var categoryStyle = CategoryStyle(model);
         var styleState = StyleStates.GetOrCreateValue(card);
         styleState.Capture(card);
-        ApplyDescriptionCategory(card, isPartner);
-        ApplyTextStyle(card, isPartner);
+        ApplyDescriptionCategory(card, categoryStyle);
+        ApplyTextStyle(card, categoryStyle);
         styleState.MarkApplied();
     }
 
@@ -328,41 +333,64 @@ internal static class SakuraNonClearFrameApplier
             .Apply(highlight, SakuraNonClearHighlightTexture(highlight.Size));
     }
 
-    private static void ApplyDescriptionCategory(NCard card, bool isPartner)
+    private static void ApplyDescriptionCategory(NCard card, SakuraNonClearCategoryStyle style)
     {
         if (FieldValue<MegaRichTextLabel>(DescriptionLabelField, card) is not { } description)
             return;
 
-        var label = isPartner ? SakuraStateText.PartnerCardLabel() : SakuraStateText.TechniqueCardLabel();
-        var color = isPartner ? PartnerCategoryTextColor : TechniqueCategoryTextColor;
         DescriptionStates
             .GetOrCreateValue(card)
-            .Apply(description, $"[color={color}]{label}[/color]");
+            .Apply(description, $"[color={style.CategoryTextColor}]{style.Label}[/color]");
     }
 
-    private static void ApplyTextStyle(NCard card, bool isPartner)
+    private static void ApplyTextStyle(NCard card, SakuraNonClearCategoryStyle style)
     {
-        var textColor = isPartner ? PartnerTextColor : TechniqueTextColor;
-        var titleTextColor = card.Model?.IsUpgraded == true ? SakuraCardVisualStyle.UpgradedNameTextColor : textColor;
-        var titleOutlineColor = isPartner ? PartnerTitleOutlineColor : TechniqueTitleOutlineColor;
-        var descriptionOutlineColor = isPartner
-            ? PartnerDescriptionOutlineColor
-            : TechniqueDescriptionOutlineColor;
+        var titleTextColor = card.Model?.IsUpgraded == true ? SakuraCardVisualStyle.UpgradedNameTextColor : style.TextColor;
 
         var titleLabel = FieldValue<Control>(TitleLabelField, card);
         ApplyThemeColorOverride(titleLabel, FontColorName, titleTextColor);
-        ApplyThemeColorOverride(titleLabel, FontOutlineColorName, titleOutlineColor);
+        ApplyThemeColorOverride(titleLabel, FontOutlineColorName, style.TitleOutlineColor);
         ApplyThemeConstantOverride(titleLabel, OutlineSizeName, TitleOutlineSize);
 
         var descriptionLabel = FieldValue<Control>(DescriptionLabelField, card);
-        ApplyThemeColorOverride(descriptionLabel, FontColorName, textColor);
-        ApplyThemeColorOverride(descriptionLabel, DefaultColorName, textColor);
-        ApplyThemeColorOverride(descriptionLabel, FontOutlineColorName, descriptionOutlineColor);
+        ApplyThemeColorOverride(descriptionLabel, FontColorName, style.TextColor);
+        ApplyThemeColorOverride(descriptionLabel, DefaultColorName, style.TextColor);
+        ApplyThemeColorOverride(descriptionLabel, FontOutlineColorName, style.DescriptionOutlineColor);
         ApplyThemeConstantOverride(descriptionLabel, OutlineSizeName, DescriptionOutlineSize);
 
         var typeLabel = FieldValue<Control>(TypeLabelField, card);
-        ApplyThemeColorOverride(typeLabel, FontColorName, textColor);
-        ApplyThemeColorOverride(typeLabel, FontOutlineColorName, descriptionOutlineColor);
+        ApplyThemeColorOverride(typeLabel, FontColorName, style.TextColor);
+        ApplyThemeColorOverride(typeLabel, FontOutlineColorName, style.DescriptionOutlineColor);
+    }
+
+    private static SakuraNonClearCategoryStyle CategoryStyle(CardModel model)
+    {
+        if (SakuraCardCatalog.IsPartnerCard(model))
+        {
+            return new(
+                SakuraStateText.PartnerCardLabel(),
+                PartnerCategoryTextColor,
+                PartnerTextColor,
+                PartnerTitleOutlineColor,
+                PartnerDescriptionOutlineColor);
+        }
+
+        if (SakuraCardFrameVisuals.UsesTsubasaFrame(model))
+        {
+            return new(
+                SakuraStateText.TsubasaCardLabel(),
+                TsubasaCategoryTextColor,
+                TsubasaTextColor,
+                TsubasaTitleOutlineColor,
+                TsubasaDescriptionOutlineColor);
+        }
+
+        return new(
+            SakuraStateText.TechniqueCardLabel(),
+            TechniqueCategoryTextColor,
+            TechniqueTextColor,
+            TechniqueTitleOutlineColor,
+            TechniqueDescriptionOutlineColor);
     }
 
     private static T? FieldValue<T>(FieldInfo? field, object instance)
@@ -479,6 +507,13 @@ internal static class SakuraNonClearFrameApplier
     {
         return SakuraCardVisualInfrastructure.RoundedRectDistance(point, halfSize, radius);
     }
+
+    private readonly record struct SakuraNonClearCategoryStyle(
+        string Label,
+        string CategoryTextColor,
+        Color TextColor,
+        Color TitleOutlineColor,
+        Color DescriptionOutlineColor);
 
     private sealed class SakuraCostLabelState
     {

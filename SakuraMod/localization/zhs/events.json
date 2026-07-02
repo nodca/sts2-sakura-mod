@@ -40,11 +40,12 @@
   "SAKURAMOD-ANOTHER_ME_EVENT.title": "另一个我",
   "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.description": "废墟在高处沉默地崩塌。\n\n沙尘弥漫的狂风中站着一个少女的背影。她戴着兜帽，白色的斗篷上沾染着斑驳的红褐色血迹。\n\n某种难以名状的共鸣在空气中颤动。那不是你的旅途，却来自同一种形状的灵魂。",
   "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.options.ACCEPT_ENCOUNTER.title": "分担旅程。",
-  "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.options.ACCEPT_ENCOUNTER.description": "获得记忆裂痕。从 7 张翼牌中选择至多 3 张。（占位奖励，暂时用慈爱代替）",
+  "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.options.ACCEPT_ENCOUNTER.description": "获得记忆裂痕。从 7 张翼牌中选择至多 3 张。",
   "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.options.LEAVE_THE_DREAM.title": "离开梦境。",
   "SAKURAMOD-ANOTHER_ME_EVENT.pages.INITIAL.options.LEAVE_THE_DREAM.description": "回复 6 点生命。获得 25 金币。",
   "SAKURAMOD-ANOTHER_ME_EVENT.pages.ACCEPT_ENCOUNTER.description": "在你触碰斗篷的瞬间，废墟在金色光芒中散为沙砾。少女留下一道裂开的记忆与数片温热的羽毛，消失在风沙深处。",
   "SAKURAMOD-ANOTHER_ME_EVENT.pages.LEAVE_THE_DREAM.description": "你停下脚步。那个背影在沙尘中微微驻足，随后消失在废墟的尽头。虚无的狂风为你拂去了一些疲惫。",
+  "SAKURAMOD-ANOTHER_ME_EVENT.selectionPrompt": "选择至多 {MaxCount} 张翼牌。",
 
   "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.title": "小狼的心意",
   "SAKURAMOD-CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.description": "小狼站在路边，带着尴尬而坚定的神情。他递来一枚小小的护符，其中藏着安静的温度。",

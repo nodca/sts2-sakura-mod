@@ -217,7 +217,7 @@
   "SAKURAMOD-COPIED_SOUL.selectionPrompt": "Choose a Partner Card to copy.",
   "SAKURAMOD-COPIED_SOUL.description": "Choose a Partner Card in your hand. Add a [red]Temporary[/red] copy to your hand.{IfUpgraded:show: It costs 0 this turn. This no longer Exhausts.| [gold]Exhaust[/gold].}",
   "SAKURAMOD-SLEEPING_WINGS.title": "Sleeping Wings",
-  "SAKURAMOD-SLEEPING_WINGS.description": "After you draw at the start of your turn, if you have no Partner Cards in hand, draw 1 card and gain 1 [gold]Energy[/gold]. The first {SleepingWingsPower:diff()} time(s) each turn you Exhaust a Partner Card, gain 1 [gold]Energy[/gold].",
+  "SAKURAMOD-SLEEPING_WINGS.description": "At the start of your turn, if you have no Partner Cards in hand, draw 1 card and gain 1 [gold]Energy[/gold].",
   "SAKURAMOD-MEMORY_FEATHER.title": "Memory Feather",
   "SAKURAMOD-MEMORY_FEATHER.selectionPrompt": "Choose a non-Tsubasa Card.",
   "SAKURAMOD-MEMORY_FEATHER.description": "Choose a non-Tsubasa Card in your hand. Double its damage and Block this turn. It gains [red]Temporary[/red]. [gold]Exhaust[/gold].",
