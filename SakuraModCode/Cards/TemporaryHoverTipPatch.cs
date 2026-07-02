@@ -13,11 +13,13 @@ public static class TemporaryHoverTipPatch
     private const string ReleasedTipKey = "SAKURAMOD-RELEASED";
     private const string ReflectionTipKey = "SAKURAMOD-REFLECTION";
     private const string StrongReflectionTipKey = "SAKURAMOD-STRONG_REFLECTION";
+    private const string ClassicSpellTipKey = "SAKURAMOD-CLASSIC_SPELL_CARD";
 
     [HarmonyPostfix]
     public static void HoverTipsPostfix(CardModel __instance, ref IEnumerable<IHoverTip> __result)
     {
         __result = AppendElementTips(__instance, __result);
+        __result = AppendClassicElementTips(__instance, __result);
         __result = AppendClassicSakuraCardTips(__instance, __result);
         __result = AppendReferencedKeywordTips(__instance, __result);
 
@@ -43,6 +45,23 @@ public static class TemporaryHoverTipPatch
         return tips;
     }
 
+    private static IEnumerable<IHoverTip> AppendClassicElementTips(CardModel card, IEnumerable<IHoverTip> tips)
+    {
+        if (card is not ClassicSakuraCard classicCard)
+            return tips;
+
+        if (classicCard.Family == ClassicSakuraCardFamily.Spell)
+            tips = AppendTip(tips, ClassicSpellTipKey);
+
+        foreach (var element in classicCard.Element.AsElements())
+            tips = AppendTip(tips, ClassicElementTipKey(classicCard, element));
+
+        foreach (var element in ClassicElementStatesReferencedBy(classicCard))
+            tips = AppendTip(tips, ClassicElementStateTipKey(element));
+
+        return tips;
+    }
+
     private static IEnumerable<IHoverTip> AppendClassicSakuraCardTips(CardModel card, IEnumerable<IHoverTip> tips)
     {
         if (card is ClassicSakuraCard { ShowsSakuraCardVoidTip: true })
@@ -61,6 +80,57 @@ public static class TemporaryHoverTipPatch
 
         return tips;
     }
+
+    private static IEnumerable<ClassicElement> ClassicElementStatesReferencedBy(ClassicSakuraCard card)
+    {
+        if (card.Family == ClassicSakuraCardFamily.Sakura && card.Identity == ClassicCardIdentity.Wave)
+            return (ClassicElement.Earthy | ClassicElement.Firey | ClassicElement.Watery | ClassicElement.Windy).AsElements();
+
+        if (card.Family is not (ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura))
+            return [];
+
+        return card.Identity is ClassicCardIdentity.Earthy
+            or ClassicCardIdentity.Firey
+            or ClassicCardIdentity.Watery
+            or ClassicCardIdentity.Windy
+            ? card.Element.AsElements()
+            : [];
+    }
+
+    private static string ClassicElementTipKey(ClassicSakuraCard card, ClassicElement element) =>
+        card.Family == ClassicSakuraCardFamily.Spell
+            ? ClassicElementSpellTipKey(element)
+            : ClassicElementCardTipKey(element);
+
+    private static string ClassicElementCardTipKey(ClassicElement element) =>
+        element switch
+        {
+            ClassicElement.Earthy => "SAKURAMOD-CLASSIC_EARTHY_CARD",
+            ClassicElement.Firey => "SAKURAMOD-CLASSIC_FIREY_CARD",
+            ClassicElement.Watery => "SAKURAMOD-CLASSIC_WATERY_CARD",
+            ClassicElement.Windy => "SAKURAMOD-CLASSIC_WINDY_CARD",
+            _ => throw new ArgumentOutOfRangeException(nameof(element), element, null)
+        };
+
+    private static string ClassicElementSpellTipKey(ClassicElement element) =>
+        element switch
+        {
+            ClassicElement.Earthy => "SAKURAMOD-CLASSIC_EARTHY_SPELL_CARD",
+            ClassicElement.Firey => "SAKURAMOD-CLASSIC_FIREY_SPELL_CARD",
+            ClassicElement.Watery => "SAKURAMOD-CLASSIC_WATERY_SPELL_CARD",
+            ClassicElement.Windy => "SAKURAMOD-CLASSIC_WINDY_SPELL_CARD",
+            _ => throw new ArgumentOutOfRangeException(nameof(element), element, null)
+        };
+
+    private static string ClassicElementStateTipKey(ClassicElement element) =>
+        element switch
+        {
+            ClassicElement.Earthy => "SAKURAMOD-CLASSIC_EARTHY_STATE",
+            ClassicElement.Firey => "SAKURAMOD-CLASSIC_FIREY_STATE",
+            ClassicElement.Watery => "SAKURAMOD-CLASSIC_WATERY_STATE",
+            ClassicElement.Windy => "SAKURAMOD-CLASSIC_WINDY_STATE",
+            _ => throw new ArgumentOutOfRangeException(nameof(element), element, null)
+        };
 
     private static IEnumerable<IHoverTip> AppendTip(IEnumerable<IHoverTip> tips, string key) =>
         tips.Append(new HoverTip(

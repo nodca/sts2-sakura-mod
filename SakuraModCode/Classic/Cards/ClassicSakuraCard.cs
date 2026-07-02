@@ -135,6 +135,7 @@ public abstract class ClassicSakuraCard(
             if (ClassicSakuraMagic.ShouldSpendMagicForExtraEffect(Owner))
                 await ClassicSakuraMagic.SpendMagic(choiceContext, Owner, ClassicSakuraMagic.ExtraEffectCost);
             await PlayExtra(choiceContext, play);
+            await ApplyMagicChargeElementStates(choiceContext);
         }
         else
         {
@@ -148,6 +149,31 @@ public abstract class ClassicSakuraCard(
 
     protected virtual Task PlayExtra(PlayerChoiceContext choiceContext, CardPlay play) =>
         PlayNormal(choiceContext, play);
+
+    private async Task ApplyMagicChargeElementStates(PlayerChoiceContext choiceContext)
+    {
+        if (Family != ClassicSakuraCardFamily.Clow)
+            return;
+
+        foreach (var element in Element.AsElements())
+            await ApplyElementStateIfMissing(choiceContext, element);
+    }
+
+    private Task ApplyElementStateIfMissing(PlayerChoiceContext choiceContext, ClassicElement element) =>
+        element switch
+        {
+            ClassicElement.Earthy => ApplyElementStateIfMissing<ClassicEarthyPower>(choiceContext),
+            ClassicElement.Firey => ApplyElementStateIfMissing<ClassicFireyPower>(choiceContext),
+            ClassicElement.Watery => ApplyElementStateIfMissing<ClassicWateryPower>(choiceContext),
+            ClassicElement.Windy => ApplyElementStateIfMissing<ClassicWindyPower>(choiceContext),
+            _ => Task.CompletedTask
+        };
+
+    private async Task ApplyElementStateIfMissing<T>(PlayerChoiceContext choiceContext) where T : PowerModel
+    {
+        if (Owner.Creature.GetPower<T>() is null)
+            await ApplyPower<T>(choiceContext, Owner.Creature, 1);
+    }
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -281,6 +307,18 @@ internal static class ClassicElementExtensions
 {
     public static bool HasElement(this ClassicElement elements, ClassicElement element) =>
         element != ClassicElement.None && (elements & element) == element;
+
+    public static IEnumerable<ClassicElement> AsElements(this ClassicElement elements)
+    {
+        if (elements.HasElement(ClassicElement.Earthy))
+            yield return ClassicElement.Earthy;
+        if (elements.HasElement(ClassicElement.Firey))
+            yield return ClassicElement.Firey;
+        if (elements.HasElement(ClassicElement.Watery))
+            yield return ClassicElement.Watery;
+        if (elements.HasElement(ClassicElement.Windy))
+            yield return ClassicElement.Windy;
+    }
 }
 
 internal static class ClassicSakuraCardCatalog

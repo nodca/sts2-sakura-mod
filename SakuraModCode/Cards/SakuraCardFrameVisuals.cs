@@ -19,12 +19,14 @@ internal static class SakuraCardFrameVisuals
     private const string DreamCompassPortraitFileName = "dream_compass.png";
     private const string DreamKeyGlowPortraitFileName = "dream_key_glow.png";
     private const string DreamWandPortraitFileName = "dream_wand.png";
+    private const string FalseDailyLifePortraitFileName = "false_daily_life.png";
     private const string FourSymbolsPortraitFileName = "four_symbols.png";
     private const string FujitakaNotePortraitFileName = "fujitaka_note.png";
     private const string GrowingMagicPortraitFileName = "growing_magic.png";
     private const string KeroBondPortraitFileName = "kero_bond.png";
     private const string KeroSnackBreakPortraitFileName = "kero_snack_break.png";
     private const string MagicSurgePortraitFileName = "magic_surge.png";
+    private const string MeilingComboKickPortraitFileName = "meiling_combo_kick.png";
     private const string RollerbladeDashPortraitFileName = "rollerblade_dash.png";
     private const string SealedBookPortraitFileName = "sealed_book.png";
     private const string StabilizePortraitFileName = "stabilize.png";
@@ -150,12 +152,14 @@ internal static class SakuraCardFrameVisuals
             DreamCompass => DreamCompassPortraitFileName,
             DreamKeyGlow => DreamKeyGlowPortraitFileName,
             DreamWand => DreamWandPortraitFileName,
+            FalseDailyLife => FalseDailyLifePortraitFileName,
             FourSymbols => FourSymbolsPortraitFileName,
             FujitakaNote => FujitakaNotePortraitFileName,
             GrowingMagic => GrowingMagicPortraitFileName,
             KeroBond => KeroBondPortraitFileName,
             KeroSnackBreak => KeroSnackBreakPortraitFileName,
             MagicSurge => MagicSurgePortraitFileName,
+            MeilingComboKick => MeilingComboKickPortraitFileName,
             RollerbladeDash => RollerbladeDashPortraitFileName,
             SealedBook => SealedBookPortraitFileName,
             Stabilize => StabilizePortraitFileName,
@@ -170,7 +174,8 @@ internal static class SakuraCardFrameVisuals
         };
 
     private static string FrameDirectory(CardModel card) =>
-        SakuraCardCatalog.IsPartnerCard(card) ? "partner" : "technique";
+        SakuraCardCatalog.IsTsubasaCard(card) ? "tsubasa"
+        : SakuraCardCatalog.IsPartnerCard(card) ? "partner" : "technique";
 
     private static string FramePartFileName(SakuraFramePart part) =>
         part switch
