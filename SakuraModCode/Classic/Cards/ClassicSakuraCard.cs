@@ -199,21 +199,55 @@ public abstract class ClassicSakuraCard(
     protected static Creature RequiredTarget(CardPlay play) =>
         play.Target ?? throw new InvalidOperationException("Card target is required by this card's TargetType.");
 
-    protected async Task DealDamage(PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move) =>
+    protected async Task DealDamage(PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move, int hitCount = 1)
+    {
+        if (hitCount <= 0)
+            return;
+
         await DamageCmd.Attack(amount)
+            .WithHitCount(hitCount)
             .FromCard(this)
             .WithValueProp(props)
             .WithNoAttackerAnim()
             .Targeting(target)
             .Execute(choiceContext);
+    }
 
-    protected async Task DealDamageToEnemies(PlayerChoiceContext choiceContext, IEnumerable<Creature> targets, int amount, ValueProp props = ValueProp.Move) =>
+    protected async Task DealDamageToEnemies(PlayerChoiceContext choiceContext, IEnumerable<Creature> targets, int amount, ValueProp props = ValueProp.Move, int hitCount = 1)
+    {
+        if (hitCount <= 0)
+            return;
+
         await DamageCmd.Attack(amount)
+            .WithHitCount(hitCount)
             .FromCard(this)
             .WithValueProp(props)
             .WithNoAttackerAnim()
             .TargetingFiltered(targets.Where(static target => target.IsAlive).ToList())
             .Execute(choiceContext);
+    }
+
+    protected async Task DealDamageToRandomEnemies(PlayerChoiceContext choiceContext, int amount, int hitCount, ValueProp props = ValueProp.Move)
+    {
+        if (hitCount <= 0)
+            return;
+
+        await DamageCmd.Attack(amount)
+            .WithHitCount(hitCount)
+            .FromCard(this)
+            .WithValueProp(props)
+            .WithNoAttackerAnim()
+            .TargetingRandomOpponents(CombatState!)
+            .Execute(choiceContext);
+    }
+
+    protected async Task DealDamageHit(AttackContext attackContext, PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move)
+    {
+        if (!target.IsAlive)
+            return;
+
+        attackContext.AddHit(await CreatureCmd.Damage(choiceContext, target, amount, props, Owner.Creature, this));
+    }
 
     protected async Task GainBlock(CardPlay play, int amount) =>
         await CreatureCmd.GainBlock(Owner.Creature, amount, ValueProp.Move, play, false);
@@ -855,9 +889,22 @@ internal static class ClassicStarterScaling
     }
 }
 
-internal sealed class ClassicDamageVar(decimal damage, ValueProp props, ClassicCardIdentity? starterIdentity = null) :
-    DamageVar(damage, props)
+internal sealed class ClassicDamageVar : DamageVar
 {
+    private readonly ClassicCardIdentity? _starterIdentity;
+
+    public ClassicDamageVar(decimal damage, ValueProp props, ClassicCardIdentity? starterIdentity = null) :
+        base(damage, props)
+    {
+        _starterIdentity = starterIdentity;
+    }
+
+    public ClassicDamageVar(string name, decimal damage, ValueProp props, ClassicCardIdentity? starterIdentity = null) :
+        base(name, damage, props)
+    {
+        _starterIdentity = starterIdentity;
+    }
+
     public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks)
     {
         var baseValue = AdjustedBase(card);
@@ -879,9 +926,37 @@ internal sealed class ClassicDamageVar(decimal damage, ValueProp props, ClassicC
     private decimal AdjustedBase(CardModel card)
     {
         var baseValue = (int)BaseValue;
-        if (card.Owner is not null && starterIdentity is { } identity)
+        if (card.Owner is not null && _starterIdentity is { } identity)
             baseValue = ClassicStarterScaling.ScaledValue(card.Owner, identity, baseValue);
         return ClassicReleaseState.ReleasedValue(card, Name, baseValue);
+    }
+}
+
+internal sealed class ClassicCombatHistoryDamageVar(
+    decimal damage,
+    ValueProp props,
+    Func<CardModel, int> hitCount,
+    string perHitVarName = ClassicSnowRules.PerCardDamageVar) : DamageVar(damage, props)
+{
+    public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks)
+    {
+        var count = Math.Max(0, hitCount(card));
+        var baseValue = card.DynamicVars.TryGetValue(perHitVarName, out var perHitVar)
+            ? (int)perHitVar.BaseValue
+            : (int)BaseValue;
+        decimal preview = baseValue;
+        if (card.Enchantment is not null)
+        {
+            preview += card.Enchantment.EnchantDamageAdditive(preview, Props);
+            preview *= card.Enchantment.EnchantDamageMultiplicative(preview, Props);
+            if (!card.IsEnchantmentPreview)
+                EnchantedValue = preview * count;
+        }
+
+        if (runGlobalHooks)
+            preview = Hook.ModifyDamage(card.Owner.RunState, card.CombatState, target, card.Owner.Creature, baseValue, Props, card, ModifyDamageHookType.All, previewMode, out _);
+
+        PreviewValue = preview * count;
     }
 }
 
@@ -1151,6 +1226,25 @@ internal static class ClassicCombatHistory
             .Where(card => card != excludedCard)
             .OfType<ClassicSakuraCard>()
             .Count(predicate);
+}
+
+internal static class ClassicSnowRules
+{
+    public const string PerCardDamageVar = "SnowDamage";
+
+    public static int PlayedWateryClowCards(CardModel card) =>
+        PlayedCards(card, static playedCard =>
+            playedCard.Family == ClassicSakuraCardFamily.Clow
+            && playedCard.Element.HasElement(ClassicElement.Watery));
+
+    public static int PlayedWateryCards(CardModel card) =>
+        PlayedCards(card, static playedCard =>
+            playedCard.Element.HasElement(ClassicElement.Watery));
+
+    private static int PlayedCards(CardModel card, Func<ClassicSakuraCard, bool> predicate) =>
+        card.Owner is null || card.CombatState is null
+            ? 0
+            : ClassicCombatHistory.PlayedClassicCardsThisCombat(card.Owner, card, predicate);
 }
 
 internal static class ClassicPowerRules

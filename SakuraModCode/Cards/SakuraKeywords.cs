@@ -37,6 +37,22 @@ public static class SakuraKeywords
     [KeywordProperties(AutoKeywordPosition.None)]
     public static CardKeyword SakuraCard;
 
+    [CustomEnum("ECHO")]
+    [KeywordProperties(AutoKeywordPosition.None)]
+    public static CardKeyword Echo;
+
+    [CustomEnum("REMOVABLE")]
+    [KeywordProperties(AutoKeywordPosition.None)]
+    public static CardKeyword Removable;
+
+    [CustomEnum("COST_DECREASING")]
+    [KeywordProperties(AutoKeywordPosition.None)]
+    public static CardKeyword CostDecreasing;
+
+    [CustomEnum("ENTITY_LIMITED")]
+    [KeywordProperties(AutoKeywordPosition.None)]
+    public static CardKeyword EntityLimited;
+
     [CustomEnum("BURN")]
     [KeywordProperties(AutoKeywordPosition.None)]
     public static CardKeyword Burn;

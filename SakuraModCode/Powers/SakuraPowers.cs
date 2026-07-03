@@ -242,19 +242,35 @@ public class SakuraSleepPower : SakuraModPower
         return false;
     }
 
-    public override async Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
+    public override Task AfterApplied(Creature? applier, CardModel? cardSource)
     {
-        if (Amount <= 0 || side != Owner.Side || !participants.Contains(Owner) || !Owner.IsAlive)
+        SakuraSleepMove.Apply(Owner);
+        return Task.CompletedTask;
+    }
+
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
+    {
+        if (Amount <= 0
+            || side != Owner.Side
+            || !participants.Contains(Owner)
+            || !SakuraSleepMove.WasConsumedBy(Owner))
             return;
 
-        await CreatureCmd.Stun(Owner);
         await PowerCmd.Decrement(this);
+        if (Amount > 0)
+            SakuraSleepMove.Renew(Owner);
     }
 
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature creature, DamageResult damageResult, ValueProp damageProps, Creature? source, CardModel? card)
     {
         if (creature == Owner && damageResult.TotalDamage > 0 && damageProps.IsPoweredAttack())
             await PowerCmd.Remove(this);
+    }
+
+    public override Task AfterRemoved(Creature oldOwner)
+    {
+        SakuraSleepMove.RestoreIfUnconsumed(oldOwner);
+        return Task.CompletedTask;
     }
 }
 

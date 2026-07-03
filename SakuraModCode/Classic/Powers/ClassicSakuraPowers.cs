@@ -930,14 +930,15 @@ public class ClassicSilentNoAttackPower : ClassicSakuraPower
 
 public class ClassicSleepPower : ClassicSakuraPower
 {
-    private const int ExpirationWeak = 2;
-
     protected override string IconFileName => "sleep_power.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task AfterApplied(Creature? applier, CardModel? cardSource) =>
-        await StunIfAllowed();
+    public override Task AfterApplied(Creature? applier, CardModel? cardSource)
+    {
+        SakuraSleepMove.Apply(Owner);
+        return Task.CompletedTask;
+    }
 
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature target, DamageResult result, ValueProp props, Creature? dealer, CardModel? cardSource)
     {
@@ -947,36 +948,26 @@ public class ClassicSleepPower : ClassicSakuraPower
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Side != side || !participants.Contains(Owner))
+        if (Owner.Side != side
+            || !participants.Contains(Owner)
+            || !SakuraSleepMove.WasConsumedBy(Owner))
             return;
 
         if (Amount > 1)
         {
-            await StunIfAllowed();
             await PowerCmd.Decrement(this);
+            SakuraSleepMove.Renew(Owner);
             return;
         }
 
-        var missingHp = Math.Max(0, Owner.MaxHp - Owner.CurrentHp);
-        if (missingHp > 0)
-            await CreatureCmd.Heal(Owner, missingHp);
-
-        await PowerCmd.Apply<WeakPower>(choiceContext, Owner, ExpirationWeak, Owner, null, false);
         await PowerCmd.Remove(this);
     }
 
     public override Task AfterRemoved(Creature oldOwner)
     {
-        if (oldOwner.IsMonster && oldOwner.IsAlive && oldOwner.CombatState is not null)
-            oldOwner.PrepareForNextTurn(oldOwner.CombatState.GetOpponentsOf(oldOwner));
+        SakuraSleepMove.RestoreIfUnconsumed(oldOwner);
 
         return Task.CompletedTask;
-    }
-
-    private async Task StunIfAllowed()
-    {
-        if (Owner.IsMonster)
-            await CreatureCmd.Stun(Owner);
     }
 }
 

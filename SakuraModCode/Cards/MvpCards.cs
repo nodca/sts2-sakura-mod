@@ -1,6 +1,9 @@
+using BaseLib.Cards.Variables;
 using BaseLib.Utils;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
@@ -66,24 +69,23 @@ public class Aqua() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, Tar
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<SakuraFrostbitePower>()];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(4, ValueProp.Move),
+        new DynamicVar("AquaDamageBase", 4),
+        new CustomExtraDamageVar("AquaDamage", 1),
+        new CustomCalculatedDamageVar("AquaDamage", ValueProp.Move).WithMultiplier(AquaRules.FrostbiteBonusCount),
         new PowerVar<WeakPower>(1),
-        new DynamicVar("FrostbiteDamage", 1)
     ];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var targets = CombatState!.HittableEnemies.ToList();
+        var aquaDamage = (CalculatedDamageVar)DynamicVars["AquaDamage"];
         SakuraCardPlayVfx.PlayAqua(targets);
         foreach (var enemy in targets)
         {
-            var damage = DynamicVars.Damage.IntValue;
             var frostbite = enemy.GetPower<SakuraFrostbitePower>();
-            var frostbiteAmount = Math.Max(0, frostbite?.Amount ?? 0);
-            if (ShouldRelease)
-                damage += frostbiteAmount / 10 * DynamicVars["FrostbiteDamage"].IntValue;
+            var frostbiteAmount = AquaRules.FrostbiteAmount(enemy);
 
-            await SakuraActions.Attack(choiceContext, this, enemy, damage);
+            await SakuraActions.Attack(choiceContext, this, enemy, aquaDamage);
             if (ShouldRelease && enemy.IsAlive && frostbiteAmount > 0 && frostbite is not null)
                 await PowerCmd.ModifyAmount(choiceContext, frostbite, frostbiteAmount, Owner.Creature, this, false);
         }
@@ -93,10 +95,30 @@ public class Aqua() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, Tar
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Damage.UpgradeValueBy(4);
+        DynamicVars["AquaDamageBase"].UpgradeValueBy(4);
         DynamicVars.Weak.UpgradeValueBy(1);
-        DynamicVars["FrostbiteDamage"].UpgradeValueBy(1);
+        DynamicVars["AquaDamageExtra"].UpgradeValueBy(1);
     }
+}
+
+internal static class AquaRules
+{
+    public static decimal FrostbiteBonusCount(CardModel card, Creature? target)
+    {
+        if (!card.IsReleased())
+            return 0;
+
+        if (target is not null)
+            return FrostbiteBonusCount(target);
+
+        return card.CombatState?.HittableEnemies.Select(FrostbiteBonusCount).DefaultIfEmpty(0).Max() ?? 0;
+    }
+
+    public static int FrostbiteAmount(Creature target) =>
+        Math.Max(0, target.GetPower<SakuraFrostbitePower>()?.Amount ?? 0);
+
+    private static int FrostbiteBonusCount(Creature target) =>
+        FrostbiteAmount(target) / 10;
 }
 
 public class Blade() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
@@ -104,28 +126,51 @@ public class Blade() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, Ta
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DamageVar(4, ValueProp.Move),
-        new DynamicVar("BaseHits", 2)
+        new BladeHitsVar(2)
     ];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        var releaseCount = SakuraActions.ReleaseGainCountThisTurn(Owner);
-        var hits = DynamicVars["BaseHits"].IntValue;
-        if (releaseCount > 0)
-            hits++;
-        if (ShouldRelease)
-            hits += releaseCount;
-
-        for (var i = 0; i < hits; i++)
-            await SakuraActions.Attack(choiceContext, this, target, DynamicVars.Damage.IntValue);
+        var hits = BladeRules.HitCount(this);
+        await SakuraActions.Attack(choiceContext, this, target, DynamicVars.Damage.IntValue, hitCount: hits);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(1);
 }
 
-public class Hail() : SakuraModCard(1, CardType.Attack, CardRarity.Common, TargetType.RandomEnemy), IReleaseable
+internal sealed class BladeHitsVar(decimal hits) : DynamicVar("Hits", hits)
 {
+    public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks) =>
+        PreviewValue = BladeRules.HitCount(card, (int)BaseValue);
+}
+
+internal static class BladeRules
+{
+    public static int HitCount(CardModel card) =>
+        card.DynamicVars.TryGetValue("Hits", out var hits)
+            ? HitCount(card, hits.IntValue)
+            : 0;
+
+    internal static int HitCount(CardModel card, int baseHits)
+    {
+        var releaseCount = card.Owner is { } owner
+            ? SakuraActions.ReleaseGainCountThisTurn(owner)
+            : 0;
+        var hits = baseHits;
+        if (releaseCount > 0)
+            hits++;
+        if (card.IsReleased())
+            hits += releaseCount;
+        return Math.Max(0, hits);
+    }
+}
+
+public class Hail() : SakuraModCard(1, CardType.Attack, CardRarity.Common, TargetType.RandomEnemy)
+{
+    private const int BaseHits = 3;
+    private const int ReleaseHits = 1;
+
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
     protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<SakuraFrostbitePower>()];
 
@@ -137,23 +182,26 @@ public class Hail() : SakuraModCard(1, CardType.Attack, CardRarity.Common, Targe
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        for (var i = 0; i < 3; i++)
-            await Hit(choiceContext);
-
-        await TriggerReleaseEffect(choiceContext, play);
+        await using var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, this);
+        var hits = BaseHits + (ShouldRelease ? ReleaseHits : 0);
+        for (var i = 0; i < hits; i++)
+            await Hit(choiceContext, attack);
     }
 
-    public async Task OnReleased(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await Hit(choiceContext);
-
-    private async Task Hit(PlayerChoiceContext choiceContext)
+    private async Task Hit(PlayerChoiceContext choiceContext, AttackContext attack)
     {
         var target = Owner.RunState.Rng.CombatTargets.NextItem(CombatState!.HittableEnemies);
         if (target is null)
             return;
 
         SakuraCardPlayVfx.PlayHail(target);
-        await SakuraActions.Attack(choiceContext, this, target, DynamicVars.Damage.IntValue);
+        attack.AddHit(await CreatureCmd.Damage(
+            choiceContext,
+            target,
+            DynamicVars.Damage.IntValue,
+            SakuraActions.AttackProps(this, DynamicVars.Damage.Props),
+            Owner.Creature,
+            this));
         if (target.IsAlive)
             await PowerCmd.Apply<SakuraFrostbitePower>(choiceContext, target, DynamicVars["SakuraFrostbitePower"].IntValue, Owner.Creature, this, false);
     }
@@ -385,7 +433,7 @@ public class Break() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, Ta
 public class Choice() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("ManifestCards", 1), new CardsVar("DrawCards", 2)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -403,13 +451,13 @@ public class Choice() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, Ta
     private async Task Manifest(PlayerChoiceContext choiceContext, int repeats)
     {
         for (var i = 0; i < repeats; i++)
-            await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
+            await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars["ManifestCards"].IntValue);
     }
 
     private async Task Draw(PlayerChoiceContext choiceContext, int repeats) =>
-        await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue * repeats, Owner, false);
+        await CardPileCmd.Draw(choiceContext, DynamicVars["DrawCards"].IntValue * repeats, Owner, false);
 
-    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
+    protected override void OnUpgrade() => DynamicVars["ManifestCards"].UpgradeValueBy(1);
 }
 
 public class Promise() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self), IReleaseable
@@ -463,30 +511,34 @@ public class Blaze() : SakuraModCard(2, CardType.Attack, CardRarity.Rare, Target
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, SakuraKeywords.Burn];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(14, ValueProp.Move),
-        new DamageVar("TemporaryDamage", 3, ValueProp.Move),
+        new CalculationBaseVar(14),
+        new ExtraDamageVar(3),
+        new CalculatedDamageVar(ValueProp.Move).WithMultiplier(BlazeRules.TemporaryRemovedMultiplier),
         new PowerVar<SakuraBurnPower>(2)
     ];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var temporaryRemoved = TemporaryCardMemory.CardsRemovedByTemporary(CombatState, Owner).Count;
         var target = RequiredTarget(play);
-        var bonusDamage = temporaryRemoved * DynamicVars["TemporaryDamage"].IntValue;
-        if (ShouldRelease)
-            bonusDamage *= 2;
-
         SakuraCardPlayVfx.PlayBlaze(target);
-        await SakuraActions.Attack(choiceContext, this, target, DynamicVars.Damage.IntValue + bonusDamage);
+        await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage);
         if (target.IsAlive)
             await PowerCmd.Apply<SakuraBurnPower>(choiceContext, target, DynamicVars["SakuraBurnPower"].IntValue, Owner.Creature, this, false);
     }
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Damage.UpgradeValueBy(4);
-        DynamicVars["TemporaryDamage"].UpgradeValueBy(1);
+        DynamicVars.CalculationBase.UpgradeValueBy(4);
+        DynamicVars.ExtraDamage.UpgradeValueBy(1);
     }
+}
+
+internal static class BlazeRules
+{
+    public static decimal TemporaryRemovedMultiplier(CardModel card, Creature? target) =>
+        card.Owner is { } owner
+            ? TemporaryCardMemory.CardsRemovedByTemporary(card.CombatState, owner).Count * (card.IsReleased() ? 2 : 1)
+            : 0;
 }
 
 public class Dreaming() : SakuraModCard(2, CardType.Power, CardRarity.Rare, TargetType.Self), IReleaseable

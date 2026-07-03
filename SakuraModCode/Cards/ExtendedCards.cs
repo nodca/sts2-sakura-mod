@@ -1,8 +1,11 @@
 using BaseLib.Utils;
 using BaseLib.Patches.Hooks;
 using MegaCrit.Sts2.Core;
+using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -266,7 +269,7 @@ public class Repair() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Ta
     protected override void OnUpgrade() => DynamicVars["RegenPower"].UpgradeValueBy(1);
 }
 
-public class Reversal() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy), IReleaseable
+public class Reversal() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy), IReleaseable
 {
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
@@ -351,14 +354,17 @@ public class Snooze() : SakuraModCard(1, CardType.Skill, CardRarity.Common, Targ
 public class Spiral() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy), IReleaseable
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(4, ValueProp.Move), new DamageVar("SpiralDamage", 3, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new CalculationBaseVar(4),
+        new ExtraDamageVar(3),
+        new CalculatedDamageVar(ValueProp.Move).WithMultiplier(SpiralRules.PlayedPreviouslyThisCombat)
+    ];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        var previousSpirals = SakuraActions.CardPlayCountThisCombat(Owner, card => card is Spiral, play);
-        var damage = DynamicVars.Damage.IntValue + previousSpirals * DynamicVars["SpiralDamage"].IntValue;
-        await SakuraActions.Attack(choiceContext, this, target, damage);
+        await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage);
         await TriggerReleaseEffect(choiceContext, play);
     }
 
@@ -367,7 +373,18 @@ public class Spiral() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, T
         await SakuraManifestLoop.AddTemporaryCopyToHand(this, choiceContext, this, release: false, freeThisTurn: false);
     }
 
-    protected override void OnUpgrade() => DynamicVars["SpiralDamage"].UpgradeValueBy(1);
+    protected override void OnUpgrade() => DynamicVars.ExtraDamage.UpgradeValueBy(1);
+}
+
+internal static class SpiralRules
+{
+    public static decimal PlayedPreviouslyThisCombat(CardModel card, Creature? target) =>
+        card.Owner is { } owner
+            ? CombatManager.Instance.History.CardPlaysFinished
+                .Where(entry => entry is CardPlayFinishedEntry { CardPlay.Card.Owner: var cardOwner } && cardOwner == owner)
+                .Select(entry => ((CardPlayFinishedEntry)entry).CardPlay.Card)
+                .Count(static playedCard => playedCard is Spiral)
+            : 0;
 }
 
 public class Transfer() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy), IReleaseStateObserver
@@ -569,18 +586,18 @@ public class StarlightChant() : SakuraModCard(1, CardType.Attack, CardRarity.Unc
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(5, ValueProp.Move),
-        new DamageVar("CatalogDamage", 2, ValueProp.Move)
+        new CalculationBaseVar(5),
+        new ExtraDamageVar(2),
+        new CalculatedDamageVar(ValueProp.Move).WithMultiplier(TechniqueDamageRules.CatalogCount)
     ];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        var damage = DynamicVars.Damage.IntValue + SakuraManifestLoop.CatalogCount(Owner) * DynamicVars["CatalogDamage"].IntValue;
-        await SakuraActions.Attack(choiceContext, this, target, damage);
+        await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage);
     }
 
-    protected override void OnUpgrade() => DynamicVars["CatalogDamage"].UpgradeValueBy(1);
+    protected override void OnUpgrade() => DynamicVars.ExtraDamage.UpgradeValueBy(1);
 }
 
 public class Archive() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
@@ -663,38 +680,54 @@ public class NamelessMagic() : SakuraModCard(2, CardType.Attack, CardRarity.Rare
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Catalog];
 
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(3, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new CalculationBaseVar(0),
+        new ExtraDamageVar(3),
+        new CalculatedDamageVar(ValueProp.Move).WithMultiplier(TechniqueDamageRules.CatalogCount)
+    ];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var damage = DynamicVars.Damage.IntValue * SakuraManifestLoop.CatalogCount(Owner);
-        await SakuraActions.Attack(choiceContext, this, CombatState!.HittableEnemies.ToList(), damage);
+        await SakuraActions.Attack(choiceContext, this, CombatState!.HittableEnemies.ToList(), DynamicVars.CalculatedDamage);
     }
 
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(1);
+    protected override void OnUpgrade() => DynamicVars.ExtraDamage.UpgradeValueBy(1);
 }
 
 public class ChainPhenomenon() : SakuraModCard(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
 {
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(4, ValueProp.Move),
-        new DamageVar("ClearDamage", 2, ValueProp.Move)
+        new CalculationBaseVar(4),
+        new ExtraDamageVar(2),
+        new CalculatedDamageVar(ValueProp.Move).WithMultiplier(TechniqueDamageRules.ClearCardTypesPlayedThisTurn)
     ];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        var clearCardsPlayed = SakuraActions.DistinctCardTypesPlayedThisTurn(Owner, SakuraCardCatalog.IsTransparentCard, this);
-        var damage = DynamicVars.Damage.IntValue + clearCardsPlayed * DynamicVars["ClearDamage"].IntValue;
-        await SakuraActions.Attack(choiceContext, this, target, damage);
+        await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage);
     }
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Damage.UpgradeValueBy(1);
-        DynamicVars["ClearDamage"].UpgradeValueBy(1);
+        DynamicVars.CalculationBase.UpgradeValueBy(1);
+        DynamicVars.ExtraDamage.UpgradeValueBy(1);
     }
+}
+
+internal static class TechniqueDamageRules
+{
+    public static decimal CatalogCount(CardModel card, Creature? target) =>
+        card.Owner is { } owner
+            ? Math.Max(0, SakuraManifestLoop.CatalogCount(owner))
+            : 0;
+
+    public static decimal ClearCardTypesPlayedThisTurn(CardModel card, Creature? target) =>
+        card.Owner is { } owner
+            ? Math.Max(0, SakuraActions.DistinctCardTypesPlayedThisTurn(owner, SakuraCardCatalog.IsTransparentCard, card))
+            : 0;
 }
 
 public class MagicSurge() : SakuraModCard(2, CardType.Power, CardRarity.Rare, TargetType.Self)

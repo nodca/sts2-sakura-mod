@@ -13,12 +13,12 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Powers;
-using SakuraMod.SakuraModCode.Relics;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Ui;
 using System.Runtime.CompilerServices;
@@ -219,7 +219,6 @@ public static class SakuraActions
         if (!wasReleased)
         {
             await RecordReleaseGainThisTurn(choiceContext, card);
-            DreamKey.RecordReleasedCard(card);
         }
     }
 
@@ -230,7 +229,6 @@ public static class SakuraActions
         if (!wasReleased)
         {
             await RecordReleaseGainThisTurn(choiceContext, card);
-            DreamKey.RecordReleasedCard(card);
         }
     }
 
@@ -309,6 +307,22 @@ public static class SakuraActions
     public static async Task Attack(
         PlayerChoiceContext context,
         SakuraModCard source,
+        Creature target,
+        CalculatedDamageVar damage,
+        int hitCount = 1)
+    {
+        await DamageCmd.Attack(damage)
+            .WithHitCount(hitCount)
+            .FromCard(source)
+            .WithValueProp(AttackProps(source, damage.Props))
+            .WithNoAttackerAnim()
+            .Targeting(target)
+            .Execute(context);
+    }
+
+    public static async Task Attack(
+        PlayerChoiceContext context,
+        SakuraModCard source,
         IEnumerable<Creature> targets,
         decimal damage,
         ValueProp props = ValueProp.Move,
@@ -322,6 +336,26 @@ public static class SakuraActions
             .WithHitCount(hitCount)
             .FromCard(source)
             .WithValueProp(AttackProps(source, props))
+            .WithNoAttackerAnim()
+            .TargetingFiltered(targetList)
+            .Execute(context);
+    }
+
+    public static async Task Attack(
+        PlayerChoiceContext context,
+        SakuraModCard source,
+        IEnumerable<Creature> targets,
+        CalculatedDamageVar damage,
+        int hitCount = 1)
+    {
+        var targetList = targets.ToList();
+        if (targetList.Count == 0)
+            return;
+
+        await DamageCmd.Attack(damage)
+            .WithHitCount(hitCount)
+            .FromCard(source)
+            .WithValueProp(AttackProps(source, damage.Props))
             .WithNoAttackerAnim()
             .TargetingFiltered(targetList)
             .Execute(context);
@@ -343,7 +377,7 @@ public static class SakuraActions
             .Targeting(target)
             .WithHitFx(vfx, sfx, tmpSfx);
 
-    private static ValueProp AttackProps(SakuraModCard source, ValueProp props) =>
+    internal static ValueProp AttackProps(SakuraModCard source, ValueProp props) =>
         LucidPiercePower.ShouldPierce(source.Owner.Creature, source)
             ? props | ValueProp.Unblockable
             : props;

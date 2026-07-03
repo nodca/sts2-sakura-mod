@@ -272,7 +272,7 @@ internal static class ClearCardLayout
     private static readonly Dictionary<Type, Texture2D?> ClearCardArtCache = [];
     private static readonly Dictionary<Type, string> ClearCardEnglishNameCache = [];
     private static readonly Dictionary<(string Language, SakuraElement Element), string> ElementTitleCache = [];
-    private static readonly Dictionary<string, (string ClearCard, string Released, string Temporary)> ClearCardStatusTextCache = [];
+    private static readonly Dictionary<string, (string Released, string Temporary)> ClearCardStatusTextCache = [];
     private static Texture2D? ClearCardHighlightTextureCache;
     private static Texture2D? DefaultHighlightTextureCache;
     private static readonly ConditionalWeakTable<NCard, ClearCardState> CardStates = new();
@@ -957,6 +957,8 @@ internal static class ClearCardLayout
 
         var header = ClearCardHeaderText(model);
 
+        if (header.Length == 0)
+            return CenterText(body);
         if (body.Length == 0)
             return CenterText(header);
 
@@ -1016,9 +1018,6 @@ internal static class ClearCardLayout
     {
         foreach (var statusPart in ClearCardStatusParts(model))
             yield return statusPart;
-
-        foreach (var elementText in ClearCardElementTexts(model))
-            yield return elementText;
     }
 
     private static IEnumerable<string> ClearCardStatusParts(CardModel model)
@@ -1031,31 +1030,20 @@ internal static class ClearCardLayout
             yield return statusText.Released;
         if (temporary)
             yield return statusText.Temporary;
-        yield return statusText.ClearCard;
     }
 
-    private static (string ClearCard, string Released, string Temporary) ClearCardStatusText()
+    private static (string Released, string Temporary) ClearCardStatusText()
     {
         var language = CurrentLanguageKey();
         if (ClearCardStatusTextCache.TryGetValue(language, out var cachedText))
             return cachedText;
 
         var text = (
-            ClearCard: $"[color=#d6e8ff]{SakuraStateText.ClearCardLabel()}[/color]",
             Released: $"[color=#ffe094]{SakuraStateText.ReleasedLabel()}[/color]",
             Temporary: $"[color=#a6e0ff]{SakuraStateText.TemporaryLabel()}[/color]");
         ClearCardStatusTextCache[language] = text;
         return text;
     }
-
-    private static IEnumerable<string> ClearCardElementTexts(CardModel model)
-    {
-        foreach (var element in SakuraActions.ElementSetOf(model).AsElements())
-            yield return ElementCardText(element);
-    }
-
-    private static string ElementCardText(SakuraElement element) =>
-        $"[gold]{ElementTitle(element)}[/gold]";
 
     private static string ElementTitle(SakuraElement element)
     {

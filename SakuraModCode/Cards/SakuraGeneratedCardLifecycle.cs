@@ -108,7 +108,12 @@ internal static class SakuraGeneratedCardLifecycle
     {
         var copy = card.CreateClone();
         copy.RemoveManifestAtlasOrigin();
-        await AddGeneratedCardToCombat(copy, options, context);
+        // Copy-generated Clear Cards keep the native generated-card hand animation intact.
+        await AddGeneratedCardToCombat(
+            copy,
+            options,
+            context,
+            refreshGeneratedTransparentHandVisual: false);
         return copy;
     }
 

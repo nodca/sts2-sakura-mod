@@ -3,6 +3,7 @@ using BaseLib.Utils;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
@@ -77,18 +78,14 @@ public class ClowArrow() : ClassicExtraClowCard(0, CardType.Attack, CardRarity.C
 
     private async Task FireArrows(PlayerChoiceContext choiceContext, Creature? fixedTarget, int count)
     {
-        for (var i = 0; i < count; i++)
+        if (fixedTarget is not null)
         {
-            var target = fixedTarget ?? RandomHittableEnemy();
-            if (target is null)
-                return;
-
-            await DealDamage(choiceContext, target, ReleasedDamage());
+            await DealDamage(choiceContext, fixedTarget, ReleasedDamage(), hitCount: count);
+            return;
         }
-    }
 
-    private Creature? RandomHittableEnemy() =>
-        Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
+        await DealDamageToRandomEnemies(choiceContext, ReleasedDamage(), count);
+    }
 
     private List<CardModel> HandWithoutSelf() =>
         CardPile.GetCards(Owner, PileType.Hand).Where(card => card != this).ToList();
@@ -112,14 +109,7 @@ public class SakuraArrow() : ClassicSakuraConversionCard(1, CardType.Attack, Tar
         if (drawPile.Count > 0)
             await CardCmd.Discard(choiceContext, drawPile);
 
-        for (var i = 0; i < count; i++)
-        {
-            var target = Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
-            if (target is null)
-                return;
-
-            await DealDamage(choiceContext, target, ReleasedDamage());
-        }
+        await DealDamageToRandomEnemies(choiceContext, ReleasedDamage(), count);
     }
 }
 
@@ -1313,9 +1303,13 @@ public class ClowShot() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.Co
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
+        await using var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, this);
         for (var i = 0; i < Hits; i++)
         {
-            await DealDamage(choiceContext, target, ReleasedDamage());
+            if (!target.IsAlive)
+                break;
+
+            await DealDamageHit(attack, choiceContext, target, ReleasedDamage());
             await ApplyPower<PoisonPower>(choiceContext, target, ReleasedValue("PoisonPower"));
         }
     }
@@ -1341,8 +1335,7 @@ public class SakuraShot() : ClassicSakuraConversionCard(1, CardType.Attack, Targ
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        for (var i = 0; i < ReleasedMagic(); i++)
-            await DealDamage(choiceContext, target, ReleasedDamage());
+        await DealDamage(choiceContext, target, ReleasedDamage(), hitCount: ReleasedMagic());
     }
 }
 
@@ -1727,19 +1720,13 @@ public class ClowStorm() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.U
     {
         await ClassicSakuraMagic.AddVoidToDiscardPile(choiceContext, Owner);
         var target = RequiredTarget(play);
-        for (var i = 0; i < ReleasedMagic(); i++)
-        {
-            if (!target.IsAlive)
-                break;
-            await DealDamage(choiceContext, target, ReleasedDamage());
-        }
+        await DealDamage(choiceContext, target, ReleasedDamage(), hitCount: ReleasedMagic());
     }
 
     protected override async Task PlayExtra(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await ClassicSakuraMagic.AddVoidToDiscardPile(choiceContext, Owner);
-        for (var i = 0; i < ReleasedMagic(); i++)
-            await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies, ReleasedDamage());
+        await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies, ReleasedDamage(), hitCount: ReleasedMagic());
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(2);
@@ -1754,6 +1741,7 @@ public class SakuraStorm() : ClassicSakuraConversionCard(1, CardType.Attack, Tar
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
     {
+        await using var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, this);
         for (var i = 0; i < ReleasedMagic(); i++)
         {
             var target = Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
@@ -1761,7 +1749,7 @@ public class SakuraStorm() : ClassicSakuraConversionCard(1, CardType.Attack, Tar
                 return;
 
             var amount = Owner.RunState.Rng.CombatCardSelection.NextInt(ReleasedDamage(), ReleasedDamage() + MaxDamageOffset + 1);
-            await DealDamage(choiceContext, target, amount);
+            await DealDamageHit(attack, choiceContext, target, amount);
         }
     }
 }
@@ -1927,7 +1915,7 @@ public class ClowSleep() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Un
 {
     public override ClassicElement Element => ClassicElement.Windy;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 2), new PowerVar<WeakPower>(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 2)];
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplySleep(choiceContext, RequiredTarget(play));
@@ -1950,7 +1938,7 @@ public class SakuraSleep() : ClassicSakuraConversionCard(1, CardType.Skill, Targ
 {
     public override ClassicElement Element => ClassicElement.Windy;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 4), new PowerVar<WeakPower>(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 4)];
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -2133,20 +2121,24 @@ public class ClowSnow() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.Un
     private const int ExtraDamage = 9;
 
     public override ClassicElement Element => ClassicElement.Watery;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicDamageVar(4, ValueProp.Move), new DynamicVar("Magic", 0), new DynamicVar("ExtraDamage", ExtraDamage)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new ClassicCombatHistoryDamageVar(4, ValueProp.Move, ClassicSnowRules.PlayedWateryClowCards),
+        new ClassicDamageVar(ClassicSnowRules.PerCardDamageVar, 4, ValueProp.Move),
+        new DynamicVar("Magic", 0),
+        new DynamicVar("ExtraDamage", ExtraDamage)
+    ];
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var count = ClassicCombatHistory.PlayedClassicCardsThisCombat(Owner, this, card =>
-            card.Family == ClassicSakuraCardFamily.Clow
-            && card.Element.HasElement(ClassicElement.Watery));
+        var count = ClassicSnowRules.PlayedWateryClowCards(this);
         for (var i = 0; i < count; i++)
         {
             var target = Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
             if (target is null)
                 return;
 
-            await DealDamage(choiceContext, target, ReleasedDamage());
+            await DealDamage(choiceContext, target, SnowDamage());
         }
     }
 
@@ -2156,21 +2148,33 @@ public class ClowSnow() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.Un
         await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies.ToList(), ExtraDamage);
     }
 
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(2);
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Damage.UpgradeValueBy(2);
+        DynamicVars[ClassicSnowRules.PerCardDamageVar].UpgradeValueBy(2);
+    }
+
+    private int SnowDamage() => ReleasedValue(ClassicSnowRules.PerCardDamageVar);
 }
 
 public class SakuraSnow() : ClassicSakuraConversionCard(1, CardType.Attack, TargetType.AllEnemies, ClassicCardIdentity.Snow)
 {
     public override ClassicElement Element => ClassicElement.Watery;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicDamageVar(5, ValueProp.Move), new DynamicVar("Magic", 0)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new ClassicCombatHistoryDamageVar(5, ValueProp.Move, ClassicSnowRules.PlayedWateryCards),
+        new ClassicDamageVar(ClassicSnowRules.PerCardDamageVar, 5, ValueProp.Move),
+        new DynamicVar("Magic", 0)
+    ];
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var count = ClassicCombatHistory.PlayedClassicCardsThisCombat(Owner, this, card =>
-            card.Element.HasElement(ClassicElement.Watery));
+        var count = ClassicSnowRules.PlayedWateryCards(this);
         for (var i = 0; i < count; i++)
-            await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies.ToList(), ReleasedDamage());
+            await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies.ToList(), SnowDamage());
     }
+
+    private int SnowDamage() => ReleasedValue(ClassicSnowRules.PerCardDamageVar);
 }
 
 public class ClowThunder() : ClassicExtraClowCard(3, CardType.Attack, CardRarity.Rare, TargetType.None, ClassicCardIdentity.Thunder)
@@ -2185,7 +2189,7 @@ public class ClowThunder() : ClassicExtraClowCard(3, CardType.Attack, CardRarity
 
     protected override async Task PlayExtra(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await StrikeRandomEnemies(choiceContext, ReleasedMagic());
+        await DealDamageToRandomEnemies(choiceContext, ReleasedDamage(), ReleasedMagic());
         await ClassicSakuraMagic.AddVoidToDiscardPile(choiceContext, Owner);
     }
 
@@ -2193,18 +2197,6 @@ public class ClowThunder() : ClassicExtraClowCard(3, CardType.Attack, CardRarity
     {
         DynamicVars.Damage.UpgradeValueBy(3);
         DynamicVars["Magic"].UpgradeValueBy(1);
-    }
-
-    private async Task StrikeRandomEnemies(PlayerChoiceContext choiceContext, int count)
-    {
-        for (var i = 0; i < count; i++)
-        {
-            var target = Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
-            if (target is null)
-                return;
-
-            await DealDamage(choiceContext, target, ReleasedDamage());
-        }
     }
 }
 
@@ -2220,14 +2212,7 @@ public class SakuraThunder() : ClassicSakuraConversionCard(0, CardType.Attack, T
     {
         var charge = await ClassicSakuraMagic.SpendAllMagic(choiceContext, Owner);
         var count = ((int)play.Resources.EnergySpent * ResourceDivisor + charge) / ResourceDivisor;
-        for (var i = 0; i < count; i++)
-        {
-            var target = Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
-            if (target is null)
-                return;
-
-            await DealDamage(choiceContext, target, ReleasedDamage());
-        }
+        await DealDamageToRandomEnemies(choiceContext, ReleasedDamage(), count);
     }
 }
 
@@ -2509,8 +2494,7 @@ public class SpellFengHua() : ClassicElementSpellCard(0, CardType.Attack, Target
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        for (var i = 0; i < ReleasedMagic(); i++)
-            await DealDamage(choiceContext, target, ReleasedDamage());
+        await DealDamage(choiceContext, target, ReleasedDamage(), hitCount: ReleasedMagic());
     }
 }
 
