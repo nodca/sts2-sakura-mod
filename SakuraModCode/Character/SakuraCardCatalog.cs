@@ -142,6 +142,19 @@ public static class SakuraCardCatalog
         typeof(YueTrueForm)
     ];
 
+    private static readonly IReadOnlyList<Type> RetiredCardTypesInternal =
+    [
+        typeof(ReleaseChant),
+        typeof(NamelessMagic),
+        typeof(MagicBarrier),
+        typeof(MomoContract),
+        typeof(MagicAwakening),
+        typeof(BlessingOfTheNamelessBook),
+        typeof(DreamCostume),
+        typeof(DreamKeyResonance),
+        typeof(DreamsEnd)
+    ];
+
     private static readonly IReadOnlyList<Type> StarterCardTypesInternal =
     [
         typeof(Gale),
@@ -179,6 +192,7 @@ public static class SakuraCardCatalog
     private static readonly HashSet<Type> StarterCardTypeSet = StarterCardTypesInternal.ToHashSet();
     private static readonly HashSet<Type> TsubasaCardTypeSet = TsubasaCardTypesInternal.ToHashSet();
     private static readonly HashSet<Type> EventOnlyCardTypeSet = EventOnlyCardTypesInternal.ToHashSet();
+    private static readonly HashSet<Type> RetiredCardTypeSet = RetiredCardTypesInternal.ToHashSet();
     private static readonly IReadOnlyList<Type> AllCardTypesInternal =
         TransparentCardTypesInternal
             .Concat(SupportCardTypesInternal)
@@ -233,6 +247,9 @@ public static class SakuraCardCatalog
     public static bool IsEventOnlyCard(CardModel card) =>
         EventOnlyCardTypeSet.Contains(card.GetType());
 
+    public static bool IsRetiredCard(CardModel card) =>
+        RetiredCardTypeSet.Contains(card.GetType());
+
     public static bool IsStarterCard(CardModel card) =>
         StarterCardTypeSet.Contains(card.GetType());
 
@@ -255,14 +272,14 @@ public static class SakuraCardCatalog
     public static bool IsTransformableStarterCard(CardModel card) =>
         IsStarterCard(card) && card.IsTransformable;
 
-    public static bool CanReplaceStrikeOrDefendPair(Player player) =>
-        CountRemovable<Gale>(player) >= 2 || CountRemovable<Siege>(player) >= 2;
-
     public static int CountRemovable<T>(Player player) where T : CardModel =>
         player.Deck.Cards.Count(card => IsStarterCard<T>(card) && card.IsRemovable);
 
     public static IReadOnlyList<CardModel> PartnerTemplates() =>
-        PartnerCardTypesInternal.Select(CardTemplate).ToList();
+        PartnerCardTypesInternal
+            .Where(type => !RetiredCardTypeSet.Contains(type))
+            .Select(CardTemplate)
+            .ToList();
 
     public static IReadOnlyList<CardModel> RewardableSupportCardTemplates(Player owner) =>
         ModelDb.CardPool<SakuraModCardPool>()

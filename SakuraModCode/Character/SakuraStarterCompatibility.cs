@@ -19,6 +19,7 @@ using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Classic.Relics;
 using SakuraMod.SakuraModCode.Relics;
 using VanillaEvents = MegaCrit.Sts2.Core.Models.Events;
 
@@ -61,9 +62,6 @@ public static class SakuraStarterCompatibility
 
     public static bool IsTransformableStarterCard(CardModel card) =>
         SakuraCardCatalog.IsTransformableStarterCard(card);
-
-    public static bool CanReplaceStrikeOrDefendPair(Player player) =>
-        SakuraCardCatalog.CanReplaceStrikeOrDefendPair(player);
 
     public static int CountRemovable<T>(Player player) where T : CardModel =>
         SakuraCardCatalog.CountRemovable<T>(player);
@@ -254,6 +252,46 @@ public static class SakuraStarterCompatibility
         return false;
     }
 
+    public static bool TrySetupClassicSealedWandStarterUpgrade(
+        TouchOfOrobas touchOfOrobas,
+        Player player,
+        ref bool result)
+    {
+        var sealedWand = ClassicUltimateWandRecipe.FindExactSealedWand(player);
+        if (sealedWand is null)
+            return true;
+
+        touchOfOrobas.StarterRelic = sealedWand.Id;
+        touchOfOrobas.UpgradedRelic = ModelDb.Relic<ClassicStarWandRelic>().Id;
+        result = true;
+        return false;
+    }
+
+    public static bool TryApplyClassicSealedWandStarterUpgrade(
+        TouchOfOrobas touchOfOrobas,
+        ref Task result)
+    {
+        var owner = touchOfOrobas.Owner;
+        var starterRelic = touchOfOrobas.StarterRelic is { } starterRelicId
+            ? owner.GetRelicById(starterRelicId)
+            : ClassicUltimateWandRecipe.FindExactSealedWand(owner);
+        if (starterRelic is not ClassicSealedWandRelic sealedWand
+            || starterRelic.GetType() != typeof(ClassicSealedWandRelic))
+        {
+            return true;
+        }
+
+        var upgradedRelicId = touchOfOrobas.UpgradedRelic
+            ?? touchOfOrobas.GetUpgradedStarterRelic(starterRelic).Id;
+        if (upgradedRelicId != ModelDb.Relic<ClassicStarWandRelic>().Id)
+            return true;
+
+        result = RelicCmd.Replace(
+            sealedWand,
+            ClassicUltimateWandRecipe.CreateStarWandReplacement(sealedWand));
+        return false;
+    }
+
     public static bool TryUseCustomStarterRelicUpgrade(RelicModel starterRelic, ref RelicModel result)
     {
         if (starterRelic is not CustomRelicModel customStarter)
@@ -357,13 +395,11 @@ public static class SakuraStarterCompatibility
     private static CardModel? FindArchaicToothStarter(Player owner) =>
         owner.Deck.Cards.FirstOrDefault(card =>
             card.IsTransformable
-            && (IsStarterCard<Gale>(card) || IsStarterCard<Siege>(card)));
+            && IsStarterCard<Gale>(card));
 
     private static CardModel CreateArchaicToothReplacement(CardModel starter)
     {
-        CardModel replacementTemplate = IsStarterCard<Gale>(starter)
-            ? ModelDb.Card<RollerbladeDash>()
-            : ModelDb.Card<MagicBarrier>();
+        CardModel replacementTemplate = ModelDb.Card<RollerbladeDash>();
         var replacement = starter.Owner.RunState.CreateCard(replacementTemplate, starter.Owner);
 
         if (starter.IsUpgraded)

@@ -307,6 +307,7 @@ public abstract class ClassicSakuraConversionCard(
     ClassicSakuraCard(cost, type, CardRarity.Token, target, ClassicSakuraCardFamily.Sakura, identity)
 {
     public override int MaxUpgradeLevel => 0;
+    public override bool CanBeGeneratedInCombat => false;
 
     protected override string BigPortraitPath =>
         ClassicSakuraCardCatalog.ArtStem(GetType()).BigClassicSakuraArtPath();
@@ -771,6 +772,9 @@ internal static class ClassicSakuraCardCatalog
 
     public static Type? SakuraTypeFor(ClassicCardIdentity identity) =>
         SakuraByIdentity.TryGetValue(identity, out var type) ? type : null;
+
+    public static CardModel? SakuraTemplateFor(ClassicCardIdentity identity) =>
+        SakuraTypeFor(identity) is { } type ? TypeToCard(type) : null;
 
     public static Type? ClowTypeFor(ClassicCardIdentity identity) =>
         ClowByIdentity.TryGetValue(identity, out var type) ? type : null;

@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using SakuraMod.SakuraModCode.Classic.Cards;
 
 namespace SakuraMod.SakuraModCode.Cards;
@@ -160,6 +161,11 @@ internal static class SakuraCardVisualDispatcher
     public static void AfterClassicSelectionHighlightChanged(NCardHighlight highlight, bool selected)
     {
         SakuraCardVisualLifecycle.AfterSelectionHighlightChanged(highlight, selected, SakuraCardVisualFamily.Classic);
+    }
+
+    public static void AfterCardHoverTipAdded(NHoverTipCardContainer container)
+    {
+        SakuraCardVisualLifecycle.AfterCardHoverTipAdded(container);
     }
 }
 
@@ -338,6 +344,32 @@ internal static class SakuraCardVisualLifecycle
         ApplySelectionHighlightLayer(highlight, selected, family);
     }
 
+    public static void AfterCardHoverTipAdded(NHoverTipCardContainer container)
+    {
+        var tip = LastHoverTipControl(container);
+        if (tip is null)
+            return;
+
+        var card = tip.GetNodeOrNull<NCard>("%Card");
+        if (card is null)
+            return;
+
+        var family = SakuraCardVisualFamilies.Family(card);
+        if (family is not (SakuraCardVisualFamily.Clear or SakuraCardVisualFamily.Classic))
+            return;
+
+        var size = card.GetCurrentSize();
+        if (size.X <= 0f || size.Y <= 0f)
+            return;
+
+        if (tip.Size != size)
+            tip.Size = size;
+        if (tip.CustomMinimumSize != size)
+            tip.CustomMinimumSize = size;
+        if (card.Position != Vector2.Zero)
+            card.Position = Vector2.Zero;
+    }
+
     private static void ApplyHolderVisuals(NCardHolder holder, SakuraCardVisualFamily family)
     {
         switch (family)
@@ -425,4 +457,15 @@ internal static class SakuraCardVisualLifecycle
     private static bool IsRecoverableGodotObjectLifetimeException(Exception exception) =>
         exception is ObjectDisposedException { ObjectName: RecoverableObjectName }
         || exception.InnerException is not null && IsRecoverableGodotObjectLifetimeException(exception.InnerException);
+
+    private static Control? LastHoverTipControl(NHoverTipCardContainer container)
+    {
+        for (var index = container.GetChildCount() - 1; index >= 0; index--)
+        {
+            if (container.GetChild(index) is Control control)
+                return control;
+        }
+
+        return null;
+    }
 }

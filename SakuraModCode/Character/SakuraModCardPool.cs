@@ -27,5 +27,6 @@ public class SakuraModCardPool : CustomCardPoolModel
 
     protected override IEnumerable<CardModel> FilterThroughEpochs(UnlockState unlockState, IEnumerable<CardModel> cards) =>
         base.FilterThroughEpochs(unlockState, cards)
-            .Where(card => !SakuraCardCatalog.IsEventOnlyCard(card));
+            .Where(card => !SakuraCardCatalog.IsEventOnlyCard(card))
+            .Where(card => !SakuraCardCatalog.IsRetiredCard(card));
 }

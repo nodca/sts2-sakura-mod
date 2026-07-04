@@ -46,6 +46,7 @@ public class Gravitation() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommo
 public class Mirage() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => HoverTipFactory.FromCardWithCardHoverTips<MirageImage>(IsUpgraded);
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<BufferPower>(1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -85,6 +86,8 @@ public class MirageImage() : SakuraModCard(0, CardType.Skill, CardRarity.Basic, 
 public class Record() : SakuraModCard(2, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     private bool _restoredDuringCurrentPlay;
+
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new EnergyVar(1)];
 
@@ -198,7 +201,7 @@ public class MagicAwakening() : SakuraModCard(2, CardType.Power, CardRarity.Rare
 
 public class Exchange() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -219,7 +222,7 @@ public class Exchange() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, 
 
 public class Kindness() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new HealVar(3)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -254,7 +257,7 @@ public class Labyrinth() : SakuraModCard(2, CardType.Skill, CardRarity.Rare, Tar
 
 public class Repair() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self), IReleaseable
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<RegenPower>(3)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -271,6 +274,8 @@ public class Repair() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Ta
 
 public class Reversal() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy), IReleaseable
 {
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
+
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DamageVar(4, ValueProp.Move),
@@ -310,7 +315,7 @@ public class Reversal() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, 
 
 public class Rewind() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -331,6 +336,8 @@ public class Rewind() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Ta
 
 public class Snooze() : SakuraModCard(1, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy), IReleaseable
 {
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
+
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<WeakPower>(2), new PowerVar<SakuraSleepPower>(2)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -389,7 +396,7 @@ internal static class SpiralRules
 
 public class Transfer() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy), IReleaseStateObserver
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DynamicVar("EnemyStrengthLoss", 2),
@@ -450,6 +457,7 @@ public class AkihoDream() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon
 
 public class ClockCountryAlice() : SakuraModCard(2, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => HoverTipFactory.FromCardWithCardHoverTips<AliceReading>(IsUpgraded);
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new PowerVar<ClockCountryAlicePower>(ClockCountryAlicePower.ReadingMode(upgradedReading: false))
@@ -730,7 +738,7 @@ internal static class TechniqueDamageRules
             : 0;
 }
 
-public class MagicSurge() : SakuraModCard(2, CardType.Power, CardRarity.Rare, TargetType.Self)
+public class MagicSurge() : SakuraModCard(1, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<MagicSurgePower>(1)];
@@ -825,6 +833,7 @@ public class ThunderEmperorSummon() : SakuraModCard(1, CardType.Attack, CardRari
 
 public class MeilingComboKick() : SakuraModCard(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
 {
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => HoverTipFactory.FromCardWithCardHoverTips<Struggle>();
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DamageVar(3, ValueProp.Move),
@@ -1134,7 +1143,7 @@ public class Blank() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Tar
 {
     private int _removedCardsThisPlay;
 
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(4, ValueProp.Move)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -1188,7 +1197,7 @@ public class Blank() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Tar
 
 public class Mirror() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new RepeatVar(1), new RepeatVar("ReleaseRepeat", 1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -1210,7 +1219,7 @@ public class Remind() : SakuraModCard(0, CardType.Skill, CardRarity.Rare, Target
 {
     private static readonly LocString SelectionPrompt = new("cards", "SAKURAMOD-REMIND.selectionPrompt");
 
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust];
     protected override bool HasEnergyCostX => true;
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -1247,6 +1256,8 @@ public class Remind() : SakuraModCard(0, CardType.Skill, CardRarity.Rare, Target
 
 public class Synchronize() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
+
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var cards = await SakuraActions.SelectHandCards(
@@ -1269,7 +1280,7 @@ public class Synchronize() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, T
 
 public class Time() : SakuraModCard(3, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -1286,7 +1297,7 @@ public class Time() : SakuraModCard(3, CardType.Skill, CardRarity.Rare, TargetTy
 
 public class TrueOrFalse() : SakuraModCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, SakuraKeywords.Stabilize];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust, SakuraKeywords.Stabilize];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new CardsVar(2),

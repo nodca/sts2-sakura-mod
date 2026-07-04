@@ -17,6 +17,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Rooms;
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Classic.Cards;
@@ -53,11 +54,11 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
     private const string TriggerIncreaseVar = "TriggerIncrease";
     private const string RemainingChargeVar = "RemainingCharge";
 
-    private const int BaseTrigger = 40;
-    private const int UpdateTrigger = 20;
-    private const int BaseChargeGain = 3;
-    private const int EliteBossExtraGain = 2;
-    private const int SealExtraGain = 2;
+    private const int DefaultBaseTrigger = 40;
+    private const int DefaultTriggerIncrease = 20;
+    private const int DefaultBaseChargeGain = 3;
+    private const int DefaultEliteBossExtraGain = 2;
+    private const int DefaultSealExtraGain = 2;
 
     private static readonly SavedSpireField<ClassicSealedWandRelic, int> Charge =
         new(() => 0, "SakuraMod_ClassicSealedWandCharge");
@@ -69,17 +70,27 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
     public override RelicRarity Rarity => RelicRarity.Starter;
     public override bool ShowCounter => true;
     public override int DisplayAmount => Charge[this];
+    public int ChargeAmount => Charge[this];
     public int ReturnRechargeAmount => ReturnRechargeAmountForThreshold(TriggerThreshold());
+    protected virtual int BaseTriggerAmount => DefaultBaseTrigger;
+    protected virtual int TriggerIncreaseAmount => DefaultTriggerIncrease;
+    protected virtual int BaseChargeGainAmount => DefaultBaseChargeGain;
+    protected virtual int EliteBossExtraGainAmount => DefaultEliteBossExtraGain;
+    protected virtual int SealExtraGainAmount => DefaultSealExtraGain;
+    protected virtual string GeneratedTurnSourceName => "Sealed Wand";
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DynamicVar(ChargeGainVar, BaseChargeGain),
-        new DynamicVar(EliteBossExtraGainVar, EliteBossExtraGain),
-        new DynamicVar(SealExtraGainVar, SealExtraGain),
-        new SealedWandTriggerThresholdVar(),
-        new DynamicVar(TriggerIncreaseVar, UpdateTrigger),
-        new SealedWandRemainingChargeVar()
+        new DynamicVar(ChargeGainVar, BaseChargeGainAmount),
+        new DynamicVar(EliteBossExtraGainVar, EliteBossExtraGainAmount),
+        new DynamicVar(SealExtraGainVar, SealExtraGainAmount),
+        new SealedWandTriggerThresholdVar(BaseTriggerAmount),
+        new DynamicVar(TriggerIncreaseVar, TriggerIncreaseAmount),
+        new SealedWandRemainingChargeVar(BaseTriggerAmount)
     ];
+
+    public override RelicModel? GetUpgradeReplacement() =>
+        ModelDb.Relic<ClassicStarWandRelic>();
 
     public override async Task BeforeCombatStart()
     {
@@ -107,27 +118,33 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
         return Task.CompletedTask;
     }
 
-    public override async Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, bool wasRemovalPrevented, float deathAnimLength)
+    public override Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, bool wasRemovalPrevented, float deathAnimLength)
+    {
+        TryGainChargeForEnemyDeath(creature, wasRemovalPrevented);
+        return Task.CompletedTask;
+    }
+
+    internal bool TryGainChargeForEnemyDeath(Creature creature, bool wasRemovalPrevented)
     {
         var wasKilledBySeal = _sealKillsThisCombat.Remove(creature);
         if (wasRemovalPrevented
-            || Owner?.Creature?.CombatState is null
+            || creature.CombatState is null
             || creature.Side != CombatSide.Enemy
             || creature.IsSecondaryEnemy)
-            return;
+            return false;
 
         var combatId = creature.CombatId ?? 0;
         if (!_chargedDeathsThisCombat.Add(combatId))
-            return;
+            return false;
 
-        var gain = BaseChargeGain;
-        if (Owner.Creature.CombatState.Encounter?.RoomType is RoomType.Elite or RoomType.Boss)
-            gain += EliteBossExtraGain;
+        var gain = BaseChargeGainAmount;
+        if (creature.CombatState.Encounter?.RoomType is RoomType.Elite or RoomType.Boss)
+            gain += EliteBossExtraGainAmount;
         if (wasKilledBySeal)
-            gain += SealExtraGain;
+            gain += SealExtraGainAmount;
 
         AddCharge(gain);
-        await Task.CompletedTask;
+        return true;
     }
 
     public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
@@ -144,8 +161,13 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
             Charge[this] = 0;
 
         Flash();
+        await AddGeneratedTurnCard();
+    }
+
+    protected virtual async Task AddGeneratedTurnCard()
+    {
         var combatState = Owner.Creature.CombatState
-            ?? throw new InvalidOperationException("Sealed Wand generated Turn requires an active combat.");
+            ?? throw new InvalidOperationException($"{GeneratedTurnSourceName} generated Turn requires an active combat.");
         var turn = combatState.CreateCard<SpellTurn>(Owner);
         await CardPileCmd.AddGeneratedCardToCombat(turn, PileType.Hand, Owner, CardPilePosition.Random);
     }
@@ -158,35 +180,37 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
     }
 
     private int TriggerThreshold() =>
-        TriggerThreshold(Owner);
+        TriggerThreshold(Owner, BaseTriggerAmount, TriggerIncreaseAmount);
 
-    private static int TriggerThreshold(Player owner) =>
-        BaseTrigger + UpdateTrigger * ClassicSakuraCardCatalog.ConvertedSakuraCount(owner);
+    private static int TriggerThreshold(Player owner, int baseTrigger, int triggerIncrease) =>
+        baseTrigger + triggerIncrease * ClassicSakuraCardCatalog.ConvertedSakuraCount(owner);
 
     private int DisplayTriggerThreshold()
     {
         if (!IsMutable || Owner is null)
-            return BaseTrigger;
+            return BaseTriggerAmount;
 
-        return TriggerThreshold(Owner);
+        return TriggerThreshold(Owner, BaseTriggerAmount, TriggerIncreaseAmount);
     }
 
     private int DisplayRemainingCharge()
     {
         if (!IsMutable || Owner is null)
-            return BaseTrigger;
+            return BaseTriggerAmount;
 
-        return Math.Max(0, TriggerThreshold(Owner) - Charge[this]);
+        return Math.Max(0, TriggerThreshold(Owner, BaseTriggerAmount, TriggerIncreaseAmount) - Charge[this]);
     }
 
     public void AddReturnRecharge() =>
         AddCharge(ReturnRechargeAmount);
 
     public static int ReturnRechargeAmountFor(Player owner) =>
-        ReturnRechargeAmountForThreshold(BaseTrigger + UpdateTrigger * ClassicSakuraCardCatalog.ConvertedSakuraCount(owner));
+        owner.GetRelic<ClassicSealedWandRelic>() is { } wand
+            ? wand.ReturnRechargeAmount
+            : ReturnRechargeAmountForThreshold(TriggerThreshold(owner, DefaultBaseTrigger, DefaultTriggerIncrease));
 
     private static int ReturnRechargeAmountForThreshold(int threshold) =>
-        Math.Max(0, (threshold - UpdateTrigger) * 3 / 4);
+        Math.Max(0, (threshold - DefaultTriggerIncrease) * 3 / 4);
 
     private async Task DowngradeDuplicateSakuraCards()
     {
@@ -213,13 +237,19 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
             await CardCmd.Transform(transformations, null, CardPreviewStyle.None);
     }
 
-    private void AddCharge(int amount)
+    public void CopyChargeFrom(ClassicSealedWandRelic source) =>
+        SetCharge(source.ChargeAmount);
+
+    private void AddCharge(int amount) =>
+        SetCharge(Charge[this] + amount);
+
+    private void SetCharge(int amount)
     {
-        Charge[this] += amount;
+        Charge[this] = Math.Max(0, amount);
         InvokeDisplayAmountChanged();
     }
 
-    private sealed class SealedWandTriggerThresholdVar() : DynamicVar(TriggerThresholdVar, BaseTrigger)
+    private sealed class SealedWandTriggerThresholdVar(int fallbackValue) : DynamicVar(TriggerThresholdVar, fallbackValue)
     {
         public override string ToString() =>
             CurrentValue().ToString();
@@ -228,10 +258,10 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
             CurrentValue();
 
         private int CurrentValue() =>
-            _owner is ClassicSealedWandRelic relic ? relic.DisplayTriggerThreshold() : BaseTrigger;
+            _owner is ClassicSealedWandRelic relic ? relic.DisplayTriggerThreshold() : fallbackValue;
     }
 
-    private sealed class SealedWandRemainingChargeVar() : DynamicVar(RemainingChargeVar, BaseTrigger)
+    private sealed class SealedWandRemainingChargeVar(int fallbackValue) : DynamicVar(RemainingChargeVar, fallbackValue)
     {
         public override string ToString() =>
             CurrentValue().ToString();
@@ -240,7 +270,131 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
             CurrentValue();
 
         private int CurrentValue() =>
-            _owner is ClassicSealedWandRelic relic ? relic.DisplayRemainingCharge() : BaseTrigger;
+            _owner is ClassicSealedWandRelic relic ? relic.DisplayRemainingCharge() : fallbackValue;
+    }
+}
+
+public class ClassicStarWandRelic : ClassicSealedWandRelic
+{
+    protected override string IconFileName => "star_wand.png";
+    public override RelicRarity Rarity => RelicRarity.Ancient;
+    public override bool IsAllowedInShops => false;
+    protected override int BaseTriggerAmount => 35;
+    protected override int BaseChargeGainAmount => 4;
+    protected override int EliteBossExtraGainAmount => 3;
+    protected override string GeneratedTurnSourceName => "Star Wand";
+
+    public override bool IsAllowed(IRunState runState) =>
+        runState.Players.Any(static player => ClassicUltimateWandRecipe.FindExactSealedWand(player) is not null);
+
+    public override RelicModel? GetUpgradeReplacement() =>
+        null;
+
+    public override async Task AfterObtained()
+    {
+        var sealedWand = ClassicUltimateWandRecipe.FindExactSealedWand(Owner);
+        if (sealedWand is not null && !ReferenceEquals(sealedWand, this))
+        {
+            var replacement = ClassicUltimateWandRecipe.CreateStarWandReplacement(sealedWand);
+            await RelicCmd.Replace(sealedWand, replacement);
+            if (!HasBeenRemovedFromState)
+                await RelicCmd.Remove(this);
+            return;
+        }
+
+        await ClassicUltimateWandRecipe.TryCreateUltimateWand(Owner);
+    }
+
+    protected override async Task AddGeneratedTurnCard()
+    {
+        await base.AddGeneratedTurnCard();
+
+        var deckCard = Owner.RunState.CreateCard<SpellTurn>(Owner);
+        await CardPileCmd.Add(deckCard, PileType.Deck, CardPilePosition.Bottom, this, skipVisuals: true);
+    }
+}
+
+public class ClassicUltimateWandRelic : ClassicSealedWandRelic
+{
+    private const string BattleStartMagicChargeVar = "BattleStartMagicCharge";
+    private const string ElementTriggerVar = "ElementTrigger";
+    private const string ElementMagicChargeVar = "ElementMagicCharge";
+    private const string MarkDamageIncreaseVar = "MarkDamageIncrease";
+    private const string HandUpgradesVar = "HandUpgrades";
+
+    private const int BattleStartMagicCharge = 6;
+    private const int ElementTrigger = 2;
+    private const int ElementMagicCharge = 1;
+    private const int MarkAmount = 2;
+    private const int MarkDamageIncreasePercent = 50;
+    private const int HandUpgrades = 2;
+
+    private int _elementCardsPlayed;
+
+    protected override string IconFileName => "ultimate_wand.png";
+    public override RelicRarity Rarity => RelicRarity.Ancient;
+    public override bool IsAllowedInShops => false;
+    protected override int BaseTriggerAmount => 35;
+    protected override int BaseChargeGainAmount => 5;
+    protected override int EliteBossExtraGainAmount => 5;
+    protected override string GeneratedTurnSourceName => "Ultimate Wand";
+
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        ..base.CanonicalVars,
+        new DynamicVar(BattleStartMagicChargeVar, BattleStartMagicCharge),
+        new DynamicVar(ElementTriggerVar, ElementTrigger),
+        new DynamicVar(ElementMagicChargeVar, ElementMagicCharge),
+        new DynamicVar(MarkDamageIncreaseVar, MarkDamageIncreasePercent),
+        new DynamicVar(HandUpgradesVar, HandUpgrades)
+    ];
+
+    public override bool IsAllowed(IRunState runState) =>
+        false;
+
+    public override RelicModel? GetUpgradeReplacement() =>
+        null;
+
+    public override async Task BeforeCombatStart()
+    {
+        await base.BeforeCombatStart();
+        await ClassicRelicCombatActions.ApplyMagicChargeIfSealedBook(
+            this,
+            new ThrowingPlayerChoiceContext(),
+            BattleStartMagicCharge);
+    }
+
+    public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
+    {
+        if (player == Owner)
+            _elementCardsPlayed = 0;
+
+        return Task.CompletedTask;
+    }
+
+    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
+    {
+        if (player != Owner)
+            return;
+
+        ClassicRelicCombatActions.UpgradeRandomHandCards(this, HandUpgrades);
+        await ClassicRelicCombatActions.MarkRandomEnemy(this, choiceContext, MarkAmount);
+        await base.AfterPlayerTurnStart(choiceContext, player);
+    }
+
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        if (play.Card?.Owner != Owner
+            || play.Card is not ClassicSakuraCard card
+            || card.Element == ClassicElement.None)
+            return;
+
+        _elementCardsPlayed++;
+        if (_elementCardsPlayed < ElementTrigger)
+            return;
+
+        _elementCardsPlayed -= ElementTrigger;
+        await ClassicRelicCombatActions.ApplyMagicChargeIfSealedBook(this, choiceContext, ElementMagicCharge);
     }
 }
 
@@ -485,31 +639,21 @@ public class ClassicCerberusRelic : ClassicSakuraRelic
     protected override string IconFileName => "cerberus.png";
     public override RelicRarity Rarity => RelicRarity.Rare;
 
-    public override async Task BeforeCombatStart()
-    {
-        if (Owner.GetRelic<ClassicSealedBookRelic>() is not null)
-            await PowerCmd.Apply<ClassicMagicChargePower>(
-                new ThrowingPlayerChoiceContext(),
-                Owner.Creature,
-                BattleStartMagicCharge,
-                Owner.Creature,
-                null,
-                false);
-    }
+    public override async Task AfterObtained() =>
+        await ClassicUltimateWandRecipe.TryCreateUltimateWand(Owner);
+
+    public override async Task BeforeCombatStart() =>
+        await ClassicRelicCombatActions.ApplyMagicChargeIfSealedBook(
+            this,
+            new ThrowingPlayerChoiceContext(),
+            BattleStartMagicCharge);
 
     public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
         if (player != Owner)
             return;
 
-        var target = Owner.Creature.CombatState?.HittableEnemies.ToList() is { Count: > 0 } enemies
-            ? Owner.RunState.Rng.CombatCardSelection.NextItem(enemies)
-            : null;
-        if (target is null)
-            return;
-
-        Flash();
-        await PowerCmd.Apply<ClassicCerberusMarkPower>(choiceContext, target, MarkAmount, Owner.Creature, null, false);
+        await ClassicRelicCombatActions.MarkRandomEnemy(this, choiceContext, MarkAmount);
     }
 }
 
@@ -525,6 +669,9 @@ public class ClassicYueRelic : ClassicSakuraRelic
     public override bool ShowCounter => true;
     public override int DisplayAmount => _elementCardsPlayed;
 
+    public override async Task AfterObtained() =>
+        await ClassicUltimateWandRecipe.TryCreateUltimateWand(Owner);
+
     public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
     {
         if (player == Owner)
@@ -536,7 +683,7 @@ public class ClassicYueRelic : ClassicSakuraRelic
     public override Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
         if (player == Owner)
-            UpgradeRandomHandCards();
+            ClassicRelicCombatActions.UpgradeRandomHandCards(this, Upgrades);
 
         return Task.CompletedTask;
     }
@@ -553,29 +700,7 @@ public class ClassicYueRelic : ClassicSakuraRelic
             return;
 
         SetElementCardsPlayed(_elementCardsPlayed - Trigger);
-        Flash();
-        if (Owner.GetRelic<ClassicSealedBookRelic>() is not null)
-            await PowerCmd.Apply<ClassicMagicChargePower>(choiceContext, Owner.Creature, MagicCharge, Owner.Creature, null, false);
-    }
-
-    private void UpgradeRandomHandCards()
-    {
-        var upgradable = CardPile.GetCards(Owner, PileType.Hand)
-            .Where(static card => !card.IsUpgraded && card.MaxUpgradeLevel > card.CurrentUpgradeLevel)
-            .ToList();
-        if (upgradable.Count == 0)
-            return;
-
-        Flash();
-        for (var i = 0; i < Upgrades && upgradable.Count > 0; i++)
-        {
-            var card = Owner.RunState.Rng.CombatCardSelection.NextItem(upgradable);
-            if (card is null)
-                return;
-
-            upgradable.Remove(card);
-            CardCmd.Upgrade(card, CardPreviewStyle.None);
-        }
+        await ClassicRelicCombatActions.ApplyMagicChargeIfSealedBook(this, choiceContext, MagicCharge);
     }
 
     private void SetElementCardsPlayed(int amount)
@@ -619,7 +744,8 @@ public class ClassicMoonBellRelic : ClassicSakuraRelic
         Status = RelicStatus.Disabled;
         RelicIconChanged();
         Flash();
-        await CreatureCmd.SetCurrentHp(Owner.Creature, 0);
+
+        // Heal is the revive path; SetCurrentHp(0) would re-enter Kill while death is being prevented.
         await CreatureCmd.Heal(Owner.Creature, Math.Max(1, Owner.Creature.MaxHp * DeathPreventHealPercent / 100));
 
         var combatState = Owner.Creature.CombatState
@@ -629,6 +755,103 @@ public class ClassicMoonBellRelic : ClassicSakuraRelic
 
         var deckCard = Owner.RunState.CreateCard<SpellTurn>(Owner);
         await CardPileCmd.Add(deckCard, PileType.Deck, CardPilePosition.Bottom, this, skipVisuals: true);
+    }
+}
+
+internal static class ClassicUltimateWandRecipe
+{
+    public static ClassicSealedWandRelic? FindExactSealedWand(Player owner) =>
+        owner.Relics.FirstOrDefault(static relic => relic.GetType() == typeof(ClassicSealedWandRelic))
+            as ClassicSealedWandRelic;
+
+    public static RelicModel CreateStarWandReplacement(ClassicSealedWandRelic sealedWand)
+    {
+        var replacement = ModelDb.Relic<ClassicStarWandRelic>().ToMutable();
+        ((ClassicStarWandRelic)replacement).CopyChargeFrom(sealedWand);
+        return replacement;
+    }
+
+    public static async Task TryCreateUltimateWand(Player owner)
+    {
+        if (owner.GetRelic<ClassicUltimateWandRelic>() is not null)
+            return;
+
+        var starWand = owner.GetRelic<ClassicStarWandRelic>();
+        var cerberus = owner.GetRelic<ClassicCerberusRelic>();
+        var yue = owner.GetRelic<ClassicYueRelic>();
+        if (starWand is null || cerberus is null || yue is null)
+            return;
+
+        var ultimateWand = ModelDb.Relic<ClassicUltimateWandRelic>().ToMutable();
+        ((ClassicUltimateWandRelic)ultimateWand).CopyChargeFrom(starWand);
+
+        await RelicCmd.Replace(starWand, ultimateWand);
+        if (!cerberus.HasBeenRemovedFromState)
+            await RelicCmd.Remove(cerberus);
+        if (!yue.HasBeenRemovedFromState)
+            await RelicCmd.Remove(yue);
+    }
+}
+
+internal static class ClassicRelicCombatActions
+{
+    public static async Task ApplyMagicChargeIfSealedBook(
+        ClassicSakuraRelic relic,
+        PlayerChoiceContext choiceContext,
+        int amount)
+    {
+        if (relic.Owner.GetRelic<ClassicSealedBookRelic>() is null)
+            return;
+
+        relic.Flash();
+        await PowerCmd.Apply<ClassicMagicChargePower>(
+            choiceContext,
+            relic.Owner.Creature,
+            amount,
+            relic.Owner.Creature,
+            null,
+            false);
+    }
+
+    public static async Task MarkRandomEnemy(
+        ClassicSakuraRelic relic,
+        PlayerChoiceContext choiceContext,
+        int amount)
+    {
+        var target = relic.Owner.Creature.CombatState?.HittableEnemies.ToList() is { Count: > 0 } enemies
+            ? relic.Owner.RunState.Rng.CombatCardSelection.NextItem(enemies)
+            : null;
+        if (target is null)
+            return;
+
+        relic.Flash();
+        await PowerCmd.Apply<ClassicCerberusMarkPower>(
+            choiceContext,
+            target,
+            amount,
+            relic.Owner.Creature,
+            null,
+            false);
+    }
+
+    public static void UpgradeRandomHandCards(ClassicSakuraRelic relic, int upgrades)
+    {
+        var upgradable = CardPile.GetCards(relic.Owner, PileType.Hand)
+            .Where(static card => !card.IsUpgraded && card.MaxUpgradeLevel > card.CurrentUpgradeLevel)
+            .ToList();
+        if (upgradable.Count == 0)
+            return;
+
+        relic.Flash();
+        for (var i = 0; i < upgrades && upgradable.Count > 0; i++)
+        {
+            var card = relic.Owner.RunState.Rng.CombatCardSelection.NextItem(upgradable);
+            if (card is null)
+                return;
+
+            upgradable.Remove(card);
+            CardCmd.Upgrade(card, CardPreviewStyle.None);
+        }
     }
 }
 
@@ -691,6 +914,8 @@ public static class ClassicSakuraExclusiveRelics
     [
         ModelDb.Relic<ClassicSealedBookRelic>(),
         ModelDb.Relic<ClassicSealedWandRelic>(),
+        ModelDb.Relic<ClassicStarWandRelic>(),
+        ModelDb.Relic<ClassicUltimateWandRelic>(),
         ..RewardableTemplates()
     ];
 

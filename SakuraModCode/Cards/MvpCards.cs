@@ -47,7 +47,7 @@ public class Action() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Ta
 
 public class Appear() : SakuraModCard(1, CardType.Skill, CardRarity.Common, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2), new DynamicVar("ReleaseDiscount", 1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -123,6 +123,8 @@ internal static class AquaRules
 
 public class Blade() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
+
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DamageVar(4, ValueProp.Move),
@@ -211,6 +213,8 @@ public class Hail() : SakuraModCard(1, CardType.Attack, CardRarity.Common, Targe
 
 public class Lucid() : SakuraModCard(0, CardType.Skill, CardRarity.Common, TargetType.Self), IReleaseable
 {
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
+
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("Look", 3)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -231,6 +235,8 @@ public class Lucid() : SakuraModCard(0, CardType.Skill, CardRarity.Common, Targe
 
 public class Shade() : SakuraModCard(2, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy), IReleaseable
 {
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
+
     protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(12, ValueProp.Move), new PowerVar<WeakPower>(1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -432,7 +438,7 @@ public class Break() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, Ta
 
 public class Choice() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("ManifestCards", 1), new CardsVar("DrawCards", 2)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -462,7 +468,7 @@ public class Choice() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, Ta
 
 public class Promise() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self), IReleaseable
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(6, ValueProp.Move), new CardsVar(1), new CardsVar("ReleaseCards", 1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
@@ -543,7 +549,7 @@ internal static class BlazeRules
 
 public class Dreaming() : SakuraModCard(2, CardType.Power, CardRarity.Rare, TargetType.Self), IReleaseable
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, SakuraKeywords.Manifest];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {

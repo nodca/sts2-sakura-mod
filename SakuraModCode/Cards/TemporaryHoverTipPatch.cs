@@ -18,6 +18,7 @@ public static class TemporaryHoverTipPatch
     [HarmonyPostfix]
     public static void HoverTipsPostfix(CardModel __instance, ref IEnumerable<IHoverTip> __result)
     {
+        __result = AppendClassicSakuraCounterpartPreview(__instance, __result);
         __result = AppendElementTips(__instance, __result);
         __result = AppendClassicElementTips(__instance, __result);
         __result = AppendClassicSakuraCardTips(__instance, __result);
@@ -34,6 +35,18 @@ public static class TemporaryHoverTipPatch
                 __instance.CurrentUpgradeLevel > 0 ? StrongReflectionTipKey : ReflectionTipKey);
 
         __result = __result.Distinct();
+    }
+
+    private static IEnumerable<IHoverTip> AppendClassicSakuraCounterpartPreview(CardModel card, IEnumerable<IHoverTip> tips)
+    {
+        if (card is not ClassicClowCard { Identity: { } identity })
+            return tips;
+
+        var sakuraCard = ClassicSakuraCardCatalog.SakuraTemplateFor(identity);
+        if (sakuraCard is null)
+            return tips;
+
+        return tips.Append(HoverTipFactory.FromCard(sakuraCard));
     }
 
     private static IEnumerable<IHoverTip> AppendElementTips(CardModel card, IEnumerable<IHoverTip> tips)

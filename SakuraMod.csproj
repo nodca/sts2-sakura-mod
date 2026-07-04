@@ -29,7 +29,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Alchyr.Sts2.BaseLib" Version="3.3.2" PrivateAssets="All"/>
+        <PackageReference Include="Alchyr.Sts2.BaseLib" Version="3.3.4" PrivateAssets="All"/>
         <PackageReference Include="Alchyr.Sts2.ModAnalyzers" Version="0.1.9" />
         <AdditionalFiles Include="SakuraMod/localization/**/*.json"/> <!-- Used by analyzer -->
     </ItemGroup>

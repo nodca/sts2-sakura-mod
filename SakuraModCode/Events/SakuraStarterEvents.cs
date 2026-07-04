@@ -2,6 +2,7 @@ using BaseLib.Abstracts;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Events;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
@@ -34,15 +35,9 @@ public class SakuraAmalgamator : CustomEventModel
     {
     }
 
-    protected override IEnumerable<DynamicVar> CanonicalVars =>
-    [
-        new StringVar("GaleReward", ModelDb.Card<RollerbladeDash>().Title),
-        new StringVar("SiegeReward", ModelDb.Card<MagicBarrier>().Title)
-    ];
-
     public override bool IsAllowed(IRunState runState) =>
         SakuraStarterCompatibility.IsSakuraRun(runState)
-        && runState.Players.All(SakuraStarterCompatibility.CanReplaceStrikeOrDefendPair);
+        && runState.Players.All(CanCombineStarterPair);
 
     protected override IReadOnlyList<EventOption> GenerateInitialOptions() =>
     [
@@ -50,9 +45,13 @@ public class SakuraAmalgamator : CustomEventModel
             ? new EventOption(this, CombineGales, SakuraInitialOptionKey("COMBINE_GALES"), HoverTipFactory.FromCardWithCardHoverTips<RollerbladeDash>())
             : new EventOption(this, null, SakuraInitialOptionKey("COMBINE_GALES_LOCKED"), HoverTipFactory.FromCardWithCardHoverTips<RollerbladeDash>()),
         SakuraStarterCompatibility.CountRemovable<Siege>(Owner!) >= 2
-            ? new EventOption(this, CombineSieges, SakuraInitialOptionKey("COMBINE_SIEGES"), HoverTipFactory.FromCardWithCardHoverTips<MagicBarrier>())
-            : new EventOption(this, null, SakuraInitialOptionKey("COMBINE_SIEGES_LOCKED"), HoverTipFactory.FromCardWithCardHoverTips<MagicBarrier>())
+            ? new EventOption(this, CombineSieges, SakuraInitialOptionKey("COMBINE_SIEGES"), HoverTipFactory.FromCardWithCardHoverTips<YukitoLunchBox>())
+            : new EventOption(this, null, SakuraInitialOptionKey("COMBINE_SIEGES_LOCKED"), HoverTipFactory.FromCardWithCardHoverTips<YukitoLunchBox>())
     ];
+
+    private static bool CanCombineStarterPair(Player player) =>
+        SakuraStarterCompatibility.CountRemovable<Gale>(player) >= 2
+        || SakuraStarterCompatibility.CountRemovable<Siege>(player) >= 2;
 
     private async Task CombineGales()
     {
@@ -64,7 +63,7 @@ public class SakuraAmalgamator : CustomEventModel
     private async Task CombineSieges()
     {
         await RemoveTwo<Siege>();
-        await AddReward<MagicBarrier>();
+        await AddReward<YukitoLunchBox>();
         SetEventFinished(L10NLookup($"{Id.Entry}.pages.COMBINE_SIEGES.description"));
     }
 

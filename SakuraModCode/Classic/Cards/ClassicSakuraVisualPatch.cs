@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
+using MegaCrit.Sts2.Core.Nodes.HoverTips;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
@@ -331,9 +332,6 @@ internal static class ClassicSakuraCardLayout
     private static readonly FieldInfo? EnergyIconField = AccessTools.Field(typeof(NCard), "_energyIcon");
     private static readonly FieldInfo? EnergyLabelField = AccessTools.Field(typeof(NCard), "_energyLabel");
     private static readonly FieldInfo? UnplayableEnergyIconField = AccessTools.Field(typeof(NCard), "_unplayableEnergyIcon");
-    private static readonly FieldInfo? StarIconField = AccessTools.Field(typeof(NCard), "_starIcon");
-    private static readonly FieldInfo? StarLabelField = AccessTools.Field(typeof(NCard), "_starLabel");
-    private static readonly FieldInfo? UnplayableStarIconField = AccessTools.Field(typeof(NCard), "_unplayableStarIcon");
     private static readonly FieldInfo? RareGlowField = AccessTools.Field(typeof(NCard), "_rareGlow");
     private static readonly FieldInfo? UncommonGlowField = AccessTools.Field(typeof(NCard), "_uncommonGlow");
     private static readonly FieldInfo? HolderHitboxField = AccessTools.Field(typeof(NCardHolder), "_hitbox");
@@ -712,12 +710,6 @@ internal static class ClassicSakuraCardLayout
             Hide(nodes.UnplayableEnergyIcon);
         }
 
-        ApplyCostLayout(
-            nodes.StarIcon,
-            nodes.StarLabel,
-            nodes.UnplayableStarIcon,
-            Spec.StarCostBox);
-
         HideVanillaBodyVisuals(card, state);
         HideLateRewardGlows(card);
         foreach (var hiddenNode in nodes.HiddenNodes)
@@ -1043,9 +1035,6 @@ internal static class ClassicSakuraCardLayout
         yield return nodes.EnergyIcon;
         yield return nodes.EnergyLabel;
         yield return nodes.UnplayableEnergyIcon;
-        yield return nodes.StarIcon;
-        yield return nodes.StarLabel;
-        yield return nodes.UnplayableStarIcon;
     }
 
     private static IEnumerable<Control> HiddenVanillaControls(NCard card, ClassicCardState state, ClassicCardNodes nodes)
@@ -1090,9 +1079,6 @@ internal static class ClassicSakuraCardLayout
             nodes.EnergyIcon,
             nodes.EnergyLabel,
             nodes.UnplayableEnergyIcon,
-            nodes.StarIcon,
-            nodes.StarLabel,
-            nodes.UnplayableStarIcon,
             card.CardHighlight,
             state.Face,
             state.EnglishNameLabel,
@@ -1484,9 +1470,6 @@ internal static class ClassicSakuraCardLayout
             TextureRect? energyIcon,
             MegaLabel? energyLabel,
             TextureRect? unplayableEnergyIcon,
-            TextureRect? starIcon,
-            MegaLabel? starLabel,
-            TextureRect? unplayableStarIcon,
             IReadOnlyList<CanvasItem> hiddenNodes)
         {
             TitleLabel = titleLabel;
@@ -1494,9 +1477,6 @@ internal static class ClassicSakuraCardLayout
             EnergyIcon = energyIcon;
             EnergyLabel = energyLabel;
             UnplayableEnergyIcon = unplayableEnergyIcon;
-            StarIcon = starIcon;
-            StarLabel = starLabel;
-            UnplayableStarIcon = unplayableStarIcon;
             HiddenNodes = hiddenNodes;
         }
 
@@ -1510,12 +1490,6 @@ internal static class ClassicSakuraCardLayout
 
         public TextureRect? UnplayableEnergyIcon { get; }
 
-        public TextureRect? StarIcon { get; }
-
-        public MegaLabel? StarLabel { get; }
-
-        public TextureRect? UnplayableStarIcon { get; }
-
         public IReadOnlyList<CanvasItem> HiddenNodes { get; }
 
         public static ClassicCardNodes From(NCard card) =>
@@ -1525,9 +1499,6 @@ internal static class ClassicSakuraCardLayout
                 FieldValue<TextureRect>(EnergyIconField, card),
                 FieldValue<MegaLabel>(EnergyLabelField, card),
                 FieldValue<TextureRect>(UnplayableEnergyIconField, card),
-                FieldValue<TextureRect>(StarIconField, card),
-                FieldValue<MegaLabel>(StarLabelField, card),
-                FieldValue<TextureRect>(UnplayableStarIconField, card),
                 HiddenCardNodeFields
                     .Select(field => field.GetValue(card))
                     .OfType<CanvasItem>()
@@ -1619,6 +1590,9 @@ internal static class ClassicSakuraCardLayout
                 Spec.DefaultRootPivotOffset,
                 null);
             var priority = 0;
+            if (HasAncestor<NHoverTipCardContainer>(card))
+                return new ClassicLayoutContext(Spec.RootBox, Spec.DefaultRootPivotOffset, null);
+
             if (card.GetParent() is NCardHolder)
             {
                 context = ForCenteredOrigin(null);
@@ -1681,7 +1655,6 @@ internal static class ClassicSakuraCardLayout
         public Rect2 DescriptionBox { get; } = new(new Vector2(16f, 273f), new Vector2(190f, 140f));
         public Rect2 EnergyCostBox { get; } = new(new Vector2(-14f, -12f), new Vector2(56f, 56f));
         public Rect2 EnergyCostLabelBox { get; } = new(new Vector2(12f, -2f), new Vector2(44f, 44f));
-        public Rect2 StarCostBox { get; } = new(new Vector2(174f, 14f), new Vector2(44f, 44f));
         public Vector2 DefaultGridCellSize => NCard.defaultSize * NCardHolder.smallScale;
         public Vector2 GridCellSize => new(
             Mathf.Max(DefaultGridCellSize.X, RootSize.X * NCardHolder.smallScale.X),

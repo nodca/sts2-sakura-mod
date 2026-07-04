@@ -1,7 +1,10 @@
+using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Runs;
 using SakuraMod.SakuraModCode.Classic.Cards;
+using SakuraMod.SakuraModCode.Classic.Relics;
 
 namespace SakuraMod.SakuraModCode.Classic.Character;
 
@@ -43,6 +46,17 @@ internal sealed class ClassicSakuraHook : AbstractModel
 
         foreach (var player in runState.Players.Where(player => player.Character is ClassicSakura))
             ClowCreate.ReduceCostAtCombatStart(player);
+
+        return Task.CompletedTask;
+    }
+
+    public override Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, bool wasRemovalPrevented, float deathAnimLength)
+    {
+        if (_runState is not { } runState)
+            return Task.CompletedTask;
+
+        foreach (var player in runState.Players.Where(player => player.Character is ClassicSakura && !player.IsActiveForHooks))
+            player.GetRelic<ClassicSealedWandRelic>()?.TryGainChargeForEnemyDeath(creature, wasRemovalPrevented);
 
         return Task.CompletedTask;
     }

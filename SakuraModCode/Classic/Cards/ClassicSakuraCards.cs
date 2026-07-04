@@ -2377,15 +2377,14 @@ public class SpellTurn() : ClassicSpellCard(-2, CardType.Skill, CardRarity.Token
         if (selected is not ClassicClowCard { Identity: { } identity })
             return;
 
-        var sakuraType = ClassicSakuraCardCatalog.SakuraTypeFor(identity);
-        if (sakuraType is null || ClassicSakuraCardCatalog.HasSakuraIdentity(Owner, identity))
+        var canonicalSakura = ClassicSakuraCardCatalog.SakuraTemplateFor(identity);
+        if (canonicalSakura is null || ClassicSakuraCardCatalog.HasSakuraIdentity(Owner, identity))
             return;
 
         var deckCard = selected.DeckVersion;
         if (deckCard is null || deckCard.Pile?.Type != PileType.Deck)
             return;
 
-        var canonicalSakura = ModelDb.GetById<CardModel>(ModelDb.GetId(sakuraType));
         var deckReplacement = Owner.RunState.CreateCard(canonicalSakura, Owner);
         var results = (await CardCmd.Transform(
             [new CardTransformation(deckCard, deckReplacement)],

@@ -973,7 +973,7 @@ public class ClassicSleepPower : ClassicSakuraPower
 
 public class ClassicCerberusMarkPower : ClassicSakuraPower
 {
-    private const decimal DamageMultiplier = 1.25m;
+    private const decimal DamageMultiplierPerStack = 0.25m;
 
     protected override string IconFileName => "power.png";
     public override PowerType Type => PowerType.Debuff;
@@ -986,7 +986,7 @@ public class ClassicCerberusMarkPower : ClassicSakuraPower
         Creature? dealer,
         CardModel? cardSource) =>
         target == Owner && Amount > 0 && props.IsPoweredAttack()
-            ? DamageMultiplier
+            ? 1m + DamageMultiplierPerStack * Amount
             : 1m;
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
