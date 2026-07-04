@@ -262,10 +262,12 @@ public class ClassicShieldWardPower : ClassicSakuraPower
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
+    public override async Task BeforeSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Player == player && Amount > 0)
-            await CreatureCmd.GainBlock(Owner, Amount, ValueProp.Move, null, false);
+        if (Owner.Side != side || !participants.Contains(Owner) || Amount <= 0)
+            return;
+
+        await CreatureCmd.GainBlock(Owner, Amount, ValueProp.Move, null, false);
     }
 }
 
