@@ -325,6 +325,8 @@ public abstract class ClassicSpecialSakuraCard(int cost, CardType type, TargetTy
 public abstract class ClassicSpellCard(int cost, CardType type, CardRarity rarity, TargetType target) :
     ClassicSakuraCard(cost, type, rarity, target, ClassicSakuraCardFamily.Spell)
 {
+    public override bool CanBeGeneratedInCombat => false;
+
     protected override bool GrantsMagicCharge => false;
 }
 
@@ -1051,6 +1053,12 @@ internal static class ClassicSakuraMagic
     {
         var amount = card.Type == CardType.Power ? 2 : 1;
         await PowerCmd.Apply<ClassicMagicChargePower>(choiceContext, card.Owner.Creature, amount, card.Owner.Creature, card, false);
+    }
+
+    public static void SetFreeForRestOfTurn(CardModel card)
+    {
+        if (card.EnergyCost.GetWithModifiers(CostModifiers.Local) > 0)
+            card.EnergyCost.SetThisTurn(0, true);
     }
 
     public static async Task AddVoidToDrawPile(PlayerChoiceContext choiceContext, Player owner)

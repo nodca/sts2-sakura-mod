@@ -912,7 +912,7 @@ public class ClowDream() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Co
         for (var i = 0; i < count; i++)
         {
             var card = ClassicSakuraCardCatalog.CreateRandomDreamClowCard(Owner);
-            card.EnergyCost.SetThisTurnOrUntilPlayed(0, true);
+            ClassicSakuraMagic.SetFreeForRestOfTurn(card);
             await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, Owner, CardPilePosition.Random);
         }
     }

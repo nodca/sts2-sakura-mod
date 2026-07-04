@@ -55,7 +55,7 @@ internal sealed class ClassicSakuraHook : AbstractModel
         if (_runState is not { } runState)
             return Task.CompletedTask;
 
-        foreach (var player in runState.Players.Where(player => player.Character is ClassicSakura && !player.IsActiveForHooks))
+        foreach (var player in runState.Players.Where(player => player.Character is ClassicSakura))
             player.GetRelic<ClassicSealedWandRelic>()?.TryGainChargeForEnemyDeath(creature, wasRemovalPrevented);
 
         return Task.CompletedTask;
