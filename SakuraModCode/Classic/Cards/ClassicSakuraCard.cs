@@ -20,6 +20,7 @@ using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
+using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Classic.Relics;
@@ -1066,7 +1067,11 @@ internal static class ClassicSakuraMagic
         var combatState = owner.Creature.CombatState
             ?? throw new InvalidOperationException("Classic Sakura generated Void requires an active combat.");
         var card = combatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Void>(owner);
-        await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Draw, owner, CardPilePosition.Random);
+        CardCmd.PreviewCardPileAdd(await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombatWithResult(
+            card,
+            PileType.Draw,
+            owner,
+            CardPilePosition.Random));
     }
 
     public static async Task AddVoidToDiscardPile(PlayerChoiceContext choiceContext, Player owner)
@@ -1074,7 +1079,11 @@ internal static class ClassicSakuraMagic
         var combatState = owner.Creature.CombatState
             ?? throw new InvalidOperationException("Classic Sakura generated Void requires an active combat.");
         var card = combatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Void>(owner);
-        await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Discard, owner, CardPilePosition.Random);
+        CardCmd.PreviewCardPileAdd(await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombatWithResult(
+            card,
+            PileType.Discard,
+            owner,
+            CardPilePosition.Bottom));
     }
 }
 

@@ -323,9 +323,10 @@ public class AkihoAliceBook : SakuraModRelic
 
         _dazedAddedThisCombat = true;
         var dazed = Enumerable.Range(0, 3)
-            .Select(_ => ModelDb.Card<Dazed>().CreateClone())
+            .Select(_ => combatState.CreateCard<Dazed>(Owner))
             .ToList();
-        await CardPileCmd.AddGeneratedCardsToCombat(dazed, PileType.Draw, Owner, CardPilePosition.Random);
+        CardCmd.PreviewCardPileAdd(
+            await SakuraGeneratedCardLifecycle.AddGeneratedCardsToCombatWithResults(dazed, PileType.Draw, Owner, CardPilePosition.Random));
         await CardPileCmd.Shuffle(choiceContext, Owner);
     }
 

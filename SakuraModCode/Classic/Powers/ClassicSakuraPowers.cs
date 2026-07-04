@@ -13,9 +13,11 @@ using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode;
+using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Relics;
 using SakuraMod.SakuraModCode.Extensions;
@@ -50,7 +52,7 @@ public class ClassicReturnPower : ClassicSakuraPower
     private int _recordedHp;
     private int _recordedBlock;
 
-    protected override string IconFileName => "power.png";
+    protected override string IconFileName => "classic_sts1_retain.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
@@ -115,7 +117,7 @@ public class ClassicDreamPower : ClassicSakuraPower
 {
     private readonly List<DreamSwap> _swaps = [];
 
-    protected override string IconFileName => "power.png";
+    protected override string IconFileName => "classic_sts1_establishment.png";
     protected override bool IsVisibleInternal => false;
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
@@ -240,19 +242,23 @@ public class ClassicDarkSakuraPower : ClassicSakuraPower
         foreach (var card in hand)
             await CardCmd.Exhaust(choiceContext, card, false);
 
+        var replacements = new List<CardModel>();
         for (var i = 0; i < hand.Count; i++)
         {
             var card = ClassicSakuraCardCatalog.CreateRandomDarkClowCard(player);
             if (card.IsUpgradable)
                 card.UpgradeInternal();
-            await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Discard, player, CardPilePosition.Random);
+            replacements.Add(card);
         }
+        CardCmd.PreviewCardPileAdd(
+            await SakuraGeneratedCardLifecycle.AddGeneratedCardsToCombatWithResults(replacements, PileType.Discard, player, CardPilePosition.Bottom),
+            style: CardPreviewStyle.GridLayout);
     }
 }
 
 public class ClassicShieldWardPower : ClassicSakuraPower
 {
-    protected override string IconFileName => "power.png";
+    protected override string IconFileName => "classic_sts1_armor.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
@@ -855,7 +861,7 @@ public class ClassicFreezePower : ClassicSakuraPower
 
 public class ClassicTimePower : ClassicSakuraPower
 {
-    protected override string IconFileName => "power.png";
+    protected override string IconFileName => "classic_sts1_time.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
@@ -975,7 +981,7 @@ public class ClassicCerberusMarkPower : ClassicSakuraPower
 {
     private const decimal DamageMultiplierPerStack = 0.25m;
 
-    protected override string IconFileName => "power.png";
+    protected override string IconFileName => "classic_sts1_accuracy.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Single;
 
@@ -1002,7 +1008,7 @@ public class ClassicNothingPower : ClassicSakuraPower
     private int _block = 3;
     private bool _upgraded;
 
-    protected override string IconFileName => "power.png";
+    protected override string IconFileName => "classic_sts1_retain.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
@@ -1158,7 +1164,7 @@ public class ClassicNothingMonsterPower : ClassicSakuraPower
 {
     private const int ExhaustChance = 10;
 
-    protected override string IconFileName => "power.png";
+    protected override string IconFileName => "classic_sts1_blur.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 

@@ -17,6 +17,8 @@
   "SAKURAMOD-SAKURA_CARD.description": "Converted from a Clow Card. When played, shuffle 1 Void into your draw pile.",
   "SAKURAMOD-ECHO.title": "Echo",
   "SAKURAMOD-ECHO.description": "When exhausted by The Song, trigger The Song's effect additional times.",
+  "SAKURAMOD-INVISIBLE.title": "Invisible",
+  "SAKURAMOD-INVISIBLE.description": "When drawn, draw 1 card.",
   "SAKURAMOD-REMOVABLE.title": "Removable",
   "SAKURAMOD-REMOVABLE.description": "After use, it will be removed from the master deck. And the temporary card does not work.",
   "SAKURAMOD-COST_DECREASING.title": "Cost-Decreasing",

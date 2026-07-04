@@ -81,7 +81,10 @@ public static class TemporaryHoverTipPatch
             tips = tips.Append(HoverTipFactory.FromKeyword(SakuraKeywords.SakuraCard));
 
         if (card is ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow, Identity: ClassicCardIdentity.Voice })
+        {
+            tips = tips.Append(HoverTipFactory.FromKeyword(SakuraKeywords.Invisible));
             tips = tips.Append(HoverTipFactory.FromKeyword(SakuraKeywords.Echo));
+        }
 
         if (card is ClassicSakuraCard { Identity: ClassicCardIdentity.Create } createCard)
         {

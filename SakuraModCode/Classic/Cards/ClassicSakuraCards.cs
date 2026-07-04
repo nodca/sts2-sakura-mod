@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
@@ -152,7 +153,12 @@ public class ClowShield() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.B
 {
     public override ClassicElement Element => ClassicElement.Firey;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Loner];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicBlockVar(5, ValueProp.Move, ClassicCardIdentity.Shield)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new ClassicBlockVar(5, ValueProp.Move, ClassicCardIdentity.Shield),
+        new PowerVar<ClassicShieldWardPower>(ClassicSakuraMagic.ShieldMetallicizeBlock)
+    ];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<ClassicShieldWardPower>()];
     protected override HashSet<CardTag> CanonicalTags => [CardTag.Defend];
 
     private int CurrentBlock() =>
@@ -164,7 +170,7 @@ public class ClowShield() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.B
     protected override async Task PlayExtra(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await PlayNormal(choiceContext, play);
-        await ApplyPower<ClassicShieldWardPower>(choiceContext, Owner.Creature, ClassicSakuraMagic.ShieldMetallicizeBlock);
+        await ApplyPower<ClassicShieldWardPower>(choiceContext, Owner.Creature, DynamicVars["ClassicShieldWardPower"].IntValue);
     }
 
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
@@ -396,7 +402,7 @@ public class ClowVoice() : ClassicExtraClowCard(0, CardType.Skill, CardRarity.Co
 {
     public override ClassicElement Element => ClassicElement.Windy;
     public override bool HasTurnEndInHandEffect => true;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Ethereal];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Ethereal, SakuraKeywords.Invisible];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicBlockVar(4, ValueProp.Move), new DynamicVar("Magic", 1), new CardsVar(1)];
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -422,12 +428,14 @@ public class ClowVoice() : ClassicExtraClowCard(0, CardType.Skill, CardRarity.Co
 
     private async Task AddVoiceCopies(PlayerChoiceContext choiceContext, int count, PileType pile)
     {
-        var combatState = Owner.Creature.CombatState
-            ?? throw new InvalidOperationException("Clow Voice generated copies require an active combat.");
         for (var i = 0; i < count; i++)
         {
-            var copy = combatState.CreateCard<ClowVoice>(Owner);
-            await CardPileCmd.AddGeneratedCardToCombat(copy, pile, Owner, CardPilePosition.Random);
+            var copy = CreateClone();
+            await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
+                copy,
+                pile,
+                Owner,
+                pile == PileType.Hand ? CardPilePosition.Random : CardPilePosition.Bottom);
         }
     }
 }
@@ -1143,10 +1151,12 @@ public class ClowLock() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Com
         foreach (var card in selected)
             await CardCmd.Exhaust(choiceContext, card, false);
 
-        var copy = CombatState!.CreateCard<ClowLock>(Owner);
-        while (copy.CurrentUpgradeLevel < CurrentUpgradeLevel && copy.IsUpgradable)
-            copy.UpgradeInternal();
-        await CardPileCmd.AddGeneratedCardToCombat(copy, PileType.Discard, Owner, CardPilePosition.Random);
+        var copy = CreateClone();
+        await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
+            copy,
+            PileType.Discard,
+            Owner,
+            CardPilePosition.Bottom);
 
         await PowerCmd.Apply<ClassicMagicChargePower>(choiceContext, Owner.Creature, selected.Count, Owner.Creature, this, false);
     }
@@ -1613,11 +1623,7 @@ public class ClowFight() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.R
 
     private async Task AddFightCopy(PlayerChoiceContext choiceContext)
     {
-        var combatState = Owner.Creature.CombatState
-            ?? throw new InvalidOperationException("The Fight copy requires an active combat.");
-        var copy = combatState.CreateCard<ClowFight>(Owner);
-        while (copy.CurrentUpgradeLevel < CurrentUpgradeLevel && copy.IsUpgradable)
-            copy.UpgradeInternal();
+        var copy = CreateClone();
         await CardPileCmd.AddGeneratedCardToCombat(copy, PileType.Hand, Owner, CardPilePosition.Random);
     }
 }
@@ -2222,7 +2228,13 @@ public class ClowTime() : ClassicExtraClowCard(2, CardType.Skill, CardRarity.Rar
 
     public override ClassicElement Element => ClassicElement.Watery;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new DynamicVar("Voids", VoidCount)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new PowerVar<ClassicTimePower>(1),
+        new CardsVar(1),
+        new DynamicVar("Voids", VoidCount)
+    ];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<ClassicTimePower>()];
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -2234,7 +2246,7 @@ public class ClowTime() : ClassicExtraClowCard(2, CardType.Skill, CardRarity.Rar
     protected override async Task PlayExtra(PlayerChoiceContext choiceContext, CardPlay play)
     {
         foreach (var enemy in CombatState!.HittableEnemies.ToList())
-            await ClassicPowerRules.ApplyBypassingArtifact<ClassicTimePower>(choiceContext, enemy, 1, Owner.Creature, this);
+            await ClassicPowerRules.ApplyBypassingArtifact<ClassicTimePower>(choiceContext, enemy, DynamicVars["ClassicTimePower"].IntValue, Owner.Creature, this);
         await CardPileCmd.Draw(choiceContext, ReleasedValue("Cards"), Owner, false);
     }
 
@@ -2245,12 +2257,13 @@ public class SakuraTime() : ClassicSakuraConversionCard(1, CardType.Skill, Targe
 {
     public override ClassicElement Element => ClassicElement.Watery;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, CardKeyword.Innate];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<ClassicTimePower>(1)];
+    protected override IEnumerable<IHoverTip> ExtraHoverTips => [HoverTipFactory.FromPower<ClassicTimePower>()];
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
     {
         foreach (var enemy in CombatState!.HittableEnemies.ToList())
-            await ClassicPowerRules.ApplyBypassingArtifact<ClassicTimePower>(choiceContext, enemy, ReleasedMagic(), Owner.Creature, this);
+            await ClassicPowerRules.ApplyBypassingArtifact<ClassicTimePower>(choiceContext, enemy, ReleasedValue("ClassicTimePower"), Owner.Creature, this);
         await ClassicSakuraMagic.AddVoidToDiscardPile(choiceContext, Owner);
     }
 }

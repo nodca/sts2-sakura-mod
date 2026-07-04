@@ -622,9 +622,11 @@ internal static class SakuraStateText
         "保留",
         "消耗",
         "固有",
+        "无形",
         "Retain",
         "Exhaust",
-        "Innate"
+        "Innate",
+        "Invisible"
     ];
 
     private static string SentenceEnding() =>

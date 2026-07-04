@@ -89,6 +89,51 @@ internal static class SakuraGeneratedCardLifecycle
         bool freeThisTurn) =>
         AddGeneratedCardToCombat(card, RestoredReleasedCardToHandOptions(freeThisTurn), context);
 
+    public static async Task<CardModel> AddGeneratedCardToCombat(
+        CardModel card,
+        PileType pile,
+        Player? creator,
+        CardPilePosition position = CardPilePosition.Random)
+    {
+        await AddGeneratedCardToCombatWithResult(card, pile, creator, position);
+        return card;
+    }
+
+    public static async Task<CardPileAddResult> AddGeneratedCardToCombatWithResult(
+        CardModel card,
+        PileType pile,
+        Player? creator,
+        CardPilePosition position = CardPilePosition.Random)
+    {
+        var result = await CardPileCmd.AddGeneratedCardToCombat(card, pile, creator, position);
+        NotifyGeneratedPileAddFinished(card, pile);
+        return result;
+    }
+
+    public static async Task<IReadOnlyList<CardModel>> AddGeneratedCardsToCombat(
+        IEnumerable<CardModel> cards,
+        PileType pile,
+        Player? creator,
+        CardPilePosition position = CardPilePosition.Random)
+    {
+        var list = cards.ToList();
+        await AddGeneratedCardsToCombatWithResults(list, pile, creator, position);
+        return list;
+    }
+
+    public static async Task<IReadOnlyList<CardPileAddResult>> AddGeneratedCardsToCombatWithResults(
+        IEnumerable<CardModel> cards,
+        PileType pile,
+        Player? creator,
+        CardPilePosition position = CardPilePosition.Random)
+    {
+        var list = cards.ToList();
+        var results = await CardPileCmd.AddGeneratedCardsToCombat(list, pile, creator, position);
+        foreach (var card in list)
+            NotifyGeneratedPileAddFinished(card, pile);
+        return results;
+    }
+
     public static async Task<CardModel?> AddGeneratedCopyToHand(
         CardModel card,
         GeneratedCardOptions options,
@@ -123,6 +168,16 @@ internal static class SakuraGeneratedCardLifecycle
         PlayerChoiceContext? context = null,
         bool refreshGeneratedTransparentHandVisual = true)
     {
+        await AddGeneratedCardToCombatWithResult(card, options, context, refreshGeneratedTransparentHandVisual);
+        return card;
+    }
+
+    public static async Task<CardPileAddResult> AddGeneratedCardToCombatWithResult(
+        CardModel card,
+        GeneratedCardOptions options = default,
+        PlayerChoiceContext? context = null,
+        bool refreshGeneratedTransparentHandVisual = true)
+    {
         if (options.RemoveRelease)
             card.RemoveRelease();
         if (options.RemoveTemporary)
@@ -145,7 +200,7 @@ internal static class SakuraGeneratedCardLifecycle
 
         var destinationPile = options.Pile ?? PileType.Hand;
         TrackGeneratedTransparentHandVisualCard(card, destinationPile, refreshGeneratedTransparentHandVisual);
-        await CardPileCmd.AddGeneratedCardToCombat(
+        var result = await AddGeneratedCardToCombatWithResult(
             card,
             destinationPile,
             card.Owner,
@@ -159,7 +214,17 @@ internal static class SakuraGeneratedCardLifecycle
 
         if (refreshGeneratedTransparentHandVisual)
             RefreshGeneratedTransparentHandVisual(card);
-        return card;
+        return result;
+    }
+
+    private static void NotifyGeneratedPileAddFinished(CardModel card, PileType requestedPile)
+    {
+        if (requestedPile == PileType.Hand
+            || card.Pile?.Type != requestedPile
+            || card.Pile is not { IsCombatPile: true } pile)
+            return;
+
+        pile.InvokeCardAddFinished();
     }
 
     private static void RefreshGeneratedTransparentHandVisual(CardModel card)

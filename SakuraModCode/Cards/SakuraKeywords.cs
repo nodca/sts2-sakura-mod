@@ -41,6 +41,10 @@ public static class SakuraKeywords
     [KeywordProperties(AutoKeywordPosition.None)]
     public static CardKeyword Echo;
 
+    [CustomEnum("INVISIBLE")]
+    [KeywordProperties(AutoKeywordPosition.None)]
+    public static CardKeyword Invisible;
+
     [CustomEnum("REMOVABLE")]
     [KeywordProperties(AutoKeywordPosition.None)]
     public static CardKeyword Removable;

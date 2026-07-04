@@ -22,6 +22,7 @@ using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.ValueProps;
+using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Character;
@@ -337,14 +338,17 @@ public class ClassicTheNothingMonster : CustomMonsterModel
 
     private static async Task AddVoids(Creature target, int count)
     {
-        if (target.Player is not { } player)
+        if (target.Player is not { } player || target.CombatState is not { } combatState)
             return;
 
-        for (var i = 0; i < count; i++)
-        {
-            var card = player.RunState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Void>(player);
-            await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Discard, player, CardPilePosition.Random);
-        }
+        var cards = Enumerable.Range(0, count)
+            .Select(_ => (CardModel)combatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Void>(player))
+            .ToList();
+        CardCmd.PreviewCardPileAdd(await SakuraGeneratedCardLifecycle.AddGeneratedCardsToCombatWithResults(
+            cards,
+            PileType.Discard,
+            player,
+            CardPilePosition.Bottom));
     }
 
     private static async Task PurgeRandomCombatCards(Creature target, int count)

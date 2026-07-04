@@ -56,15 +56,18 @@ public class Mirage() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Ta
         if (IsUpgraded)
             CardCmd.Upgrade(image, CardPreviewStyle.None);
 
-        await SakuraManifestLoop.AddGeneratedCardToCombat(
+        var targetPile = ShouldRelease ? PileType.Hand : PileType.Discard;
+        var result = await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombatWithResult(
             image,
             new GeneratedCardOptions
             {
                 AddTemporary = this.IsTemporary(),
-                Pile = ShouldRelease ? PileType.Hand : PileType.Discard,
+                Pile = targetPile,
                 Position = CardPilePosition.Random
             },
             choiceContext);
+        if (targetPile != PileType.Hand)
+            CardCmd.PreviewCardPileAdd(result);
     }
 
     private MirageImage CreateMirageImage() =>
