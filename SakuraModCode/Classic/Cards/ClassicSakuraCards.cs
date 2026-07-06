@@ -1127,7 +1127,7 @@ public class SakuraLight() : ClassicSakuraConversionCard(1, CardType.Skill, Targ
 public class ClowLock() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None, ClassicCardIdentity.Lock)
 {
     public override ClassicElement Element => ClassicElement.Firey;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, CardKeyword.Ethereal];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 2), new EnergyVar(2)];
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
@@ -2131,7 +2131,7 @@ public class ClowSnow() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.Un
     [
         new ClassicCombatHistoryDamageVar(4, ValueProp.Move, ClassicSnowRules.PlayedWateryClowCards),
         new ClassicDamageVar(ClassicSnowRules.PerCardDamageVar, 4, ValueProp.Move),
-        new DynamicVar("Magic", 0),
+        new ClassicCombatHistoryCountVar(ClassicSnowRules.PlayedWateryClowCards),
         new DynamicVar("ExtraDamage", ExtraDamage)
     ];
 
@@ -2170,7 +2170,7 @@ public class SakuraSnow() : ClassicSakuraConversionCard(1, CardType.Attack, Targ
     [
         new ClassicCombatHistoryDamageVar(5, ValueProp.Move, ClassicSnowRules.PlayedWateryCards),
         new ClassicDamageVar(ClassicSnowRules.PerCardDamageVar, 5, ValueProp.Move),
-        new DynamicVar("Magic", 0)
+        new ClassicCombatHistoryCountVar(ClassicSnowRules.PlayedWateryCards)
     ];
 
     protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)

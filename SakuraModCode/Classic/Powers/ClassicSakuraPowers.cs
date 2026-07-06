@@ -1195,6 +1195,7 @@ public class ClassicTemporaryStrengthPower : TemporaryStrengthPower, ICustomPowe
     public string? CustomBigIconPath => ModelDb.Power<StrengthPower>().ResolvedBigIconPath;
     public string? CustomBigBetaIconPath => ModelDb.Power<StrengthPower>().ResolvedBigIconPath;
     public override AbstractModel OriginModel => ModelDb.Card<ClowFight>();
+    protected override bool IsVisibleInternal => false;
 }
 
 public class ClassicTemporaryStrengthLossPower : TemporaryStrengthPower, ICustomPower

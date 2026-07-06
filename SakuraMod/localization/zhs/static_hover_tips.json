@@ -9,6 +9,8 @@
   "SAKURAMOD-STRONG_REFLECTION.description": "反射下一次受到的攻击伤害。",
   "SAKURAMOD-CLASSIC_SPELL_CARD.title": "符咒",
   "SAKURAMOD-CLASSIC_SPELL_CARD.description": "不属于[gold]库洛牌[/gold]的一类特殊卡牌，多为消耗性牌。",
+  "SAKURAMOD-CLASSIC_UNREAL.title": "虚幻",
+  "SAKURAMOD-CLASSIC_UNREAL.description": "此牌消耗其他手牌时，添加此牌的复制品到弃牌堆。",
   "SAKURAMOD-CLASSIC_EARTHY_CARD.title": "地",
   "SAKURAMOD-CLASSIC_EARTHY_CARD.description": "地属性库洛牌。魔力充能状态下打出此牌时，将会进入地元素状态。在地元素状态中打出可以获得格挡。",
   "SAKURAMOD-CLASSIC_EARTHY_SPELL_CARD.title": "地",

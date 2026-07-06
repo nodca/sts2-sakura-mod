@@ -967,6 +967,12 @@ internal sealed class ClassicCombatHistoryDamageVar(
     }
 }
 
+internal sealed class ClassicCombatHistoryCountVar(Func<CardModel, int> hitCount) : DynamicVar("Magic", 0)
+{
+    public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks) =>
+        PreviewValue = Math.Max(0, hitCount(card));
+}
+
 internal sealed class ClassicBlockVar(decimal block, ValueProp props, ClassicCardIdentity? starterIdentity = null) :
     BlockVar(block, props)
 {

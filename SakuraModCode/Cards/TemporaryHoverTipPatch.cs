@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Classic.Cards;
+using SakuraMod.SakuraModCode.Classic.Powers;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -86,6 +87,27 @@ public static class TemporaryHoverTipPatch
             tips = tips.Append(HoverTipFactory.FromKeyword(SakuraKeywords.Echo));
         }
 
+        if (card is ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow, Identity: ClassicCardIdentity.Lock })
+            tips = AppendTip(tips, "SAKURAMOD-CLASSIC_UNREAL");
+
+        if (card is ClassicSakuraCard classicCard)
+        {
+            if (ReferencesClassicMagicChargeTip(classicCard))
+                tips = tips.Append(HoverTipFactory.FromPower<ClassicMagicChargePower>());
+
+            tips = classicCard.Identity switch
+            {
+                ClassicCardIdentity.Freeze => tips.Append(HoverTipFactory.FromPower<ClassicFreezePower>()),
+                ClassicCardIdentity.Sleep => tips.Append(HoverTipFactory.FromPower<ClassicSleepPower>()),
+                ClassicCardIdentity.Silent => tips.Append(HoverTipFactory.FromPower<ClassicSilentPendingPower>()),
+                ClassicCardIdentity.Nothing => tips.Append(HoverTipFactory.FromPower<ClassicNothingPower>()),
+                _ => tips
+            };
+        }
+
+        if (card is SakuraHope)
+            tips = tips.Append(HoverTipFactory.FromPower<ClassicHopePower>());
+
         if (card is ClassicSakuraCard { Identity: ClassicCardIdentity.Create } createCard)
         {
             tips = tips.Append(HoverTipFactory.FromKeyword(SakuraKeywords.Removable));
@@ -98,6 +120,15 @@ public static class TemporaryHoverTipPatch
 
         return tips;
     }
+
+    private static bool ReferencesClassicMagicChargeTip(ClassicSakuraCard card) =>
+        card is SakuraLegacy
+        || card.Identity is ClassicCardIdentity.Bubbles
+            or ClassicCardIdentity.Fight
+            or ClassicCardIdentity.Glow
+            or ClassicCardIdentity.Libra
+            or ClassicCardIdentity.Lock
+            or ClassicCardIdentity.Thunder;
 
     private static IEnumerable<IHoverTip> AppendReferencedKeywordTips(CardModel card, IEnumerable<IHoverTip> tips)
     {

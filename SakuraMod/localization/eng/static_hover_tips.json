@@ -9,6 +9,8 @@
   "SAKURAMOD-STRONG_REFLECTION.description": "Reflect the next enemy attack.",
   "SAKURAMOD-CLASSIC_SPELL_CARD.title": "Spell",
   "SAKURAMOD-CLASSIC_SPELL_CARD.description": "A special card type that is not a Clow Card, usually consumed after use.",
+  "SAKURAMOD-CLASSIC_UNREAL.title": "Unreal",
+  "SAKURAMOD-CLASSIC_UNREAL.description": "When this card exhausts another card, add a copy of this card into your discard pile.",
   "SAKURAMOD-CLASSIC_EARTHY_CARD.title": "Earthy",
   "SAKURAMOD-CLASSIC_EARTHY_CARD.description": "An Earthy card. When played while Magic Charge is active, this card enters Earthy state. While in Earthy state, playing Earthy cards grants Block.",
   "SAKURAMOD-CLASSIC_EARTHY_SPELL_CARD.title": "Earthy",
