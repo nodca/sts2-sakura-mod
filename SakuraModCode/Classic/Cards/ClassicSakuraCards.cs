@@ -1623,7 +1623,7 @@ public class ClowFight() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.R
 
     private async Task AddFightCopy(PlayerChoiceContext choiceContext)
     {
-        var copy = CreateClone();
+        var copy = SakuraActions.CloneWithCurrentUpgrade<ClowFight>(this);
         await CardPileCmd.AddGeneratedCardToCombat(copy, PileType.Hand, Owner, CardPilePosition.Random);
     }
 }
