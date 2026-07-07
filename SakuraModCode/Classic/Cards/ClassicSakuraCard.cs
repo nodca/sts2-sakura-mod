@@ -1,6 +1,7 @@
 using BaseLib.Abstracts;
 using BaseLib.Extensions;
 using BaseLib.Patches.Features;
+using BaseLib.Patches.Localization;
 using BaseLib.Utils;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
@@ -26,6 +27,7 @@ using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Classic.Relics;
 using SakuraMod.SakuraModCode.Extensions;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace SakuraMod.SakuraModCode.Classic.Cards;
 
@@ -289,14 +291,18 @@ public abstract class ClassicClowCard(
         ClassicSakuraCardCatalog.ArtStem(GetType()).BigClassicClowArtPath();
 }
 
-public abstract class ClassicExtraClowCard(
-    int cost,
-    CardType type,
-    CardRarity rarity,
-    TargetType target,
-    ClassicCardIdentity identity) :
-    ClassicClowCard(cost, type, rarity, target, identity)
+public abstract class ClassicExtraClowCard :
+    ClassicClowCard
 {
+    protected ClassicExtraClowCard(
+        int cost,
+        CardType type,
+        CardRarity rarity,
+        TargetType target,
+        ClassicCardIdentity identity) :
+        base(cost, type, rarity, target, identity)
+    { }
+
     protected override bool HasMagicChargeExtraEffect => true;
 }
 
@@ -1090,6 +1096,94 @@ internal static class ClassicSakuraMagic
             PileType.Discard,
             owner,
             CardPilePosition.Bottom));
+    }
+}
+
+internal static class ClassicMagicChargeDescriptionText
+{
+    public static void Register() =>
+        DescriptionOverrides.CustomizeDescriptionPost += HideInactiveExtraEffectText;
+
+    private static void HideInactiveExtraEffectText(CardModel cardModel, Creature? target, ref string description)
+    {
+        if (ShouldHideExtraEffectText(cardModel))
+            description = RemoveExtraEffectLines(description);
+    }
+
+    internal static bool ShouldHideExtraEffectText(CardModel cardModel)
+    {
+        if (cardModel is not ClassicExtraClowCard card)
+            return false;
+        if (!card.IsMutable)
+            return true;
+
+        return !ClassicSakuraMagic.CanUseExtraEffect(card.Owner);
+    }
+
+    internal static string RemoveExtraEffectLines(string description)
+    {
+        var builder = new StringBuilder(description.Length);
+        var lineStart = 0;
+        for (var i = 0; i <= description.Length; i++)
+        {
+            if (i < description.Length && description[i] is not '\r' and not '\n')
+                continue;
+
+            AppendLineUnlessExtraEffect(builder, description, lineStart, i);
+            if (i < description.Length && description[i] == '\r' && i + 1 < description.Length && description[i + 1] == '\n')
+                i++;
+
+            lineStart = i + 1;
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AppendLineUnlessExtraEffect(StringBuilder builder, string text, int start, int end)
+    {
+        while (start < end && char.IsWhiteSpace(text[start]))
+            start++;
+        while (end > start && char.IsWhiteSpace(text[end - 1]))
+            end--;
+
+        if (start >= end || IsExtraEffectLine(text, start, end))
+            return;
+
+        if (builder.Length > 0)
+            builder.Append('\n');
+        builder.Append(text, start, end - start);
+    }
+
+    private static bool IsExtraEffectLine(string text, int start, int end)
+    {
+        var visibleText = RemoveRichTextTags(text, start, end).TrimStart();
+        return visibleText.StartsWith("额外效果：", StringComparison.Ordinal)
+               || visibleText.StartsWith("Extra:", StringComparison.Ordinal);
+    }
+
+    private static string RemoveRichTextTags(string text, int start, int end)
+    {
+        var builder = new StringBuilder(end - start);
+        var insideTag = false;
+        for (var i = start; i < end; i++)
+        {
+            var c = text[i];
+            if (c == '[')
+            {
+                insideTag = true;
+                continue;
+            }
+            if (insideTag)
+            {
+                if (c == ']')
+                    insideTag = false;
+                continue;
+            }
+
+            builder.Append(c);
+        }
+
+        return builder.ToString();
     }
 }
 

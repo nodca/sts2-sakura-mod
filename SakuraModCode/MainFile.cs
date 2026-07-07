@@ -3,6 +3,7 @@ using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Relics;
@@ -25,6 +26,7 @@ public partial class MainFile : Node
         ModConfigRegistry.Register(ModId, new SakuraModConfig());
         SealedBookMemory.Register();
         SakuraManifestLoop.Register();
+        ClassicMagicChargeDescriptionText.Register();
         DreamKey.Register();
 
         Harmony harmony = new(ModId);
