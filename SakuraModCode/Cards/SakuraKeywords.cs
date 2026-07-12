@@ -1,69 +1,74 @@
-using BaseLib.Patches.Content;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using STS2RitsuLib.Content;
+using STS2RitsuLib.Keywords;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
 public static class SakuraKeywords
 {
-    [CustomEnum("WIND")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword Wind;
+    public static readonly CardKeyword Wind = Keyword("WIND");
+    public static readonly CardKeyword Water = Keyword("WATER");
+    public static readonly CardKeyword Fire = Keyword("FIRE");
+    public static readonly CardKeyword Earth = Keyword("EARTH");
+    public static readonly CardKeyword Stabilize = Keyword("STABILIZE");
+    public static readonly CardKeyword Manifest = Keyword("MANIFEST");
+    public static readonly CardKeyword SakuraCard = Keyword("SAKURA_CARD");
+    public static readonly CardKeyword Echo = Keyword("ECHO");
+    public static readonly CardKeyword Invisible = Keyword("INVISIBLE");
+    public static readonly CardKeyword Removable = Keyword("REMOVABLE");
+    public static readonly CardKeyword CostDecreasing = Keyword("COST_DECREASING");
+    public static readonly CardKeyword EntityLimited = Keyword("ENTITY_LIMITED");
+    public static readonly CardKeyword Purge = Keyword("PURGE");
+    public static readonly CardKeyword Loner = Keyword("LONER");
+    public static readonly CardKeyword Frostbite = Keyword("FROSTBITE");
 
-    [CustomEnum("WATER")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword Water;
+    private static readonly IReadOnlyDictionary<string, ModKeywordCardDescriptionPlacement> DescriptionPlacements =
+        new Dictionary<string, ModKeywordCardDescriptionPlacement>
+        {
+            ["LONER"] = ModKeywordCardDescriptionPlacement.AfterCardDescription
+        };
 
-    [CustomEnum("FIRE")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword Fire;
+    public static void Register()
+    {
+        var registry = ModKeywordRegistry.For(MainFile.ModId);
+        foreach (var stem in Stems)
+        {
+            registry.RegisterOwned(
+                stem,
+                "card_keywords",
+                LocKey(stem, "title"),
+                "card_keywords",
+                LocKey(stem, "description"),
+                iconPath: null,
+                DescriptionPlacements.GetValueOrDefault(stem, ModKeywordCardDescriptionPlacement.None),
+                includeInCardHoverTip: true);
+        }
+    }
 
-    [CustomEnum("EARTH")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword Earth;
+    private static readonly string[] Stems =
+    [
+        "WIND",
+        "WATER",
+        "FIRE",
+        "EARTH",
+        "STABILIZE",
+        "MANIFEST",
+        "SAKURA_CARD",
+        "ECHO",
+        "INVISIBLE",
+        "REMOVABLE",
+        "COST_DECREASING",
+        "ENTITY_LIMITED",
+        "PURGE",
+        "LONER",
+        "FROSTBITE"
+    ];
 
-    [CustomEnum("STABILIZE")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword Stabilize;
+    private static CardKeyword Keyword(string stem) =>
+        ModKeywordRegistry.GetCardKeyword(ModContentRegistry.GetQualifiedKeywordId(MainFile.ModId, stem));
 
-    [CustomEnum("CATALOG")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword Catalog;
-
-    [CustomEnum("MANIFEST")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword Manifest;
-
-    [CustomEnum("SAKURA_CARD")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword SakuraCard;
-
-    [CustomEnum("ECHO")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword Echo;
-
-    [CustomEnum("INVISIBLE")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword Invisible;
-
-    [CustomEnum("REMOVABLE")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword Removable;
-
-    [CustomEnum("COST_DECREASING")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword CostDecreasing;
-
-    [CustomEnum("ENTITY_LIMITED")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword EntityLimited;
-
-    [CustomEnum("BURN")]
-    [KeywordProperties(AutoKeywordPosition.None)]
-    public static CardKeyword Burn;
-
-    [CustomEnum("LONER")]
-    [KeywordProperties(AutoKeywordPosition.After)]
-    public static CardKeyword Loner;
+    private static string LocKey(string stem, string suffix) =>
+        $"{MainFile.ModId.ToUpperInvariant()}-{stem}.{suffix}";
 }
 
 public enum SakuraElement

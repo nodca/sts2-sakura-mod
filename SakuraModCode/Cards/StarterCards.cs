@@ -1,54 +1,67 @@
-using BaseLib.Utils;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.Extensions;
 using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Gale() : SakuraModCard(1, CardType.Attack, CardRarity.Basic, TargetType.AnyEnemy), IReleaseable
+public class Gale() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy), IExtraEffectCard
 {
+    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(6, ValueProp.Move),
-        new DamageVar("ReleaseDamage", 4, ValueProp.Move),
-        new CardsVar("ReleaseDraw", 1)
+        new DamageVar(3, ValueProp.Move),
+        new GaleHitsVar(),
+        new CardsVar("ExtraDraw", 3)
     ];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
+        var hits = GaleRules.HitCount(this);
         await SakuraActions.AttackCommand(this, target, DynamicVars.Damage.IntValue, DynamicVars.Damage.Props)
+            .WithHitCount(hits)
             .WithHitVfxNode(target => SakuraCardPlayVfx.CreateGaleWindBlade(Owner.Creature, target))
             .Execute(choiceContext);
-        await TriggerReleaseEffect(choiceContext, play);
+
+        await TriggerExtraEffect(choiceContext, play);
     }
 
-    public async Task OnReleased(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        var target = play.Target ?? CombatState?.HittableEnemies.FirstOrDefault();
-        if (target is not null)
-        {
-            await SakuraActions.AttackCommand(this, target, damage: DynamicVars["ReleaseDamage"].IntValue)
-                .WithHitVfxNode(target => SakuraCardPlayVfx.CreateGaleWindBlade(Owner.Creature, target, releaseFollowUp: true))
-                .WithNoAttackerAnim()
-                .Execute(choiceContext);
-        }
+    public async Task OnExtraEffect(PlayerChoiceContext choiceContext, CardPlay play) =>
+        await CardPileCmd.Draw(choiceContext, DynamicVars["ExtraDraw"].IntValue, Owner, false);
 
-        await CardPileCmd.Draw(choiceContext, DynamicVars["ReleaseDraw"].IntValue, Owner, false);
-    }
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(1);
+}
 
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
+internal sealed class GaleHitsVar() : DynamicVar("Hits", 1)
+{
+    public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks) =>
+        PreviewValue = GaleRules.HitCount(card);
+}
+
+internal static class GaleRules
+{
+    public static int HitCount(CardModel card) =>
+        HitCount(SakuraDrawCountHook.DrawCountThisTurn(card));
+
+    internal static int HitCount(int drawCount) =>
+        1 + Math.Max(0, drawCount) / 2;
 }
 
 public class Reflect() : SakuraModCard(1, CardType.Skill, CardRarity.Common, TargetType.Self)
 {
+    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [CurrentUpgradeLevel > 0 ? SakuraCardHoverTips.StrongReflectionTipKey : SakuraCardHoverTips.ReflectionTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new BlockVar("UpgradeBlock", 3, ValueProp.Move)
@@ -59,57 +72,33 @@ public class Reflect() : SakuraModCard(1, CardType.Skill, CardRarity.Common, Tar
         if (IsUpgraded)
             await CreatureCmd.GainBlock(Owner.Creature, DynamicVars["UpgradeBlock"].IntValue, ValueProp.Move, play, false);
 
-        if (ShouldRelease)
+        if (IsUsingExtraEffect)
             await PowerCmd.Apply<StrongReflectionPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
         else
             await PowerCmd.Apply<ReflectionPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
     }
 
-    protected override void OnUpgrade() {}
+    protected override void OnUpgrade() { }
 }
 
-public class Flight() : SakuraModCard(1, CardType.Skill, CardRarity.Common, TargetType.Self), IReleaseable
+public class Flight() : SakuraModCard(1, CardType.Skill, CardRarity.Common, TargetType.Self), IExtraEffectCard
 {
+    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(4, ValueProp.Move), new PowerVar<SakuraTemporaryDexterityPower>(1), new EnergyVar(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(5, ValueProp.Move), new PowerVar<SakuraTemporaryDexterityPower>(2), new EnergyVar(1)];
 
     protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await CommonActions.CardBlock(this, play);
+        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, play, false);
         await PowerCmd.Apply<SakuraTemporaryDexterityPower>(choiceContext, Owner.Creature, DynamicVars["SakuraTemporaryDexterityPower"].IntValue, Owner.Creature, this, false);
-        await TriggerReleaseEffect(choiceContext, play);
+        await TriggerExtraEffect(choiceContext, play);
     }
 
-    public async Task OnReleased(PlayerChoiceContext choiceContext, CardPlay play) =>
+    public async Task OnExtraEffect(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PlayerCmd.GainEnergy(1, Owner);
 
     protected override void OnUpgrade()
     {
         DynamicVars.Block.UpgradeValueBy(2);
     }
-}
-
-public class DreamWand() : SakuraModCard(1, CardType.Skill, CardRarity.Basic, TargetType.Self)
-{
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
-
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        SakuraVoicePlayback.TryPlay(SakuraVoiceTrigger.DreamWand, CombatState);
-
-        var selected = await SakuraActions.SelectUpToHandCards(
-            this,
-            choiceContext,
-            card => SakuraCardCatalog.IsTransparentCard(card) && !card.IsReleased(),
-            DynamicVars.Cards.IntValue,
-            cancelable: false);
-        foreach (var card in selected)
-        {
-            await SakuraActions.ReleaseThisTurnAndRecord(choiceContext, card);
-            await SakuraActions.ReduceCostThisTurn(choiceContext, this, card);
-        }
-    }
-
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }

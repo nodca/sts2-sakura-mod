@@ -1,7 +1,3 @@
-using BaseLib.Abstracts;
-using BaseLib.Extensions;
-using BaseLib.Patches.Saves;
-using BaseLib.Utils;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
@@ -24,19 +20,21 @@ using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.Relics;
+using STS2RitsuLib.Scaffolding.Content;
+using STS2RitsuLib.Utils;
 using CoreVoid = MegaCrit.Sts2.Core.Models.Cards.Void;
 
 namespace SakuraMod.SakuraModCode.Classic.Relics;
 
-[Pool(typeof(ClassicSakuraRelicPool))]
-public abstract class ClassicSakuraRelic : CustomRelicModel
+public abstract class ClassicSakuraRelic : ModRelicTemplate
 {
-    protected virtual string IconFileName => "relic.png";
+    protected abstract string IconFileName { get; }
     protected virtual string IconOutlineFileName => $"{Path.GetFileNameWithoutExtension(IconFileName)}_outline.png";
 
-    public override string PackedIconPath => IconFileName.RelicImagePath();
-    protected override string PackedIconOutlinePath => IconOutlineFileName.RelicImagePath();
-    protected override string BigIconPath => IconFileName.BigRelicImagePath();
+    public override string CustomIconPath => IconFileName.RelicImagePath();
+    public override string CustomIconOutlinePath => IconOutlineFileName.RelicImagePath();
+    public override string CustomBigIconPath => IconFileName.BigRelicImagePath();
 }
 
 public class ClassicSealedBookRelic : ClassicSakuraRelic
@@ -45,7 +43,7 @@ public class ClassicSealedBookRelic : ClassicSakuraRelic
     public override RelicRarity Rarity => RelicRarity.Starter;
 }
 
-public class ClassicSealedWandRelic : ClassicSakuraRelic
+public class ClassicSealedWandRelic : ClassicSakuraRelic, ISakuraUpgradeableStarterRelic
 {
     private const string ChargeGainVar = "ChargeGain";
     private const string EliteBossExtraGainVar = "EliteBossExtraGain";
@@ -60,8 +58,8 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
     private const int DefaultEliteBossExtraGain = 2;
     private const int DefaultSealExtraGain = 2;
 
-    private static readonly SavedSpireField<ClassicSealedWandRelic, int> Charge =
-        new(() => 0, "SakuraMod_ClassicSealedWandCharge");
+    private static readonly SavedAttachedState<ClassicSealedWandRelic, int> Charge =
+        new("SakuraMod_ClassicSealedWandCharge", () => 0);
 
     private readonly HashSet<uint> _chargedDeathsThisCombat = [];
     private readonly HashSet<Creature> _sealKillsThisCombat = new(ReferenceEqualityComparer.Instance);
@@ -89,7 +87,7 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
         new SealedWandRemainingChargeVar(BaseTriggerAmount)
     ];
 
-    public override RelicModel? GetUpgradeReplacement() =>
+    public virtual RelicModel? GetUpgradeReplacement() =>
         ModelDb.Relic<ClassicStarWandRelic>();
 
     public override async Task BeforeCombatStart()
@@ -217,7 +215,7 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic
         if (Owner is null)
             return;
 
-        HashSet<ClassicCardIdentity> seen = [];
+        HashSet<SourceCardIdentity> seen = [];
         List<CardTransformation> transformations = [];
 
         foreach (var card in Owner.Deck.Cards.OfType<ClassicSakuraConversionCard>())
@@ -716,8 +714,8 @@ public class ClassicMoonBellRelic : ClassicSakuraRelic
     private const int Heal = 1;
     private const int DeathPreventHealPercent = 30;
 
-    private static readonly SavedSpireField<ClassicMoonBellRelic, bool> Used =
-        new(() => false, "SakuraMod_ClassicMoonBellUsed");
+    private static readonly SavedAttachedState<ClassicMoonBellRelic, bool> Used =
+        new("SakuraMod_ClassicMoonBellUsed", () => false);
 
     protected override string IconFileName => Used[this] ? "moon_bell_invalid.png" : "moon_bell.png";
     protected override string IconOutlineFileName => "moon_bell_outline.png";
@@ -909,6 +907,15 @@ public static class ClassicSakuraExclusiveRelics
 
     public static bool IsRewardableExclusive(RelicModel relic) =>
         RewardableTypes.Contains(relic.GetType());
+
+    public static Type[] AllClassicRelicTypes() =>
+    [
+        typeof(ClassicSealedBookRelic),
+        typeof(ClassicSealedWandRelic),
+        typeof(ClassicStarWandRelic),
+        typeof(ClassicUltimateWandRelic),
+        ..RewardableTypes
+    ];
 
     public static RelicModel[] AllClassicRelics() =>
     [

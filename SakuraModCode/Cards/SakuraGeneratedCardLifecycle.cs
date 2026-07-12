@@ -1,6 +1,4 @@
 using Godot;
-using BaseLib.Extensions;
-using BaseLib.Utils;
 using MegaCrit.Sts2.Core;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -13,7 +11,7 @@ using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Powers;
+using SakuraMod.SakuraModCode.Extensions;
 using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Cards;
@@ -22,11 +20,9 @@ public readonly record struct GeneratedCardOptions
 {
     public PileType? Pile { get; init; }
     public CardPilePosition? Position { get; init; }
-    public bool RemoveRelease { get; init; }
     public bool RemoveTemporary { get; init; }
     public bool RemoveManifestAtlasOrigin { get; init; }
     public bool AddTemporary { get; init; }
-    public bool AddRelease { get; init; }
     public bool AddManifestAtlasOrigin { get; init; }
     public bool FreeThisTurn { get; init; }
 }
@@ -47,13 +43,11 @@ internal static class SakuraGeneratedCardLifecycle
 
     public static async Task<CardModel?> AddTemporaryCopyToHand(
         CardModel card,
-        bool release,
         bool freeThisTurn,
-        bool preserveRelease,
         PlayerChoiceContext context) =>
         await AddGeneratedCopyToHand(
             card,
-            TemporaryCopyOptions(release, freeThisTurn, preserveRelease),
+            TemporaryCopyOptions(freeThisTurn),
             context);
 
     public static async Task<CardModel?> AddRememberedCopyToHand(CardModel card, bool freeThisTurn) =>
@@ -75,19 +69,6 @@ internal static class SakuraGeneratedCardLifecycle
         PlayerChoiceContext? context = null,
         CardPilePosition position = CardPilePosition.Random) =>
         AddGeneratedCardToCombat(card, GeneratedCardToHandOptions(position), context);
-
-    public static Task<CardModel> AddTemporaryReleasedCardToCombat(
-        CardModel card,
-        PlayerChoiceContext context,
-        PileType pile = PileType.Hand,
-        CardPilePosition position = CardPilePosition.Random) =>
-        AddGeneratedCardToCombat(card, TemporaryReleasedCardOptions(pile, position), context);
-
-    public static Task<CardModel> AddRestoredReleasedCardToHand(
-        CardModel card,
-        PlayerChoiceContext context,
-        bool freeThisTurn) =>
-        AddGeneratedCardToCombat(card, RestoredReleasedCardToHandOptions(freeThisTurn), context);
 
     public static async Task<CardModel> AddGeneratedCardToCombat(
         CardModel card,
@@ -178,8 +159,6 @@ internal static class SakuraGeneratedCardLifecycle
         PlayerChoiceContext? context = null,
         bool refreshGeneratedTransparentHandVisual = true)
     {
-        if (options.RemoveRelease)
-            card.RemoveRelease();
         if (options.RemoveTemporary)
             card.RemoveTemporaryForExchange();
         if (options.RemoveManifestAtlasOrigin)
@@ -208,9 +187,6 @@ internal static class SakuraGeneratedCardLifecycle
 
         if (temporaryGranted && context is not null)
             await TriggerTemporaryGranted(context, card);
-
-        if (options.AddRelease)
-            await SakuraActions.ReleaseAndRecord(context ?? new ThrowingPlayerChoiceContext(), card);
 
         if (refreshGeneratedTransparentHandVisual)
             RefreshGeneratedTransparentHandVisual(card);
@@ -388,12 +364,10 @@ internal static class SakuraGeneratedCardLifecycle
         }
     }
 
-    internal static GeneratedCardOptions TemporaryCopyOptions(bool release, bool freeThisTurn, bool preserveRelease) =>
+    internal static GeneratedCardOptions TemporaryCopyOptions(bool freeThisTurn) =>
         new()
         {
-            RemoveRelease = !preserveRelease,
             AddTemporary = true,
-            AddRelease = release,
             FreeThisTurn = freeThisTurn
         };
 
@@ -405,19 +379,9 @@ internal static class SakuraGeneratedCardLifecycle
             FreeThisTurn = freeThisTurn
         };
 
-    internal static GeneratedCardOptions RestoredReleasedCardToHandOptions(bool freeThisTurn) =>
-        new()
-        {
-            Pile = PileType.Hand,
-            RemoveTemporary = true,
-            AddRelease = true,
-            FreeThisTurn = freeThisTurn
-        };
-
     private static GeneratedCardOptions ManifestChoiceOptions(bool addTemporary, bool captureEligible) =>
         new()
         {
-            RemoveRelease = true,
             AddTemporary = addTemporary,
             AddManifestAtlasOrigin = captureEligible
         };
@@ -427,15 +391,6 @@ internal static class SakuraGeneratedCardLifecycle
         {
             Pile = PileType.Hand,
             Position = position
-        };
-
-    private static GeneratedCardOptions TemporaryReleasedCardOptions(PileType pile, CardPilePosition position) =>
-        new()
-        {
-            Pile = pile,
-            Position = position,
-            AddTemporary = true,
-            AddRelease = true
         };
 
     private static GeneratedCardOptions ManifestAtlasTemporaryCardOptions() =>
@@ -458,9 +413,6 @@ internal static class SakuraGeneratedCardLifecycle
         return scope.CreateCard(card, source.Owner);
     }
 
-    private static async Task TriggerTemporaryGranted(PlayerChoiceContext context, CardModel card)
-    {
-        if (card.Owner?.Creature.GetPower<FalseDailyLifePower>() is { } falseDailyLife)
-            await falseDailyLife.AfterTemporaryGranted(context);
-    }
+    private static Task TriggerTemporaryGranted(PlayerChoiceContext context, CardModel card) =>
+        Task.CompletedTask;
 }

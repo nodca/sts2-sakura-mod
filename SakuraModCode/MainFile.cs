@@ -1,4 +1,4 @@
-using BaseLib.Config;
+using System.Reflection;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
@@ -6,7 +6,9 @@ using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Relics;
+using SakuraMod.SakuraModCode.Events;
+using SakuraMod.SakuraModCode.Telemetry;
+using STS2RitsuLib.Interop;
 
 namespace SakuraMod.SakuraModCode;
 
@@ -20,20 +22,19 @@ public partial class MainFile : Node
 
     public static void Initialize()
     {
-        //If you want to use scripts defined in your mod for Godot scenes, uncomment the following line.
-        //Godot.Bridge.ScriptManagerBridge.LookupScriptsInAssembly(Assembly.GetExecutingAssembly());
+        ModTypeDiscoveryHub.RegisterModAssembly(ModId, Assembly.GetExecutingAssembly());
 
-        ModConfigRegistry.Register(ModId, new SakuraModConfig());
-        SealedBookMemory.Register();
-        SakuraManifestLoop.Register();
-        ClassicMagicChargeDescriptionText.Register();
-        DreamKey.Register();
+        SakuraKeywords.Register();
+        SakuraCardStates.Register();
+        SakuraContentRegistration.Register();
+        SakuraEventRegistration.Register();
+        SakuraTelemetry.Register();
 
         Harmony harmony = new(ModId);
 
         harmony.PatchAll();
+        SakuraCardVisualPatchRegistration.Register();
         ClassicSakuraRunHooks.Register();
-        SakuraCaptureRunHooks.Register();
         ClearCardLayout.PreloadVisualResources();
     }
 }

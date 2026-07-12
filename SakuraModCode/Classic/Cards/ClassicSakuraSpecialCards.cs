@@ -10,7 +10,7 @@ using SakuraMod.SakuraModCode.Classic.Powers;
 
 namespace SakuraMod.SakuraModCode.Classic.Cards;
 
-public class ClowNothing() : ClassicClowCard(2, CardType.Power, CardRarity.Event, TargetType.None, ClassicCardIdentity.Nothing)
+public class ClowNothing() : ClassicClowCard(2, CardType.Power, CardRarity.Event, TargetType.None, SourceCardIdentity.Nothing)
 {
     public override ClassicElement Element => ClassicElement.None;
     protected override bool HasMagicChargeExtraEffect => false;

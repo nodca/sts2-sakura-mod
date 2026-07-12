@@ -1,83 +1,34 @@
-using BaseLib.Abstracts;
-using BaseLib.Utils;
-using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
-using SakuraMod.SakuraModCode.Powers;
-using SakuraMod.SakuraModCode.Relics;
 using SakuraMod.SakuraModCode.Character;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
+using STS2RitsuLib.Content;
+using STS2RitsuLib.Models.Capabilities;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public sealed class ReleaseModifier : CardModifier
-{
-    public override void OnInitialApplication() =>
-        Owner?.NotifyReleaseStateChanged();
-
-    public override void LoadSaveData(ModifierSave save) =>
-        Owner?.NotifyReleaseStateChanged();
-
-    public override void ModifyDescriptionPost(MegaCrit.Sts2.Core.Entities.Creatures.Creature? target, ref string description)
-    {
-        if (!description.Contains("[gold]Released[/gold]") && !description.Contains("[gold]已解封[/gold]"))
-            description += SakuraStateText.ReleaseLine();
-    }
-}
-
-public sealed class ReleaseThisTurnModifier : CardModifier
-{
-    public override bool ShouldReceiveCombatHooks => true;
-
-    public override void OnInitialApplication() =>
-        Owner?.NotifyReleaseStateChanged();
-
-    public override void LoadSaveData(ModifierSave save) =>
-        Owner?.NotifyReleaseStateChanged();
-
-    public override void ModifyDescriptionPost(MegaCrit.Sts2.Core.Entities.Creatures.Creature? target, ref string description)
-    {
-        if (!description.Contains("[gold]Released[/gold]") && !description.Contains("[gold]已解封[/gold]"))
-            description += SakuraStateText.ReleaseLine();
-    }
-
-    public override Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
-    {
-        if (Owner?.Owner?.Creature is { } ownerCreature
-            && ownerCreature.Side == side
-            && participants.Contains(ownerCreature))
-        {
-            var card = Owner;
-            CardModifier.RemoveModifier(card, this);
-            card.NotifyReleaseStateChanged();
-        }
-
-        return Task.CompletedTask;
-    }
-}
-
-public sealed class SynchronizedCardPairModifier : CardModifier
+public sealed class SynchronizedCardPairModifier : SakuraCardStateCapability
 {
     private static readonly HashSet<SynchronizedPairKey> ResolvingPairs = [];
-    private readonly List<CardModel> _partners = [];
+    private readonly List<CardModel> _pairedCards = [];
 
-    public override bool ShouldReceiveCombatHooks => true;
-
-    public void AddPartner(CardModel partner)
+    public void AddPairedCard(CardModel pairedCard)
     {
-        if (Owner is null || partner == Owner || _partners.Contains(partner))
+        if (Owner is null || pairedCard == Owner || _pairedCards.Contains(pairedCard))
             return;
 
-        _partners.Add(partner);
+        _pairedCards.Add(pairedCard);
     }
 
-    public override void ModifyDescriptionPost(MegaCrit.Sts2.Core.Entities.Creatures.Creature? target, ref string description)
+    protected override void ModifyDescriptionPost(Creature? target, ref string description)
     {
         if (Owner is not { } card)
             return;
@@ -92,25 +43,25 @@ public sealed class SynchronizedCardPairModifier : CardModifier
             return;
 
         var card = Owner;
-        var partnersToConsume = _partners.ToList();
+        var pairedCardsToConsume = _pairedCards.ToList();
         try
         {
-            foreach (var partner in partnersToConsume)
+            foreach (var pairedCard in pairedCardsToConsume)
             {
-                if (!CanAutoPlay(partner))
+                if (!CanAutoPlay(pairedCard))
                     continue;
 
-                var target = AutoPlayTarget(play, partner);
+                var target = AutoPlayTarget(play, pairedCard);
                 if (target is null)
                     continue;
 
-                var pair = SynchronizedPairKey.Create(card, partner);
+                var pair = SynchronizedPairKey.Create(card, pairedCard);
                 if (!ResolvingPairs.Add(pair))
                     continue;
 
                 try
                 {
-                    await CardCmd.AutoPlay(choiceContext, partner, target, AutoPlayType.Default, false, false);
+                    await CardCmd.AutoPlay(choiceContext, pairedCard, target, AutoPlayType.Default, false, false);
                 }
                 finally
                 {
@@ -120,7 +71,7 @@ public sealed class SynchronizedCardPairModifier : CardModifier
         }
         finally
         {
-            ConsumePairs(card, partnersToConsume);
+            ConsumePairs(card, pairedCardsToConsume);
         }
     }
 
@@ -129,44 +80,44 @@ public sealed class SynchronizedCardPairModifier : CardModifier
         if (Owner?.Owner?.Creature is { } ownerCreature
             && ownerCreature.Side == side
             && participants.Contains(ownerCreature))
-            CardModifier.RemoveModifier(Owner, this);
+            base.RemoveFromOwner();
 
         return Task.CompletedTask;
     }
 
-    public IReadOnlyList<CardModel> AutoPlayPartners() =>
-        _partners
+    public IReadOnlyList<CardModel> AutoPlayPairedCards() =>
+        _pairedCards
             .Where(CanAutoPlay)
             .ToList();
 
-    private static void ConsumePairs(CardModel card, IReadOnlyList<CardModel> partners)
+    private static void ConsumePairs(CardModel card, IReadOnlyList<CardModel> pairedCards)
     {
-        foreach (var partner in partners)
+        foreach (var pairedCard in pairedCards)
         {
-            RemovePartnerReference(card, partner);
-            RemovePartnerReference(partner, card);
+            RemovePairedCardReference(card, pairedCard);
+            RemovePairedCardReference(pairedCard, card);
         }
     }
 
-    private static void RemovePartnerReference(CardModel card, CardModel partner)
+    private static void RemovePairedCardReference(CardModel card, CardModel pairedCard)
     {
-        foreach (var modifier in CardModifier.Modifiers(card).OfType<SynchronizedCardPairModifier>().ToArray())
-            modifier.RemovePartner(partner);
+        foreach (var modifier in SakuraCardStateCapability.Modifiers(card).OfType<SynchronizedCardPairModifier>().ToArray())
+            modifier.RemovePairedCard(pairedCard);
     }
 
-    private void RemovePartner(CardModel partner)
+    private void RemovePairedCard(CardModel pairedCard)
     {
-        _partners.RemoveAll(card => ReferenceEquals(card, partner));
-        if (_partners.Count == 0 && Owner is not null)
-            CardModifier.RemoveModifier(Owner, this);
+        _pairedCards.RemoveAll(card => ReferenceEquals(card, pairedCard));
+        if (_pairedCards.Count == 0 && Owner is not null)
+            RemoveFromOwner();
     }
 
-    private bool CanAutoPlay(CardModel partner)
+    private bool CanAutoPlay(CardModel pairedCard)
     {
         var owner = Owner?.Owner;
         return owner is not null
-               && partner.Owner == owner
-               && IsInSynchronizedAutoPlayPile(partner, owner);
+               && pairedCard.Owner == owner
+               && IsInSynchronizedAutoPlayPile(pairedCard, owner);
     }
 
     private static bool IsInSynchronizedAutoPlayPile(CardModel card, Player owner) =>
@@ -233,81 +184,9 @@ public sealed class SynchronizedCardPairModifier : CardModifier
     }
 }
 
-public sealed class ElementThisTurnModifier : CardModifier
-{
-    private const string ElementsKey = "Elements";
-
-    public SakuraElementSet Elements { get; private set; }
-
-    public override bool ShouldReceiveCombatHooks => true;
-
-    public SakuraElementSet AddElements(SakuraElementSet elements)
-    {
-        var added = elements & ~Elements;
-        if (added == SakuraElementSet.None)
-            return SakuraElementSet.None;
-
-        Elements |= added;
-        ApplyKeywords(added);
-        return added;
-    }
-
-    public override void StoreSaveData(ModifierSave save) =>
-        save.IntProperties[ElementsKey] = (int)Elements;
-
-    public override void LoadSaveData(ModifierSave save)
-    {
-        Elements = (SakuraElementSet)save.IntProperties.GetValueOrDefault(ElementsKey);
-        ApplyKeywords(Elements);
-    }
-
-    public override void OnInitialApplication() =>
-        ApplyKeywords(Elements);
-
-    public override Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
-    {
-        if (Owner?.Owner?.Creature is { } ownerCreature
-            && ownerCreature.Side == side
-            && participants.Contains(ownerCreature))
-            RemoveFromOwner();
-
-        return Task.CompletedTask;
-    }
-
-    private void ApplyKeywords(SakuraElementSet elements)
-    {
-        if (Owner is null)
-            return;
-
-        foreach (var element in elements.AsElements())
-        {
-            var keyword = SakuraActions.KeywordFor(element);
-            if (!Owner.Keywords.Contains(keyword))
-                Owner.AddKeyword(keyword);
-        }
-    }
-
-    private void RemoveFromOwner()
-    {
-        if (Owner is not { } card)
-            return;
-
-        var staticElements = SakuraActions.StaticElementSetOf(card);
-        foreach (var element in Elements.AsElements())
-        {
-            var keyword = SakuraActions.KeywordFor(element);
-            if (!staticElements.HasElement(element) && card.Keywords.Contains(keyword))
-                card.RemoveKeyword(keyword);
-        }
-
-        CardModifier.RemoveModifier(card, this);
-    }
-}
-
-public sealed class TemporaryModifier : CardModifier
+public sealed class TemporaryModifier : SakuraCardStateCapability
 {
     private const string DelayedRemovalTurnsKey = "DelayedRemovalTurns";
-    private static readonly LocString ResonancePrompt = new("cards", "SAKURAMOD-GENERIC.temporaryCardPrompt");
     private static readonly ConditionalWeakTable<ICombatState, HashSet<Player>> CleanupFinishedByCombat = new();
     private static readonly PileType[] CleanupPileOrder =
     [
@@ -320,8 +199,6 @@ public sealed class TemporaryModifier : CardModifier
 
     public int DelayedRemovalTurns { get; private set; }
 
-    public override bool ShouldReceiveCombatHooks => true;
-
     public void DelayRemoval(int turns)
     {
         if (turns <= 0)
@@ -330,17 +207,20 @@ public sealed class TemporaryModifier : CardModifier
         DelayedRemovalTurns += turns;
     }
 
-    public override void StoreSaveData(ModifierSave save) =>
-        save.IntProperties[DelayedRemovalTurnsKey] = DelayedRemovalTurns;
+    protected override JsonNode? SaveAdditionalState() =>
+        new JsonObject { [DelayedRemovalTurnsKey] = DelayedRemovalTurns };
 
-    public override void LoadSaveData(ModifierSave save) =>
-        DelayedRemovalTurns = save.IntProperties.GetValueOrDefault(DelayedRemovalTurnsKey);
+    protected override void LoadAdditionalState(JsonNode? state, int schemaVersion) =>
+        DelayedRemovalTurns = state?[DelayedRemovalTurnsKey]?.GetValue<int>() ?? 0;
 
-    public override void ModifyDescriptionPost(MegaCrit.Sts2.Core.Entities.Creatures.Creature? target, ref string description)
+    protected override void ModifyDescriptionPost(Creature? target, ref string description)
     {
         if (!description.Contains("[red]Temporary[/red]") && !description.Contains("[red]临时[/red]"))
             description += SakuraStateText.TemporaryLine();
     }
+
+    protected override IEnumerable<string> HoverTipKeys(CardModel card) =>
+        [SakuraCardHoverTips.TemporaryTipKey];
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
@@ -362,10 +242,6 @@ public sealed class TemporaryModifier : CardModifier
                 return;
         }
 
-        var resonance = player.Creature.GetPower<DreamKeyResonancePower>();
-        if (resonance is not null)
-            await StabilizeOneTemporaryCard(choiceContext, player);
-
         foreach (var card in TemporaryCardsInCleanupOrder(player))
         {
             if (card.Pile?.IsCombatPile != true || !card.IsTemporary())
@@ -375,28 +251,6 @@ public sealed class TemporaryModifier : CardModifier
 
             await RemoveTemporaryFromCombat(choiceContext, card);
         }
-    }
-
-    private static async Task StabilizeOneTemporaryCard(PlayerChoiceContext choiceContext, MegaCrit.Sts2.Core.Entities.Players.Player player)
-    {
-        var candidates = TemporaryCardsInCleanupOrder(player)
-            .Where(card => card.Pile?.IsCombatPile == true && card.CanStabilize())
-            .ToList();
-        if (candidates.Count == 0)
-            return;
-
-        var selected = await CardSelectCmd.FromSimpleGrid(
-            choiceContext,
-            candidates,
-            player,
-            new CardSelectorPrefs(ResonancePrompt, 1)
-            {
-                Cancelable = false,
-                RequireManualConfirmation = false
-            });
-
-        if (selected.FirstOrDefault() is { } card)
-            await card.Stabilize(choiceContext);
     }
 
     private static IEnumerable<CardModel> TemporaryCardsInCleanupOrder(MegaCrit.Sts2.Core.Entities.Players.Player player)
@@ -420,10 +274,6 @@ public sealed class TemporaryModifier : CardModifier
         if (card.Pile?.IsCombatPile == true)
         {
             TemporaryCardMemory.Remember(card);
-            if (card.Owner?.Creature.GetPower<FalseDailyLifePower>() is { } falseDailyLife)
-                await falseDailyLife.AfterTemporaryRemoved(choiceContext);
-            if (card.Owner?.Creature.GetPower<DreamsEndPower>() is { } dreamsEnd)
-                await dreamsEnd.AfterTemporaryRemoved(choiceContext);
             TemporaryDissolveVfx.Play(card);
             await CardPileCmd.RemoveFromCombat(card, true);
         }
@@ -432,7 +282,7 @@ public sealed class TemporaryModifier : CardModifier
     private static bool ConsumeTemporaryRemovalDelay(CardModel card)
     {
         var delayed = false;
-        foreach (var modifier in CardModifier.Modifiers(card).OfType<TemporaryModifier>())
+        foreach (var modifier in SakuraCardStateCapability.Modifiers(card).OfType<TemporaryModifier>())
             delayed |= modifier.ConsumeRemovalDelay();
 
         return delayed;
@@ -457,7 +307,7 @@ public sealed class TemporaryModifier : CardModifier
     }
 }
 
-public sealed class ReplayThisTurnModifier : CardModifier
+public sealed class ReplayThisTurnModifier : SakuraCardStateCapability
 {
     private const string AmountKey = "Amount";
     private bool _applied;
@@ -472,15 +322,18 @@ public sealed class ReplayThisTurnModifier : CardModifier
         Amount = amount;
     }
 
-    public override void OnInitialApplication() =>
-        ApplyToOwner();
-
-    public override void StoreSaveData(ModifierSave save) =>
-        save.IntProperties[AmountKey] = Amount;
-
-    public override void LoadSaveData(ModifierSave save)
+    protected override void OnAttach(CardModel owner)
     {
-        Amount = save.IntProperties.GetValueOrDefault(AmountKey);
+        base.OnAttach(owner);
+        ApplyToOwner();
+    }
+
+    protected override JsonNode? SaveAdditionalState() =>
+        new JsonObject { [AmountKey] = Amount };
+
+    protected override void LoadAdditionalState(JsonNode? state, int schemaVersion)
+    {
+        Amount = state?[AmountKey]?.GetValue<int>() ?? 0;
         ApplyToOwner();
     }
 
@@ -489,12 +342,12 @@ public sealed class ReplayThisTurnModifier : CardModifier
         if (Owner?.Owner?.Creature is { } ownerCreature
             && ownerCreature.Side == side
             && participants.Contains(ownerCreature))
-            RemoveFromOwner();
+            RemoveReplayStateFromOwner();
 
         return Task.CompletedTask;
     }
 
-    private void RemoveFromOwner()
+    private void RemoveReplayStateFromOwner()
     {
         if (Owner is not { } card)
             return;
@@ -505,7 +358,7 @@ public sealed class ReplayThisTurnModifier : CardModifier
             _applied = false;
         }
 
-        CardModifier.RemoveModifier(card, this);
+        base.RemoveFromOwner();
     }
 
     private void ApplyToOwner()
@@ -518,7 +371,53 @@ public sealed class ReplayThisTurnModifier : CardModifier
     }
 }
 
-public sealed class ManifestAtlasOriginModifier : CardModifier;
+public sealed class ManifestAtlasOriginModifier : SakuraCardStateCapability
+{
+}
+
+public abstract class SakuraCardStateCapability : CardCapability, ICardDescriptionContributor, ICardHoverTipContributor
+{
+    private const string DescriptionFragmentTable = "cards";
+    private const string DescriptionFragmentKey = "SAKURAMOD-GENERIC.capabilityDescriptionFragment";
+
+    public static IEnumerable<SakuraCardStateCapability> Modifiers(CardModel card) =>
+        card.Capabilities().All.OfType<SakuraCardStateCapability>();
+
+    public static void AddModifier(CardModel card, SakuraCardStateCapability modifier) =>
+        card.AddCapability(modifier, allowMerge: false);
+
+    public static void RemoveModifier(CardModel card, SakuraCardStateCapability modifier) =>
+        card.Capabilities().Remove(modifier);
+
+    public IEnumerable<CardDescriptionFragment> GetDescriptionFragments(CardDescriptionContext context)
+    {
+        var description = "";
+        ModifyDescriptionPost(context.Target, ref description);
+        if (string.IsNullOrEmpty(description))
+            return [];
+
+        var text = new LocString(DescriptionFragmentTable, DescriptionFragmentKey);
+        text.Add("Text", description);
+        return [new CardDescriptionFragment(text, CardDescriptionFragmentPlacement.AfterBase)];
+    }
+
+    protected virtual void ModifyDescriptionPost(Creature? target, ref string description)
+    {
+    }
+
+    public IEnumerable<IHoverTip> GetHoverTips(CardModel card) =>
+        HoverTipKeywords(card).Select(HoverTipFactory.FromKeyword)
+            .Concat(HoverTipKeys(card).Select(key => (IHoverTip)SakuraCardHoverTips.StaticTip(key)))
+            .Distinct();
+
+    internal IEnumerable<CardKeyword> HoverTipKeywordDecisions(CardModel card) => HoverTipKeywords(card);
+
+    internal IEnumerable<string> HoverTipKeyDecisions(CardModel card) => HoverTipKeys(card);
+
+    protected virtual IEnumerable<CardKeyword> HoverTipKeywords(CardModel card) => [];
+
+    protected virtual IEnumerable<string> HoverTipKeys(CardModel card) => [];
+}
 
 public static class TemporaryCardMemory
 {
@@ -556,14 +455,8 @@ public static class TemporaryCardMemory
 
 internal static class SakuraStateText
 {
-    public static string ReleaseLine() =>
-        $"\n{ReleasedLabel()}{SentenceEnding()}";
-
     public static string TemporaryLine() =>
         $"\n{TemporaryLabel()}{SentenceEnding()}";
-
-    public static string ReleasedLabel() =>
-        IsSimplifiedChinese() ? "[gold]已解封[/gold]" : "[gold]Released[/gold]";
 
     public static string TemporaryLabel() =>
         IsSimplifiedChinese() ? "[red]临时[/red]" : "[red]Temporary[/red]";
@@ -571,20 +464,11 @@ internal static class SakuraStateText
     public static string ClearCardLabel() =>
         IsSimplifiedChinese() ? "透明牌" : "Clear Card";
 
-    public static string PartnerCardLabel() =>
-        IsSimplifiedChinese() ? "伙伴牌" : "Partner Card";
-
-    public static string TsubasaCardLabel() =>
-        IsSimplifiedChinese() ? "翼牌" : "Tsubasa Card";
-
-    public static string TechniqueCardLabel() =>
-        IsSimplifiedChinese() ? "技法牌" : "Technique Card";
-
-    public static string SynchronizedLine(IReadOnlyList<string> partnerNames)
+    public static string SynchronizedLine(IReadOnlyList<string> pairedNames)
     {
         var names = IsSimplifiedChinese()
-            ? string.Join("、", partnerNames)
-            : string.Join(", ", partnerNames);
+            ? string.Join("、", pairedNames)
+            : string.Join(", ", pairedNames);
         return IsSimplifiedChinese()
             ? $"\n[gold]同步：[/gold]{names}。"
             : $"\n[gold]Synced:[/gold] {names}.";
@@ -592,12 +476,12 @@ internal static class SakuraStateText
 
     public static string? SynchronizedLine(CardModel card)
     {
-        var partnerNames = card.SynchronizedAutoPlayPartners()
+        var pairedNames = card.SynchronizedAutoPlayPairedCards()
             .Select(CardNameWithUpgrade)
             .ToList();
 
-        return partnerNames.Count > 0
-            ? SynchronizedLine(partnerNames)
+        return pairedNames.Count > 0
+            ? SynchronizedLine(pairedNames)
             : null;
     }
 
@@ -609,8 +493,6 @@ internal static class SakuraStateText
 
     public static IReadOnlyList<string> KnownStatusLabels { get; } =
     [
-        "[gold]已解封[/gold]",
-        "[gold]Released[/gold]",
         "[red]临时[/red]",
         "[red]Temporary[/red]",
         "透明牌",
@@ -695,15 +577,21 @@ internal static class SakuraStateText
 
 public static class SakuraCardStates
 {
-    public static bool IsReleased(this CardModel card) =>
-        CardModifier.Modifiers(card).Any(IsReleaseStateModifier);
+    public static void Register()
+    {
+        var registry = ModContentRegistry.For(MainFile.ModId);
+        registry.RegisterModelCapability<SynchronizedCardPairModifier>();
+        registry.RegisterModelCapability<TemporaryModifier>();
+        registry.RegisterModelCapability<ReplayThisTurnModifier>();
+        registry.RegisterModelCapability<ManifestAtlasOriginModifier>();
+    }
 
     public static bool IsTemporary(this CardModel card) =>
-        CardModifier.Modifiers(card).Any(modifier => modifier is TemporaryModifier);
+        SakuraCardStateCapability.Modifiers(card).Any(modifier => modifier is TemporaryModifier);
 
     public static bool DelayTemporaryRemoval(this CardModel card, int turns)
     {
-        var temporary = CardModifier.Modifiers(card).OfType<TemporaryModifier>().FirstOrDefault();
+        var temporary = SakuraCardStateCapability.Modifiers(card).OfType<TemporaryModifier>().FirstOrDefault();
         if (temporary is null)
             return false;
 
@@ -717,111 +605,43 @@ public static class SakuraCardStates
     }
 
     public static bool IsManifestAtlasOrigin(this CardModel card) =>
-        CardModifier.Modifiers(card).Any(modifier => modifier is ManifestAtlasOriginModifier);
-
-    public static void Release(this CardModel card)
-    {
-        if (HasReleaseState(card, ReleaseStateKind.Permanent))
-        {
-            card.NotifyReleaseStateChanged();
-            return;
-        }
-
-        AddReleaseState(card, ReleaseStateKind.Permanent);
-    }
-
-    public static void MakeReleasePermanent(this CardModel card)
-    {
-        var deckVersion = PermanentReleaseSourceOf(card, allowDeckFallback: !card.IsTemporary());
-        foreach (var target in PermanentReleaseTargets(card, deckVersion))
-        {
-            target.StabilizeWithoutTrigger();
-            target.Release();
-        }
-    }
-
-    public static async Task MakeReleasePermanent(this CardModel card, PlayerChoiceContext choiceContext)
-    {
-        var deckVersion = PermanentReleaseSourceOf(card, allowDeckFallback: !card.IsTemporary());
-        var stabilized = card.RemoveTemporaryForStabilize();
-        if (stabilized)
-            await SakuraManifestLoop.OnTemporaryStabilized(choiceContext, card);
-
-        foreach (var target in PermanentReleaseTargets(card, deckVersion))
-        {
-            if (!ReferenceEquals(target, card))
-                target.StabilizeWithoutTrigger();
-            target.Release();
-        }
-    }
-
-    public static void ReleaseThisTurn(this CardModel card)
-    {
-        if (card.IsReleased())
-        {
-            card.NotifyReleaseStateChanged();
-            return;
-        }
-
-        AddReleaseState(card, ReleaseStateKind.ThisTurn);
-    }
+        SakuraCardStateCapability.Modifiers(card).Any(modifier => modifier is ManifestAtlasOriginModifier);
 
     public static void MakeTemporary(this CardModel card)
     {
         if (!card.IsTemporary())
-            CardModifier.AddModifier(card, NewModifier<TemporaryModifier>());
+            SakuraCardStateCapability.AddModifier(card, NewModifier<TemporaryModifier>());
     }
 
     public static void MarkManifestAtlasOrigin(this CardModel card)
     {
         if (!card.IsManifestAtlasOrigin())
-            CardModifier.AddModifier(card, NewModifier<ManifestAtlasOriginModifier>());
+            SakuraCardStateCapability.AddModifier(card, NewModifier<ManifestAtlasOriginModifier>());
     }
 
     public static void RemoveManifestAtlasOrigin(this CardModel card)
     {
-        foreach (var modifier in CardModifier.Modifiers(card).OfType<ManifestAtlasOriginModifier>().ToArray())
-            CardModifier.RemoveModifier(card, modifier);
+        foreach (var modifier in SakuraCardStateCapability.Modifiers(card).OfType<ManifestAtlasOriginModifier>().ToArray())
+            SakuraCardStateCapability.RemoveModifier(card, modifier);
     }
 
-    public static SakuraElementSet TemporaryElementSet(this CardModel card) =>
-        CardModifier.Modifiers(card)
-            .OfType<ElementThisTurnModifier>()
-            .Aggregate(SakuraElementSet.None, (set, modifier) => set | modifier.Elements);
-
-    public static IReadOnlyList<CardModel> SynchronizedAutoPlayPartners(this CardModel card)
+    public static IReadOnlyList<CardModel> SynchronizedAutoPlayPairedCards(this CardModel card)
     {
-        List<CardModel> partners = [];
+        List<CardModel> pairedCards = [];
         HashSet<CardModel> seen = new(ReferenceEqualityComparer.Instance);
-        foreach (var modifier in CardModifier.Modifiers(card).OfType<SynchronizedCardPairModifier>())
+        foreach (var modifier in SakuraCardStateCapability.Modifiers(card).OfType<SynchronizedCardPairModifier>())
         {
-            foreach (var partner in modifier.AutoPlayPartners())
+            foreach (var pairedCard in modifier.AutoPlayPairedCards())
             {
-                if (ReferenceEquals(partner, card))
+                if (ReferenceEquals(pairedCard, card))
                     continue;
 
-                if (seen.Add(partner))
-                    partners.Add(partner);
+                if (seen.Add(pairedCard))
+                    pairedCards.Add(pairedCard);
             }
         }
 
-        return partners;
-    }
-
-    public static SakuraElementSet GrantElementsThisTurn(this CardModel card, SakuraElementSet elements)
-    {
-        var missing = elements & ~SakuraActions.ElementSetOf(card);
-        if (missing == SakuraElementSet.None)
-            return SakuraElementSet.None;
-
-        var modifier = CardModifier.Modifiers(card).OfType<ElementThisTurnModifier>().FirstOrDefault();
-        if (modifier is null)
-        {
-            modifier = NewModifier<ElementThisTurnModifier>();
-            CardModifier.AddModifier(card, modifier);
-        }
-
-        return modifier.AddElements(missing);
+        return pairedCards;
     }
 
     public static async Task Stabilize(this CardModel card, PlayerChoiceContext choiceContext)
@@ -844,77 +664,47 @@ public static class SakuraCardStates
         card.RemoveTemporaryForStabilize();
     }
 
-    public static void RemoveRelease(this CardModel card)
-    {
-        foreach (var modifier in CardModifier.Modifiers(card).Where(IsReleaseStateModifier).ToArray())
-            CardModifier.RemoveModifier(card, modifier);
-
-        card.NotifyReleaseStateChanged();
-    }
-
-    public static void NotifyReleaseStateChanged(this CardModel card)
-    {
-        if (card is IReleaseStateObserver observer)
-            observer.OnReleaseStateChanged();
-    }
-
-    public static void ExchangeReleaseState(this CardModel first, CardModel second)
-    {
-        var firstStates = ReleaseStateKinds(first);
-        var secondStates = ReleaseStateKinds(second);
-        if (firstStates.Count == 0 && secondStates.Count == 0)
-            return;
-
-        first.RemoveRelease();
-        second.RemoveRelease();
-        foreach (var state in firstStates)
-            AddReleaseState(second, state, playVfx: !secondStates.Contains(state));
-        foreach (var state in secondStates)
-            AddReleaseState(first, state, playVfx: !firstStates.Contains(state));
-    }
-
     public static void SynchronizeWith(this CardModel first, CardModel second)
     {
         if (first == second)
             return;
 
-        GetOrAddSynchronizedCardPairModifier(first).AddPartner(second);
-        GetOrAddSynchronizedCardPairModifier(second).AddPartner(first);
+        GetOrAddSynchronizedCardPairModifier(first).AddPairedCard(second);
+        GetOrAddSynchronizedCardPairModifier(second).AddPairedCard(first);
     }
 
     public static void RemoveTemporaryForExchange(this CardModel card)
     {
-        foreach (var modifier in CardModifier.Modifiers(card).OfType<TemporaryModifier>().ToArray())
-            CardModifier.RemoveModifier(card, modifier);
+        foreach (var modifier in SakuraCardStateCapability.Modifiers(card).OfType<TemporaryModifier>().ToArray())
+            SakuraCardStateCapability.RemoveModifier(card, modifier);
     }
 
     private static bool RemoveTemporaryForStabilize(this CardModel card)
     {
         var removed = false;
-        foreach (var modifier in CardModifier.Modifiers(card).OfType<TemporaryModifier>().ToArray())
+        foreach (var modifier in SakuraCardStateCapability.Modifiers(card).OfType<TemporaryModifier>().ToArray())
         {
-            CardModifier.RemoveModifier(card, modifier);
+            SakuraCardStateCapability.RemoveModifier(card, modifier);
             removed = true;
         }
 
         return removed;
     }
 
-    public static void RemovePlaybackStateExceptRelease(this CardModel card)
+    public static void RemovePlaybackState(this CardModel card)
     {
         card.RemoveTemporaryForExchange();
         card.RemoveManifestAtlasOrigin();
-        RemoveElementThisTurn(card);
 
-        foreach (var modifier in CardModifier.Modifiers(card)
+        foreach (var modifier in SakuraCardStateCapability.Modifiers(card)
                      .Where(modifier => modifier is SynchronizedCardPairModifier)
                      .ToArray())
-            CardModifier.RemoveModifier(card, modifier);
+            SakuraCardStateCapability.RemoveModifier(card, modifier);
 
-        foreach (var modifier in CardModifier.Modifiers(card).OfType<ReplayThisTurnModifier>().ToArray())
+        foreach (var modifier in SakuraCardStateCapability.Modifiers(card).OfType<ReplayThisTurnModifier>().ToArray())
         {
             card.BaseReplayCount = Math.Max(0, card.BaseReplayCount - modifier.Amount);
-            CardModifier.RemoveModifier(card, modifier);
+            SakuraCardStateCapability.RemoveModifier(card, modifier);
         }
     }
 
@@ -944,155 +734,24 @@ public static class SakuraCardStates
 
         var modifier = NewModifier<ReplayThisTurnModifier>();
         modifier.SetAmount(amount);
-        CardModifier.AddModifier(card, modifier);
+        SakuraCardStateCapability.AddModifier(card, modifier);
     }
 
     public static bool CanStabilize(this CardModel card) =>
-        SakuraCardCatalog.IsTransparentCard(card)
-        && (!card.IsMutable || card.Owner?.GetRelic<KaitoPocketWatch>() is null);
+        SakuraCardCatalog.IsTransparentCard(card);
 
-    private static T NewModifier<T>() where T : CardModifier =>
-        (T)CardModifier.Get<T>().MutableClone();
+    private static T NewModifier<T>() where T : SakuraCardStateCapability =>
+        ModelCapabilityRegistry.Create<T>();
 
     private static SynchronizedCardPairModifier GetOrAddSynchronizedCardPairModifier(CardModel card)
     {
-        var modifier = CardModifier.Modifiers(card).OfType<SynchronizedCardPairModifier>().FirstOrDefault();
+        var modifier = SakuraCardStateCapability.Modifiers(card).OfType<SynchronizedCardPairModifier>().FirstOrDefault();
         if (modifier is not null)
             return modifier;
 
         modifier = NewModifier<SynchronizedCardPairModifier>();
-        CardModifier.AddModifier(card, modifier);
+        SakuraCardStateCapability.AddModifier(card, modifier);
         return modifier;
     }
 
-    private static List<ReleaseStateKind> ReleaseStateKinds(CardModel card) =>
-        CardModifier.Modifiers(card)
-            .Select(ReleaseStateKindOf)
-            .Where(kind => kind.HasValue)
-            .Select(kind => kind!.Value)
-            .ToList();
-
-    private static bool HasReleaseState(CardModel card, ReleaseStateKind state) =>
-        CardModifier.Modifiers(card).Any(modifier => ReleaseStateKindOf(modifier) == state);
-
-    private static bool IsReleaseStateModifier(CardModifier modifier) =>
-        ReleaseStateKindOf(modifier) is not null;
-
-    private static IReadOnlyList<CardModel> PermanentReleaseTargets(CardModel card, CardModel? deckVersion)
-    {
-        List<CardModel> targets = [];
-        HashSet<CardModel> seen = new(ReferenceEqualityComparer.Instance);
-        AddTarget(card);
-        if (deckVersion is not null)
-        {
-            AddTarget(deckVersion);
-            foreach (var combatCard in card.Owner.PlayerCombatState?.AllCards ?? [])
-            {
-                if (DeckVersionOf(combatCard) == deckVersion)
-                    AddTarget(combatCard);
-            }
-        }
-
-        return targets;
-
-        void AddTarget(CardModel target)
-        {
-            if (seen.Add(target))
-                targets.Add(target);
-        }
-    }
-
-    private static CardModel? DeckVersionOf(CardModel card)
-    {
-        HashSet<CardModel> seen = new(ReferenceEqualityComparer.Instance);
-        for (CardModel? current = card; current is not null && seen.Add(current); current = current.CloneOf)
-        {
-            if (current.DeckVersion is { } deckVersion)
-                return deckVersion;
-        }
-
-        return null;
-    }
-
-    private static CardModel? PermanentReleaseSourceOf(CardModel card, bool allowDeckFallback)
-    {
-        if (card.Pile?.Type == PileType.Deck)
-            return card;
-
-        if (DeckVersionOf(card) is { } deckVersion)
-            return deckVersion;
-
-        return allowDeckFallback ? SingleMatchingDeckCard(card) : null;
-    }
-
-    private static CardModel? SingleMatchingDeckCard(CardModel card)
-    {
-        if (card.Owner is not { } owner)
-            return null;
-
-        var matches = owner.Deck.Cards
-            .Where(deckCard =>
-                !ReferenceEquals(deckCard, card)
-                && deckCard.Id == card.Id
-                && deckCard.CurrentUpgradeLevel == card.CurrentUpgradeLevel)
-            .ToList();
-
-        return matches.Count == 1 ? matches[0] : null;
-    }
-
-    private static void RemoveElementThisTurn(CardModel card)
-    {
-        var staticElements = SakuraActions.StaticElementSetOf(card);
-        foreach (var modifier in CardModifier.Modifiers(card).OfType<ElementThisTurnModifier>().ToArray())
-        {
-            foreach (var element in modifier.Elements.AsElements())
-            {
-                var keyword = SakuraActions.KeywordFor(element);
-                if (!staticElements.HasElement(element) && card.Keywords.Contains(keyword))
-                    card.RemoveKeyword(keyword);
-            }
-
-            CardModifier.RemoveModifier(card, modifier);
-        }
-    }
-
-    private static ReleaseStateKind? ReleaseStateKindOf(CardModifier modifier) =>
-        modifier switch
-        {
-            ReleaseModifier => ReleaseStateKind.Permanent,
-            ReleaseThisTurnModifier => ReleaseStateKind.ThisTurn,
-            _ => null
-        };
-
-    private static void AddReleaseState(CardModel card, ReleaseStateKind state, bool playVfx = true)
-    {
-        if (HasReleaseState(card, state))
-        {
-            card.NotifyReleaseStateChanged();
-            return;
-        }
-
-        switch (state)
-        {
-            case ReleaseStateKind.Permanent:
-                CardModifier.AddModifier(card, NewModifier<ReleaseModifier>());
-                break;
-            case ReleaseStateKind.ThisTurn:
-                CardModifier.AddModifier(card, NewModifier<ReleaseThisTurnModifier>());
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(state), state, null);
-        }
-
-        card.NotifyReleaseStateChanged();
-
-        if (playVfx)
-            ReleaseVfx.Play(card);
-    }
-
-    private enum ReleaseStateKind
-    {
-        Permanent,
-        ThisTurn
-    }
 }

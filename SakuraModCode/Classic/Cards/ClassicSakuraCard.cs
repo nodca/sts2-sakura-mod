@@ -1,8 +1,3 @@
-using BaseLib.Abstracts;
-using BaseLib.Extensions;
-using BaseLib.Patches.Features;
-using BaseLib.Patches.Localization;
-using BaseLib.Utils;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Commands;
@@ -22,12 +17,15 @@ using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Classic.Relics;
 using SakuraMod.SakuraModCode.Extensions;
+using STS2RitsuLib.Cards.FreePlay;
+using STS2RitsuLib.Models.Capabilities;
+using STS2RitsuLib.Scaffolding.Content;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace SakuraMod.SakuraModCode.Classic.Cards;
 
@@ -38,27 +36,46 @@ public enum ClassicSakuraCardFamily
     Spell
 }
 
-public enum ClassicCardIdentity
+public enum SourceCardIdentity
 {
+    Action,
+    Appear,
     Arrow,
+    Aqua,
     Big,
+    Blade,
+    Blank,
+    Blaze,
     Bubbles,
+    Break,
     Change,
+    Choice,
     Cloud,
     Create,
     Dark,
     Dash,
     Dream,
+    Dreaming,
     Earthy,
     Erase,
+    Exchange,
     Fight,
     Firey,
     Float,
+    Flight,
     Flower,
     Fly,
     Freeze,
+    Gale,
     Glow,
+    Gravitation,
+    Hail,
+    Hope,
     Illusion,
+    Kindness,
+    Labyrinth,
+    Legacy,
+    Lucid,
     Sword,
     Shield,
     Jump,
@@ -67,26 +84,44 @@ public enum ClassicCardIdentity
     Little,
     Lock,
     Loop,
+    Love,
     Maze,
+    Mirage,
     Mirror,
     Mist,
     Move,
     Nothing,
     Power,
+    Promise,
     Rain,
+    Record,
+    Reflect,
+    Remind,
+    Repair,
     Return,
+    Reversal,
+    Rewind,
     Sand,
     Shadow,
+    Shade,
     Shot,
+    Siege,
     Silent,
     Sleep,
+    Snooze,
     Snow,
     Song,
+    Spiral,
     Storm,
+    Struggle,
     Sweet,
+    Swing,
+    Synchronize,
     Through,
     Thunder,
     Time,
+    Transfer,
+    TrueOrFalse,
     Twin,
     Voice,
     Watery,
@@ -95,20 +130,21 @@ public enum ClassicCardIdentity
     Wood
 }
 
-[Pool(typeof(ClassicSakuraCardPool))]
 public abstract class ClassicSakuraCard(
     int cost,
     CardType type,
     CardRarity rarity,
     TargetType target,
     ClassicSakuraCardFamily family,
-    ClassicCardIdentity? identity = null) :
-    CustomCardModel(cost, type, rarity, target)
+    SourceCardIdentity? identity = null) :
+    ModCardTemplate(cost, type, rarity, target)
 {
     protected static readonly LocString HandPrompt = new("cards", "SAKURAMOD-GENERIC.handPrompt");
+    protected static LocString CardLoc<TCard>(string suffix) where TCard : CardModel =>
+        new("cards", $"{ModelDb.GetId(typeof(TCard)).Entry}.{suffix}");
 
     public ClassicSakuraCardFamily Family => family;
-    public ClassicCardIdentity? Identity => identity;
+    public SourceCardIdentity? Identity => identity;
 
     public virtual ClassicElement Element => ClassicElement.None;
     protected virtual bool HasMagicChargeExtraEffect => false;
@@ -135,8 +171,7 @@ public abstract class ClassicSakuraCard(
         var usedExtra = HasMagicChargeExtraEffect && ClassicSakuraMagic.CanUseExtraEffect(Owner);
         if (usedExtra)
         {
-            if (ClassicSakuraMagic.ShouldSpendMagicForExtraEffect(Owner))
-                await ClassicSakuraMagic.SpendMagic(choiceContext, Owner, ClassicSakuraMagic.ExtraEffectCost);
+            await ClassicSakuraMagic.SpendForExtraEffect(choiceContext, Owner);
             await PlayExtra(choiceContext, play);
             await ApplyMagicChargeElementStates(choiceContext);
         }
@@ -277,6 +312,7 @@ public abstract class ClassicSakuraCard(
         if (!Keywords.Contains(keyword))
             AddKeyword(keyword);
     }
+
 }
 
 public abstract class ClassicClowCard(
@@ -284,7 +320,7 @@ public abstract class ClassicClowCard(
     CardType type,
     CardRarity rarity,
     TargetType target,
-    ClassicCardIdentity identity) :
+    SourceCardIdentity identity) :
     ClassicSakuraCard(cost, type, rarity, target, ClassicSakuraCardFamily.Clow, identity)
 {
     protected override string BigPortraitPath =>
@@ -299,7 +335,7 @@ public abstract class ClassicExtraClowCard :
         CardType type,
         CardRarity rarity,
         TargetType target,
-        ClassicCardIdentity identity) :
+        SourceCardIdentity identity) :
         base(cost, type, rarity, target, identity)
     { }
 
@@ -310,7 +346,7 @@ public abstract class ClassicSakuraConversionCard(
     int cost,
     CardType type,
     TargetType target,
-    ClassicCardIdentity identity) :
+    SourceCardIdentity identity) :
     ClassicSakuraCard(cost, type, CardRarity.Token, target, ClassicSakuraCardFamily.Sakura, identity)
 {
     public override int MaxUpgradeLevel => 0;
@@ -367,370 +403,8 @@ internal static class ClassicElementExtensions
 
 internal static class ClassicSakuraCardCatalog
 {
-    private static readonly Type[] RewardableClowCardTypes =
-    [
-        typeof(ClowArrow),
-        typeof(ClowBig),
-        typeof(ClowBubbles),
-        typeof(ClowChange),
-        typeof(ClowCreate),
-        typeof(ClowDark),
-        typeof(ClowDash),
-        typeof(ClowDream),
-        typeof(ClowEarthy),
-        typeof(ClowErase),
-        typeof(ClowFight),
-        typeof(ClowFirey),
-        typeof(ClowFloat),
-        typeof(ClowFly),
-        typeof(ClowFreeze),
-        typeof(ClowGlow),
-        typeof(ClowJump),
-        typeof(ClowIllusion),
-        typeof(ClowLibra),
-        typeof(ClowLight),
-        typeof(ClowLittle),
-        typeof(ClowLock),
-        typeof(ClowLoop),
-        typeof(ClowMaze),
-        typeof(ClowMirror),
-        typeof(ClowMist),
-        typeof(ClowMove),
-        typeof(ClowPower),
-        typeof(ClowRain),
-        typeof(ClowReturn),
-        typeof(ClowSand),
-        typeof(ClowShadow),
-        typeof(ClowShot),
-        typeof(ClowSilent),
-        typeof(ClowSleep),
-        typeof(ClowSnow),
-        typeof(ClowSong),
-        typeof(ClowStorm),
-        typeof(ClowSweet),
-        typeof(ClowThrough),
-        typeof(ClowThunder),
-        typeof(ClowTime),
-        typeof(ClowTwin),
-        typeof(ClowVoice),
-        typeof(ClowCloud),
-        typeof(ClowFlower),
-        typeof(ClowWatery),
-        typeof(ClowWave),
-        typeof(ClowWindy),
-        typeof(ClowWood)
-    ];
-
-    private static readonly Type[] StarterClowCardTypes =
-    [
-        typeof(ClowSword),
-        typeof(ClowShield)
-    ];
-
-    private static readonly Type[] SakuraCardTypes =
-    [
-        typeof(SakuraArrow),
-        typeof(SakuraBig),
-        typeof(SakuraBubbles),
-        typeof(SakuraChange),
-        typeof(SakuraCreate),
-        typeof(SakuraDark),
-        typeof(SakuraDash),
-        typeof(SakuraDream),
-        typeof(SakuraEarthy),
-        typeof(SakuraErase),
-        typeof(SakuraFight),
-        typeof(SakuraFirey),
-        typeof(SakuraFloat),
-        typeof(SakuraFly),
-        typeof(SakuraFreeze),
-        typeof(SakuraGlow),
-        typeof(SakuraSword),
-        typeof(SakuraShield),
-        typeof(SakuraJump),
-        typeof(SakuraIllusion),
-        typeof(SakuraLibra),
-        typeof(SakuraLight),
-        typeof(SakuraLittle),
-        typeof(SakuraLock),
-        typeof(SakuraLoop),
-        typeof(SakuraMaze),
-        typeof(SakuraMirror),
-        typeof(SakuraMist),
-        typeof(SakuraMove),
-        typeof(SakuraPower),
-        typeof(SakuraRain),
-        typeof(SakuraReturn),
-        typeof(SakuraSand),
-        typeof(SakuraShadow),
-        typeof(SakuraShot),
-        typeof(SakuraSilent),
-        typeof(SakuraSleep),
-        typeof(SakuraSnow),
-        typeof(SakuraSong),
-        typeof(SakuraStorm),
-        typeof(SakuraSweet),
-        typeof(SakuraThrough),
-        typeof(SakuraThunder),
-        typeof(SakuraTime),
-        typeof(SakuraTwin),
-        typeof(SakuraVoice),
-        typeof(SakuraCloud),
-        typeof(SakuraFlower),
-        typeof(SakuraWatery),
-        typeof(SakuraWave),
-        typeof(SakuraWindy),
-        typeof(SakuraWood)
-    ];
-
-    private static readonly Type[] SpecialCardTypes =
-    [
-        typeof(ClowNothing),
-        typeof(SakuraLove),
-        typeof(SakuraHope)
-    ];
-
-    private static readonly Type[] AncientCardTypes =
-    [
-        typeof(SakuraLegacy)
-    ];
-
-    private static readonly Type[] SpellCardTypes =
-    [
-        typeof(SpellSeal),
-        typeof(SpellRelease),
-        typeof(SpellTurn),
-        typeof(SpellEmptySpell),
-        typeof(SpellHuoShen),
-        typeof(SpellLeiDi),
-        typeof(SpellFengHua),
-        typeof(SpellShuiLong)
-    ];
-
-    private static readonly IReadOnlyDictionary<ClassicCardIdentity, Type> SakuraByIdentity =
-        new Dictionary<ClassicCardIdentity, Type>
-        {
-            [ClassicCardIdentity.Sword] = typeof(SakuraSword),
-            [ClassicCardIdentity.Shield] = typeof(SakuraShield),
-            [ClassicCardIdentity.Arrow] = typeof(SakuraArrow),
-            [ClassicCardIdentity.Big] = typeof(SakuraBig),
-            [ClassicCardIdentity.Bubbles] = typeof(SakuraBubbles),
-            [ClassicCardIdentity.Change] = typeof(SakuraChange),
-            [ClassicCardIdentity.Create] = typeof(SakuraCreate),
-            [ClassicCardIdentity.Dark] = typeof(SakuraDark),
-            [ClassicCardIdentity.Dash] = typeof(SakuraDash),
-            [ClassicCardIdentity.Dream] = typeof(SakuraDream),
-            [ClassicCardIdentity.Earthy] = typeof(SakuraEarthy),
-            [ClassicCardIdentity.Erase] = typeof(SakuraErase),
-            [ClassicCardIdentity.Fight] = typeof(SakuraFight),
-            [ClassicCardIdentity.Firey] = typeof(SakuraFirey),
-            [ClassicCardIdentity.Float] = typeof(SakuraFloat),
-            [ClassicCardIdentity.Fly] = typeof(SakuraFly),
-            [ClassicCardIdentity.Freeze] = typeof(SakuraFreeze),
-            [ClassicCardIdentity.Glow] = typeof(SakuraGlow),
-            [ClassicCardIdentity.Jump] = typeof(SakuraJump),
-            [ClassicCardIdentity.Illusion] = typeof(SakuraIllusion),
-            [ClassicCardIdentity.Libra] = typeof(SakuraLibra),
-            [ClassicCardIdentity.Light] = typeof(SakuraLight),
-            [ClassicCardIdentity.Little] = typeof(SakuraLittle),
-            [ClassicCardIdentity.Lock] = typeof(SakuraLock),
-            [ClassicCardIdentity.Loop] = typeof(SakuraLoop),
-            [ClassicCardIdentity.Maze] = typeof(SakuraMaze),
-            [ClassicCardIdentity.Mirror] = typeof(SakuraMirror),
-            [ClassicCardIdentity.Mist] = typeof(SakuraMist),
-            [ClassicCardIdentity.Move] = typeof(SakuraMove),
-            [ClassicCardIdentity.Power] = typeof(SakuraPower),
-            [ClassicCardIdentity.Rain] = typeof(SakuraRain),
-            [ClassicCardIdentity.Return] = typeof(SakuraReturn),
-            [ClassicCardIdentity.Sand] = typeof(SakuraSand),
-            [ClassicCardIdentity.Shadow] = typeof(SakuraShadow),
-            [ClassicCardIdentity.Shot] = typeof(SakuraShot),
-            [ClassicCardIdentity.Silent] = typeof(SakuraSilent),
-            [ClassicCardIdentity.Sleep] = typeof(SakuraSleep),
-            [ClassicCardIdentity.Snow] = typeof(SakuraSnow),
-            [ClassicCardIdentity.Song] = typeof(SakuraSong),
-            [ClassicCardIdentity.Storm] = typeof(SakuraStorm),
-            [ClassicCardIdentity.Sweet] = typeof(SakuraSweet),
-            [ClassicCardIdentity.Through] = typeof(SakuraThrough),
-            [ClassicCardIdentity.Thunder] = typeof(SakuraThunder),
-            [ClassicCardIdentity.Time] = typeof(SakuraTime),
-            [ClassicCardIdentity.Twin] = typeof(SakuraTwin),
-            [ClassicCardIdentity.Voice] = typeof(SakuraVoice),
-            [ClassicCardIdentity.Cloud] = typeof(SakuraCloud),
-            [ClassicCardIdentity.Flower] = typeof(SakuraFlower),
-            [ClassicCardIdentity.Watery] = typeof(SakuraWatery),
-            [ClassicCardIdentity.Wave] = typeof(SakuraWave),
-            [ClassicCardIdentity.Windy] = typeof(SakuraWindy),
-            [ClassicCardIdentity.Wood] = typeof(SakuraWood)
-        };
-
-    private static readonly IReadOnlyDictionary<ClassicCardIdentity, Type> ClowByIdentity =
-        new Dictionary<ClassicCardIdentity, Type>
-        {
-            [ClassicCardIdentity.Sword] = typeof(ClowSword),
-            [ClassicCardIdentity.Shield] = typeof(ClowShield),
-            [ClassicCardIdentity.Arrow] = typeof(ClowArrow),
-            [ClassicCardIdentity.Big] = typeof(ClowBig),
-            [ClassicCardIdentity.Bubbles] = typeof(ClowBubbles),
-            [ClassicCardIdentity.Change] = typeof(ClowChange),
-            [ClassicCardIdentity.Create] = typeof(ClowCreate),
-            [ClassicCardIdentity.Dark] = typeof(ClowDark),
-            [ClassicCardIdentity.Dash] = typeof(ClowDash),
-            [ClassicCardIdentity.Dream] = typeof(ClowDream),
-            [ClassicCardIdentity.Earthy] = typeof(ClowEarthy),
-            [ClassicCardIdentity.Erase] = typeof(ClowErase),
-            [ClassicCardIdentity.Fight] = typeof(ClowFight),
-            [ClassicCardIdentity.Firey] = typeof(ClowFirey),
-            [ClassicCardIdentity.Float] = typeof(ClowFloat),
-            [ClassicCardIdentity.Fly] = typeof(ClowFly),
-            [ClassicCardIdentity.Freeze] = typeof(ClowFreeze),
-            [ClassicCardIdentity.Glow] = typeof(ClowGlow),
-            [ClassicCardIdentity.Jump] = typeof(ClowJump),
-            [ClassicCardIdentity.Illusion] = typeof(ClowIllusion),
-            [ClassicCardIdentity.Libra] = typeof(ClowLibra),
-            [ClassicCardIdentity.Light] = typeof(ClowLight),
-            [ClassicCardIdentity.Little] = typeof(ClowLittle),
-            [ClassicCardIdentity.Lock] = typeof(ClowLock),
-            [ClassicCardIdentity.Loop] = typeof(ClowLoop),
-            [ClassicCardIdentity.Maze] = typeof(ClowMaze),
-            [ClassicCardIdentity.Mirror] = typeof(ClowMirror),
-            [ClassicCardIdentity.Mist] = typeof(ClowMist),
-            [ClassicCardIdentity.Move] = typeof(ClowMove),
-            [ClassicCardIdentity.Power] = typeof(ClowPower),
-            [ClassicCardIdentity.Rain] = typeof(ClowRain),
-            [ClassicCardIdentity.Return] = typeof(ClowReturn),
-            [ClassicCardIdentity.Sand] = typeof(ClowSand),
-            [ClassicCardIdentity.Shadow] = typeof(ClowShadow),
-            [ClassicCardIdentity.Shot] = typeof(ClowShot),
-            [ClassicCardIdentity.Silent] = typeof(ClowSilent),
-            [ClassicCardIdentity.Sleep] = typeof(ClowSleep),
-            [ClassicCardIdentity.Snow] = typeof(ClowSnow),
-            [ClassicCardIdentity.Song] = typeof(ClowSong),
-            [ClassicCardIdentity.Storm] = typeof(ClowStorm),
-            [ClassicCardIdentity.Sweet] = typeof(ClowSweet),
-            [ClassicCardIdentity.Through] = typeof(ClowThrough),
-            [ClassicCardIdentity.Thunder] = typeof(ClowThunder),
-            [ClassicCardIdentity.Time] = typeof(ClowTime),
-            [ClassicCardIdentity.Twin] = typeof(ClowTwin),
-            [ClassicCardIdentity.Voice] = typeof(ClowVoice),
-            [ClassicCardIdentity.Cloud] = typeof(ClowCloud),
-            [ClassicCardIdentity.Flower] = typeof(ClowFlower),
-            [ClassicCardIdentity.Watery] = typeof(ClowWatery),
-            [ClassicCardIdentity.Wave] = typeof(ClowWave),
-            [ClassicCardIdentity.Windy] = typeof(ClowWindy),
-            [ClassicCardIdentity.Wood] = typeof(ClowWood),
-            [ClassicCardIdentity.Nothing] = typeof(ClowNothing)
-        };
-
-    private static readonly IReadOnlyDictionary<Type, string> ArtStems = new Dictionary<Type, string>
+    private static readonly IReadOnlyDictionary<Type, string> SpellArtStems = new Dictionary<Type, string>
     {
-        [typeof(ClowSword)] = "the_sword_p.png",
-        [typeof(ClowShield)] = "the_shield_p.png",
-        [typeof(ClowArrow)] = "the_arrow_p.png",
-        [typeof(ClowBig)] = "the_big_p.png",
-        [typeof(ClowBubbles)] = "the_bubbles_p.png",
-        [typeof(ClowChange)] = "the_change_p.png",
-        [typeof(ClowCreate)] = "the_create_p.png",
-        [typeof(ClowDark)] = "the_dark_p.png",
-        [typeof(ClowDash)] = "the_dash_p.png",
-        [typeof(ClowDream)] = "the_dream_p.png",
-        [typeof(ClowJump)] = "the_jump_p.png",
-        [typeof(ClowEarthy)] = "the_earthy_p.png",
-        [typeof(ClowErase)] = "the_erase_p.png",
-        [typeof(ClowFight)] = "the_fight_p.png",
-        [typeof(ClowFirey)] = "the_firey_p.png",
-        [typeof(ClowFloat)] = "the_float_p.png",
-        [typeof(ClowFly)] = "the_fly_p.png",
-        [typeof(ClowFreeze)] = "the_freeze_p.png",
-        [typeof(ClowGlow)] = "the_glow_p.png",
-        [typeof(ClowIllusion)] = "the_illusion_p.png",
-        [typeof(ClowLibra)] = "the_libra_p.png",
-        [typeof(ClowLight)] = "the_light_p.png",
-        [typeof(ClowLittle)] = "the_little_p.png",
-        [typeof(ClowLock)] = "the_lock_p.png",
-        [typeof(ClowLoop)] = "the_loop_p.png",
-        [typeof(ClowMaze)] = "the_maze_p.png",
-        [typeof(ClowMirror)] = "the_mirror_p.png",
-        [typeof(ClowMist)] = "the_mist_p.png",
-        [typeof(ClowMove)] = "the_move_p.png",
-        [typeof(ClowPower)] = "the_power_p.png",
-        [typeof(ClowRain)] = "the_rain_p.png",
-        [typeof(ClowReturn)] = "the_return_p.png",
-        [typeof(ClowSand)] = "the_sand_p.png",
-        [typeof(ClowShadow)] = "the_shadow_p.png",
-        [typeof(ClowShot)] = "the_shot_p.png",
-        [typeof(ClowSilent)] = "the_silent_p.png",
-        [typeof(ClowSleep)] = "the_sleep_p.png",
-        [typeof(ClowSnow)] = "the_snow_p.png",
-        [typeof(ClowSong)] = "the_song_p.png",
-        [typeof(ClowStorm)] = "the_storm_p.png",
-        [typeof(ClowSweet)] = "the_sweet_p.png",
-        [typeof(ClowThrough)] = "the_through_p.png",
-        [typeof(ClowThunder)] = "the_thunder_p.png",
-        [typeof(ClowTime)] = "the_time_p.png",
-        [typeof(ClowTwin)] = "the_twin_p.png",
-        [typeof(ClowVoice)] = "the_voice_p.png",
-        [typeof(ClowCloud)] = "the_cloud_p.png",
-        [typeof(ClowFlower)] = "the_flower_p.png",
-        [typeof(ClowWatery)] = "the_watery_p.png",
-        [typeof(ClowWave)] = "the_wave_p.png",
-        [typeof(ClowWindy)] = "the_windy_p.png",
-        [typeof(ClowWood)] = "the_wood_p.png",
-        [typeof(ClowNothing)] = "the_nothing_p.png",
-        [typeof(SakuraArrow)] = "the_arrow_p.png",
-        [typeof(SakuraEarthy)] = "the_earthy_p.png",
-        [typeof(SakuraErase)] = "the_erase_p.png",
-        [typeof(SakuraFight)] = "the_fight_p.png",
-        [typeof(SakuraFirey)] = "the_firey_p.png",
-        [typeof(SakuraFloat)] = "the_float_p.png",
-        [typeof(SakuraBig)] = "the_big_p.png",
-        [typeof(SakuraBubbles)] = "the_bubbles_p.png",
-        [typeof(SakuraChange)] = "the_change_p.png",
-        [typeof(SakuraCreate)] = "the_create_p.png",
-        [typeof(SakuraDark)] = "the_dark_p.png",
-        [typeof(SakuraDash)] = "the_dash_p.png",
-        [typeof(SakuraSword)] = "the_sword_p.png",
-        [typeof(SakuraShield)] = "the_shield_p.png",
-        [typeof(SakuraDream)] = "the_dream_p.png",
-        [typeof(SakuraFly)] = "the_fly_p.png",
-        [typeof(SakuraFreeze)] = "the_freeze_p.png",
-        [typeof(SakuraGlow)] = "the_glow_p.png",
-        [typeof(SakuraJump)] = "the_jump_p.png",
-        [typeof(SakuraIllusion)] = "the_illusion_p.png",
-        [typeof(SakuraLibra)] = "the_libra_p.png",
-        [typeof(SakuraLight)] = "the_light_p.png",
-        [typeof(SakuraLittle)] = "the_little_p.png",
-        [typeof(SakuraLock)] = "the_lock_p.png",
-        [typeof(SakuraLoop)] = "the_loop_p.png",
-        [typeof(SakuraMaze)] = "the_maze_p.png",
-        [typeof(SakuraMirror)] = "the_mirror_p.png",
-        [typeof(SakuraMist)] = "the_mist_p.png",
-        [typeof(SakuraMove)] = "the_move_p.png",
-        [typeof(SakuraPower)] = "the_power_p.png",
-        [typeof(SakuraRain)] = "the_rain_p.png",
-        [typeof(SakuraReturn)] = "the_return_p.png",
-        [typeof(SakuraSand)] = "the_sand_p.png",
-        [typeof(SakuraShadow)] = "the_shadow_p.png",
-        [typeof(SakuraShot)] = "the_shot_p.png",
-        [typeof(SakuraSilent)] = "the_silent_p.png",
-        [typeof(SakuraSleep)] = "the_sleep_p.png",
-        [typeof(SakuraSnow)] = "the_snow_p.png",
-        [typeof(SakuraSong)] = "the_song_p.png",
-        [typeof(SakuraStorm)] = "the_storm_p.png",
-        [typeof(SakuraSweet)] = "the_sweet_p.png",
-        [typeof(SakuraThrough)] = "the_through_p.png",
-        [typeof(SakuraThunder)] = "the_thunder_p.png",
-        [typeof(SakuraTime)] = "the_time_p.png",
-        [typeof(SakuraTwin)] = "the_twin_p.png",
-        [typeof(SakuraVoice)] = "the_voice_p.png",
-        [typeof(SakuraCloud)] = "the_cloud_p.png",
-        [typeof(SakuraFlower)] = "the_flower_p.png",
-        [typeof(SakuraWatery)] = "the_watery_p.png",
-        [typeof(SakuraWave)] = "the_wave_p.png",
-        [typeof(SakuraWindy)] = "the_windy_p.png",
-        [typeof(SakuraWood)] = "the_wood_p.png",
-        [typeof(SakuraLove)] = "the_love_p.png",
-        [typeof(SakuraHope)] = "the_hope_p.png",
         [typeof(SpellSeal)] = "default_card_p.png",
         [typeof(SpellRelease)] = "default_card_p.png",
         [typeof(SpellTurn)] = "default_card_p.png",
@@ -740,25 +414,22 @@ internal static class ClassicSakuraCardCatalog
         [typeof(SpellFengHua)] = "fenghua_p.png",
         [typeof(SpellShuiLong)] = "shuilong_p.png"
     };
-
-    public static CardModel[] AllCardTemplates() =>
-    [
-        ..StarterClowCardTypes.Select(TypeToCard),
-        ..RewardableClowCardTypes.Select(TypeToCard),
-        ..SakuraCardTypes.Select(TypeToCard),
-        ..SpecialCardTypes.Select(TypeToCard),
-        ..AncientCardTypes.Select(TypeToCard),
-        ..SpellCardTypes.Select(TypeToCard)
-    ];
+    public static IReadOnlyList<Type> AllCardTypes() =>
+        SakuraSourceCardCatalog.ClassicCardTypes;
 
     public static IReadOnlyList<CardModel> RewardableClowTemplates() =>
-        RewardableClowCardTypes.Select(TypeToCard).ToList();
+        SakuraSourceCardCatalog.SourceCardTypes(SourceEraClass.Clow)
+            .Where(static type => type != typeof(ClowSword)
+                && type != typeof(ClowShield)
+                && type != typeof(ClowNothing))
+            .Select(TypeToCard)
+            .ToList();
 
     public static IReadOnlyList<CardModel> AllClowTemplates() =>
-    [
-        ..StarterClowCardTypes.Select(TypeToCard),
-        ..RewardableClowCardTypes.Select(TypeToCard)
-    ];
+        SakuraSourceCardCatalog.SourceCardTypes(SourceEraClass.Clow)
+            .Where(static type => type != typeof(ClowNothing))
+            .Select(TypeToCard)
+            .ToList();
 
     public static CardModel CreateRandomDreamClowCard(Player owner)
     {
@@ -779,16 +450,16 @@ internal static class ClassicSakuraCardCatalog
         return CreateRandomClowCard(owner, options, "Dark Clow pool");
     }
 
-    public static Type? SakuraTypeFor(ClassicCardIdentity identity) =>
-        SakuraByIdentity.TryGetValue(identity, out var type) ? type : null;
+    public static Type? SakuraTypeFor(SourceCardIdentity identity) =>
+        SakuraSourceCardCatalog.TypeFor(identity, SourceEraClass.Sakura);
 
-    public static CardModel? SakuraTemplateFor(ClassicCardIdentity identity) =>
+    public static CardModel? SakuraTemplateFor(SourceCardIdentity identity) =>
         SakuraTypeFor(identity) is { } type ? TypeToCard(type) : null;
 
-    public static Type? ClowTypeFor(ClassicCardIdentity identity) =>
-        ClowByIdentity.TryGetValue(identity, out var type) ? type : null;
+    public static Type? ClowTypeFor(SourceCardIdentity identity) =>
+        SakuraSourceCardCatalog.TypeFor(identity, SourceEraClass.Clow);
 
-    public static bool HasSakuraIdentity(Player owner, ClassicCardIdentity identity) =>
+    public static bool HasSakuraIdentity(Player owner, SourceCardIdentity identity) =>
         CardsInAllKnownPiles(owner)
             .OfType<ClassicSakuraConversionCard>()
             .Any(card => card.Identity == identity);
@@ -821,7 +492,7 @@ internal static class ClassicSakuraCardCatalog
         owner.Deck.Cards.OfType<ClassicSakuraConversionCard>().Select(card => card.Identity).Distinct().Count()
         + owner.Deck.Cards.Count(static card => card is SpellTurn);
 
-    public static int StarterClowCount(Player owner, ClassicCardIdentity identity) =>
+    public static int StarterClowCount(Player owner, SourceCardIdentity identity) =>
         Math.Clamp(owner.Deck.Cards.OfType<ClassicClowCard>().Count(card => card.Identity == identity), 1, 4);
 
     public static bool IsEligibleClowForTurn(CardModel card) =>
@@ -830,10 +501,17 @@ internal static class ClassicSakuraCardCatalog
         && SakuraTypeFor(identity) is not null
         && !HasSakuraIdentity(card.Owner, identity);
 
-    public static string ArtStem(Type type) =>
-        ArtStems.TryGetValue(type, out var stem)
-            ? stem
-            : throw new InvalidOperationException($"Missing Classic Sakura art mapping for {type.Name}.");
+    public static string ArtStem(Type type)
+    {
+        if (SpellArtStems.TryGetValue(type, out var spellStem))
+            return spellStem;
+
+        var metadata = SakuraSourceCardCatalog.MetadataFor(type);
+        if (metadata.VisualRoute != SakuraSourceCardVisualRoute.Classic || metadata.Identity is not { } identity)
+            throw new InvalidOperationException($"Missing Classic Sakura art mapping for {type.Name}.");
+
+        return $"the_{identity.ToString().ToLowerInvariant()}_p.png";
+    }
 
     private static CardModel TypeToCard(Type type) =>
         ModelDb.GetById<CardModel>(ModelDb.GetId(type));
@@ -894,7 +572,7 @@ internal static class ClassicStarterScaling
     private const decimal LoneRate = 0.2m;
     private const decimal MaxLoneRate = 0.6m;
 
-    public static int ScaledValue(Player owner, ClassicCardIdentity identity, int baseValue)
+    public static int ScaledValue(Player owner, SourceCardIdentity identity, int baseValue)
     {
         var count = ClassicSakuraCardCatalog.StarterClowCount(owner, identity);
         var rate = Math.Min(MaxLoneRate, Math.Max(0m, (BaseStarterCount - count) * LoneRate));
@@ -904,15 +582,15 @@ internal static class ClassicStarterScaling
 
 internal sealed class ClassicDamageVar : DamageVar
 {
-    private readonly ClassicCardIdentity? _starterIdentity;
+    private readonly SourceCardIdentity? _starterIdentity;
 
-    public ClassicDamageVar(decimal damage, ValueProp props, ClassicCardIdentity? starterIdentity = null) :
+    public ClassicDamageVar(decimal damage, ValueProp props, SourceCardIdentity? starterIdentity = null) :
         base(damage, props)
     {
         _starterIdentity = starterIdentity;
     }
 
-    public ClassicDamageVar(string name, decimal damage, ValueProp props, ClassicCardIdentity? starterIdentity = null) :
+    public ClassicDamageVar(string name, decimal damage, ValueProp props, SourceCardIdentity? starterIdentity = null) :
         base(name, damage, props)
     {
         _starterIdentity = starterIdentity;
@@ -979,7 +657,7 @@ internal sealed class ClassicCombatHistoryCountVar(Func<CardModel, int> hitCount
         PreviewValue = Math.Max(0, hitCount(card));
 }
 
-internal sealed class ClassicBlockVar(decimal block, ValueProp props, ClassicCardIdentity? starterIdentity = null) :
+internal sealed class ClassicBlockVar(decimal block, ValueProp props, SourceCardIdentity? starterIdentity = null) :
     BlockVar(block, props)
 {
     public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks)
@@ -1021,7 +699,7 @@ internal static class ClassicSakuraMagic
 {
     public const int ExtraEffectCost = 10;
     public const int SwordExtraHpLoss = 15;
-    public const int ShieldMetallicizeBlock = 4;
+    public const int ShieldMetallicizeBlock = 3;
     public const int CloudExtraBlock = 12;
     public const int FlowerExtraEnergy = 2;
 
@@ -1033,6 +711,12 @@ internal static class ClassicSakuraMagic
 
     public static bool ShouldSpendMagicForExtraEffect(Player owner) =>
         owner.Creature.GetPower<ClassicLockSakuraPower>() is null;
+
+    public static async Task SpendForExtraEffect(PlayerChoiceContext choiceContext, Player owner)
+    {
+        if (ShouldSpendMagicForExtraEffect(owner))
+            await SpendMagic(choiceContext, owner, ExtraEffectCost);
+    }
 
     public static async Task SpendMagic(PlayerChoiceContext choiceContext, Player owner, int amount)
     {
@@ -1062,7 +746,7 @@ internal static class ClassicSakuraMagic
         return amount;
     }
 
-    public static async Task GainMagic(PlayerChoiceContext choiceContext, ClassicSakuraCard card)
+    public static async Task GainMagic(PlayerChoiceContext choiceContext, CardModel card)
     {
         var amount = card.Type == CardType.Power ? 2 : 1;
         await PowerCmd.Apply<ClassicMagicChargePower>(choiceContext, card.Owner.Creature, amount, card.Owner.Creature, card, false);
@@ -1070,8 +754,7 @@ internal static class ClassicSakuraMagic
 
     public static void SetFreeForRestOfTurn(CardModel card)
     {
-        if (card.EnergyCost.GetWithModifiers(CostModifiers.Local) > 0)
-            card.EnergyCost.SetThisTurn(0, true);
+        card.SetToFreeForRestOfTurn();
     }
 
     public static async Task AddVoidToDrawPile(PlayerChoiceContext choiceContext, Player owner)
@@ -1097,94 +780,7 @@ internal static class ClassicSakuraMagic
             owner,
             CardPilePosition.Bottom));
     }
-}
 
-internal static class ClassicMagicChargeDescriptionText
-{
-    public static void Register() =>
-        DescriptionOverrides.CustomizeDescriptionPost += HideInactiveExtraEffectText;
-
-    private static void HideInactiveExtraEffectText(CardModel cardModel, Creature? target, ref string description)
-    {
-        if (ShouldHideExtraEffectText(cardModel))
-            description = RemoveExtraEffectLines(description);
-    }
-
-    internal static bool ShouldHideExtraEffectText(CardModel cardModel)
-    {
-        if (cardModel is not ClassicExtraClowCard card)
-            return false;
-        if (!card.IsMutable)
-            return true;
-
-        return !ClassicSakuraMagic.CanUseExtraEffect(card.Owner);
-    }
-
-    internal static string RemoveExtraEffectLines(string description)
-    {
-        var builder = new StringBuilder(description.Length);
-        var lineStart = 0;
-        for (var i = 0; i <= description.Length; i++)
-        {
-            if (i < description.Length && description[i] is not '\r' and not '\n')
-                continue;
-
-            AppendLineUnlessExtraEffect(builder, description, lineStart, i);
-            if (i < description.Length && description[i] == '\r' && i + 1 < description.Length && description[i + 1] == '\n')
-                i++;
-
-            lineStart = i + 1;
-        }
-
-        return builder.ToString();
-    }
-
-    private static void AppendLineUnlessExtraEffect(StringBuilder builder, string text, int start, int end)
-    {
-        while (start < end && char.IsWhiteSpace(text[start]))
-            start++;
-        while (end > start && char.IsWhiteSpace(text[end - 1]))
-            end--;
-
-        if (start >= end || IsExtraEffectLine(text, start, end))
-            return;
-
-        if (builder.Length > 0)
-            builder.Append('\n');
-        builder.Append(text, start, end - start);
-    }
-
-    private static bool IsExtraEffectLine(string text, int start, int end)
-    {
-        var visibleText = RemoveRichTextTags(text, start, end).TrimStart();
-        return visibleText.StartsWith("额外效果：", StringComparison.Ordinal)
-               || visibleText.StartsWith("Extra:", StringComparison.Ordinal);
-    }
-
-    private static string RemoveRichTextTags(string text, int start, int end)
-    {
-        var builder = new StringBuilder(end - start);
-        var insideTag = false;
-        for (var i = start; i < end; i++)
-        {
-            var c = text[i];
-            if (c == '[')
-            {
-                insideTag = true;
-                continue;
-            }
-            if (insideTag)
-            {
-                if (c == ']')
-                    insideTag = false;
-                continue;
-            }
-
-            builder.Append(c);
-        }
-
-        return builder.ToString();
-    }
 }
 
 internal static class ClassicCreateRewards

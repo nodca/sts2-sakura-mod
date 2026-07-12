@@ -1,10 +1,38 @@
 using Godot;
+using MegaCrit.Sts2.Core.Nodes.Cards;
+using STS2RitsuLib.Patching;
+using System.Reflection;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
 internal static class SakuraCardVisualInfrastructure
 {
     private static readonly StringName PanelStyleName = new("panel");
+    private static readonly string[] ReloadOwnedVisibilityFieldNames =
+    [
+        "_portraitBorder",
+        "_portrait",
+        "_frame",
+        "_ancientPortrait",
+        "_ancientBorderGlassOverlay",
+        "_ancientBorder",
+        "_ancientTextBg",
+        "_ancientBanner",
+        "_banner",
+        "_lock",
+    ];
+
+    private static readonly FieldInfo[] ReloadOwnedVisibilityFields =
+        ReloadOwnedVisibilityFieldNames
+            .Select(static fieldName => typeof(NCard).GetField(
+                fieldName,
+                BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            .OfType<FieldInfo>()
+            .ToArray();
+    private static readonly FieldInfo PortraitField =
+        PrivateAccess.DeclaredField<NCard>("_portrait");
+    private static readonly FieldInfo AncientPortraitField =
+        PrivateAccess.DeclaredField<NCard>("_ancientPortrait");
 
     public static bool IsGodotInstanceUsable(GodotObject? instance)
     {
@@ -13,6 +41,42 @@ internal static class SakuraCardVisualInfrastructure
             return instance is not null
                 && GodotObject.IsInstanceValid(instance)
                 && (instance is not Node node || !node.IsQueuedForDeletion());
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
+    }
+
+    public static bool IsReloadOwnedVisibility(NCard card, CanvasItem item)
+    {
+        foreach (var field in ReloadOwnedVisibilityFields)
+        {
+            if (ReferenceEquals(field.GetValue(card), item))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static bool TrySynchronizeCurrentModelPortraits(NCard card)
+    {
+        try
+        {
+            var portrait = card.Model?.Portrait;
+            var normalPortrait = PortraitField.GetValue(card) as TextureRect;
+            var ancientPortrait = AncientPortraitField.GetValue(card) as TextureRect;
+            if (!IsGodotInstanceUsable(portrait)
+                || !IsGodotInstanceUsable(normalPortrait)
+                || !IsGodotInstanceUsable(ancientPortrait))
+            {
+                return false;
+            }
+
+            SetTextureIfDifferent(normalPortrait, portrait);
+            SetTextureIfDifferent(ancientPortrait, portrait);
+            return HasTexture(normalPortrait, portrait)
+                && HasTexture(ancientPortrait, portrait);
         }
         catch (ObjectDisposedException)
         {
@@ -113,6 +177,14 @@ internal static class SakuraCardVisualInfrastructure
             return;
 
         control.RemoveThemeConstantOverride(name);
+    }
+
+    public static void RemoveThemeFontSizeOverride(Control? control, StringName name)
+    {
+        if (control is null || !IsGodotInstanceUsable(control) || !control.HasThemeFontSizeOverride(name))
+            return;
+
+        control.RemoveThemeFontSizeOverride(name);
     }
 
     public static bool HasTexture(TextureRect? textureRect, Texture2D? texture) =>

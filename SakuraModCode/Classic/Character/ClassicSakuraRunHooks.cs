@@ -1,17 +1,17 @@
 using MegaCrit.Sts2.Core.Entities.Creatures;
-using MegaCrit.Sts2.Core.GameActions.Multiplayer;
-using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Modding;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Runs;
 using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Relics;
+using SakuraMod.SakuraModCode.Character;
+using STS2RitsuLib;
 
 namespace SakuraMod.SakuraModCode.Classic.Character;
 
 internal static class ClassicSakuraRunHooks
 {
-    private const string RunHookId = "SakuraMod.ClassicSakura.Run";
-    private static readonly ClassicSakuraHook Hook = new();
+    private static IDisposable? _combatStartingSubscription;
+    private static IDisposable? _creatureDiedSubscription;
     private static bool _registered;
 
     public static void Register()
@@ -19,45 +19,29 @@ internal static class ClassicSakuraRunHooks
         if (_registered)
             return;
 
-        ModHelper.SubscribeForRunStateHooks(RunHookId, runState =>
-        {
-            Hook.SetRunState(runState);
-            return [Hook];
-        });
+        _combatStartingSubscription = RitsuLibFramework.SubscribeLifecycle<CombatStartingEvent>(
+            OnCombatStarting,
+            replayCurrentState: false);
+        _creatureDiedSubscription = RitsuLibFramework.SubscribeLifecycle<CreatureDiedEvent>(
+            OnCreatureDied,
+            replayCurrentState: false);
         _registered = true;
     }
-}
 
-internal sealed class ClassicSakuraHook : AbstractModel
-{
-    private RunState? _runState;
-
-    public override bool ShouldReceiveCombatHooks => false;
-
-    public void SetRunState(RunState runState)
+    private static void OnCombatStarting(CombatStartingEvent evt)
     {
-        _runState = runState;
-    }
-
-    public override Task BeforeCombatStart()
-    {
-        if (_runState is not { } runState)
-            return Task.CompletedTask;
-
-        foreach (var player in runState.Players.Where(player => player.Character is ClassicSakura))
+        foreach (var player in ClassicSakuraPlayers(evt.RunState))
             ClowCreate.ReduceCostAtCombatStart(player);
-
-        return Task.CompletedTask;
     }
 
-    public override Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, bool wasRemovalPrevented, float deathAnimLength)
+    private static void OnCreatureDied(CreatureDiedEvent evt)
     {
-        if (_runState is not { } runState)
-            return Task.CompletedTask;
-
-        foreach (var player in runState.Players.Where(player => player.Character is ClassicSakura))
-            player.GetRelic<ClassicSealedWandRelic>()?.TryGainChargeForEnemyDeath(creature, wasRemovalPrevented);
-
-        return Task.CompletedTask;
+        foreach (var player in ClassicSakuraPlayers(evt.RunState))
+            player.GetRelic<ClassicSealedWandRelic>()?.TryGainChargeForEnemyDeath(
+                evt.Creature,
+                evt.WasRemovalPrevented);
     }
+
+    private static IEnumerable<Player> ClassicSakuraPlayers(IRunState runState) =>
+        runState.Players.Where(SakuraStarterCompatibility.IsKinomotoSakura);
 }

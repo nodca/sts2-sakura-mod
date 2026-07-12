@@ -5,18 +5,15 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary;
+using SakuraMod.SakuraModCode.Classic.Character;
 
 namespace SakuraMod.SakuraModCode.Character;
 
+// RitsuLib 0.4.56 owns compendium filter-row placement, but not the card order inside NCardLibraryGrid.
 [HarmonyPatch(typeof(NCardGrid), nameof(NCardGrid.SetCards))]
 internal static class SakuraCardLibrarySortPatch
 {
-    private const int TransparentGroup = 0;
-    private const int PartnerGroup = 1;
-    private const int TechniqueGroup = 2;
-    private const int TsubasaGroup = 3;
-    private const int OtherEventGroup = 4;
-    private const int OtherSakuraGroup = 5;
+    private const int OtherSakuraGroup = 10;
     private const int MissingIndex = 10_000;
 
     [HarmonyPrefix]
@@ -25,26 +22,37 @@ internal static class SakuraCardLibrarySortPatch
         ref IReadOnlyList<CardModel> cardsToDisplay,
         ref List<SortingOrders> sortingPriority)
     {
-        if (__instance is not NCardLibraryGrid)
-            return;
-        if (cardsToDisplay.Count == 0 || !cardsToDisplay.All(IsSakuraCard))
+        if (!ShouldSortSakuraLibraryGrid(__instance, cardsToDisplay))
             return;
 
+        cardsToDisplay = SortCardsForLibrary(cardsToDisplay, sortingPriority);
+        sortingPriority = [SortingOrders.Ascending];
+    }
+
+    internal static IReadOnlyList<CardModel> SortCardsForLibrary(
+        IReadOnlyList<CardModel> cardsToDisplay,
+        IReadOnlyList<SortingOrders> sortingPriority)
+    {
         var originalIndexes = cardsToDisplay
             .Select((card, index) => new { card, index })
             .ToDictionary(entry => entry.card, entry => entry.index);
         var nativeSortingPriority = sortingPriority.ToList();
         var useCatalogOrder = IsDefaultLibrarySort(nativeSortingPriority);
 
-        cardsToDisplay = cardsToDisplay
+        return cardsToDisplay
             .OrderBy(card => card, Comparer<CardModel>.Create(
                 (left, right) => CompareSakuraCards(left, right, nativeSortingPriority, originalIndexes, useCatalogOrder)))
             .ToList();
-        sortingPriority = [SortingOrders.Ascending];
     }
 
-    private static bool IsSakuraCard(CardModel card) =>
-        card.Pool is SakuraModCardPool;
+    private static bool ShouldSortSakuraLibraryGrid(NCardGrid grid, IReadOnlyList<CardModel> cardsToDisplay) =>
+        grid is NCardLibraryGrid
+        && cardsToDisplay.Count > 0
+        && cardsToDisplay.All(IsSakuraLibraryCard);
+
+    private static bool IsSakuraLibraryCard(CardModel card) =>
+        SakuraSourceCardCatalog.IsPoolCard(card)
+        || card.Pool is ClassicSakuraCardPool;
 
     private static int CompareSakuraCards(
         CardModel left,
@@ -53,13 +61,13 @@ internal static class SakuraCardLibrarySortPatch
         IReadOnlyDictionary<CardModel, int> originalIndexes,
         bool useCatalogOrder)
     {
-        var result = GetCategory(left).CompareTo(GetCategory(right));
+        var result = CategorySortValue(left).CompareTo(CategorySortValue(right));
         if (result != 0)
             return result;
 
         if (useCatalogOrder)
         {
-            result = GetCategoryIndex(left).CompareTo(GetCategoryIndex(right));
+            result = CategoryIndex(left).CompareTo(CategoryIndex(right));
             if (result != 0)
                 return result;
         }
@@ -73,7 +81,7 @@ internal static class SakuraCardLibrarySortPatch
         return left.Id.CompareTo(right.Id);
     }
 
-    private static bool IsDefaultLibrarySort(IReadOnlyList<SortingOrders> sortingPriority) =>
+    internal static bool IsDefaultLibrarySort(IReadOnlyList<SortingOrders> sortingPriority) =>
         sortingPriority.Count == 4
         && sortingPriority[0] == SortingOrders.RarityAscending
         && sortingPriority[1] == SortingOrders.TypeAscending
@@ -93,7 +101,7 @@ internal static class SakuraCardLibrarySortPatch
                 return nativeResult;
         }
 
-        var result = GetCategoryIndex(left).CompareTo(GetCategoryIndex(right));
+        var result = CategoryIndex(left).CompareTo(CategoryIndex(right));
         return result != 0 ? result : left.Id.CompareTo(right.Id);
     }
 
@@ -125,42 +133,27 @@ internal static class SakuraCardLibrarySortPatch
             _ => 0
         };
 
-    private static int GetCategory(CardModel card)
+    internal static int CategorySortValue(CardModel card)
     {
-        if (SakuraCardCatalog.IsTransparentCard(card))
-            return TransparentGroup;
-        if (SakuraCardCatalog.IsPartnerCard(card))
-            return PartnerGroup;
-        if (SakuraCardCatalog.IsTechniqueCard(card))
-            return TechniqueGroup;
-        if (SakuraCardCatalog.IsTsubasaCard(card))
-            return TsubasaGroup;
-        if (SakuraCardCatalog.IsEventOnlyCard(card))
-            return OtherEventGroup;
+        if (SakuraSourceCardCatalog.TryGetMetadata(card, out var metadata))
+        {
+            return metadata.Era switch
+            {
+                SourceEraClass.Clow => 0,
+                SourceEraClass.Sakura => 1,
+                SourceEraClass.Clear => 2,
+                null => 3,
+                _ => throw new ArgumentOutOfRangeException(nameof(metadata.Era), metadata.Era, null)
+            };
+        }
 
         return OtherSakuraGroup;
     }
 
-    private static int GetCategoryIndex(CardModel card)
+    internal static int CategoryIndex(CardModel card)
     {
-        var type = card.GetType();
-        return GetCategory(card) switch
-        {
-            TransparentGroup => IndexOf(SakuraCardCatalog.TransparentCardTypes, type),
-            PartnerGroup => IndexOf(SakuraCardCatalog.PartnerCardTypes, type),
-            TechniqueGroup => IndexOf(SakuraCardCatalog.TechniqueCardTypes, type),
-            TsubasaGroup => IndexOf(SakuraCardCatalog.TsubasaCardTypes, type),
-            _ => MissingIndex
-        };
-    }
-
-    private static int IndexOf(IReadOnlyList<Type> cardTypes, Type cardType)
-    {
-        for (var index = 0; index < cardTypes.Count; index++)
-        {
-            if (cardTypes[index] == cardType)
-                return index;
-        }
+        if (SakuraSourceCardCatalog.TryGetMetadata(card, out var metadata))
+            return metadata.CatalogOrder;
 
         return MissingIndex;
     }

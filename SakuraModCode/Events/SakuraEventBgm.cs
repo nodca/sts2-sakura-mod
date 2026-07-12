@@ -1,25 +1,21 @@
-using BaseLib.Utils;
-using Godot;
-using HarmonyLib;
-using MegaCrit.Sts2.Core.Commands;
-using MegaCrit.Sts2.Core.Helpers;
+using SakuraMod.SakuraModCode;
 using MegaCrit.Sts2.Core.Nodes.Audio;
-using MegaCrit.Sts2.Core.Nodes.Rooms;
-using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.TestSupport;
+using STS2RitsuLib;
+using STS2RitsuLib.Audio;
 
 namespace SakuraMod.SakuraModCode.Events;
 
 internal static class SakuraEventBgm
 {
     private const float EventMusicVolume = 0.3f;
-    private const float FadeInDuration = 0.8f;
-    private const float FadeOutDuration = 0.6f;
-    private const int FadeSteps = 12;
+    private const string EventMusicChannel = "SakuraMod.EventBgm";
+    private const string EventMusicDebugName = "SakuraMod.EventBgm";
 
-    private static GodotObject? _musicHandle;
-    private static CancellationTokenSource? _fadeCts;
-    private static float _currentVolume;
+    private static AudioMusicHandle? _musicHandle;
+    private static IDisposable? _roomExitedSubscription;
+    private static IDisposable? _runEndedSubscription;
+    private static bool _registeredLifecycleSubscriptions;
     private static bool _stoppedRunMusic;
 
     public static void Play(string relativePath)
@@ -31,50 +27,52 @@ internal static class SakuraEventBgm
         if (!File.Exists(path))
             return;
 
-        StopImmediately(restoreRunMusic: false);
-        NRunMusicController.Instance?.StopMusic();
-#pragma warning disable CS0618
-        var handle = FmodAudio.PlayMusic(path, 0f);
-#pragma warning restore CS0618
-        if (handle is null)
-        {
-            var musicController = NRunMusicController.Instance;
-            musicController?.UpdateMusic();
-            musicController?.UpdateTrack();
-            return;
-        }
+        EnsureLifecycleSubscriptions();
+        StopImmediately(restoreRunMusic: false, allowFadeOut: false);
 
-        _musicHandle = handle;
-        _currentVolume = 0f;
-        _stoppedRunMusic = true;
-        StartFade(handle, 0f, EventMusicVolume, FadeInDuration, releaseWhenComplete: false, restoreRunMusic: false);
+        _stoppedRunMusic = NRunMusicController.Instance is not null;
+        NRunMusicController.Instance?.StopMusic();
+
+        _musicHandle = GameAudioService.Shared.PlayMusic(
+            AudioSource.StreamingMusic(path),
+            new AudioPlaybackOptions
+            {
+                Volume = EventMusicVolume,
+                Scope = AudioLifecycleScope.Run,
+                AllowFadeOutOnStop = true,
+                DebugName = EventMusicDebugName,
+                Routing = new AudioRoutingOptions
+                {
+                    Channel = EventMusicChannel,
+                    ChannelMode = AudioChannelMode.ReplaceExisting,
+                    AllowFadeOutOnReplace = false
+                }
+            });
+
+        if (_musicHandle is null)
+            FinishStop(restoreRunMusic: true);
     }
 
     public static void Stop() =>
-        FadeOut(restoreRunMusic: true);
+        StopImmediately(restoreRunMusic: true, allowFadeOut: true);
 
     public static void StopForRunCleanup() =>
-        StopImmediately(restoreRunMusic: false);
+        StopImmediately(restoreRunMusic: false, allowFadeOut: false);
 
     public static void StopForEventProceed() =>
-        StopImmediately(restoreRunMusic: true);
+        StopImmediately(restoreRunMusic: true, allowFadeOut: false);
 
-    private static void FadeOut(bool restoreRunMusic)
+    private static void StopImmediately(bool restoreRunMusic, bool allowFadeOut)
     {
         var handle = _musicHandle;
-        if (handle is null || !GodotObject.IsInstanceValid(handle))
+        _musicHandle = null;
+        if (handle is not null)
         {
-            StopImmediately(restoreRunMusic);
-            return;
+            handle.TryStop(allowFadeOut);
+            handle.TryRelease();
+            handle.Dispose();
         }
 
-        StartFade(handle, _currentVolume, 0f, FadeOutDuration, releaseWhenComplete: true, restoreRunMusic);
-    }
-
-    private static void StopImmediately(bool restoreRunMusic)
-    {
-        CancelFade();
-        StopMusicHandle();
         FinishStop(restoreRunMusic);
     }
 
@@ -84,93 +82,10 @@ internal static class SakuraEventBgm
             return;
 
         _stoppedRunMusic = false;
-        _currentVolume = 0f;
         if (!restoreRunMusic)
             return;
 
-        var musicController = NRunMusicController.Instance;
-        musicController?.UpdateMusic();
-        musicController?.UpdateTrack();
-    }
-
-    private static void StartFade(
-        GodotObject handle,
-        float fromVolume,
-        float toVolume,
-        float duration,
-        bool releaseWhenComplete,
-        bool restoreRunMusic)
-    {
-        CancelFade();
-        _fadeCts = new CancellationTokenSource();
-        TaskHelper.RunSafely(FadeVolume(
-            handle,
-            fromVolume,
-            toVolume,
-            duration,
-            releaseWhenComplete,
-            restoreRunMusic,
-            _fadeCts.Token));
-    }
-
-    private static async Task FadeVolume(
-        GodotObject handle,
-        float fromVolume,
-        float toVolume,
-        float duration,
-        bool releaseWhenComplete,
-        bool restoreRunMusic,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            for (var step = 0; step <= FadeSteps; step++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (!IsCurrentHandle(handle))
-                    return;
-
-                var progress = step / (float)FadeSteps;
-                SetVolume(handle, Mathf.Lerp(fromVolume, toVolume, progress));
-                if (step < FadeSteps)
-                    await Cmd.Wait(duration / FadeSteps, cancellationToken, ignoreCombatEnd: true);
-            }
-
-            if (!releaseWhenComplete || !IsCurrentHandle(handle))
-                return;
-
-            StopMusicHandle();
-            FinishStop(restoreRunMusic);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
-
-    private static bool IsCurrentHandle(GodotObject handle) =>
-        ReferenceEquals(_musicHandle, handle) && GodotObject.IsInstanceValid(handle);
-
-    private static void SetVolume(GodotObject handle, float volume)
-    {
-        _currentVolume = volume;
-        handle.Call("set_volume", volume);
-    }
-
-    private static void CancelFade()
-    {
-        _fadeCts?.Cancel();
-        _fadeCts = null;
-    }
-
-    private static void StopMusicHandle()
-    {
-        var handle = _musicHandle;
-        _musicHandle = null;
-        if (handle is null || !GodotObject.IsInstanceValid(handle))
-            return;
-
-        handle.Call("stop");
-        handle.Call("release");
+        AudioVanillaBridge.RefreshRunMusic();
     }
 
     private static string ResolveExternalMusicPath(string relativePath)
@@ -180,22 +95,18 @@ internal static class SakuraEventBgm
             modDirectory ?? AppContext.BaseDirectory,
             relativePath.Replace('/', Path.DirectorySeparatorChar));
     }
-}
 
-[HarmonyPatch(typeof(NEventRoom), nameof(NEventRoom.Proceed))]
-internal static class SakuraEventBgmProceedPatch
-{
-    private static void Prefix()
+    private static void EnsureLifecycleSubscriptions()
     {
-        SakuraEventBgm.StopForEventProceed();
-    }
-}
+        if (_registeredLifecycleSubscriptions)
+            return;
 
-[HarmonyPatch(typeof(RunManager), nameof(RunManager.CleanUp))]
-internal static class SakuraEventBgmRunCleanupPatch
-{
-    private static void Prefix()
-    {
-        SakuraEventBgm.StopForRunCleanup();
+        _roomExitedSubscription = RitsuLibFramework.SubscribeLifecycle<RoomExitedEvent>(
+            _ => StopForEventProceed(),
+            replayCurrentState: false);
+        _runEndedSubscription = RitsuLibFramework.SubscribeLifecycle<RunEndedEvent>(
+            _ => StopForRunCleanup(),
+            replayCurrentState: false);
+        _registeredLifecycleSubscriptions = true;
     }
 }

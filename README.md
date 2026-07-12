@@ -15,7 +15,7 @@ mods/SakuraMod/SakuraMod.json
 mods/SakuraMod/SakuraMod.pck
 ```
 
-This mod requires BaseLib. Install BaseLib first and keep it enabled alongside
+This mod requires RitsuLib. Install STS2-RitsuLib first and keep it enabled alongside
 SakuraMod.
 
 ## Local Baseline
@@ -24,7 +24,7 @@ SakuraMod.
 - Godot: `4.5.1.stable.mono`
 - .NET SDK: `9.0.117`
 - Template package: `Alchyr.Sts2.Templates 2.4.3`
-- Runtime BaseLib: `3.3.0+` minimum; built against `3.3.4`
+- Runtime RitsuLib: `0.4.56` (`STS2 0.107.1` compatibility build)
 - Mod id / assembly: `SakuraMod`
 
 ## Local Setup
@@ -53,11 +53,6 @@ Compile C# and copy the DLL/manifest into the local STS2 mods folder:
 ```bash
 dotnet build SakuraMod.csproj
 ```
-
-On this machine, .NET SDK 9.0.117 can emit `CS9057` from
-`Alchyr.Sts2.ModAnalyzers` because the analyzer was built against a newer
-compiler. The build still succeeds. Installing a .NET 10 SDK should remove that
-environment warning.
 
 Export the Godot resource pack and copy it into the local STS2 mods folder:
 

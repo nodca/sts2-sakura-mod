@@ -1,5 +1,3 @@
-using BaseLib.Abstracts;
-using BaseLib.Utils;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -25,19 +23,19 @@ using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Classic.Cards;
-using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.Events;
+using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.Classic.Events;
 
-public class ClassicXiaoLangsFeelingsEvent() : CustomEventModel
+public class ClassicXiaoLangsFeelingsEvent() : SakuraModEventTemplate
 {
-    public override ActModel[] Acts => [ModelDb.Act<Hive>()];
     public override string? CustomInitialPortraitPath => "events/xiaolangs_feelings.png".ImagePath();
 
     public override bool IsAllowed(IRunState runState) =>
-        runState.Players.All(static player => player.Character is ClassicSakura);
+        SakuraStarterCompatibility.IsKinomotoSakuraRun(runState);
 
     protected override IReadOnlyList<EventOption> GenerateInitialOptions() =>
     [
@@ -62,7 +60,7 @@ public class ClassicXiaoLangsFeelingsEvent() : CustomEventModel
     }
 }
 
-public class ClassicTheSealedCardEvent() : CustomEventModel
+public class ClassicTheSealedCardEvent() : SakuraModEventTemplate
 {
     private const int HpLossPercent = 20;
     private const int CardsToRemove = 2;
@@ -73,12 +71,11 @@ public class ClassicTheSealedCardEvent() : CustomEventModel
 
     private bool _removeLoveAfterCombat;
 
-    public override ActModel[] Acts => [ModelDb.Act<Glory>()];
     public override bool IsShared => true;
     public override string? CustomInitialPortraitPath => "monsters/the_nothing.png".ImagePath();
 
     public override bool IsAllowed(IRunState runState) =>
-        runState.Players.All(static player => player.Character is ClassicSakura);
+        SakuraStarterCompatibility.IsKinomotoSakuraRun(runState);
 
     protected override IReadOnlyList<EventOption> GenerateInitialOptions()
     {
@@ -177,8 +174,9 @@ public class ClassicTheSealedCardEvent() : CustomEventModel
     }
 }
 
-public class ClassicTheNothingEncounter() : CustomEncounterModel(RoomType.Elite)
+public class ClassicTheNothingEncounter() : ModEncounterTemplate
 {
+    public override RoomType RoomType => RoomType.Elite;
     public override bool ShouldGiveRewards => false;
 
     public override IEnumerable<MonsterModel> AllPossibleMonsters =>
@@ -194,7 +192,7 @@ public class ClassicTheNothingEncounter() : CustomEncounterModel(RoomType.Elite)
     ];
 }
 
-public class ClassicTheNothingMonster : CustomMonsterModel
+public class ClassicTheNothingMonster : ModMonsterTemplate
 {
     private const int BaseHp = 187;
     private const int ToughHp = 214;
@@ -221,10 +219,10 @@ public class ClassicTheNothingMonster : CustomMonsterModel
 
     public override int MinInitialHp => AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, ToughHp, BaseHp);
     public override int MaxInitialHp => MinInitialHp;
-    public override string? CustomVisualPath => "monsters/the_nothing.png".ImagePath();
+    public override string? CustomVisualsPath => "monsters/the_nothing.png".ImagePath();
     public override bool HasDeathSfx => false;
     public override string? HurtSfx => null;
-    public override IEnumerable<string> AssetPaths => GetIntentAssets().Prepend(CustomVisualPath!);
+    public override IEnumerable<string> AssetPaths => GetIntentAssets().Prepend(CustomVisualsPath!);
 
     private int StartVoid => DeadlyValue(DeadlyStartVoid, BaseStartVoid);
     private int ThumpDamage => DeadlyValue(DeadlyThumpDamage, BaseThumpDamage);
@@ -236,8 +234,8 @@ public class ClassicTheNothingMonster : CustomMonsterModel
     private int Strengthen => DeadlyValue(DeadlyStrengthen, BaseStrengthen);
     private int Weaken => DeadlyValue(DeadlyWeaken, BaseWeaken);
 
-    public override NCreatureVisuals? CreateCustomVisuals() =>
-        SakuraStandeeVisuals.Create(CustomVisualPath!, "The Nothing", CombatVisualScale);
+    protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
+        SakuraStandeeVisuals.Create(CustomVisualsPath!, "The Nothing", CombatVisualScale);
 
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {

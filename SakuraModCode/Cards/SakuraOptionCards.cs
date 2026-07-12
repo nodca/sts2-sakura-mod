@@ -1,24 +1,24 @@
-using BaseLib.Abstracts;
 using Godot;
 using SakuraMod.SakuraModCode.Extensions;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
+using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Character;
+using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
 public abstract class SakuraOptionCard(CardType type) :
-    CustomCardModel(0, type, CardRarity.Basic, TargetType.Self, showInCardLibrary: false, autoAdd: false)
+    ModCardTemplate(0, type, CardRarity.Basic, TargetType.Self, showInCardLibrary: false)
 {
-    public override CardPoolModel Pool => ModelDb.CardPool<SakuraModCardPool>();
+    public override CardPoolModel Pool => ModelDb.CardPool<ClassicSakuraCardPool>();
 
     public override string CustomPortraitPath => SakuraCardFrameVisuals.BigPortraitPath(this);
     public override string PortraitPath => SakuraCardFrameVisuals.PortraitPath(this);
     public override string BetaPortraitPath => SakuraCardFrameVisuals.PortraitPath(this);
-    public override Texture2D? CustomFrame => SakuraCardFrameVisuals.CustomFrameTexture(this);
-    public override Material? CreateCustomFrameMaterial => SakuraCardFrameVisuals.PlainFrameMaterial;
+    public override Material? CustomFrameMaterial => SakuraCardFrameVisuals.PlainFrameMaterial;
     protected override IEnumerable<string> ExtraRunAssetPaths => SakuraCardFrameVisuals.RunAssetPaths(this);
 
     protected override Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -50,12 +50,4 @@ public class TrueOrFalseEnergyChoice() : SakuraOptionCard(CardType.Skill)
     protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(1)];
 
     protected override void OnUpgrade() => DynamicVars.Energy.UpgradeValueBy(1);
-}
-
-public class SealedBookSealChoice() : SakuraOptionCard(CardType.Skill)
-{
-}
-
-public class SealedBookReleaseChoice() : SakuraOptionCard(CardType.Skill)
-{
 }

@@ -7,7 +7,6 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public enum SakuraVoiceTrigger
 {
-    DreamWand,
     Stabilize
 }
 
@@ -17,7 +16,6 @@ public static class SakuraVoicePlayback
 
     private static readonly Dictionary<SakuraVoiceTrigger, string> VoicePaths = new()
     {
-        [SakuraVoiceTrigger.DreamWand] = $"{MainFile.ResPath}/voices/dream_wand.ogg",
         [SakuraVoiceTrigger.Stabilize] = $"{MainFile.ResPath}/voices/stabilize.ogg"
     };
 

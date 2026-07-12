@@ -1,5 +1,3 @@
-using BaseLib.Abstracts;
-using BaseLib.Hooks;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
@@ -21,14 +19,17 @@ using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Relics;
 using SakuraMod.SakuraModCode.Extensions;
+using STS2RitsuLib.Combat.HandSize;
+using STS2RitsuLib.Scaffolding.Content;
+using STS2RitsuLib.Scaffolding.Content.Patches;
 
 namespace SakuraMod.SakuraModCode.Classic.Powers;
 
-public abstract class ClassicSakuraPower : CustomPowerModel
+public abstract class ClassicSakuraPower : ModPowerTemplate
 {
     protected virtual string IconFileName => "power.png";
 
-    public override string CustomPackedIconPath => IconFileName.PowerImagePath();
+    public override string CustomIconPath => IconFileName.PowerImagePath();
     public override string CustomBigIconPath => IconFileName.BigPowerImagePath();
 }
 
@@ -185,7 +186,7 @@ public class ClassicDreamPower : ClassicSakuraPower
         return true;
     }
 
-    private sealed record DreamSwap(ClassicCardIdentity Identity, CardModel Original, CardModel Template);
+    private sealed record DreamSwap(SourceCardIdentity Identity, CardModel Original, CardModel Template);
 }
 
 public class ClassicDarkPower : ClassicSakuraPower
@@ -271,6 +272,55 @@ public class ClassicShieldWardPower : ClassicSakuraPower
     }
 }
 
+public class ClassicWoodPower : ClassicSakuraPower
+{
+    public const int DefaultStrengthLoss = 2;
+
+    protected override string IconFileName => "earthy_power.png";
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override async Task BeforeSideTurnStart(
+        PlayerChoiceContext choiceContext,
+        CombatSide side,
+        IReadOnlyList<Creature> participants,
+        ICombatState combatState)
+    {
+        if (side != CombatSide.Enemy || Owner.Side != CombatSide.Player || Amount <= 0)
+            return;
+
+        var poisonedEnemies = combatState.Enemies
+            .Where(static enemy => enemy.IsAlive && enemy.GetPower<PoisonPower>() is { Amount: > 0 })
+            .ToList();
+        if (poisonedEnemies.Count == 0)
+            return;
+
+        var poisonAmount = PoisonAmount(Amount);
+        if (poisonAmount > 0)
+            // BeforeSideTurnStart runs before the vanilla PoisonPower trigger.
+            await PowerCmd.Apply<PoisonPower>(choiceContext, poisonedEnemies, poisonAmount, Owner, null, false);
+
+        await PowerCmd.Apply<ClassicTemporaryStrengthLossPower>(
+            choiceContext,
+            poisonedEnemies,
+            Amount,
+            Owner,
+            null,
+            false);
+    }
+
+    protected virtual int PoisonAmount(int strengthLoss) => 0;
+}
+
+public class ClassicSakuraWoodPower : ClassicWoodPower
+{
+    public const int StrengthLoss = 4;
+    public const int PoisonPerTrigger = 2;
+
+    protected override int PoisonAmount(int strengthLoss) =>
+        strengthLoss / StrengthLoss * PoisonPerTrigger;
+}
+
 public class ClassicJumpPower : ClassicSakuraPower
 {
     protected override string IconFileName => "jump_power_sakuracard.png";
@@ -335,7 +385,8 @@ public class ClassicVoicePower : ClassicSakuraPower
 
 public abstract class ClassicElementStatePower : ClassicSakuraPower
 {
-    private bool _wasActiveBeforeCardPlayed;
+    private bool _wasActiveForCardPlayed;
+    private bool _preserveForNextTurn;
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
@@ -343,28 +394,47 @@ public abstract class ClassicElementStatePower : ClassicSakuraPower
     protected abstract ClassicElement Element { get; }
     protected abstract Type PermanentPowerType { get; }
 
+    public static void PreserveAllForNextTurn(Creature owner)
+    {
+        foreach (var power in owner.Powers.OfType<ClassicElementStatePower>())
+            power.PreserveForNextTurn();
+    }
+
+    public void PreserveForNextTurn() =>
+        _preserveForNextTurn = true;
+
     public override Task BeforeCardPlayed(CardPlay play)
     {
-        _wasActiveBeforeCardPlayed = Amount > 0
-            && play.Card?.Owner?.Creature == Owner
-            && play.Card is ClassicSakuraCard card
-            && card.Element.HasElement(Element);
+        _wasActiveForCardPlayed = Amount > 0
+            && play.Card?.Owner?.Creature == Owner;
 
         return Task.CompletedTask;
     }
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (!_wasActiveBeforeCardPlayed)
+        if (!_wasActiveForCardPlayed || !SakuraActions.HasClassicElement(play.Card, Element))
+        {
+            _wasActiveForCardPlayed = false;
             return;
+        }
 
-        _wasActiveBeforeCardPlayed = false;
+        _wasActiveForCardPlayed = false;
         await TriggerElement(choiceContext, play);
     }
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Side != side || !participants.Contains(Owner) || Owner.Powers.Any(power => power.GetType() == PermanentPowerType))
+        if (Owner.Side != side || !participants.Contains(Owner))
+            return;
+
+        if (_preserveForNextTurn)
+        {
+            _preserveForNextTurn = false;
+            return;
+        }
+
+        if (Owner.Powers.Any(power => power.GetType() == PermanentPowerType))
             return;
 
         await PowerCmd.Decrement(this);
@@ -850,6 +920,12 @@ public class ClassicFreezePower : ClassicSakuraPower
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
+    public override async Task AfterApplied(Creature? applier, CardModel? cardSource)
+    {
+        if (Owner.IsMonster && Owner.Monster?.IntendsToAttack == true)
+            await CreatureCmd.Stun(Owner);
+    }
+
     public override async Task BeforeSideTurnStart(
         PlayerChoiceContext choiceContext,
         CombatSide side,
@@ -1189,20 +1265,20 @@ public class ClassicNothingMonsterPower : ClassicSakuraPower
     }
 }
 
-public class ClassicTemporaryStrengthPower : TemporaryStrengthPower, ICustomPower
+public class ClassicTemporaryStrengthPower : TemporaryStrengthPower, IModPowerAssetOverrides
 {
-    public string? CustomPackedIconPath => ModelDb.Power<StrengthPower>().PackedIconPath;
+    public PowerAssetProfile AssetProfile => PowerAssetProfile.Empty;
+    public string? CustomIconPath => ModelDb.Power<StrengthPower>().PackedIconPath;
     public string? CustomBigIconPath => ModelDb.Power<StrengthPower>().ResolvedBigIconPath;
-    public string? CustomBigBetaIconPath => ModelDb.Power<StrengthPower>().ResolvedBigIconPath;
     public override AbstractModel OriginModel => ModelDb.Card<ClowFight>();
     protected override bool IsVisibleInternal => false;
 }
 
-public class ClassicTemporaryStrengthLossPower : TemporaryStrengthPower, ICustomPower
+public class ClassicTemporaryStrengthLossPower : TemporaryStrengthPower, IModPowerAssetOverrides
 {
-    public string? CustomPackedIconPath => ModelDb.Power<StrengthPower>().PackedIconPath;
+    public PowerAssetProfile AssetProfile => PowerAssetProfile.Empty;
+    public string? CustomIconPath => ModelDb.Power<StrengthPower>().PackedIconPath;
     public string? CustomBigIconPath => ModelDb.Power<StrengthPower>().ResolvedBigIconPath;
-    public string? CustomBigBetaIconPath => ModelDb.Power<StrengthPower>().ResolvedBigIconPath;
     public override AbstractModel OriginModel => ModelDb.Card<ClowWood>();
     protected override bool IsVisibleInternal => false;
     protected override bool IsPositive => false;

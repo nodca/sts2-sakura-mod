@@ -1,9 +1,6 @@
-﻿using BaseLib.Abstracts;
-using BaseLib.Extensions;
-using BaseLib.Patches.Localization;
-using SakuraMod.SakuraModCode.Extensions;
+﻿using SakuraMod.SakuraModCode.Extensions;
 using MegaCrit.Sts2.Core.Entities.Powers;
-using MegaCrit.Sts2.Core.Localization;
+using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
@@ -13,16 +10,13 @@ namespace SakuraMod.SakuraModCode.Powers;
 /// This will generate a class that extends this one.
 /// You can also just create the class manually; just make sure to inherit from this class.
 /// </summary>
-public abstract class SakuraModPower : CustomPowerModel, IAddDumbVariablesToPowerDescription
+public abstract class SakuraModPower : ModPowerTemplate
 {
     //Loads from SakuraMod/images/powers/your_power.png
     protected virtual string IconFileName => "power.png";
 
-    public override string CustomPackedIconPath => IconFileName.PowerImagePath();
+    public override string CustomIconPath => IconFileName.PowerImagePath();
     public override string CustomBigIconPath => IconFileName.BigPowerImagePath();
-
-    public void AddDumbVariablesToPowerDescription(LocString description) =>
-        DynamicVars.AddTo(description);
 
     /// <summary>
     /// Whether this power is a buff or debuff.

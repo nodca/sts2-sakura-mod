@@ -2,7 +2,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.TestSupport;
-using BaseLib.Utils.NodeFactories;
+using STS2RitsuLib.Scaffolding.Godot;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -25,7 +25,7 @@ public static class SakuraStandeeVisuals
     {
         try
         {
-            var visuals = NodeFactory<NCreatureVisuals>.CreateFromResource(visualPath);
+            var visuals = RitsuGodotNodeFactories.CreateFromResource<NCreatureVisuals>(visualPath);
             ApplyCombatVisualLayout(visuals, combatVisualScale);
             var body = visuals.GetNode<Node2D>("%Visuals");
             StartCombatStandeeAnimation(body);

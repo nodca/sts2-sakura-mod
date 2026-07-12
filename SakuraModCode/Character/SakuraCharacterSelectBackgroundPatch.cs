@@ -3,19 +3,22 @@ using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
-using SakuraMod.SakuraModCode.Classic.Character;
 
 namespace SakuraMod.SakuraModCode.Character;
 
+// RitsuLib replaces the scene path but leaves this custom Control at its texture-driven size.
 [HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.SelectCharacter))]
 internal static class SakuraCharacterSelectBackgroundPatch
 {
-    private static readonly FieldInfo BgContainerField = AccessTools.Field(typeof(NCharacterSelectScreen), "_bgContainer");
+    private static readonly FieldInfo BgContainerField =
+        AccessTools.Field(typeof(NCharacterSelectScreen), "_bgContainer");
 
     [HarmonyPostfix]
-    private static void SelectCharacterPostfix(NCharacterSelectScreen __instance, CharacterModel characterModel)
+    private static void SelectCharacterPostfix(
+        NCharacterSelectScreen __instance,
+        CharacterModel characterModel)
     {
-        if (characterModel is not SakuraMod and not ClassicSakura)
+        if (!SakuraStarterCompatibility.IsKinomotoSakuraCharacter(characterModel))
             return;
 
         Apply(__instance, characterModel);
@@ -31,25 +34,17 @@ internal static class SakuraCharacterSelectBackgroundPatch
         if (root is null)
             return;
 
-        var hasSizedBackground = false;
+        var viewportRect = root.GetViewport().GetVisibleRect();
+        ApplyTopLeftRect(root, ToLocalRect(bgContainer, viewportRect));
 
-        var globalTarget = root.GetViewport().GetVisibleRect();
-        var localTarget = ToLocalRect(bgContainer, globalTarget);
-
-        ApplyTopLeftRect(root, localTarget);
-        foreach (var background in Backgrounds(root))
+        foreach (var background in root.GetChildren().OfType<TextureRect>())
         {
-            var textureSize = background.Texture?.GetSize() ?? Vector2.Zero;
-            if (textureSize.X <= 0f || textureSize.Y <= 0f)
+            if (background.Texture?.GetSize() is not { X: > 0f, Y: > 0f })
                 continue;
 
             ApplyFullRect(background);
             background.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-            hasSizedBackground = true;
         }
-
-        if (!hasSizedBackground)
-            return;
     }
 
     private static Rect2 ToLocalRect(Control parent, Rect2 globalRect)
@@ -68,8 +63,8 @@ internal static class SakuraCharacterSelectBackgroundPatch
         control.AnchorBottom = 0f;
         control.OffsetLeft = rect.Position.X;
         control.OffsetTop = rect.Position.Y;
-        control.OffsetRight = rect.Position.X + rect.Size.X;
-        control.OffsetBottom = rect.Position.Y + rect.Size.Y;
+        control.OffsetRight = rect.End.X;
+        control.OffsetBottom = rect.End.Y;
         control.Scale = Vector2.One;
         control.PivotOffset = Vector2.Zero;
     }
@@ -86,15 +81,6 @@ internal static class SakuraCharacterSelectBackgroundPatch
         control.OffsetBottom = 0f;
         control.Scale = Vector2.One;
         control.PivotOffset = Vector2.Zero;
-    }
-
-    private static IEnumerable<TextureRect> Backgrounds(Control root)
-    {
-        foreach (var child in root.GetChildren())
-        {
-            if (child is TextureRect textureRect)
-                yield return textureRect;
-        }
     }
 
     private static Control? LastControlChild(Control parent)

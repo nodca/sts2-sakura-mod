@@ -15,7 +15,6 @@ public static class SakuraCardPlayVfx
     private const float BlazeDuration = 0.72f;
     private const float AquaDuration = 0.82f;
     private const float TimeDuration = 0.95f;
-    private const float LabyrinthDuration = 0.88f;
     private const float GravitationDuration = 0.82f;
     private const float GaleDuration = 0.34f;
 
@@ -27,20 +26,17 @@ public static class SakuraCardPlayVfx
     private static readonly Color AquaFoamColor = new(0.86f, 1f, 1f, 0.72f);
     private static readonly Color TimeGoldColor = new(1f, 0.88f, 0.54f, 0.76f);
     private static readonly Color TimeBlueColor = new(0.72f, 0.9f, 1f, 0.56f);
-    private static readonly Color LabyrinthGoldColor = new(1f, 0.86f, 0.52f, 0.72f);
-    private static readonly Color LabyrinthPinkColor = new(1f, 0.72f, 0.8f, 0.48f);
     private static readonly Color GravityColor = new(0.48f, 0.38f, 0.86f, 0.54f);
     private static readonly Color GravityLineColor = new(0.78f, 0.82f, 1f, 0.5f);
     private static readonly Color GaleEdgeColor = new(0.92f, 1f, 0.96f, 0.72f);
     private static readonly Color GaleBodyColor = new(0.54f, 0.96f, 0.88f, 0.26f);
     private static readonly Color GaleTrailColor = new(0.72f, 1f, 0.96f, 0.4f);
-    private static readonly Color GaleReleaseColor = new(0.82f, 1f, 0.95f, 0.32f);
 
-    public static Node2D CreateGaleWindBlade(Creature attacker, Creature target, bool releaseFollowUp = false)
+    public static Node2D CreateGaleWindBlade(Creature attacker, Creature target)
     {
         var root = new Node2D
         {
-            Name = releaseFollowUp ? "SakuraGaleChasingBladeVfx" : "SakuraGaleWindBladeVfx",
+            Name = "SakuraGaleWindBladeVfx",
             ZIndex = VfxZIndex,
             ZAsRelative = false
         };
@@ -56,20 +52,11 @@ public static class SakuraCardPlayVfx
         var travel = end - start;
         var hasPath = travel.LengthSquared() > 1f;
 
-        // Shift the chasing blade onto a parallel lane so it reads as a second gust.
-        if (hasPath && releaseFollowUp)
-        {
-            var lane = new Vector2(-travel.Y, travel.X).Normalized() * 26f;
-            start += lane;
-            end += lane;
-        }
-
         root.GlobalPosition = start;
         // Align the blade's long axis with travel so the player sees its slicing edge, not its broad face.
-        root.Rotation = hasPath ? travel.Angle() : (releaseFollowUp ? -0.26f : -0.44f);
-        root.Scale = releaseFollowUp ? Vector2.One * 0.86f : Vector2.One;
-        BuildGaleWindBlade(root, releaseFollowUp);
-        TaskHelper.RunSafely(AnimateGaleWindBlade(root, releaseFollowUp, start, end));
+        root.Rotation = hasPath ? travel.Angle() : -0.44f;
+        BuildGaleWindBlade(root);
+        TaskHelper.RunSafely(AnimateGaleWindBlade(root, start, end));
         return root;
     }
 
@@ -113,18 +100,6 @@ public static class SakuraCardPlayVfx
         root.GlobalPosition = CreatureCenter(room, owner) + Vector2.Up * 18f;
         BuildTime(root);
         TaskHelper.RunSafely(AnimateTime(root));
-    }
-
-    public static void PlayLabyrinth(IEnumerable<Creature> targets)
-    {
-        var targetList = targets.ToList();
-        if (targetList.Count == 0 || !TryCreateRoot("SakuraLabyrinthVfx", out var root, out var room))
-            return;
-
-        var area = EnemyArea(room, targetList);
-        root.GlobalPosition = area.Center + Vector2.Up * 16f;
-        BuildLabyrinth(root, area);
-        TaskHelper.RunSafely(AnimateSimple(root, LabyrinthDuration));
     }
 
     public static void PlayGravitation(IEnumerable<Creature> targets)
@@ -335,64 +310,6 @@ public static class SakuraCardPlayVfx
         root.AddChild(hour);
     }
 
-    private static void BuildLabyrinth(Node2D root, VfxArea area)
-    {
-        var width = area.Width * 0.86f;
-        var height = area.Height * 0.74f;
-        var half = new Vector2(width * 0.5f, height * 0.5f);
-
-        var outer = new Line2D
-        {
-            Name = "LabyrinthLine",
-            Width = 2.6f,
-            DefaultColor = LabyrinthGoldColor,
-            Closed = true,
-            Antialiased = true,
-            Points =
-            [
-                new(-half.X, -half.Y),
-                new(half.X, -half.Y),
-                new(half.X, half.Y),
-                new(-half.X, half.Y)
-            ]
-        };
-        root.AddChild(outer);
-
-        var maze = new Line2D
-        {
-            Name = "LabyrinthLine",
-            Width = 2f,
-            DefaultColor = LabyrinthPinkColor,
-            Antialiased = true,
-            Points =
-            [
-                new(-half.X * 0.72f, -half.Y * 0.48f),
-                new(-half.X * 0.18f, -half.Y * 0.48f),
-                new(-half.X * 0.18f, -half.Y * 0.12f),
-                new(half.X * 0.42f, -half.Y * 0.12f),
-                new(half.X * 0.42f, half.Y * 0.22f),
-                new(-half.X * 0.46f, half.Y * 0.22f),
-                new(-half.X * 0.46f, half.Y * 0.52f),
-                new(half.X * 0.68f, half.Y * 0.52f)
-            ]
-        };
-        root.AddChild(maze);
-
-        for (var i = 0; i < 4; i++)
-        {
-            var x = -half.X * 0.5f + i * width / 3f;
-            var gate = new Line2D
-            {
-                Name = "LabyrinthLine",
-                Width = 1.6f,
-                DefaultColor = i % 2 == 0 ? LabyrinthGoldColor : LabyrinthPinkColor,
-                Antialiased = true,
-                Points = [new Vector2(x, -half.Y * 0.74f), new Vector2(x, -half.Y * 0.36f)]
-            };
-            root.AddChild(gate);
-        }
-    }
-
     private static void BuildGravitation(Node2D root, VfxArea area)
     {
         AddEllipse(root, area.Width * 0.35f, 24f, GravityColor, 2.6f, 0f, "GravityRing", Vector2.Down * area.Height * 0.32f);
@@ -413,10 +330,10 @@ public static class SakuraCardPlayVfx
         }
     }
 
-    private static void BuildGaleWindBlade(Node2D root, bool releaseFollowUp)
+    private static void BuildGaleWindBlade(Node2D root)
     {
-        var bladeLength = releaseFollowUp ? 320f : 380f;
-        var thickness = releaseFollowUp ? 18f : 24f;
+        const float bladeLength = 380f;
+        const float thickness = 24f;
         var back = new Vector2(-bladeLength * 0.5f, 0f);
         var front = new Vector2(bladeLength * 0.5f, 0f);
         // Slim crescent: thin perpendicular to travel so the player reads the slicing edge, not a flat face.
@@ -426,7 +343,7 @@ public static class SakuraCardPlayVfx
         var body = new Polygon2D
         {
             Name = "GaleBladeBody",
-            Color = releaseFollowUp ? GaleReleaseColor : GaleBodyColor,
+            Color = GaleBodyColor,
             Polygon =
             [
                 back,
@@ -444,7 +361,7 @@ public static class SakuraCardPlayVfx
         var edge = new Line2D
         {
             Name = "GaleBladeEdge",
-            Width = releaseFollowUp ? 4.4f : 5.4f,
+            Width = 5.4f,
             DefaultColor = GaleEdgeColor,
             Antialiased = true,
             Points = QuadraticPoints(back, topControl, front, 20)
@@ -454,7 +371,7 @@ public static class SakuraCardPlayVfx
         var lowerEdge = new Line2D
         {
             Name = "GaleBladeEdge",
-            Width = releaseFollowUp ? 1.8f : 2.4f,
+            Width = 2.4f,
             DefaultColor = GaleTrailColor,
             Antialiased = true,
             Points = QuadraticPoints(back, bottomControl, front, 16)
@@ -642,7 +559,7 @@ public static class SakuraCardPlayVfx
         root.QueueFreeSafely();
     }
 
-    private static async Task AnimateGaleWindBlade(Node2D root, bool releaseFollowUp, Vector2 start, Vector2 end)
+    private static async Task AnimateGaleWindBlade(Node2D root, Vector2 start, Vector2 end)
     {
         if (!root.IsInsideTree())
         {
@@ -651,7 +568,7 @@ public static class SakuraCardPlayVfx
                 return;
         }
 
-        var duration = releaseFollowUp ? GaleDuration * 0.82f : GaleDuration;
+        const float duration = GaleDuration;
 
         var tween = root.CreateTween().SetParallel();
 
@@ -667,7 +584,7 @@ public static class SakuraCardPlayVfx
 
         foreach (var line in root.GetChildren().OfType<Line2D>().Where(node => node.Name == "GaleTrail"))
         {
-            tween.TweenProperty(line, "position", line.Position + Vector2.Left * (releaseFollowUp ? 26f : 34f), duration * 0.6f)
+            tween.TweenProperty(line, "position", line.Position + Vector2.Left * 34f, duration * 0.6f)
                 .SetEase(Tween.EaseType.Out)
                 .SetTrans(Tween.TransitionType.Cubic);
             tween.TweenProperty(line, "modulate:a", 0f, duration * 0.34f)

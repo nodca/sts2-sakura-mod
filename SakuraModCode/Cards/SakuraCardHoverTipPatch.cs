@@ -10,6 +10,6 @@ public static class SakuraCardHoverTipPatch
     [HarmonyPostfix]
     public static void AddPostfix(NHoverTipCardContainer __instance)
     {
-        SakuraCardVisualDispatcher.AfterCardHoverTipAdded(__instance);
+        SakuraCardGeometryLifecycle.ResizeHoverTip(__instance);
     }
 }

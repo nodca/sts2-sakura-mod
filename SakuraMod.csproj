@@ -13,8 +13,7 @@
     <PropertyGroup>
         <!-- Disable architecture mismatch warning; mods are ideally built for all platforms (MSIL)
              while your local StS2 version will be for your specific platform. -->
-        <!-- CS9057 is emitted by Alchyr.Sts2.ModAnalyzers 0.1.9 on the local .NET 9 SDK. -->
-        <NoWarn>$(NoWarn);MSB3270;CS9057</NoWarn>
+        <NoWarn>$(NoWarn);MSB3270</NoWarn>
     </PropertyGroup>
 
     <ItemGroup Condition="Exists('$(Sts2DataDir)')" >
@@ -29,8 +28,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Alchyr.Sts2.BaseLib" Version="3.3.4" PrivateAssets="All"/>
-        <PackageReference Include="Alchyr.Sts2.ModAnalyzers" Version="0.1.9" />
+        <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.4.56" PrivateAssets="All"/>
         <AdditionalFiles Include="SakuraMod/localization/**/*.json"/> <!-- Used by analyzer -->
     </ItemGroup>
 

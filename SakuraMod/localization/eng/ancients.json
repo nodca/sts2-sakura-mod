@@ -1,10 +1,6 @@
 {
-  "THE_ARCHITECT.talk.SAKURAMOD-SAKURA_MOD.0-0r.char": "Are you the one who created this place? Why does everyone have to keep fighting in the Spire...",
-  "THE_ARCHITECT.talk.SAKURAMOD-SAKURA_MOD.0-0r.next": "Ask",
-  "THE_ARCHITECT.talk.SAKURAMOD-SAKURA_MOD.0-1r.ancient": "Cards made from dreams. Warm magic, yet it cannot save anyone.",
-  "THE_ARCHITECT.talk.SAKURAMOD-SAKURA_MOD.0-attack": "Even if my power is small, I have to try! Because... everything will definitely be alright!",
-  "THE_ARCHITECT.talk.SAKURAMOD-CLASSIC_SAKURA.0-0r.char": "Whoa! ...Whew, you startled me. Excuse me... are you the one who built this Spire?",
-  "THE_ARCHITECT.talk.SAKURAMOD-CLASSIC_SAKURA.0-0r.next": "Ask",
-  "THE_ARCHITECT.talk.SAKURAMOD-CLASSIC_SAKURA.0-1r.ancient": "Carrying those cards all this way. You think those toys can change the Spire's rules?",
-  "THE_ARCHITECT.talk.SAKURAMOD-CLASSIC_SAKURA.0-attack": "They're not toys, they're my friends! I'm going home with everyone... Release!"
+  "THE_ARCHITECT.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.0-0r.char": "Are you the one who created this place? Why does everyone have to keep fighting in the Spire...",
+  "THE_ARCHITECT.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.0-0r.next": "Ask",
+  "THE_ARCHITECT.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.0-1r.ancient": "Warm magic, yet it cannot save anyone.",
+  "THE_ARCHITECT.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.0-attack": "Even if my power is small, I have to try! Because... everything will definitely be alright!"
 }

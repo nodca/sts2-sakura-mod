@@ -1,10 +1,6 @@
 {
-  "THE_ARCHITECT.talk.SAKURAMOD-SAKURA_MOD.0-0r.char": "你就是这里的创造者吗？为什么要让大家在尖塔里一直战斗呢……",
-  "THE_ARCHITECT.talk.SAKURAMOD-SAKURA_MOD.0-0r.next": "询问",
-  "THE_ARCHITECT.talk.SAKURAMOD-SAKURA_MOD.0-1r.ancient": "用梦境做成的卡牌。温暖的魔法，却救不了任何人。",
-  "THE_ARCHITECT.talk.SAKURAMOD-SAKURA_MOD.0-attack": "就算力量很小，我也要试一试！因为……绝对没问题的！",
-  "THE_ARCHITECT.talk.SAKURAMOD-CLASSIC_SAKURA.0-0r.char": "哇啊！……呼，吓了我一跳。请问……你就是建造这座尖塔的人吗？",
-  "THE_ARCHITECT.talk.SAKURAMOD-CLASSIC_SAKURA.0-0r.next": "询问",
-  "THE_ARCHITECT.talk.SAKURAMOD-CLASSIC_SAKURA.0-1r.ancient": "带着那些卡牌一路走到这里。你以为凭这些玩具，就能改变尖塔的规则吗？",
-  "THE_ARCHITECT.talk.SAKURAMOD-CLASSIC_SAKURA.0-attack": "它们不是玩具，是我的朋友！我要和大家一起回去……封印解除！"
+  "THE_ARCHITECT.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.0-0r.char": "你就是这里的创造者吗？为什么要让大家在尖塔里一直战斗呢……",
+  "THE_ARCHITECT.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.0-0r.next": "询问",
+  "THE_ARCHITECT.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.0-1r.ancient": "温暖的魔法，却救不了任何人。",
+  "THE_ARCHITECT.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.0-attack": "就算力量很小，我也要试一试！因为……绝对没问题的！"
 }

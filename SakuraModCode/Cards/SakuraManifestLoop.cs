@@ -1,4 +1,3 @@
-using BaseLib.Utils;
 using MegaCrit.Sts2.Core;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
@@ -8,10 +7,8 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Powers;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Powers;
-using SakuraMod.SakuraModCode.Relics;
+using SakuraMod.SakuraModCode.Extensions;
 using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Cards;
@@ -24,11 +21,7 @@ public static class SakuraManifestLoop
     private const int BaseManifestChoiceCount = 3;
 
     private static readonly LocString ManifestPrompt = new("cards", "SAKURAMOD-GENERIC.manifestPrompt");
-    private static readonly ConditionalWeakTable<ICombatState, Dictionary<Player, HashSet<Type>>> CatalogedClearCardsByCombat = new();
     private static readonly ConditionalWeakTable<ICombatState, Dictionary<Player, Type>> CaptureCandidatesByCombat = new();
-
-    public static void Register() =>
-        SakuraCaptureRewardHandoff.Register();
 
     public static Task<IReadOnlyList<CardModel>> Manifest(
         SakuraModCard source,
@@ -48,7 +41,6 @@ public static class SakuraManifestLoop
         int rareAtlasChoices = 0)
     {
         List<CardModel> manifested = [];
-        amount += owner.Creature.GetPower<MagicSurgePower>()?.ConsumeManifestBonus() ?? 0;
 
         for (var i = 0; i < amount; i++)
         {
@@ -90,95 +82,36 @@ public static class SakuraManifestLoop
             }
         }
 
-        if (manifested.Count > 0)
-            await PowerCmd.Apply<SakuraManifestedThisTurnPower>(context, owner.Creature, 1, owner.Creature, null, false);
-
         return manifested;
     }
 
-    public static async Task RememberCatalogCard(PlayerChoiceContext context, CardPlay play)
-    {
-        var card = play.Card;
-        if (card?.Owner is not { } owner || card.CombatState is null || !SakuraCardCatalog.IsTransparentCard(card))
-            return;
-
-        var cardsByOwner = CatalogedClearCardsByCombat.GetValue(card.CombatState, _ => []);
-        if (!cardsByOwner.TryGetValue(owner, out var cards))
-        {
-            cards = [];
-            cardsByOwner[owner] = cards;
-        }
-
-        if (cards.Add(card.GetType()))
-        {
-            await SyncCatalogPower(context, owner);
-            await TriggerCatalogedClearCard(context, play);
-        }
-    }
-
-    public static int CatalogCount(Player owner)
-    {
-        var combatState = owner.Creature.CombatState;
-        if (combatState is null
-            || !CatalogedClearCardsByCombat.TryGetValue(combatState, out var cardsByOwner)
-            || !cardsByOwner.TryGetValue(owner, out var cards))
-            return 0;
-
-        return cards.Count;
-    }
-
-    public static IReadOnlyList<Type> CatalogedClearCardTypes(Player owner)
-    {
-        var combatState = owner.Creature.CombatState;
-        if (combatState is null
-            || !CatalogedClearCardsByCombat.TryGetValue(combatState, out var cardsByOwner)
-            || !cardsByOwner.TryGetValue(owner, out var cards))
-            return [];
-
-        return cards.ToList();
-    }
-
-    public static bool HasCatalogedClearCard(Player owner, CardModel card)
-    {
-        var combatState = owner.Creature.CombatState;
-        return combatState is not null
-            && SakuraCardCatalog.IsTransparentCard(card)
-            && CatalogedClearCardsByCombat.TryGetValue(combatState, out var cardsByOwner)
-            && cardsByOwner.TryGetValue(owner, out var cards)
-            && cards.Contains(card.GetType());
-    }
-
-    public static IReadOnlyList<CardModel> CatalogedClearCards(Player owner, Type? excludedType = null)
-    {
-        var combatState = owner.Creature.CombatState;
-        if (combatState is null
-            || !CatalogedClearCardsByCombat.TryGetValue(combatState, out var cardsByOwner)
-            || !cardsByOwner.TryGetValue(owner, out var cards))
-            return [];
-
-        return SakuraCardCatalog.TransparentCardTypes
-            .Where(cards.Contains)
-            .Where(type => type != excludedType)
-            .Select(SakuraCardCatalog.CardTemplate)
-            .ToList();
-    }
-
-    public static async Task<CardModel?> SelectCatalogedClearCard(
+    public static async Task<CardModel?> AddTemporaryTransparentCopyToHand(
         SakuraModCard source,
         PlayerChoiceContext context,
-        bool cancelable = true,
-        Type? excludedType = null)
+        bool freeThisTurn)
     {
-        var choices = CatalogedClearCards(source.Owner, excludedType)
-            .Select(card => SakuraGeneratedCardLifecycle.CreateGeneratedChoice(source, card, upgraded: false))
+        var owner = source.Owner;
+        var choices = TransparentCardChoices(owner, source.GetType())
+            .Select(card => SakuraGeneratedCardLifecycle.CreateCombatCardFromTemplate(owner, card))
             .ToList();
         if (choices.Count == 0)
             return null;
 
         try
         {
-            var selected = await SakuraActions.SelectFromCards(source, context, choices, cancelable);
-            return selected?.CreateClone();
+            var selected = await SakuraActions.SelectFromCards(source, context, choices, cancelable: false);
+            if (selected is null)
+                return null;
+
+            return await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
+                selected,
+                new GeneratedCardOptions
+                {
+                    Pile = PileType.Hand,
+                    AddTemporary = true,
+                    FreeThisTurn = freeThisTurn
+                },
+                context);
         }
         finally
         {
@@ -192,135 +125,14 @@ public static class SakuraManifestLoop
             : [];
 
     public static IReadOnlyList<CardModel> CaptureCandidateTemplates(Player owner) =>
-        SakuraCaptureRewardHandoff.CaptureCandidateTypes(owner)
+        CaptureCandidateTypes(owner)
             .Select(SakuraCardCatalog.CardTemplate)
             .ToList();
 
-    public static async Task<bool> GrantTemporary(PlayerChoiceContext context, CardModel card)
-        => await SakuraGeneratedCardLifecycle.GrantTemporary(context, card);
-
-    public static async Task OnTemporaryStabilized(PlayerChoiceContext context, CardModel card)
+    public static Task OnTemporaryStabilized(PlayerChoiceContext context, CardModel card)
     {
         RememberCaptureCandidate(card);
-
-        if (card.Owner?.Creature.GetPower<GrowingMagicPower>() is { } growingMagic)
-            await growingMagic.AfterTemporaryStabilized(context);
-        if (card.Owner?.GetRelic<StorageRibbon>() is { } storageRibbon)
-            await storageRibbon.AfterTemporaryStabilized(context, card);
-    }
-
-    public static async Task<CardModel?> AddTemporaryCopyToHand(
-        SakuraModCard source,
-        PlayerChoiceContext context,
-        CardModel card,
-        bool release,
-        bool freeThisTurn,
-        bool preserveRelease = false) =>
-        await SakuraGeneratedCardLifecycle.AddTemporaryCopyToHand(
-            card,
-            release,
-            freeThisTurn,
-            preserveRelease,
-            context);
-
-    public static async Task<CardModel?> AddRememberedCopyToHand(SakuraModCard source, CardModel card, bool freeThisTurn) =>
-        await SakuraGeneratedCardLifecycle.AddRememberedCopyToHand(card, freeThisTurn);
-
-    public static async Task<CardModel?> AddTemporaryRememberedCopyToHand(
-        SakuraModCard source,
-        PlayerChoiceContext context,
-        CardModel card,
-        bool freeThisTurn) =>
-        await SakuraGeneratedCardLifecycle.AddTemporaryRememberedCopyToHand(
-            card,
-            freeThisTurn,
-            context);
-
-    public static Task<CardModel> AddGeneratedCardToHand(
-        CardModel card,
-        PlayerChoiceContext? context = null,
-        CardPilePosition position = CardPilePosition.Random) =>
-        SakuraGeneratedCardLifecycle.AddGeneratedCardToHand(card, context, position);
-
-    public static Task<CardModel> AddTemporaryReleasedCardToCombat(
-        CardModel card,
-        PlayerChoiceContext context,
-        PileType pile = PileType.Hand,
-        CardPilePosition position = CardPilePosition.Random) =>
-        SakuraGeneratedCardLifecycle.AddTemporaryReleasedCardToCombat(card, context, pile, position);
-
-    public static Task<CardModel> AddRestoredReleasedCardToHand(
-        CardModel card,
-        PlayerChoiceContext context,
-        bool freeThisTurn) =>
-        SakuraGeneratedCardLifecycle.AddRestoredReleasedCardToHand(card, context, freeThisTurn);
-
-    public static async Task<CardModel?> AddGeneratedCopyToHand(
-        SakuraModCard source,
-        CardModel card,
-        GeneratedCardOptions options,
-        PlayerChoiceContext? context = null) =>
-        await SakuraGeneratedCardLifecycle.AddGeneratedCopyToHand(card, options, context);
-
-    public static async Task<CardModel?> AddGeneratedCopy(
-        SakuraModCard source,
-        CardModel card,
-        GeneratedCardOptions options,
-        PlayerChoiceContext? context = null)
-        => await SakuraGeneratedCardLifecycle.AddGeneratedCopy(card, options, context);
-
-    public static async Task<CardModel> AddGeneratedCardToCombat(
-        CardModel card,
-        GeneratedCardOptions options = default,
-        PlayerChoiceContext? context = null)
-        => await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(card, options, context);
-
-    public static async Task<CardModel?> AddRandomUncatalogedTemporaryClearCardToHand(
-        SakuraModCard source,
-        PlayerChoiceContext context)
-    {
-        var candidates = SakuraCardCatalog.DefaultManifestAtlasTypes
-            .Where(type => !HasCatalogedClearCard(source.Owner, SakuraCardCatalog.CardTemplate(type)))
-            .Select(SakuraCardCatalog.CardTemplate)
-            .ToList();
-
-        if (candidates.Count == 0)
-            candidates = SakuraCardCatalog.DefaultManifestAtlasTypes
-                .Select(SakuraCardCatalog.CardTemplate)
-                .ToList();
-
-        var template = source.Owner.RunState.Rng.CombatCardSelection.NextItem(candidates);
-        if (template is null)
-            return null;
-
-        var card = SakuraGeneratedCardLifecycle.CreateCombatCardFromTemplate(source.Owner, template);
-        await SakuraGeneratedCardLifecycle.AddManifestAtlasTemporaryCardToCombat(card, context);
-        return card;
-    }
-
-    public static async Task<CardModel?> DiscoverGenerated(
-        SakuraModCard source,
-        PlayerChoiceContext context,
-        IReadOnlyList<CardModel> cards,
-        bool freeThisTurn = false,
-        bool upgraded = false)
-    {
-        var choices = cards
-            .Select(card => SakuraGeneratedCardLifecycle.CreateGeneratedChoice(source, card, upgraded))
-            .ToList();
-        try
-        {
-            var chosen = await SakuraActions.SelectFromCards(source, context, choices, cancelable: false);
-            if (chosen is null)
-                return null;
-
-            await SakuraGeneratedCardLifecycle.AddDiscoveredChoiceToCombat(chosen, context, freeThisTurn);
-            return chosen;
-        }
-        finally
-        {
-            SakuraGeneratedCardLifecycle.RemoveDetachedGeneratedChoices(choices);
-        }
+        return Task.CompletedTask;
     }
 
     internal static IReadOnlyList<Type> CaptureCandidateTypes(ICombatState combatState, Player owner)
@@ -334,14 +146,9 @@ public static class SakuraManifestLoop
 
     private static ManifestChoiceSet ManifestChoices(Player owner, Type? excludedType, ManifestSource source)
     {
-        var hasNamelessBookTruth = owner.GetRelic<NamelessBookTruth>() is not null;
-        var captureEligible = source == ManifestSource.RareAtlas || !hasNamelessBookTruth;
         var weightedSources = source switch
         {
             ManifestSource.RareAtlas => WeightedManifestAtlasSources(card => card.Rarity == CardRarity.Rare),
-            _ when hasNamelessBookTruth => CardPile.GetCards(owner, PileType.Hand, PileType.Draw, PileType.Discard, PileType.Exhaust)
-                .Where(SakuraCardCatalog.IsTransparentCard)
-                .ToList(),
             _ => WeightedManifestAtlasSources(SakuraCardCatalog.IsDefaultManifestAtlasCard)
         };
         if (excludedType is not null)
@@ -350,7 +157,7 @@ public static class SakuraManifestLoop
         List<CardModel> choices = [];
         var rng = owner.RunState.Rng.CombatCardSelection;
 
-        while (choices.Count < ManifestChoiceCount(owner) && weightedSources.Count > 0)
+        while (choices.Count < BaseManifestChoiceCount && weightedSources.Count > 0)
         {
             var picked = rng.NextItem(weightedSources);
             if (picked is null)
@@ -361,11 +168,30 @@ public static class SakuraManifestLoop
             weightedSources.RemoveAll(card => card.GetType() == pickedType);
         }
 
-        return new ManifestChoiceSet(choices, captureEligible);
+        return new ManifestChoiceSet(choices, CaptureEligible: true);
     }
 
-    private static int ManifestChoiceCount(Player owner) =>
-        BaseManifestChoiceCount + (owner.GetRelic<SakuraIntuition>()?.AdditionalManifestChoices ?? 0);
+    private static List<CardModel> TransparentCardChoices(Player owner, Type excludedType)
+    {
+        var candidates = SakuraCardCatalog.TransparentCardTypes
+            .Select(SakuraCardCatalog.CardTemplate)
+            .Where(card => card.GetType() != excludedType)
+            .ToList();
+        var choices = new List<CardModel>(BaseManifestChoiceCount);
+        var rng = owner.RunState.Rng.CombatCardSelection;
+
+        while (choices.Count < BaseManifestChoiceCount && candidates.Count > 0)
+        {
+            var picked = rng.NextItem(candidates);
+            if (picked is null)
+                break;
+
+            choices.Add(picked);
+            candidates.RemoveAll(card => card.GetType() == picked.GetType());
+        }
+
+        return choices;
+    }
 
     private static List<CardModel> WeightedManifestAtlasSources(Func<CardModel, bool>? predicate = null) =>
         SakuraCardCatalog.TransparentCardTypes
@@ -393,33 +219,6 @@ public static class SakuraManifestLoop
 
         var cardsByOwner = CaptureCandidatesByCombat.GetValue(card.CombatState, _ => []);
         cardsByOwner.TryAdd(owner, card.GetType());
-    }
-
-    private static async Task TriggerCatalogedClearCard(PlayerChoiceContext context, CardPlay play)
-    {
-        if (play.Card?.Owner?.GetRelic<CatalogNewPage>() is { } catalogNewPage)
-            await catalogNewPage.AfterCatalogedClearCard(context, play);
-    }
-
-    private static async Task SyncCatalogPower(PlayerChoiceContext context, Player owner)
-    {
-        var count = CatalogCount(owner);
-        if (count <= 0)
-            return;
-
-        var power = owner.Creature.GetPower<SakuraCatalogPower>();
-        if (power is null)
-        {
-            power = await PowerCmd.Apply<SakuraCatalogPower>(
-                context,
-                owner.Creature,
-                SakuraCatalogPower.PresenceAmount,
-                owner.Creature,
-                null,
-                false);
-        }
-
-        power?.SetCatalogCount(count);
     }
 
     private enum ManifestSource

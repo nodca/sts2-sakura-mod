@@ -1,0 +1,6 @@
+{
+  "SAKURA_MOD_LABYRINTH.title": "Labyrinth",
+  "SAKURA_MOD_LABYRINTH.description": "This enemy is lost in the Labyrinth. It cannot act or be targeted by cards or effects. Its existing statuses continue to resolve normally.",
+  "SAKURA_MOD_LABYRINTH_RELEASE_WARNING.title": "Leaving the Labyrinth",
+  "SAKURA_MOD_LABYRINTH_RELEASE_WARNING.description": "This enemy will leave the Labyrinth at the end of this turn. Its next intent is shown beside this icon."
+}

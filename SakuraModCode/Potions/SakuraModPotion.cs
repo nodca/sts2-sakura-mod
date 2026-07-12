@@ -1,8 +1,5 @@
-﻿using BaseLib.Abstracts;
-using BaseLib.Utils;
-using SakuraMod.SakuraModCode.Character;
+﻿using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.Potions;
 
-[Pool(typeof(SakuraModPotionPool))]
-public abstract class SakuraModPotion : CustomPotionModel;
+public abstract class SakuraModPotion : ModPotionTemplate;
