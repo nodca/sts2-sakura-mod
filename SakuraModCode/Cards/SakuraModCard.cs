@@ -15,15 +15,8 @@ using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public interface IExtraEffectCard
-{
-    Task OnExtraEffect(PlayerChoiceContext choiceContext, CardPlay play);
-}
-
 public abstract class SakuraModCard : ModCardTemplate
 {
-    private bool _usingExtraEffect;
-
     protected SakuraModCard(int cost, CardType type, CardRarity rarity, TargetType target) :
         base(cost, type, rarity, target)
     {
@@ -55,27 +48,21 @@ public abstract class SakuraModCard : ModCardTemplate
 
     internal virtual IEnumerable<CardKeyword> ReferencedKeywords => [];
     internal virtual IEnumerable<string> ReferencedStaticHoverTipKeys => [];
-    protected virtual bool HasExtraEffect => false;
-
-    protected bool IsUsingExtraEffect => _usingExtraEffect;
-
     internal static bool UsesMagicChargeExtraEffect(CardModel? card) =>
         card is SakuraModCard sakuraCard
-        && SakuraCardCatalog.IsTransparentCard(sakuraCard)
-        && sakuraCard.HasExtraEffect
-        && (sakuraCard._usingExtraEffect || ShouldShowMagicChargeExtraEffectDescription(sakuraCard));
+        && SakuraTransparentCardCatalog.IsTransparentCard(sakuraCard)
+        && SakuraExtraEffectTransaction.Supports(sakuraCard)
+        && SakuraExtraEffectTransaction.ShouldShowAsActive(sakuraCard);
 
     internal static bool ShouldShowMagicChargeExtraEffectDescription(CardModel card) =>
         card is SakuraModCard sakuraCard
-        && SakuraCardCatalog.IsTransparentCard(sakuraCard)
-        && sakuraCard.HasExtraEffect
-        && (sakuraCard._usingExtraEffect
-            || sakuraCard.IsMutable && ClassicSakuraMagic.CanUseExtraEffect(sakuraCard.Owner));
+        && SakuraTransparentCardCatalog.IsTransparentCard(sakuraCard)
+        && SakuraExtraEffectTransaction.ShouldShowAsActive(sakuraCard);
 
     internal static bool HasMagicChargeExtraEffect(CardModel? card) =>
         card is SakuraModCard sakuraCard
-        && SakuraCardCatalog.IsTransparentCard(sakuraCard)
-        && sakuraCard.HasExtraEffect;
+        && SakuraTransparentCardCatalog.IsTransparentCard(sakuraCard)
+        && SakuraExtraEffectTransaction.Supports(sakuraCard);
 
     private bool UsesClearCardPortrait => SakuraCardVisualFamilies.UsesClearLayout(this);
 
@@ -91,39 +78,24 @@ public abstract class SakuraModCard : ModCardTemplate
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await ApplyClassicElementStateForExtraEffect(choiceContext, play);
-        await GainMagicChargeForTransparentCard(choiceContext, play);
-        ResetExtraEffect(play);
+        await SakuraExtraEffectTransaction.AfterCardPlayed(this, choiceContext, play);
     }
 
     protected static Creature RequiredTarget(CardPlay play) =>
         play.Target ?? throw new InvalidOperationException("Card target is required by this card's TargetType.");
 
-    public override async Task BeforeCardPlayed(CardPlay play)
-    {
-        _usingExtraEffect = play.Card == this
-                            && SakuraCardCatalog.IsTransparentCard(this)
-                            && HasExtraEffect
-                            && ClassicSakuraMagic.CanUseExtraEffect(Owner);
+    protected sealed override Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
+        SakuraExtraEffectTransaction.Execute(
+            this,
+            choiceContext,
+            play,
+            (context, currentPlay) => PlayCard(context, currentPlay, default));
 
-        if (!_usingExtraEffect)
-            return;
-
-        await ClassicSakuraMagic.SpendForExtraEffect(new ThrowingPlayerChoiceContext(), Owner);
-        await SakuraActions.RecordExtraEffectTriggeredThisTurn(new ThrowingPlayerChoiceContext(), play);
-    }
-
-    protected async Task TriggerExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        if (IsUsingExtraEffect && this is IExtraEffectCard extraEffectCard)
-            await extraEffectCard.OnExtraEffect(choiceContext, play);
-    }
-
-    protected async Task TriggerExtraEffect(Func<Task> extraEffect)
-    {
-        if (IsUsingExtraEffect)
-            await extraEffect();
-    }
+    protected virtual Task PlayCard(
+        PlayerChoiceContext choiceContext,
+        CardPlay play,
+        SakuraExtraEffectActivation activation) =>
+        Task.CompletedTask;
 
     protected void AddKeywordIfMissing(CardKeyword keyword)
     {
@@ -137,24 +109,25 @@ public abstract class SakuraModCard : ModCardTemplate
             RemoveKeyword(keyword);
     }
 
-    private async Task GainMagicChargeForTransparentCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        if (play.Card == this && SakuraCardCatalog.IsTransparentCard(this))
-            await ClassicSakuraMagic.GainMagic(choiceContext, this);
-    }
+}
 
-    private async Task ApplyClassicElementStateForExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        if (play.Card == this && SakuraActions.DidTriggerExtraEffect(play))
-            await SakuraActions.ApplyClassicElementStatesForTransparentCard(choiceContext, this);
-    }
+public abstract class SakuraExtraEffectCard(
+    int cost,
+    CardType type,
+    CardRarity rarity,
+    TargetType target) :
+    SakuraModCard(cost, type, rarity, target), ISakuraExtraEffectCard
+{
+    protected abstract override Task PlayCard(
+        PlayerChoiceContext choiceContext,
+        CardPlay play,
+        SakuraExtraEffectActivation activation);
 
-    private void ResetExtraEffect(CardPlay play)
-    {
-        if (play.Card == this)
-            _usingExtraEffect = false;
-    }
-
+    Task ISakuraExtraEffectCard.PlayWithExtraEffect(
+        PlayerChoiceContext choiceContext,
+        CardPlay play,
+        SakuraExtraEffectActivation activation) =>
+        PlayCard(choiceContext, play, activation);
 }
 
 internal sealed class SakuraCardHoverTipCapability : CardCapability, ICardHoverTipContributor
@@ -188,6 +161,7 @@ internal static class SakuraCardHoverTips
     internal const string ReflectionTipKey = "SAKURAMOD-REFLECTION";
     internal const string StrongReflectionTipKey = "SAKURAMOD-STRONG_REFLECTION";
     internal const string LabyrinthTipKey = "SAKURAMOD-ENTER_LABYRINTH";
+    internal const string RemindTipKey = "SAKURAMOD-REMIND";
 
     internal static IEnumerable<IHoverTip> HoverTips(SakuraModCard card) =>
         KeywordTips(card).Select(HoverTipFactory.FromKeyword)

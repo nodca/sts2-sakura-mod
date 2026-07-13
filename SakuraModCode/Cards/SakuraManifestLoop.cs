@@ -126,7 +126,7 @@ public static class SakuraManifestLoop
 
     public static IReadOnlyList<CardModel> CaptureCandidateTemplates(Player owner) =>
         CaptureCandidateTypes(owner)
-            .Select(SakuraCardCatalog.CardTemplate)
+            .Select(SakuraTransparentCardCatalog.CardTemplate)
             .ToList();
 
     public static Task OnTemporaryStabilized(PlayerChoiceContext context, CardModel card)
@@ -149,7 +149,7 @@ public static class SakuraManifestLoop
         var weightedSources = source switch
         {
             ManifestSource.RareAtlas => WeightedManifestAtlasSources(card => card.Rarity == CardRarity.Rare),
-            _ => WeightedManifestAtlasSources(SakuraCardCatalog.IsDefaultManifestAtlasCard)
+            _ => WeightedManifestAtlasSources(SakuraTransparentCardCatalog.IsDefaultManifestAtlasCard)
         };
         if (excludedType is not null)
             weightedSources.RemoveAll(card => card.GetType() == excludedType);
@@ -173,8 +173,8 @@ public static class SakuraManifestLoop
 
     private static List<CardModel> TransparentCardChoices(Player owner, Type excludedType)
     {
-        var candidates = SakuraCardCatalog.TransparentCardTypes
-            .Select(SakuraCardCatalog.CardTemplate)
+        var candidates = SakuraTransparentCardCatalog.TransparentCardTypes
+            .Select(SakuraTransparentCardCatalog.CardTemplate)
             .Where(card => card.GetType() != excludedType)
             .ToList();
         var choices = new List<CardModel>(BaseManifestChoiceCount);
@@ -194,8 +194,8 @@ public static class SakuraManifestLoop
     }
 
     private static List<CardModel> WeightedManifestAtlasSources(Func<CardModel, bool>? predicate = null) =>
-        SakuraCardCatalog.TransparentCardTypes
-            .Select(SakuraCardCatalog.CardTemplate)
+        SakuraTransparentCardCatalog.TransparentCardTypes
+            .Select(SakuraTransparentCardCatalog.CardTemplate)
             .Where(card => predicate?.Invoke(card) != false)
             .SelectMany(card => Enumerable.Repeat(card, ManifestWeight(card.Rarity)))
             .ToList();
@@ -213,7 +213,7 @@ public static class SakuraManifestLoop
     {
         if (card.Owner is not { } owner
             || card.CombatState is null
-            || !SakuraCardCatalog.IsTransparentCard(card)
+            || !SakuraTransparentCardCatalog.IsTransparentCard(card)
             || !card.IsManifestAtlasOrigin())
             return;
 

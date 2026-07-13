@@ -22,12 +22,11 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Gravitation() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self), IExtraEffectCard
+public class Gravitation() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         SakuraCardPlayVfx.PlayGravitation(CombatState!.HittableEnemies);
         var power = await PowerCmd.Apply<GravitationHoldPower>(
@@ -38,10 +37,11 @@ public class Gravitation() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, T
             this,
             false);
         power?.ExcludeSource(this);
-        await TriggerExtraEffect(choiceContext, play);
+        if (activation.IsActive)
+            await ApplyExtraEffect(choiceContext, play);
     }
 
-    public async Task OnExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
+    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await ChooseFromPileToHand(choiceContext, PileType.Discard);
         await ChooseFromPileToHand(choiceContext, PileType.Draw);
@@ -61,15 +61,14 @@ public class Gravitation() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, T
     }
 }
 
-public class Mirage() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
+public class Mirage() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
     protected override IEnumerable<IHoverTip> AdditionalHoverTips => [HoverTipFactory.FromPower<MiragePower>()];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var targets = IsUsingExtraEffect
+        var targets = activation.IsActive
             ? CombatState!.HittableEnemies.ToList()
             : [RequiredTarget(play)];
         await PowerCmd.Apply<MiragePower>(choiceContext, targets, 1, Owner.Creature, this, false);
@@ -78,9 +77,8 @@ public class Mirage() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Ta
     protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Retain);
 }
 
-public class Record() : SakuraModCard(2, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Record() : SakuraExtraEffectCard(2, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    protected override bool HasExtraEffect => true;
     private bool _restoredDuringCurrentPlay;
 
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
@@ -103,7 +101,7 @@ public class Record() : SakuraModCard(2, CardType.Skill, CardRarity.Rare, Target
         return (pileType, position);
     }
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         if (_restoredDuringCurrentPlay)
             return;
@@ -112,7 +110,7 @@ public class Record() : SakuraModCard(2, CardType.Skill, CardRarity.Rare, Target
         if (result == RecordResult.Restored)
             _restoredDuringCurrentPlay = true;
 
-        if (!IsUsingExtraEffect)
+        if (!activation.IsActive)
             return;
 
         if (result == RecordResult.Recorded)
@@ -148,11 +146,15 @@ public class Exchange() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, 
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         await CardPileCmd.Draw(choiceContext, 1, Owner, false);
 
-        var cards = await SakuraActions.SelectHandCards(this, choiceContext, card => card != this, 2);
+        var cards = await SakuraActions.SelectHandCards(
+            this,
+            choiceContext,
+            card => card != this && SakuraActions.HasExchangeableEnergyCost(card),
+            2);
         if (cards.Count == 2)
         {
             var first = cards[0];
@@ -163,12 +165,11 @@ public class Exchange() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, 
     }
 }
 
-public class Kindness() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Kindness() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var power = await PowerCmd.Apply<KindnessPower>(
             choiceContext,
@@ -177,7 +178,7 @@ public class Kindness() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, 
             Owner.Creature,
             this,
             false);
-        power?.QueueEffect(IsUsingExtraEffect);
+        power?.QueueEffect(activation.IsActive);
     }
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
@@ -188,7 +189,7 @@ public class Labyrinth() : SakuraModCard(2, CardType.Power, CardRarity.Rare, Tar
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys => [SakuraCardHoverTips.LabyrinthTipKey];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var targets = CombatState!.Enemies.Where(enemy => enemy.IsAlive).ToList();
         var power = await PowerCmd.Apply<LabyrinthPower>(
@@ -205,27 +206,26 @@ public class Labyrinth() : SakuraModCard(2, CardType.Power, CardRarity.Rare, Tar
     protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Retain);
 }
 
-public class Repair() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self), IExtraEffectCard
+public class Repair() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<RegenPower>(3)];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         await PowerCmd.Apply<RegenPower>(choiceContext, Owner.Creature, DynamicVars["RegenPower"].IntValue, Owner.Creature, this, false);
-        await TriggerExtraEffect(choiceContext, play);
+        if (activation.IsActive)
+            await ApplyExtraEffect(choiceContext, play);
     }
 
-    public async Task OnExtraEffect(PlayerChoiceContext choiceContext, CardPlay play) =>
+    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PowerCmd.Apply<RepairRegenerationPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
 
     protected override void OnUpgrade() => DynamicVars["RegenPower"].UpgradeValueBy(1);
 }
 
-public class Reversal() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy), IExtraEffectCard
+public class Reversal() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
@@ -236,7 +236,7 @@ public class Reversal() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, 
         new CardsVar(1)
     ];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var drawCards = CardPile.Get(PileType.Draw, Owner)!.Cards.ToList();
         var discardCards = CardPile.Get(PileType.Discard, Owner)!.Cards.ToList();
@@ -251,10 +251,11 @@ public class Reversal() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, 
         var pileDamage = exchangedCards / DynamicVars["PileCardsPerDamage"].IntValue * DynamicVars["PileDamage"].IntValue;
         await SakuraActions.Attack(choiceContext, this, RequiredTarget(play), DynamicVars.Damage.IntValue + pileDamage);
         await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
-        await TriggerExtraEffect(choiceContext, play);
+        if (activation.IsActive)
+            await ApplyExtraEffect(choiceContext, play);
     }
 
-    public async Task OnExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
+    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var handSize = CardPile.Get(PileType.Hand, Owner)!.Cards.Count;
         var cardsToDraw = MaxHandSizeCalculator.Calculate(Owner) - handSize;
@@ -265,44 +266,42 @@ public class Reversal() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, 
     protected override void OnUpgrade() => DynamicVars["PileCardsPerDamage"].UpgradeValueBy(-1);
 }
 
-public class Rewind() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Rewind() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var card = await SakuraActions.SelectFromCards(this, choiceContext, CardPile.Get(PileType.Exhaust, Owner)!.Cards, cancelable: false);
         if (card is null)
             return;
 
         await SakuraActions.MoveExistingCardToHand(this, card);
-        await TriggerExtraEffect(() =>
+        if (activation.IsActive)
         {
             card.SetToFreeThisTurn();
-            return Task.CompletedTask;
-        });
+        }
     }
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
-public class Snooze() : SakuraModCard(1, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy), IExtraEffectCard
+public class Snooze() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy)
 {
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<WeakPower>(2), new PowerVar<SakuraSleepPower>(2)];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var target = RequiredTarget(play);
         await PowerCmd.Apply<WeakPower>(choiceContext, target, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
         await CardPileCmd.Draw(choiceContext, 1, Owner, false);
-        await TriggerExtraEffect(choiceContext, play);
+        if (activation.IsActive)
+            await ApplyExtraEffect(choiceContext, play);
     }
 
-    public async Task OnExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
+    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = play.Target ?? CombatState?.HittableEnemies.FirstOrDefault();
         if (target is not null)
@@ -312,25 +311,29 @@ public class Snooze() : SakuraModCard(1, CardType.Skill, CardRarity.Common, Targ
     protected override void OnUpgrade() => DynamicVars.Weak.UpgradeValueBy(1);
 }
 
-public class Spiral() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy), IExtraEffectCard
+public class Spiral() : SakuraExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new CalculationBaseVar(4),
-        new ExtraDamageVar(3),
-        new CalculatedDamageVar(ValueProp.Move).WithMultiplier(SpiralRules.PlayedPreviouslyThisCombat)
+        new DamageVar(4, ValueProp.Move),
+        new BlockVar(4, ValueProp.Move)
     ];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var target = RequiredTarget(play);
-        await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage);
-        await TriggerExtraEffect(choiceContext, play);
+        var repetitions = this.IsTemporary() ? 2 : 1;
+        for (var i = 0; i < repetitions; i++)
+        {
+            await SakuraActions.Attack(choiceContext, this, target, DynamicVars.Damage.IntValue);
+            await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, play, false);
+        }
+        if (activation.IsActive)
+            await ApplyExtraEffect(choiceContext, play);
     }
 
-    public async Task OnExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
+    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await SakuraGeneratedCardLifecycle.AddTemporaryCopyToHand(
             this,
@@ -338,23 +341,15 @@ public class Spiral() : SakuraModCard(1, CardType.Attack, CardRarity.Uncommon, T
             context: choiceContext);
     }
 
-    protected override void OnUpgrade() => DynamicVars.ExtraDamage.UpgradeValueBy(1);
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Damage.UpgradeValueBy(2);
+        DynamicVars.Block.UpgradeValueBy(2);
+    }
 }
 
-internal static class SpiralRules
+public class Transfer() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
-    public static decimal PlayedPreviouslyThisCombat(CardModel card, Creature? target) =>
-        card.Owner is { } owner
-            ? CombatManager.Instance.History.CardPlaysFinished
-                .Where(entry => entry is CardPlayFinishedEntry { CardPlay.Card.Owner: var cardOwner } && cardOwner == owner)
-                .Select(entry => ((CardPlayFinishedEntry)entry).CardPlay.Card)
-                .Count(static playedCard => playedCard is Spiral)
-            : 0;
-}
-
-public class Transfer() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
-{
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
@@ -363,9 +358,9 @@ public class Transfer() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, 
         new DynamicVar("DexterityGain", 1)
     ];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        ApplyExtraEffectExhaustChange();
+        ApplyExtraEffectExhaustChange(activation);
         var target = RequiredTarget(play);
         await PowerCmd.Apply<StrengthPower>(choiceContext, target, -DynamicVars["EnemyStrengthLoss"].IntValue, Owner.Creature, this, false);
         await PowerCmd.Apply<StrengthPower>(choiceContext, Owner.Creature, DynamicVars["StrengthGain"].IntValue, Owner.Creature, this, false);
@@ -377,9 +372,9 @@ public class Transfer() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, 
             ? PileType.Discard
             : base.GetResultPileTypeForCardPlay();
 
-    private void ApplyExtraEffectExhaustChange()
+    private void ApplyExtraEffectExhaustChange(SakuraExtraEffectActivation activation)
     {
-        if (IsUsingExtraEffect)
+        if (activation.IsActive)
             RemoveKeywordIfPresent(CardKeyword.Exhaust);
         else
             AddKeywordIfMissing(CardKeyword.Exhaust);
@@ -427,15 +422,14 @@ public class Transfer() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, 
 
 
 
-public class Blank() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self), IExtraEffectCard
+public class Blank() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
-    protected override bool HasExtraEffect => true;
     private int _removedCardsThisPlay;
 
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(4, ValueProp.Move)];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
 
@@ -447,10 +441,11 @@ public class Blank() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Tar
         foreach (var card in cards)
             await CardCmd.Exhaust(choiceContext, card);
 
-        await TriggerExtraEffect(choiceContext, play);
+        if (activation.IsActive)
+            await ApplyExtraEffect(choiceContext, play);
     }
 
-    public async Task OnExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
+    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
     {
         foreach (var power in Owner.Creature.Powers.Where(IsOwnNegativePower).ToList())
             await PowerCmd.Remove(power);
@@ -484,19 +479,18 @@ public class Blank() : SakuraModCard(1, CardType.Skill, CardRarity.Uncommon, Tar
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
 
-public class Mirror() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Mirror() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new RepeatVar(1), new RepeatVar("ExtraRepeat", 1)];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var card = await SakuraActions.SelectHandCard(this, choiceContext, card => card != this);
         if (card is not null)
         {
             var amount = DynamicVars["Repeat"].IntValue;
-            if (IsUsingExtraEffect)
+            if (activation.IsActive)
                 amount += DynamicVars["ExtraRepeat"].IntValue;
             card.AddReplayThisTurn(amount);
         }
@@ -510,14 +504,15 @@ public class Remind() : SakuraModCard(0, CardType.Skill, CardRarity.Rare, Target
     private static LocString SelectionPrompt => CardLoc<Remind>("selectionPrompt");
 
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys => [SakuraCardHoverTips.RemindTipKey];
     protected override bool HasEnergyCostX => true;
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var choices = TemporaryCardMemory.CardsRemovedByTemporary(CombatState, Owner);
         var recallCount = RecallCount();
-        var cards = choices.Count <= recallCount
-            ? choices
+        var cards = (choices.Count <= recallCount
+            ? choices.ToList()
             : await SakuraActions.SelectUpToFromCards(
                 this,
                 choiceContext,
@@ -525,7 +520,9 @@ public class Remind() : SakuraModCard(0, CardType.Skill, CardRarity.Rare, Target
                 recallCount,
                 cancelable: false,
                 prompt: SelectionPrompt,
-                minSelect: recallCount);
+                minSelect: recallCount)).ToList();
+
+        TemporaryCardMemory.Consume(CombatState, Owner, cards);
 
         foreach (var card in cards)
         {
@@ -539,8 +536,11 @@ public class Remind() : SakuraModCard(0, CardType.Skill, CardRarity.Rare, Target
     private int RecallCount()
     {
         var energy = Math.Max(0, ResolveEnergyXValue());
-        return IsUpgraded ? energy * 2 + 1 : energy + 1;
+        return RecallCount(energy, IsUpgraded);
     }
+
+    internal static int RecallCount(int energy, bool upgraded) =>
+        upgraded ? Math.Max(0, energy) * 2 + 1 : Math.Max(0, energy) + 1;
 
     protected override void OnUpgrade() { }
 }
@@ -549,32 +549,35 @@ public class Synchronize() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, T
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var cards = await SakuraActions.SelectHandCards(
             this,
             choiceContext,
-            card => SakuraCardCatalog.IsTransparentCard(card) && card != this,
-            2);
+            card => CanSynchronize(this, card),
+            2,
+            pretendCardsCanBePlayed: true);
         if (cards.Count != 2)
             return;
 
         cards[0].SynchronizeWith(cards[1]);
     }
 
+    internal static bool CanSynchronize(CardModel source, CardModel candidate) =>
+        candidate != source && !candidate.Keywords.Contains(CardKeyword.Unplayable);
+
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
-public class Time() : SakuraModCard(3, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Time() : SakuraExtraEffectCard(3, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         SakuraCardPlayVfx.PlayTime(Owner.Creature);
         var power = await PowerCmd.Apply<TimeStopPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, true);
-        if (IsUsingExtraEffect)
+        if (activation.IsActive)
             power?.PreserveCurrentTurnState();
 
         PlayerCmd.EndTurn(Owner, canBackOut: false);
@@ -592,9 +595,8 @@ public class Time() : SakuraModCard(3, CardType.Skill, CardRarity.Rare, TargetTy
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
-public class TrueOrFalse() : SakuraModCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class TrueOrFalse() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    protected override bool HasExtraEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust, SakuraKeywords.Stabilize];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
@@ -602,9 +604,9 @@ public class TrueOrFalse() : SakuraModCard(0, CardType.Skill, CardRarity.Rare, T
         new EnergyVar(1)
     ];
 
-    protected override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        if (IsUsingExtraEffect)
+        if (activation.IsActive)
         {
             await Virtual(choiceContext);
             await Real(choiceContext);

@@ -21,7 +21,7 @@ internal static class SakuraCardFrameVisuals
 
     public static IEnumerable<string> RunAssetPaths(CardModel card)
     {
-        if (SakuraCardCatalog.IsTransparentCard(card))
+        if (SakuraTransparentCardCatalog.IsTransparentCard(card))
         {
             yield return ClearCardLayout.CardArtPath(card.GetType());
             foreach (var path in SakuraDescriptionRegion.AssetPaths(card))

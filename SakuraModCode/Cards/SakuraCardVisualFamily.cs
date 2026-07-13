@@ -37,7 +37,7 @@ internal static class SakuraCardVisualFamilies
         ContentOwner(card?.Model);
 
     public static SakuraCardContentOwner ContentOwner(CardModel? card) =>
-        card is not null && SakuraSourceCardCatalog.TryGetMetadata(card, out _)
+        card is not null && SakuraCardCatalog.TryGetMetadata(card, out _)
             ? SakuraCardContentOwner.Sakura
             : SakuraCardContentOwner.Vanilla;
 
@@ -60,7 +60,7 @@ internal static class SakuraCardVisualFamilies
 
     public static SakuraCardVisualLayout Layout(CardModel? card)
     {
-        if (card is null || !SakuraSourceCardCatalog.TryGetMetadata(card, out var metadata))
+        if (card is null || !SakuraCardCatalog.TryGetMetadata(card, out var metadata))
             return SakuraCardVisualLayout.None;
 
         return metadata.VisualRoute switch

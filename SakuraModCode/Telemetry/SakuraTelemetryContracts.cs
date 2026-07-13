@@ -127,7 +127,7 @@ internal static class SakuraTelemetryCardClassifier
 
     internal static bool TryClassifyOwner(Type cardType, out string category, out string owner)
     {
-        if (SakuraSourceCardCatalog.TryGetMetadata(cardType, out var metadata) && metadata.Era.HasValue)
+        if (SakuraCardCatalog.TryGetMetadata(cardType, out var metadata) && metadata.Era.HasValue)
         {
             category = metadata.Era.Value switch
             {

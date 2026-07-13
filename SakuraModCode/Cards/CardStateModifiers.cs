@@ -451,6 +451,38 @@ public static class TemporaryCardMemory
             ? cards
             : [];
     }
+
+    public static void Consume(ICombatState? combatState, Player? player, IReadOnlyList<CardModel> selected)
+    {
+        if (selected.Count == 0)
+            return;
+        if (combatState is null
+            || player is null
+            || !CardsByCombat.TryGetValue(combatState, out var cardsByOwner)
+            || !cardsByOwner.TryGetValue(player, out var cards))
+        {
+            throw new InvalidOperationException("Cannot consume Temporary memory outside its owning combat and player.");
+        }
+
+        ConsumeRecords(cards, selected);
+    }
+
+    internal static void ConsumeRecords(List<CardModel> records, IReadOnlyList<CardModel> selected)
+    {
+        var selectedIndices = new List<int>(selected.Count);
+        foreach (var selectedRecord in selected)
+        {
+            var index = records.FindIndex(record => ReferenceEquals(record, selectedRecord));
+            if (index < 0 || selectedIndices.Contains(index))
+                throw new InvalidOperationException("Temporary memory selection contains a stale or duplicate record.");
+
+            selectedIndices.Add(index);
+        }
+
+        selectedIndices.Sort();
+        for (var i = selectedIndices.Count - 1; i >= 0; i--)
+            records.RemoveAt(selectedIndices[i]);
+    }
 }
 
 internal static class SakuraStateText
@@ -738,7 +770,7 @@ public static class SakuraCardStates
     }
 
     public static bool CanStabilize(this CardModel card) =>
-        SakuraCardCatalog.IsTransparentCard(card);
+        SakuraTransparentCardCatalog.IsTransparentCard(card);
 
     private static T NewModifier<T>() where T : SakuraCardStateCapability =>
         ModelCapabilityRegistry.Create<T>();

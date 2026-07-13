@@ -14,6 +14,7 @@ using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.addons.mega_text;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Extensions;
 using STS2RitsuLib.Patching;
@@ -24,6 +25,17 @@ namespace SakuraMod.SakuraModCode.Classic.Cards;
 
 internal static class ClassicSakuraVisualAssets
 {
+    private static readonly IReadOnlyDictionary<Type, string> SpellArtStems = new Dictionary<Type, string>
+    {
+        [typeof(SpellSeal)] = "default_card_p.png",
+        [typeof(SpellRelease)] = "default_card_p.png",
+        [typeof(SpellTurn)] = "default_card_p.png",
+        [typeof(SpellEmptySpell)] = "empty_spell_p.png",
+        [typeof(SpellHuoShen)] = "huoshen_p.png",
+        [typeof(SpellLeiDi)] = "leidi_p.png",
+        [typeof(SpellFengHua)] = "fenghua_p.png",
+        [typeof(SpellShuiLong)] = "shuilong_p.png"
+    };
     private static readonly Dictionary<string, SakuraCardTextureResource> TextureResources = [];
 
     public static IEnumerable<string> RunAssetPaths(ClassicSakuraCard card)
@@ -34,10 +46,10 @@ internal static class ClassicSakuraVisualAssets
             yield break;
         }
 
-        if (IsFullFaceFamily(card.Family))
+        if (IsFullFaceCard(card))
         {
             yield return FullFacePath(card);
-            yield return UnknownFullFacePath(card.Family);
+            yield return UnknownFullFacePath(card);
             if (EnergyIconPath(card) is { } energyIconPath)
                 yield return energyIconPath;
             if (TextEnergyIconPath(card) is { } textEnergyIconPath)
@@ -64,46 +76,58 @@ internal static class ClassicSakuraVisualAssets
     }
 
     public static string FullFacePath(ClassicSakuraCard card) =>
-        FullFacePath(card.Family, ClassicSakuraCardCatalog.ArtStem(card.GetType()).NormalClassicArtStem());
+        FullFacePath(card, ArtStem(card.GetType()).NormalClassicArtStem());
 
-    public static string UnknownFullFacePath(ClassicSakuraCardFamily family) =>
-        FullFacePath(family, "unknown.png");
+    public static string UnknownFullFacePath(ClassicSakuraCard card) =>
+        FullFacePath(card, "unknown.png");
 
-    public static string FullFacePath(ClassicSakuraCardFamily family, string fileName) =>
-        Path.Join(FullFaceFamilyDirectory(family), fileName).ClassicFullFaceImagePath();
+    public static string FullFacePath(ClassicSakuraCard card, string fileName) =>
+        Path.Join(FullFaceFamilyDirectory(card), fileName).ClassicFullFaceImagePath();
+
+    public static string ArtStem(Type type)
+    {
+        if (SpellArtStems.TryGetValue(type, out var spellStem))
+            return spellStem;
+
+        var metadata = SakuraCardCatalog.MetadataFor(type);
+        if (metadata.VisualRoute != SakuraSourceCardVisualRoute.Classic || metadata.Identity is not { } identity)
+            throw new InvalidOperationException($"Missing Classic Sakura art mapping for {type.Name}.");
+
+        return $"the_{identity.ToString().ToLowerInvariant()}_p.png";
+    }
 
     public static string FlashPath() =>
         Path.Join("general", "flash", "flash.png").ClassicCardUiImagePath();
 
     public static string? EnergyIconPath(ClassicSakuraCard card) =>
-        card.Family switch
-        {
-            ClassicSakuraCardFamily.Clow => ClassicSakuraEnergyIcon.ClowBigPath,
-            ClassicSakuraCardFamily.Sakura => ClassicSakuraEnergyIcon.SakuraBigPath,
-            ClassicSakuraCardFamily.Spell when card is SpellSeal or SpellRelease or SpellTurn => ClassicSakuraEnergyIcon.ClowBigPath,
-            _ => null
-        };
+        card.IsClowCard
+            ? ClassicSakuraEnergyIcon.ClowBigPath
+            : card.IsSakuraCard
+                ? ClassicSakuraEnergyIcon.SakuraBigPath
+                : card is SpellSeal or SpellRelease or SpellTurn
+                    ? ClassicSakuraEnergyIcon.ClowBigPath
+                    : null;
 
     public static string? TextEnergyIconPath(ClassicSakuraCard card) =>
-        card.Family switch
-        {
-            ClassicSakuraCardFamily.Clow => ClassicSakuraEnergyIcon.ClowTextPath,
-            ClassicSakuraCardFamily.Sakura => ClassicSakuraEnergyIcon.SakuraTextPath,
-            ClassicSakuraCardFamily.Spell when card is SpellSeal or SpellRelease or SpellTurn => ClassicSakuraEnergyIcon.ClowTextPath,
-            _ => null
-        };
+        card.IsClowCard
+            ? ClassicSakuraEnergyIcon.ClowTextPath
+            : card.IsSakuraCard
+                ? ClassicSakuraEnergyIcon.SakuraTextPath
+                : card is SpellSeal or SpellRelease or SpellTurn
+                    ? ClassicSakuraEnergyIcon.ClowTextPath
+                    : null;
 
-    private static string FullFaceFamilyDirectory(ClassicSakuraCardFamily family) =>
-        family switch
-        {
-            ClassicSakuraCardFamily.Clow => "clow",
-            ClassicSakuraCardFamily.Sakura => "sakura",
-            ClassicSakuraCardFamily.Spell => "spell",
-            _ => throw new InvalidOperationException($"Classic full-card face assets are not defined for {family} cards.")
-        };
+    internal static string FullFaceFamilyDirectory(ClassicSakuraCard card) =>
+        card.IsClowCard
+            ? "clow"
+            : card.IsSakuraCard
+                ? "sakura"
+                : card.IsSpellCard
+                    ? "spell"
+                    : throw new InvalidOperationException($"Classic full-card face assets are not defined for {card.GetType().Name}.");
 
-    private static bool IsFullFaceFamily(ClassicSakuraCardFamily family) =>
-        family is ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura or ClassicSakuraCardFamily.Spell;
+    private static bool IsFullFaceCard(ClassicSakuraCard card) =>
+        card.IsClassicSourceCard || card.IsSpellCard;
 
 }
 
@@ -215,7 +239,7 @@ internal static class ClassicSakuraCardLayout
 
         var facePath = card.Visibility == ModelVisibility.Visible
             ? ClassicSakuraVisualAssets.FullFacePath(model)
-            : ClassicSakuraVisualAssets.UnknownFullFacePath(model.Family);
+            : ClassicSakuraVisualAssets.UnknownFullFacePath(model);
         var faceTexture = ClassicSakuraVisualAssets.Texture(facePath);
         var highlightTexture = HighlightTexture(Spec.HighlightBox.Size);
         var descriptionTexture = SakuraDescriptionRegion.AppliesTo(model)
@@ -262,7 +286,7 @@ internal static class ClassicSakuraCardLayout
         var showFaceIdentity = card.Visibility == ModelVisibility.Visible;
         var facePath = showFaceIdentity
             ? ClassicSakuraVisualAssets.FullFacePath(model)
-            : ClassicSakuraVisualAssets.UnknownFullFacePath(model.Family);
+            : ClassicSakuraVisualAssets.UnknownFullFacePath(model);
         ApplyTextureLayer(state.GetOrCreateFace(card), Spec.RootBox, facePath, Spec.ArtZIndex);
 
         SakuraCardGeometryLifecycle.ApplyCardHighlight(highlight, Spec.HighlightBox, Spec.HighlightZIndex);
@@ -271,9 +295,9 @@ internal static class ClassicSakuraCardLayout
         ApplyEnglishNameLayout(
             state.GetOrCreateEnglishNameLabel(card),
             model,
-            showFaceIdentity && model.Family is not ClassicSakuraCardFamily.Spell);
+            showFaceIdentity && !model.IsSpellCard);
         ApplyDescriptionRegion(card, model, nodes.DescriptionLabel, state, showFaceIdentity);
-        if (ShouldShowCost(model))
+        if (model.ShowsEnergyCost)
         {
             ApplyCostLayout(
                 nodes.EnergyIcon,
@@ -292,9 +316,6 @@ internal static class ClassicSakuraCardLayout
         foreach (var hiddenNode in nodes.HiddenNodes(card))
             Hide(hiddenNode);
     }
-
-    private static bool ShouldShowCost(ClassicSakuraCard model) =>
-        model is SpellSeal or SpellRelease || model.Family is not ClassicSakuraCardFamily.Spell;
 
     private static void ApplyTextureLayer(
         TextureRect layer,
@@ -377,6 +398,7 @@ internal static class ClassicSakuraCardLayout
 
         var flash = HandFlash(holder);
         ledger.Borrow(flash, SakuraControlProperty.Modulate);
+        SakuraHandHighlightVisual.Apply(holder, ledger);
         ledger.BorrowTexture(flash as TextureRect);
         if (flash is TextureRect textureRect)
             SetTextureIfDifferent(textureRect, ClassicSakuraVisualAssets.Texture(ClassicSakuraVisualAssets.FlashPath()));
@@ -683,13 +705,13 @@ internal static class ClassicSakuraCardLayout
         model.IsUpgraded ? SakuraCardVisualStyle.UpgradedNameTextColor : Spec.DefaultNameTextColor;
 
     private static Rect2 EnglishNameBox(ClassicSakuraCard model) =>
-        model.Family == ClassicSakuraCardFamily.Sakura
+        model.IsSakuraCard
             ? Spec.SakuraEnglishNameBox
             : Spec.ClowEnglishNameBox;
 
     private static string ClassicEnglishName(Type cardType)
     {
-        var artStem = ClassicSakuraCardCatalog.ArtStem(cardType).NormalClassicArtStem();
+        var artStem = ClassicSakuraVisualAssets.ArtStem(cardType).NormalClassicArtStem();
         var name = Path.GetFileNameWithoutExtension(artStem);
         if (name.StartsWith("the_", StringComparison.Ordinal))
             name = name["the_".Length..];

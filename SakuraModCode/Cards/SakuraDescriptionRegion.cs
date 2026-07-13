@@ -37,7 +37,7 @@ internal static class SakuraDescriptionRegion
     public static bool AppliesTo(CardModel? card)
     {
         if (card is null
-            || !SakuraSourceCardCatalog.TryGetMetadata(card, out var metadata)
+            || !SakuraCardCatalog.TryGetMetadata(card, out var metadata)
             || metadata.VisualRoute is not (SakuraSourceCardVisualRoute.Classic or SakuraSourceCardVisualRoute.Clear)
             || metadata.Era is not (SourceEraClass.Clow or SourceEraClass.Sakura or SourceEraClass.Clear)
                 && card is not ClassicSpellCard)
@@ -238,7 +238,7 @@ internal static class SakuraDescriptionRegion
         if (card is ClassicSakuraCard classic)
         {
             var elementCount = classic.Element.AsElements().Count();
-            return classic.Family == ClassicSakuraCardFamily.Sakura
+            return classic.IsSakuraCard
                 ? 1 + elementCount
                 : elementCount;
         }

@@ -34,6 +34,7 @@ public partial class MainFile : Node
 
         harmony.PatchAll();
         SakuraCardVisualPatchRegistration.Register();
+        SakuraElementStateHudPatchRegistration.Register();
         ClassicSakuraRunHooks.Register();
         ClearCardLayout.PreloadVisualResources();
     }

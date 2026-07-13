@@ -16,10 +16,10 @@ public class ClassicSakuraCardPool : TypeListCardPoolModel
     public override bool IsColorless => false;
 
     internal static IReadOnlyList<Type> AllCardTypesForPool() =>
-        SakuraSourceCardCatalog.PoolCardTypes;
+        SakuraCardCatalog.PoolCardTypes;
 
     internal static CardModel[] AllCardTemplatesForPool() =>
-        SakuraSourceCardCatalog.PoolCardTemplates();
+        SakuraCardCatalog.PoolCardTemplates();
 
 }
 

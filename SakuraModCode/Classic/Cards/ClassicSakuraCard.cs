@@ -22,6 +22,7 @@ using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Classic.Relics;
 using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.Powers;
 using STS2RitsuLib.Cards.FreePlay;
 using STS2RitsuLib.Models.Capabilities;
 using STS2RitsuLib.Scaffolding.Content;
@@ -29,127 +30,28 @@ using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Classic.Cards;
 
-public enum ClassicSakuraCardFamily
-{
-    Clow,
-    Sakura,
-    Spell
-}
-
-public enum SourceCardIdentity
-{
-    Action,
-    Appear,
-    Arrow,
-    Aqua,
-    Big,
-    Blade,
-    Blank,
-    Blaze,
-    Bubbles,
-    Break,
-    Change,
-    Choice,
-    Cloud,
-    Create,
-    Dark,
-    Dash,
-    Dream,
-    Dreaming,
-    Earthy,
-    Erase,
-    Exchange,
-    Fight,
-    Firey,
-    Float,
-    Flight,
-    Flower,
-    Fly,
-    Freeze,
-    Gale,
-    Glow,
-    Gravitation,
-    Hail,
-    Hope,
-    Illusion,
-    Kindness,
-    Labyrinth,
-    Legacy,
-    Lucid,
-    Sword,
-    Shield,
-    Jump,
-    Libra,
-    Light,
-    Little,
-    Lock,
-    Loop,
-    Love,
-    Maze,
-    Mirage,
-    Mirror,
-    Mist,
-    Move,
-    Nothing,
-    Power,
-    Promise,
-    Rain,
-    Record,
-    Reflect,
-    Remind,
-    Repair,
-    Return,
-    Reversal,
-    Rewind,
-    Sand,
-    Shadow,
-    Shade,
-    Shot,
-    Siege,
-    Silent,
-    Sleep,
-    Snooze,
-    Snow,
-    Song,
-    Spiral,
-    Storm,
-    Struggle,
-    Sweet,
-    Swing,
-    Synchronize,
-    Through,
-    Thunder,
-    Time,
-    Transfer,
-    TrueOrFalse,
-    Twin,
-    Voice,
-    Watery,
-    Wave,
-    Windy,
-    Wood
-}
-
 public abstract class ClassicSakuraCard(
     int cost,
     CardType type,
     CardRarity rarity,
-    TargetType target,
-    ClassicSakuraCardFamily family,
-    SourceCardIdentity? identity = null) :
+    TargetType target) :
     ModCardTemplate(cost, type, rarity, target)
 {
     protected static readonly LocString HandPrompt = new("cards", "SAKURAMOD-GENERIC.handPrompt");
     protected static LocString CardLoc<TCard>(string suffix) where TCard : CardModel =>
         new("cards", $"{ModelDb.GetId(typeof(TCard)).Entry}.{suffix}");
 
-    public ClassicSakuraCardFamily Family => family;
-    public SourceCardIdentity? Identity => identity;
+    internal SourceEraClass? Era => SakuraCardCatalog.MetadataFor(GetType()).Era;
+    public SourceCardIdentity? Identity => SakuraCardCatalog.MetadataFor(GetType()).Identity;
+    internal bool IsClowCard => Era == SourceEraClass.Clow;
+    internal bool IsSakuraCard => Era == SourceEraClass.Sakura;
+    internal bool IsClassicSourceCard => Era is SourceEraClass.Clow or SourceEraClass.Sakura;
+    internal bool IsSpellCard => this is ClassicSpellCard;
+    internal bool ShowsEnergyCost => this is SpellSeal or SpellRelease || !IsSpellCard;
 
     public virtual ClassicElement Element => ClassicElement.None;
-    protected virtual bool HasMagicChargeExtraEffect => false;
-    protected virtual bool GrantsMagicCharge => Family is ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura;
-    protected virtual bool AddsVoidOnNormalSakuraPlay => Family == ClassicSakuraCardFamily.Sakura;
+    internal virtual bool GrantsMagicCharge => IsClassicSourceCard;
+    internal virtual bool AddsVoidOnNormalSakuraPlay => IsSakuraCard;
     internal bool ShowsSakuraCardVoidTip => AddsVoidOnNormalSakuraPlay;
 
     public override string CustomPortraitPath => "card.png".BigCardImagePath();
@@ -157,42 +59,13 @@ public abstract class ClassicSakuraCard(
     public override string BetaPortraitPath => "card.png".CardImagePath();
     protected override IEnumerable<string> ExtraRunAssetPaths => ClassicSakuraVisualAssets.RunAssetPaths(this);
 
-    protected virtual string BigPortraitPath =>
-        Family switch
-        {
-            ClassicSakuraCardFamily.Clow => ClassicSakuraCardCatalog.ArtStem(GetType()).BigClassicClowArtPath(),
-            ClassicSakuraCardFamily.Sakura => ClassicSakuraCardCatalog.ArtStem(GetType()).BigClassicSakuraArtPath(),
-            ClassicSakuraCardFamily.Spell => ClassicSakuraCardCatalog.ArtStem(GetType()).BigClassicSpellArtPath(),
-            _ => "card.png".BigCardImagePath()
-        };
+    protected sealed override Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
+        SakuraExtraEffectTransaction.Execute(this, choiceContext, play, PlayCard);
 
-    protected sealed override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    protected abstract Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play);
+
+    internal async Task ApplyMagicChargeElementStates(PlayerChoiceContext choiceContext)
     {
-        var usedExtra = HasMagicChargeExtraEffect && ClassicSakuraMagic.CanUseExtraEffect(Owner);
-        if (usedExtra)
-        {
-            await ClassicSakuraMagic.SpendForExtraEffect(choiceContext, Owner);
-            await PlayExtra(choiceContext, play);
-            await ApplyMagicChargeElementStates(choiceContext);
-        }
-        else
-        {
-            await PlayNormal(choiceContext, play);
-            if (AddsVoidOnNormalSakuraPlay)
-                await ClassicSakuraMagic.AddVoidToDrawPile(choiceContext, Owner);
-        }
-    }
-
-    protected abstract Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play);
-
-    protected virtual Task PlayExtra(PlayerChoiceContext choiceContext, CardPlay play) =>
-        PlayNormal(choiceContext, play);
-
-    private async Task ApplyMagicChargeElementStates(PlayerChoiceContext choiceContext)
-    {
-        if (Family != ClassicSakuraCardFamily.Clow)
-            return;
-
         foreach (var element in Element.AsElements())
             await ApplyElementStateIfMissing(choiceContext, element);
     }
@@ -215,8 +88,7 @@ public abstract class ClassicSakuraCard(
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (play.Card == this && GrantsMagicCharge && Owner.GetRelic<ClassicSealedBookRelic>() is not null)
-            await ClassicSakuraMagic.GainMagic(choiceContext, this);
+        await SakuraExtraEffectTransaction.AfterCardPlayed(this, choiceContext, play);
     }
 
     public override Task AfterCardExhausted(PlayerChoiceContext choiceContext, CardModel card, bool causedByEthereal)
@@ -237,12 +109,12 @@ public abstract class ClassicSakuraCard(
     protected static Creature RequiredTarget(CardPlay play) =>
         play.Target ?? throw new InvalidOperationException("Card target is required by this card's TargetType.");
 
-    protected async Task DealDamage(PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move, int hitCount = 1)
+    protected async Task<AttackCommand?> DealDamage(PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move, int hitCount = 1)
     {
         if (hitCount <= 0)
-            return;
+            return null;
 
-        await DamageCmd.Attack(amount)
+        return await DamageCmd.Attack(amount)
             .WithHitCount(hitCount)
             .FromCard(this)
             .WithValueProp(props)
@@ -251,12 +123,12 @@ public abstract class ClassicSakuraCard(
             .Execute(choiceContext);
     }
 
-    protected async Task DealDamageToEnemies(PlayerChoiceContext choiceContext, IEnumerable<Creature> targets, int amount, ValueProp props = ValueProp.Move, int hitCount = 1)
+    protected async Task<AttackCommand?> DealDamageToEnemies(PlayerChoiceContext choiceContext, IEnumerable<Creature> targets, int amount, ValueProp props = ValueProp.Move, int hitCount = 1)
     {
         if (hitCount <= 0)
-            return;
+            return null;
 
-        await DamageCmd.Attack(amount)
+        return await DamageCmd.Attack(amount)
             .WithHitCount(hitCount)
             .FromCard(this)
             .WithValueProp(props)
@@ -319,58 +191,57 @@ public abstract class ClassicClowCard(
     int cost,
     CardType type,
     CardRarity rarity,
-    TargetType target,
-    SourceCardIdentity identity) :
-    ClassicSakuraCard(cost, type, rarity, target, ClassicSakuraCardFamily.Clow, identity)
-{
-    protected override string BigPortraitPath =>
-        ClassicSakuraCardCatalog.ArtStem(GetType()).BigClassicClowArtPath();
-}
+    TargetType target) :
+    ClassicSakuraCard(cost, type, rarity, target);
 
 public abstract class ClassicExtraClowCard :
-    ClassicClowCard
+    ClassicClowCard,
+    ISakuraExtraEffectCard
 {
     protected ClassicExtraClowCard(
         int cost,
         CardType type,
         CardRarity rarity,
-        TargetType target,
-        SourceCardIdentity identity) :
-        base(cost, type, rarity, target, identity)
+        TargetType target) :
+        base(cost, type, rarity, target)
     { }
 
-    protected override bool HasMagicChargeExtraEffect => true;
+    protected abstract override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play);
+
+    protected virtual Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        PlayCard(choiceContext, play);
+
+    Task ISakuraExtraEffectCard.PlayWithExtraEffect(
+        PlayerChoiceContext choiceContext,
+        CardPlay play,
+        SakuraExtraEffectActivation activation) =>
+        activation.IsActive
+            ? PlayActivatedCard(choiceContext, play)
+            : PlayCard(choiceContext, play);
 }
 
 public abstract class ClassicSakuraConversionCard(
     int cost,
     CardType type,
-    TargetType target,
-    SourceCardIdentity identity) :
-    ClassicSakuraCard(cost, type, CardRarity.Token, target, ClassicSakuraCardFamily.Sakura, identity)
+    TargetType target) :
+    ClassicSakuraCard(cost, type, CardRarity.Token, target)
 {
     public override int MaxUpgradeLevel => 0;
     public override bool CanBeGeneratedInCombat => false;
-
-    protected override string BigPortraitPath =>
-        ClassicSakuraCardCatalog.ArtStem(GetType()).BigClassicSakuraArtPath();
 }
 
 public abstract class ClassicSpecialSakuraCard(int cost, CardType type, TargetType target) :
-    ClassicSakuraCard(cost, type, CardRarity.Event, target, ClassicSakuraCardFamily.Sakura)
+    ClassicSakuraCard(cost, type, CardRarity.Event, target)
 {
     public override int MaxUpgradeLevel => 0;
-
-    protected override string BigPortraitPath =>
-        ClassicSakuraCardCatalog.ArtStem(GetType()).BigClassicSakuraArtPath();
 }
 
 public abstract class ClassicSpellCard(int cost, CardType type, CardRarity rarity, TargetType target) :
-    ClassicSakuraCard(cost, type, rarity, target, ClassicSakuraCardFamily.Spell)
+    ClassicSakuraCard(cost, type, rarity, target)
 {
     public override bool CanBeGeneratedInCombat => false;
 
-    protected override bool GrantsMagicCharge => false;
+    internal override bool GrantsMagicCharge => false;
 }
 
 [Flags]
@@ -403,22 +274,11 @@ internal static class ClassicElementExtensions
 
 internal static class ClassicSakuraCardCatalog
 {
-    private static readonly IReadOnlyDictionary<Type, string> SpellArtStems = new Dictionary<Type, string>
-    {
-        [typeof(SpellSeal)] = "default_card_p.png",
-        [typeof(SpellRelease)] = "default_card_p.png",
-        [typeof(SpellTurn)] = "default_card_p.png",
-        [typeof(SpellEmptySpell)] = "empty_spell_p.png",
-        [typeof(SpellHuoShen)] = "huoshen_p.png",
-        [typeof(SpellLeiDi)] = "leidi_p.png",
-        [typeof(SpellFengHua)] = "fenghua_p.png",
-        [typeof(SpellShuiLong)] = "shuilong_p.png"
-    };
     public static IReadOnlyList<Type> AllCardTypes() =>
-        SakuraSourceCardCatalog.ClassicCardTypes;
+        SakuraCardCatalog.ClassicCardTypes;
 
     public static IReadOnlyList<CardModel> RewardableClowTemplates() =>
-        SakuraSourceCardCatalog.SourceCardTypes(SourceEraClass.Clow)
+        SakuraCardCatalog.SourceCardTypes(SourceEraClass.Clow)
             .Where(static type => type != typeof(ClowSword)
                 && type != typeof(ClowShield)
                 && type != typeof(ClowNothing))
@@ -426,7 +286,7 @@ internal static class ClassicSakuraCardCatalog
             .ToList();
 
     public static IReadOnlyList<CardModel> AllClowTemplates() =>
-        SakuraSourceCardCatalog.SourceCardTypes(SourceEraClass.Clow)
+        SakuraCardCatalog.SourceCardTypes(SourceEraClass.Clow)
             .Where(static type => type != typeof(ClowNothing))
             .Select(TypeToCard)
             .ToList();
@@ -451,13 +311,13 @@ internal static class ClassicSakuraCardCatalog
     }
 
     public static Type? SakuraTypeFor(SourceCardIdentity identity) =>
-        SakuraSourceCardCatalog.TypeFor(identity, SourceEraClass.Sakura);
+        SakuraCardCatalog.TypeFor(identity, SourceEraClass.Sakura);
 
     public static CardModel? SakuraTemplateFor(SourceCardIdentity identity) =>
         SakuraTypeFor(identity) is { } type ? TypeToCard(type) : null;
 
     public static Type? ClowTypeFor(SourceCardIdentity identity) =>
-        SakuraSourceCardCatalog.TypeFor(identity, SourceEraClass.Clow);
+        SakuraCardCatalog.TypeFor(identity, SourceEraClass.Clow);
 
     public static bool HasSakuraIdentity(Player owner, SourceCardIdentity identity) =>
         CardsInAllKnownPiles(owner)
@@ -500,18 +360,6 @@ internal static class ClassicSakuraCardCatalog
         && card.Pile?.Type == PileType.Hand
         && SakuraTypeFor(identity) is not null
         && !HasSakuraIdentity(card.Owner, identity);
-
-    public static string ArtStem(Type type)
-    {
-        if (SpellArtStems.TryGetValue(type, out var spellStem))
-            return spellStem;
-
-        var metadata = SakuraSourceCardCatalog.MetadataFor(type);
-        if (metadata.VisualRoute != SakuraSourceCardVisualRoute.Classic || metadata.Identity is not { } identity)
-            throw new InvalidOperationException($"Missing Classic Sakura art mapping for {type.Name}.");
-
-        return $"the_{identity.ToString().ToLowerInvariant()}_p.png";
-    }
 
     private static CardModel TypeToCard(Type type) =>
         ModelDb.GetById<CardModel>(ModelDb.GetId(type));
@@ -705,18 +553,6 @@ internal static class ClassicSakuraMagic
 
     public static bool CanSpendMagic(Player? owner) =>
         owner?.Creature.GetPower<ClassicMagicChargePower>()?.Amount >= ExtraEffectCost;
-
-    public static bool CanUseExtraEffect(Player? owner) =>
-        CanSpendMagic(owner) && owner?.Creature.GetPower<ClassicLockPower>() is null;
-
-    public static bool ShouldSpendMagicForExtraEffect(Player owner) =>
-        owner.Creature.GetPower<ClassicLockSakuraPower>() is null;
-
-    public static async Task SpendForExtraEffect(PlayerChoiceContext choiceContext, Player owner)
-    {
-        if (ShouldSpendMagicForExtraEffect(owner))
-            await SpendMagic(choiceContext, owner, ExtraEffectCost);
-    }
 
     public static async Task SpendMagic(PlayerChoiceContext choiceContext, Player owner, int amount)
     {
@@ -951,12 +787,42 @@ internal static class ClassicSnowRules
 
     public static int PlayedWateryClowCards(CardModel card) =>
         PlayedCards(card, static playedCard =>
-            playedCard.Family == ClassicSakuraCardFamily.Clow
+            playedCard.IsClowCard
             && playedCard.Element.HasElement(ClassicElement.Watery));
 
     public static int PlayedWateryCards(CardModel card) =>
         PlayedCards(card, static playedCard =>
             playedCard.Element.HasElement(ClassicElement.Watery));
+
+    public static IEnumerable<Creature> FrostbiteReceivers(AttackCommand? attack) =>
+        attack?.Results
+            .SelectMany(static hit => hit)
+            .Where(ShouldApplyFrostbite)
+            .Select(static result => result.Receiver)
+        ?? [];
+
+    internal static bool ShouldApplyFrostbite(DamageResult result) =>
+        result.UnblockedDamage > 0;
+
+    public static async Task ApplyFrostbite(
+        PlayerChoiceContext choiceContext,
+        ClassicSakuraCard source,
+        AttackCommand? attack)
+    {
+        foreach (var target in FrostbiteReceivers(attack))
+        {
+            if (!target.IsAlive || target.Side == source.Owner.Creature.Side)
+                continue;
+
+            await PowerCmd.Apply<SakuraFrostbitePower>(
+                choiceContext,
+                target,
+                1,
+                source.Owner.Creature,
+                source,
+                false);
+        }
+    }
 
     private static int PlayedCards(CardModel card, Func<ClassicSakuraCard, bool> predicate) =>
         card.Owner is null || card.CombatState is null

@@ -17,6 +17,7 @@ using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Classic.Cards;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Extensions;
@@ -475,7 +476,7 @@ public class ClassicTaoistSuitRelic : ClassicSakuraRelic
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
         if (play.Card?.Owner != Owner
-            || play.Card is not ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura })
+            || play.Card is not ClassicSakuraCard { IsClassicSourceCard: true })
             return;
 
         SetCardsPlayed(_cardsPlayed + 1);

@@ -205,7 +205,7 @@ internal static class SakuraGeneratedCardLifecycle
 
     private static void RefreshGeneratedTransparentHandVisual(CardModel card)
     {
-        if (!SakuraCardCatalog.IsTransparentCard(card) || card.Pile?.Type != PileType.Hand)
+        if (!SakuraTransparentCardCatalog.IsTransparentCard(card) || card.Pile?.Type != PileType.Hand)
             return;
 
         var node = NCard.FindOnTable(card, PileType.Hand);
@@ -228,7 +228,7 @@ internal static class SakuraGeneratedCardLifecycle
 
     internal static bool IsGeneratedTransparentHandVisualCard(CardModel? card) =>
         card is not null
-        && SakuraCardCatalog.IsTransparentCard(card)
+        && SakuraTransparentCardCatalog.IsTransparentCard(card)
         && GeneratedTransparentHandVisualCards.TryGetValue(card, out _);
 
     internal static void BeforeGeneratedTransparentHandHolderSetCard(NCard card)
@@ -272,7 +272,7 @@ internal static class SakuraGeneratedCardLifecycle
     {
         if (!refreshGeneratedTransparentHandVisual
             || destinationPile != PileType.Hand
-            || !SakuraCardCatalog.IsTransparentCard(card))
+            || !SakuraTransparentCardCatalog.IsTransparentCard(card))
             return;
 
         GeneratedTransparentHandVisualCards.GetOrCreateValue(card);

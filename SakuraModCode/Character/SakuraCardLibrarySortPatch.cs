@@ -9,7 +9,7 @@ using SakuraMod.SakuraModCode.Classic.Character;
 
 namespace SakuraMod.SakuraModCode.Character;
 
-// RitsuLib 0.4.56 owns compendium filter-row placement, but not the card order inside NCardLibraryGrid.
+// RitsuLib 0.4.57 owns compendium filter-row placement, but not the card order inside NCardLibraryGrid.
 [HarmonyPatch(typeof(NCardGrid), nameof(NCardGrid.SetCards))]
 internal static class SakuraCardLibrarySortPatch
 {
@@ -51,7 +51,7 @@ internal static class SakuraCardLibrarySortPatch
         && cardsToDisplay.All(IsSakuraLibraryCard);
 
     private static bool IsSakuraLibraryCard(CardModel card) =>
-        SakuraSourceCardCatalog.IsPoolCard(card)
+        SakuraCardCatalog.IsPoolCard(card)
         || card.Pool is ClassicSakuraCardPool;
 
     private static int CompareSakuraCards(
@@ -135,7 +135,7 @@ internal static class SakuraCardLibrarySortPatch
 
     internal static int CategorySortValue(CardModel card)
     {
-        if (SakuraSourceCardCatalog.TryGetMetadata(card, out var metadata))
+        if (SakuraCardCatalog.TryGetMetadata(card, out var metadata))
         {
             return metadata.Era switch
             {
@@ -152,7 +152,7 @@ internal static class SakuraCardLibrarySortPatch
 
     internal static int CategoryIndex(CardModel card)
     {
-        if (SakuraSourceCardCatalog.TryGetMetadata(card, out var metadata))
+        if (SakuraCardCatalog.TryGetMetadata(card, out var metadata))
             return metadata.CatalogOrder;
 
         return MissingIndex;

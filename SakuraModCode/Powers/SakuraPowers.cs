@@ -895,5 +895,5 @@ internal static class SakuraPowerTriggers
     public static bool IsOwnerClearCard(CardPlay play, Creature owner) =>
         play.Card is { } card
         && card.Owner?.Creature == owner
-        && SakuraCardCatalog.IsTransparentCard(card);
+        && SakuraTransparentCardCatalog.IsTransparentCard(card);
 }

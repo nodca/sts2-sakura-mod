@@ -28,7 +28,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.4.56" PrivateAssets="All"/>
+        <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.4.57" PrivateAssets="All"/>
         <AdditionalFiles Include="SakuraMod/localization/**/*.json"/> <!-- Used by analyzer -->
     </ItemGroup>
 

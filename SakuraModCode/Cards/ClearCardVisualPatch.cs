@@ -69,8 +69,6 @@ internal static class ClearCardLayout
     private static readonly FieldInfo? RareGlowField = PrivateAccess.DeclaredField(typeof(NCard), "_rareGlow");
     private static readonly FieldInfo? UncommonGlowField = PrivateAccess.DeclaredField(typeof(NCard), "_uncommonGlow");
     private static readonly FieldInfo? HandFlashField = PrivateAccess.DeclaredField(typeof(NHandCardHolder), "_flash");
-    private static readonly FieldInfo? HighlightCurrentTweenField = PrivateAccess.DeclaredField(typeof(NCardHighlight), "_curTween");
-    private static readonly StringName HighlightWidthParameterName = new("width");
     private static readonly StringName FontColorName = new("font_color");
     private static readonly StringName FontOutlineColorName = new("font_outline_color");
     private static readonly StringName FontSizeName = new("font_size");
@@ -81,8 +79,6 @@ internal static class ClearCardLayout
     private static readonly StringName ShadowOutlineSizeName = new("shadow_outline_size");
     private const string HeaderPartSeparator = "  ";
     private const float HeaderPartSeparatorUnits = 1f;
-
-    private static readonly Color TemporaryHighlightColor = new(0.65f, 0.9f, 1f, 1f);
 
     private const string DefaultHighlightTexturePath = "res://images/packed/card_template/card_frame_sdf.exr";
     private static readonly Dictionary<Type, SakuraCardTextureResource> ClearCardArtResources = [];
@@ -105,7 +101,7 @@ internal static class ClearCardLayout
 
     public static void PreloadVisualResources()
     {
-        foreach (var cardType in SakuraCardCatalog.TransparentCardTypes)
+        foreach (var cardType in SakuraTransparentCardCatalog.TransparentCardTypes)
             _ = ClearCardTexture(cardType);
         _ = ClearCardHighlightTexture();
     }
@@ -293,10 +289,8 @@ internal static class ClearCardLayout
 
         var flash = HandFlash(holder);
         ledger.Borrow(flash, SakuraControlProperty.Modulate);
-        ledger.Borrow(holder.CardNode?.CardHighlight, SakuraControlProperty.Modulate);
-        ledger.YieldShaderStateToNative(holder.CardNode?.CardHighlight);
 
-        ApplyHandStateHighlightColor(holder);
+        SakuraHandHighlightVisual.Apply(holder, ledger);
         ApplyHandFlashColor(holder, flash);
     }
 
@@ -330,34 +324,6 @@ internal static class ClearCardLayout
         var targetColor = new Color(highlightColor.R, highlightColor.G, highlightColor.B, flashColor.A);
         if (flashColor != targetColor)
             flash.Modulate = targetColor;
-    }
-
-    private static void ApplyHandStateHighlightColor(NCardHolder holder)
-    {
-        if (holder is not NHandCardHolder || holder.CardNode is not { } card || card.CardHighlight is not { } highlight)
-            return;
-
-        var color = StateHighlightColor(card.Model, highlight.Modulate);
-        if (color is null)
-            return;
-
-        var shouldAnimateWidth = ShaderWidthValue(highlight) <= 0.001f;
-        highlight.Modulate = color.Value;
-        if (shouldAnimateWidth)
-            AnimateStateHighlightWidth(highlight);
-        else
-            SetShaderWidth(highlight, Spec.StateHighlightWidth);
-    }
-
-    private static Color? StateHighlightColor(CardModel? model, Color currentColor)
-    {
-        if (model is null || !Approximately(currentColor, NCardHighlight.playableColor))
-            return null;
-
-        if (model.IsTemporary())
-            return TemporaryHighlightColor;
-
-        return null;
     }
 
     private static void ApplyTitleLayout(NCard card, MegaLabel? title, CardModel model)
@@ -938,55 +904,6 @@ internal static class ClearCardLayout
         return false;
     }
 
-    private static float ShaderWidthValue(NCardHighlight? highlight)
-    {
-        if (highlight?.Material is not ShaderMaterial material)
-            return 0f;
-
-        return material.GetShaderParameter(HighlightWidthParameterName).AsSingle();
-    }
-
-    private static void AnimateStateHighlightWidth(NCardHighlight highlight)
-    {
-        if (highlight.Material is not ShaderMaterial material)
-            return;
-
-        KillHighlightTween(highlight);
-        var tween = highlight.CreateTween();
-        tween.TweenMethod(
-                Callable.From<float>(value => material.SetShaderParameter(HighlightWidthParameterName, value)),
-                ShaderWidthValue(highlight),
-                Spec.StateHighlightWidth,
-                Spec.StateHighlightShowDuration)
-            .SetEase(Tween.EaseType.Out)
-            .SetTrans(Tween.TransitionType.Cubic);
-        HighlightCurrentTweenField?.SetValue(highlight, tween);
-    }
-
-    private static void KillHighlightTween(NCardHighlight highlight)
-    {
-        if (FieldValue<Tween>(HighlightCurrentTweenField, highlight) is { } tween)
-            tween.Kill();
-    }
-
-    private static void SetShaderWidth(NCardHighlight highlight, float width)
-    {
-        if (highlight.Material is ShaderMaterial material)
-        {
-            var currentWidth = material.GetShaderParameter(HighlightWidthParameterName).AsSingle();
-            if (Mathf.Abs(currentWidth - width) > 0.001f)
-                material.SetShaderParameter(HighlightWidthParameterName, width);
-        }
-    }
-
-    private static bool Approximately(Color left, Color right)
-    {
-        const float tolerance = 0.001f;
-        return Mathf.Abs(left.R - right.R) <= tolerance
-            && Mathf.Abs(left.G - right.G) <= tolerance
-            && Mathf.Abs(left.B - right.B) <= tolerance;
-    }
-
     private sealed class ClearCardState
     {
         private const SakuraControlProperty BoxProperties =
@@ -1390,8 +1307,6 @@ internal static class ClearCardLayout
         public float HighlightCornerRadius { get; } = Scaled(16f);
         public float HighlightSdfRange { get; } = Scaled(240f);
         public float HighlightTextureScale { get; } = 2f;
-        public float StateHighlightWidth { get; } = 0.12f;
-        public float StateHighlightShowDuration { get; } = 0.32f;
         public float HeaderLineUnits { get; } = Scaled(14f);
         public Vector2 DefaultHighlightPosition { get; } = new(-381f, -475f);
         public Vector2 DefaultHighlightSize { get; } = new(759f, 951f);

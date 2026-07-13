@@ -7,6 +7,8 @@
   "SAKURAMOD-STRONG_REFLECTION.description": "Reflect the next enemy attack.",
   "SAKURAMOD-ENTER_LABYRINTH.title": "Enter the Labyrinth",
   "SAKURAMOD-ENTER_LABYRINTH.description": "Enemies in the Labyrinth cannot act or be targeted by cards or effects; their existing statuses continue to resolve normally. Starting at the end of your next turn, whenever your turn ends, a random enemy in the Labyrinth leaves it.",
+  "SAKURAMOD-REMIND.title": "Remind",
+  "SAKURAMOD-REMIND.description": "Choose N cards that were removed by [red]Temporary[/red] this combat; if fewer than N are available, choose all of them.\nRemove their records, add [red]Temporary[/red] copies of those cards to your hand, and make them cost 0 this turn.",
   "SAKURAMOD-CLASSIC_SPELL_CARD.title": "Spell",
   "SAKURAMOD-CLASSIC_SPELL_CARD.description": "A special card type that is not a Clow Card, usually consumed after use.",
   "SAKURAMOD-CLASSIC_UNREAL.title": "Unreal",

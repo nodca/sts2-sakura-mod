@@ -17,7 +17,6 @@ using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
-using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -25,24 +24,16 @@ public static class SakuraActions
 {
     private static readonly LocString HandPrompt = new("cards", "SAKURAMOD-GENERIC.handPrompt");
     private static readonly LocString CardPrompt = new("cards", "SAKURAMOD-GENERIC.cardPrompt");
-    private static readonly ConditionalWeakTable<CardPlay, ExtraEffectPlayMarker> ExtraEffectCardPlays = new();
 
     public static int ExtraEffectTriggerCountThisTurn(Player owner) =>
         owner.Creature.GetPower<SakuraExtraEffectCountThisTurnPower>()?.Amount ?? 0;
 
-    public static bool DidTriggerExtraEffect(CardPlay play) =>
-        ExtraEffectCardPlays.TryGetValue(play, out _);
-
-    public static async Task RecordExtraEffectTriggeredThisTurn(PlayerChoiceContext choiceContext, CardPlay play)
+    internal static async Task RecordExtraEffectTriggeredThisTurn(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var card = play.Card;
         if (card?.Owner is not { } owner || card.CombatState is null)
             return;
 
-        if (ExtraEffectCardPlays.TryGetValue(play, out _))
-            return;
-
-        ExtraEffectCardPlays.Add(play, new ExtraEffectPlayMarker());
         await PowerCmd.Apply<SakuraExtraEffectCountThisTurnPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
     }
 
@@ -161,7 +152,7 @@ public static class SakuraActions
         if (card is ClassicSakuraCard classicCard)
             return classicCard.Element;
 
-        return card is not null && SakuraCardCatalog.IsTransparentCard(card)
+        return card is not null && SakuraTransparentCardCatalog.IsTransparentCard(card)
             ? ClassicElementSetFrom(ElementSetOf(card))
             : ClassicElement.None;
     }
@@ -171,7 +162,7 @@ public static class SakuraActions
 
     public static async Task ApplyClassicElementStatesForTransparentCard(PlayerChoiceContext choiceContext, CardModel card)
     {
-        if (!card.IsMutable || !SakuraCardCatalog.IsTransparentCard(card))
+        if (!card.IsMutable || !SakuraTransparentCardCatalog.IsTransparentCard(card))
             return;
 
         foreach (var element in ClassicElementSetOf(card).AsElements())
@@ -297,7 +288,8 @@ public static class SakuraActions
         PlayerChoiceContext context,
         Func<CardModel, bool> predicate,
         int count,
-        bool cancelable = true)
+        bool cancelable = true,
+        bool pretendCardsCanBePlayed = false)
     {
         if (count <= 0)
             return [];
@@ -311,7 +303,8 @@ public static class SakuraActions
             new CardSelectorPrefs(HandPrompt, count)
             {
                 Cancelable = cancelable,
-                RequireManualConfirmation = false
+                RequireManualConfirmation = false,
+                PretendCardsCanBePlayed = pretendCardsCanBePlayed
             },
             predicate,
             source);
@@ -501,9 +494,14 @@ public static class SakuraActions
         return true;
     }
 
+    internal static bool HasExchangeableEnergyCost(CardModel card) =>
+        card is not ClassicSakuraCard { ShowsEnergyCost: false }
+        && !card.EnergyCost.CostsX
+        && card.EnergyCost.GetWithModifiers(CostModifiers.None) >= 0;
+
     private static bool TryGetExchangeableEnergyCost(CardModel card, out int cost)
     {
-        if (card.EnergyCost.CostsX)
+        if (!HasExchangeableEnergyCost(card))
         {
             cost = 0;
             return false;
@@ -512,7 +510,5 @@ public static class SakuraActions
         cost = card.EnergyCost.GetResolved();
         return cost >= 0;
     }
-
-    private sealed class ExtraEffectPlayMarker;
 
 }

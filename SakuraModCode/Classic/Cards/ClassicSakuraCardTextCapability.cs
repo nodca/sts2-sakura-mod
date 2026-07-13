@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
 using STS2RitsuLib.Content;
 using STS2RitsuLib.Models.Capabilities;
 
@@ -71,7 +72,7 @@ internal static class ClassicSakuraCardText
 
     internal static IEnumerable<string> StaticTipKeys(ClassicSakuraCard card)
     {
-        if (card.Family == ClassicSakuraCardFamily.Spell)
+        if (card.IsSpellCard)
             yield return ClassicSpellTipKey;
 
         foreach (var element in card.Element.AsElements())
@@ -80,19 +81,19 @@ internal static class ClassicSakuraCardText
         foreach (var element in ElementStatesReferencedBy(card))
             yield return ClassicElementStateTipKey(element);
 
-        if (card is { Family: ClassicSakuraCardFamily.Clow, Identity: SourceCardIdentity.Lock })
+        if (card is { IsClowCard: true, Identity: SourceCardIdentity.Lock })
             yield return "SAKURAMOD-CLASSIC_UNREAL";
     }
 
     internal static IEnumerable<CardKeyword> KeywordTips(ClassicSakuraCard card)
     {
-        if (card is ClowFreeze)
+        if (card is ClowFreeze or ClowSnow or SakuraSnow)
             yield return SakuraKeywords.Frostbite;
 
         if (card.ShowsSakuraCardVoidTip)
             yield return SakuraKeywords.SakuraCard;
 
-        if (card is { Family: ClassicSakuraCardFamily.Clow, Identity: SourceCardIdentity.Voice })
+        if (card is { IsClowCard: true, Identity: SourceCardIdentity.Voice })
         {
             yield return SakuraKeywords.Invisible;
             yield return SakuraKeywords.Echo;
@@ -102,7 +103,7 @@ internal static class ClassicSakuraCardText
             yield break;
 
         yield return SakuraKeywords.Removable;
-        if (card.Family != ClassicSakuraCardFamily.Clow)
+        if (!card.IsClowCard)
             yield break;
 
         yield return SakuraKeywords.CostDecreasing;
@@ -110,7 +111,7 @@ internal static class ClassicSakuraCardText
     }
 
     internal static bool ShouldShowMagicChargeExtraDescription(ClassicExtraClowCard card) =>
-        card.IsMutable && ClassicSakuraMagic.CanUseExtraEffect(card.Owner);
+        card.IsMutable && SakuraExtraEffectTransaction.CanActivate(card.Owner);
 
     internal static LocString MagicChargeExtraDescription(ClassicExtraClowCard card) =>
         new("cards", $"{ModelDb.GetId(card.GetType()).Entry}.extraDescription");
@@ -126,10 +127,10 @@ internal static class ClassicSakuraCardText
 
     internal static IEnumerable<ClassicElement> ElementStatesReferencedBy(ClassicSakuraCard card)
     {
-        if (card.Family == ClassicSakuraCardFamily.Sakura && card.Identity == SourceCardIdentity.Wave)
+        if (card.IsSakuraCard && card.Identity == SourceCardIdentity.Wave)
             return (ClassicElement.Earthy | ClassicElement.Firey | ClassicElement.Watery | ClassicElement.Windy).AsElements();
 
-        if (card.Family is not (ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura))
+        if (!card.IsClassicSourceCard)
             return [];
 
         return card.Identity is SourceCardIdentity.Earthy
@@ -141,7 +142,7 @@ internal static class ClassicSakuraCardText
     }
 
     private static string ClassicElementTipKey(ClassicSakuraCard card, ClassicElement element) =>
-        card.Family == ClassicSakuraCardFamily.Spell
+        card.IsSpellCard
             ? ClassicElementSpellTipKey(element)
             : ClassicElementCardTipKey(element);
 
@@ -165,7 +166,7 @@ internal static class ClassicSakuraCardText
             _ => throw new ArgumentOutOfRangeException(nameof(element), element, null)
         };
 
-    private static string ClassicElementStateTipKey(ClassicElement element) =>
+    internal static string ClassicElementStateTipKey(ClassicElement element) =>
         element switch
         {
             ClassicElement.Earthy => "SAKURAMOD-CLASSIC_EARTHY_STATE",

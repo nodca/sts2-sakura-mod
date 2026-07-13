@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.TestSupport;
 using SakuraMod.SakuraModCode.Classic.Cards;
+using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Extensions;
 
 namespace SakuraMod.SakuraModCode.Classic.Character;
@@ -74,7 +75,7 @@ internal static class ClassicMagicChargeAuraVisual
             time += step;
             aura.GlobalPosition = creatureNode.VfxSpawnPosition + AuraOffset;
 
-            var targetAlpha = ClassicSakuraMagic.CanUseExtraEffect(player) ? MaxAlpha : 0f;
+            var targetAlpha = SakuraExtraEffectTransaction.CanActivate(player) ? MaxAlpha : 0f;
             alpha = MoveToward(alpha, targetAlpha, step / FadeDuration);
 
             if (alpha <= 0.001f && targetAlpha <= 0f)

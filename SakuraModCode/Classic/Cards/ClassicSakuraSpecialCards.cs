@@ -10,18 +10,16 @@ using SakuraMod.SakuraModCode.Classic.Powers;
 
 namespace SakuraMod.SakuraModCode.Classic.Cards;
 
-public class ClowNothing() : ClassicClowCard(2, CardType.Power, CardRarity.Event, TargetType.None, SourceCardIdentity.Nothing)
+public class ClowNothing() : ClassicClowCard(2, CardType.Power, CardRarity.Event, TargetType.None)
 {
     public override ClassicElement Element => ClassicElement.None;
-    protected override bool HasMagicChargeExtraEffect => false;
-
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new ClassicDamageVar(4, ValueProp.Unblockable | ValueProp.Unpowered),
         new ClassicBlockVar(3, ValueProp.Move)
     ];
 
-    protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         if (Owner.Creature.GetPower<ClassicNothingPower>() is null)
             await ApplyPower<ClassicNothingPower>(choiceContext, Owner.Creature, 1);
@@ -38,13 +36,13 @@ public class ClowNothing() : ClassicClowCard(2, CardType.Power, CardRarity.Event
 
 public class SakuraLove() : ClassicSpecialSakuraCard(-2, CardType.Skill, TargetType.None)
 {
-    protected override bool GrantsMagicCharge => false;
-    protected override bool AddsVoidOnNormalSakuraPlay => false;
+    internal override bool GrantsMagicCharge => false;
+    internal override bool AddsVoidOnNormalSakuraPlay => false;
     protected override bool IsPlayable => false;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Unplayable];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Energy", 1)];
 
-    protected override Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play) =>
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         Task.CompletedTask;
 
     public override async Task AfterCardDrawn(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
@@ -58,17 +56,17 @@ public class SakuraHope() : ClassicSpecialSakuraCard(4, CardType.Power, TargetTy
 {
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 1)];
 
-    protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play) =>
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicHopePower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
 
-public class SakuraLegacy() : ClassicSakuraCard(1, CardType.Skill, CardRarity.Ancient, TargetType.None, ClassicSakuraCardFamily.Sakura)
+public class SakuraLegacy() : ClassicSakuraCard(1, CardType.Skill, CardRarity.Ancient, TargetType.None)
 {
-    protected override bool GrantsMagicCharge => false;
-    protected override bool AddsVoidOnNormalSakuraPlay => false;
+    internal override bool GrantsMagicCharge => false;
+    internal override bool AddsVoidOnNormalSakuraPlay => false;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new DynamicVar("Magic", 2)];
 
-    protected override async Task PlayNormal(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
         await PowerCmd.Apply<ClassicMagicChargePower>(choiceContext, Owner.Creature, ReleasedMagic(), Owner.Creature, this, false);

@@ -16,6 +16,7 @@ using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Relics;
 using SakuraMod.SakuraModCode.Extensions;
@@ -390,6 +391,7 @@ public abstract class ClassicElementStatePower : ClassicSakuraPower
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
+    protected override bool IsVisibleInternal => false;
 
     protected abstract ClassicElement Element { get; }
     protected abstract Type PermanentPowerType { get; }
@@ -447,6 +449,7 @@ public abstract class ClassicPermanentElementPower : ClassicSakuraPower
 {
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
+    protected override bool IsVisibleInternal => false;
 }
 
 public class ClassicEarthyPower : ClassicElementStatePower
@@ -797,7 +800,7 @@ public class ClassicTwinPower : ClassicSakuraPower
         Amount > 0
         && _cardsDoubledThisTurn < Amount
         && card.Owner?.Creature == Owner
-        && card is ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow }
+        && card is ClassicSakuraCard { IsClowCard: true }
         && !card.IsClone
         && !card.IsDupe;
 }
@@ -885,7 +888,7 @@ public class ClassicTwinSakuraPower : ClassicSakuraPower
         && currentCost >= 0;
 
     private static bool IsClow(CardModel card) =>
-        card is ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow };
+        card is ClassicSakuraCard { IsClowCard: true };
 }
 
 public class ClassicFloatPower : ClassicSakuraPower
@@ -916,14 +919,19 @@ public class ClassicFloatSakuraPower : ClassicSakuraPower
 
 public class ClassicFreezePower : ClassicSakuraPower
 {
+    internal const int BlockGain = 5;
+
     protected override string IconFileName => "freeze_power.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
     public override async Task AfterApplied(Creature? applier, CardModel? cardSource)
     {
-        if (Owner.IsMonster && Owner.Monster?.IntendsToAttack == true)
-            await CreatureCmd.Stun(Owner);
+        if (!Owner.IsMonster || Owner.Monster?.IntendsToAttack != true)
+            return;
+
+        await CreatureCmd.Stun(Owner);
+        await CreatureCmd.GainBlock(Owner, BlockGain, ValueProp.Move, null, false);
     }
 
     public override async Task BeforeSideTurnStart(
@@ -1205,13 +1213,13 @@ public class ClassicNothingPower : ClassicSakuraPower
         card.Owner?.Creature == Owner && IsCostedMagic(card);
 
     private static bool IsCostedMagic(CardModel card) =>
-        card is ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura }
+        card is ClassicSakuraCard { IsClassicSourceCard: true }
         && !card.EnergyCost.CostsX
         && card.EnergyCost.GetWithModifiers(CostModifiers.Local) > 0;
 
     private bool IsOwnedClowOrSakura(CardModel? card) =>
         card?.Owner?.Creature == Owner
-        && card is ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura };
+        && card is ClassicSakuraCard { IsClassicSourceCard: true };
 }
 
 public class ClassicHopePower : ClassicSakuraPower
@@ -1255,7 +1263,7 @@ public class ClassicNothingMonsterPower : ClassicSakuraPower
         PileType pileType,
         CardPilePosition position)
     {
-        if (card.Owner?.Creature != Owner || card is not ClassicSakuraCard { Family: ClassicSakuraCardFamily.Clow or ClassicSakuraCardFamily.Sakura })
+        if (card.Owner?.Creature != Owner || card is not ClassicSakuraCard { IsClassicSourceCard: true })
             return (pileType, position);
 
         var roll = Owner.Player?.RunState.Rng.CombatCardSelection.NextInt(100) ?? 100;
