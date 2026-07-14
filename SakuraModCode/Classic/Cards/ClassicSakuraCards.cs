@@ -2378,24 +2378,51 @@ public class SpellTurn() : ClassicSpellCard(-2, CardType.Skill, CardRarity.Token
             card => choices.Contains(card),
             this)).FirstOrDefault();
 
-        if (selected is not ClassicClowCard { Identity: { } identity })
+        if (selected is not ClassicClowCard { Identity: { } identity } selectedClow)
             return;
 
         var canonicalSakura = ClassicSakuraCardCatalog.SakuraTemplateFor(identity);
         if (canonicalSakura is null || ClassicSakuraCardCatalog.HasSakuraIdentity(Owner, identity))
             return;
 
-        var deckCard = selected.DeckVersion;
+        var deckCard = selectedClow.DeckVersion;
         if (deckCard is null || deckCard.Pile?.Type != PileType.Deck)
             return;
 
+        var vfx = ClassicTurnTransformationVfx.TryCreate(selectedClow);
+        try
+        {
+            if (vfx is not null && !await vfx.PlayPrelude())
+                return;
+
+            var handCard = await TransformSelected(selectedClow, deckCard, canonicalSakura);
+            if (handCard is null)
+                return;
+
+            if (vfx is not null)
+                await vfx.PlayReveal(handCard);
+        }
+        finally
+        {
+            vfx?.Dispose();
+        }
+
+        if (DeckVersion?.Pile?.Type == PileType.Deck)
+            await CardPileCmd.RemoveFromDeck(DeckVersion, showPreview: false);
+    }
+
+    private async Task<CardModel?> TransformSelected(
+        ClassicClowCard selected,
+        CardModel deckCard,
+        CardModel canonicalSakura)
+    {
         var deckReplacement = Owner.RunState.CreateCard(canonicalSakura, Owner);
         var results = (await CardCmd.Transform(
             [new CardTransformation(deckCard, deckReplacement)],
             null,
             CardPreviewStyle.None)).ToList();
         if (results.Count == 0)
-            return;
+            return null;
 
         var combatState = Owner.Creature.CombatState
             ?? throw new InvalidOperationException("Spell Turn requires an active combat.");
@@ -2403,9 +2430,7 @@ public class SpellTurn() : ClassicSpellCard(-2, CardType.Skill, CardRarity.Token
         await CardPileCmd.AddGeneratedCardToCombat(handCard, PileType.Hand, Owner, CardPilePosition.Random);
         ClassicReleaseState.Reset(selected);
         await CardPileCmd.RemoveFromCombat(selected, skipVisuals: false);
-
-        if (DeckVersion?.Pile?.Type == PileType.Deck)
-            await CardPileCmd.RemoveFromDeck(DeckVersion, showPreview: false);
+        return handCard;
     }
 }
 

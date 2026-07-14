@@ -1030,7 +1030,7 @@ internal static class ClassicSakuraCardLayout
                 if (parent is SubViewport subViewport)
                     viewport = subViewport;
 
-                if (parent is NCardTransformVfx)
+                if (parent is NCardTransformVfx or ClassicTurnCardPreviewContainer)
                 {
                     context = priority < 3
                         ? ForCenteredOrigin(viewport)

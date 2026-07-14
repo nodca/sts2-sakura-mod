@@ -21,15 +21,18 @@ internal static class SakuraHandHighlightPolicy
 {
     public static SakuraHandHighlightKind Select(
         CardModel? model,
-        bool hasNativePlayableHighlight,
+        bool isPlayable,
         bool extraEffectActive,
         bool isTemporary)
     {
-        if (!hasNativePlayableHighlight || model is null)
+        if (model is null)
             return SakuraHandHighlightKind.None;
 
         if (isTemporary && SakuraTransparentCardCatalog.IsTransparentCard(model))
             return SakuraHandHighlightKind.Temporary;
+
+        if (!isPlayable)
+            return SakuraHandHighlightKind.None;
 
         if (extraEffectActive && SupportsGoldExtraEffectHighlight(model))
             return SakuraHandHighlightKind.ExtraEffect;
@@ -64,11 +67,10 @@ internal static class SakuraHandHighlightVisual
         ledger.YieldShaderStateToNative(highlight);
 
         var currentColor = highlight.Modulate;
-        var hasNativePlayableHighlight = Approximately(currentColor, NCardHighlight.playableColor);
         var hasOwnedHighlight = IsOwnedColor(currentColor);
         var kind = SakuraHandHighlightPolicy.Select(
             model,
-            hasNativePlayableHighlight || hasOwnedHighlight,
+            model.CanPlay(),
             SakuraExtraEffectTransaction.ShouldShowAsActive(model),
             model.IsTemporary());
 
