@@ -755,15 +755,6 @@ internal static class ClassicReleaseState
 
 internal static class ClassicSakuraAssetPaths
 {
-    public static string BigClassicClowArtPath(this string path) =>
-        Path.Join("big", "clow", path).ClassicFullFaceImagePath();
-
-    public static string BigClassicSakuraArtPath(this string path) =>
-        Path.Join("big", "sakura", path).ClassicFullFaceImagePath();
-
-    public static string BigClassicSpellArtPath(this string path) =>
-        Path.Join("big", "spell", path).ClassicFullFaceImagePath();
-
     public static string NormalClassicArtStem(this string path) =>
         path.EndsWith("_p.png", StringComparison.Ordinal)
             ? string.Concat(path.AsSpan(0, path.Length - "_p.png".Length), ".png")

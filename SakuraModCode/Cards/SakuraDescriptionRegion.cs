@@ -36,16 +36,16 @@ internal static class SakuraDescriptionRegion
 
     public static bool AppliesTo(CardModel? card)
     {
-        if (card is null
-            || !SakuraCardCatalog.TryGetMetadata(card, out var metadata)
-            || metadata.VisualRoute is not (SakuraSourceCardVisualRoute.Classic or SakuraSourceCardVisualRoute.Clear)
-            || metadata.Era is not (SourceEraClass.Clow or SourceEraClass.Sakura or SourceEraClass.Clear)
-                && card is not ClassicSpellCard)
-        {
+        if (card is null || card.Type is not (CardType.Attack or CardType.Skill or CardType.Power))
             return false;
-        }
 
-        return card.Type is CardType.Attack or CardType.Skill or CardType.Power;
+        if (card is SakuraOptionCard)
+            return true;
+
+        return SakuraCardCatalog.TryGetMetadata(card, out var metadata)
+            && metadata.VisualRoute is SakuraSourceCardVisualRoute.Classic or SakuraSourceCardVisualRoute.Clear
+            && (metadata.Era is SourceEraClass.Clow or SourceEraClass.Sakura or SourceEraClass.Clear
+                || card is ClassicSpellCard);
     }
 
     public static bool ShouldShow(
@@ -75,7 +75,7 @@ internal static class SakuraDescriptionRegion
         new(Origin(layout) + TextOffset, TextSize);
 
     public static string ShapeAssetPath(CardModel card) =>
-        ShapeFileName(ShapeFor(card)).DescriptionRegionImagePath();
+        ShapeFileName(ShapeFor(card)).DescriptionRegionAssetPath();
 
     public static IEnumerable<string> AssetPaths(CardModel card)
     {
@@ -85,7 +85,7 @@ internal static class SakuraDescriptionRegion
 
     public static Texture2D ShapeTexture(CardModel card)
     {
-        var path = ShapeAssetPath(card);
+        var path = ShapeFileName(ShapeFor(card)).DescriptionRegionImagePath();
         if (!TextureResources.TryGetValue(path, out var resource))
         {
             resource = SakuraCardTextureResource.FromPath(path);

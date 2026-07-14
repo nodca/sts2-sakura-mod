@@ -187,6 +187,7 @@ public sealed class SynchronizedCardPairModifier : SakuraCardStateCapability
 public sealed class TemporaryModifier : SakuraCardStateCapability
 {
     private const string DelayedRemovalTurnsKey = "DelayedRemovalTurns";
+    private const string ReturnsToMemoryKey = "ReturnsToMemory";
     private static readonly ConditionalWeakTable<ICombatState, HashSet<Player>> CleanupFinishedByCombat = new();
     private static readonly PileType[] CleanupPileOrder =
     [
@@ -198,6 +199,8 @@ public sealed class TemporaryModifier : SakuraCardStateCapability
     ];
 
     public int DelayedRemovalTurns { get; private set; }
+    public bool ReturnsToMemory { get; private set; } = true;
+    internal static IReadOnlyList<PileType> CleanupPileTypes => CleanupPileOrder;
 
     public void DelayRemoval(int turns)
     {
@@ -207,11 +210,20 @@ public sealed class TemporaryModifier : SakuraCardStateCapability
         DelayedRemovalTurns += turns;
     }
 
-    protected override JsonNode? SaveAdditionalState() =>
-        new JsonObject { [DelayedRemovalTurnsKey] = DelayedRemovalTurns };
+    public void PreventMemoryReturn() => ReturnsToMemory = false;
 
-    protected override void LoadAdditionalState(JsonNode? state, int schemaVersion) =>
+    protected override JsonNode? SaveAdditionalState() =>
+        new JsonObject
+        {
+            [DelayedRemovalTurnsKey] = DelayedRemovalTurns,
+            [ReturnsToMemoryKey] = ReturnsToMemory
+        };
+
+    protected override void LoadAdditionalState(JsonNode? state, int schemaVersion)
+    {
         DelayedRemovalTurns = state?[DelayedRemovalTurnsKey]?.GetValue<int>() ?? 0;
+        ReturnsToMemory = state?[ReturnsToMemoryKey]?.GetValue<bool>() ?? true;
+    }
 
     protected override void ModifyDescriptionPost(Creature? target, ref string description)
     {
@@ -271,12 +283,17 @@ public sealed class TemporaryModifier : SakuraCardStateCapability
 
     public static async Task RemoveTemporaryFromCombat(PlayerChoiceContext choiceContext, CardModel card)
     {
-        if (card.Pile?.IsCombatPile == true)
+        if (card.Pile?.IsCombatPile != true)
+            return;
+
+        if (card.ReturnsToMemoryAfterTemporary())
         {
-            TemporaryCardMemory.Remember(card);
-            TemporaryDissolveVfx.Play(card);
-            await CardPileCmd.RemoveFromCombat(card, true);
+            await SakuraMemoryPile.MoveTemporaryCardIntoMemory(card);
+            return;
         }
+
+        TemporaryDissolveVfx.Play(card);
+        await CardPileCmd.RemoveFromCombat(card, true);
     }
 
     private static bool ConsumeTemporaryRemovalDelay(CardModel card)
@@ -419,72 +436,6 @@ public abstract class SakuraCardStateCapability : CardCapability, ICardDescripti
     protected virtual IEnumerable<string> HoverTipKeys(CardModel card) => [];
 }
 
-public static class TemporaryCardMemory
-{
-    private static readonly ConditionalWeakTable<ICombatState, Dictionary<Player, List<CardModel>>> CardsByCombat = new();
-
-    public static void Remember(CardModel card)
-    {
-        if (card.CombatState is null || card.Owner is null)
-            return;
-
-        var copy = card.CreateClone();
-        copy.RemoveTemporaryForExchange();
-
-        var cardsByOwner = CardsByCombat.GetValue(card.CombatState, _ => []);
-        if (!cardsByOwner.TryGetValue(card.Owner, out var cards))
-        {
-            cards = [];
-            cardsByOwner[card.Owner] = cards;
-        }
-
-        cards.Add(copy);
-    }
-
-    public static IReadOnlyList<CardModel> CardsRemovedByTemporary(ICombatState? combatState, Player? player)
-    {
-        if (combatState is null || player is null)
-            return [];
-
-        return CardsByCombat.TryGetValue(combatState, out var cardsByOwner)
-               && cardsByOwner.TryGetValue(player, out var cards)
-            ? cards
-            : [];
-    }
-
-    public static void Consume(ICombatState? combatState, Player? player, IReadOnlyList<CardModel> selected)
-    {
-        if (selected.Count == 0)
-            return;
-        if (combatState is null
-            || player is null
-            || !CardsByCombat.TryGetValue(combatState, out var cardsByOwner)
-            || !cardsByOwner.TryGetValue(player, out var cards))
-        {
-            throw new InvalidOperationException("Cannot consume Temporary memory outside its owning combat and player.");
-        }
-
-        ConsumeRecords(cards, selected);
-    }
-
-    internal static void ConsumeRecords(List<CardModel> records, IReadOnlyList<CardModel> selected)
-    {
-        var selectedIndices = new List<int>(selected.Count);
-        foreach (var selectedRecord in selected)
-        {
-            var index = records.FindIndex(record => ReferenceEquals(record, selectedRecord));
-            if (index < 0 || selectedIndices.Contains(index))
-                throw new InvalidOperationException("Temporary memory selection contains a stale or duplicate record.");
-
-            selectedIndices.Add(index);
-        }
-
-        selectedIndices.Sort();
-        for (var i = selectedIndices.Count - 1; i >= 0; i--)
-            records.RemoveAt(selectedIndices[i]);
-    }
-}
-
 internal static class SakuraStateText
 {
     public static string TemporaryLine() =>
@@ -621,6 +572,11 @@ public static class SakuraCardStates
     public static bool IsTemporary(this CardModel card) =>
         SakuraCardStateCapability.Modifiers(card).Any(modifier => modifier is TemporaryModifier);
 
+    public static bool ReturnsToMemoryAfterTemporary(this CardModel card) =>
+        SakuraCardStateCapability.Modifiers(card)
+            .OfType<TemporaryModifier>()
+            .Any(static modifier => modifier.ReturnsToMemory);
+
     public static bool DelayTemporaryRemoval(this CardModel card, int turns)
     {
         var temporary = SakuraCardStateCapability.Modifiers(card).OfType<TemporaryModifier>().FirstOrDefault();
@@ -639,10 +595,19 @@ public static class SakuraCardStates
     public static bool IsManifestAtlasOrigin(this CardModel card) =>
         SakuraCardStateCapability.Modifiers(card).Any(modifier => modifier is ManifestAtlasOriginModifier);
 
-    public static void MakeTemporary(this CardModel card)
+    public static void MakeTemporary(this CardModel card, bool returnsToMemory = true)
     {
-        if (!card.IsTemporary())
-            SakuraCardStateCapability.AddModifier(card, NewModifier<TemporaryModifier>());
+        var modifier = SakuraCardStateCapability.Modifiers(card)
+            .OfType<TemporaryModifier>()
+            .FirstOrDefault();
+        if (modifier is null)
+        {
+            modifier = NewModifier<TemporaryModifier>();
+            SakuraCardStateCapability.AddModifier(card, modifier);
+        }
+
+        if (!returnsToMemory)
+            modifier.PreventMemoryReturn();
     }
 
     public static void MarkManifestAtlasOrigin(this CardModel card)
@@ -678,9 +643,6 @@ public static class SakuraCardStates
 
     public static async Task Stabilize(this CardModel card, PlayerChoiceContext choiceContext)
     {
-        if (!card.CanStabilize())
-            return;
-
         if (!card.RemoveTemporaryForStabilize())
             return;
 
@@ -690,9 +652,6 @@ public static class SakuraCardStates
 
     public static void StabilizeWithoutTrigger(this CardModel card)
     {
-        if (!card.CanStabilize())
-            return;
-
         card.RemoveTemporaryForStabilize();
     }
 
@@ -768,9 +727,6 @@ public static class SakuraCardStates
         modifier.SetAmount(amount);
         SakuraCardStateCapability.AddModifier(card, modifier);
     }
-
-    public static bool CanStabilize(this CardModel card) =>
-        SakuraTransparentCardCatalog.IsTransparentCard(card);
 
     private static T NewModifier<T>() where T : SakuraCardStateCapability =>
         ModelCapabilityRegistry.Create<T>();

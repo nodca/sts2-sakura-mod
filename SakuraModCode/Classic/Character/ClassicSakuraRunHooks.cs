@@ -12,6 +12,7 @@ internal static class ClassicSakuraRunHooks
 {
     private static IDisposable? _combatStartingSubscription;
     private static IDisposable? _creatureDiedSubscription;
+    private static IDisposable? _runLoadedSubscription;
     private static bool _registered;
 
     public static void Register()
@@ -24,6 +25,9 @@ internal static class ClassicSakuraRunHooks
             replayCurrentState: false);
         _creatureDiedSubscription = RitsuLibFramework.SubscribeLifecycle<CreatureDiedEvent>(
             OnCreatureDied,
+            replayCurrentState: false);
+        _runLoadedSubscription = RitsuLibFramework.SubscribeLifecycle<RunLoadedEvent>(
+            OnRunLoaded,
             replayCurrentState: false);
         _registered = true;
     }
@@ -40,6 +44,15 @@ internal static class ClassicSakuraRunHooks
             player.GetRelic<ClassicSealedWandRelic>()?.TryGainChargeForEnemyDeath(
                 evt.Creature,
                 evt.WasRemovalPrevented);
+    }
+
+    private static void OnRunLoaded(RunLoadedEvent evt)
+    {
+        foreach (var player in ClassicSakuraPlayers(evt.RunState))
+        {
+            foreach (var moonBell in player.Relics.OfType<ClassicMoonBellRelic>())
+                moonBell.RestoreSavedPresentation();
+        }
     }
 
     private static IEnumerable<Player> ClassicSakuraPlayers(IRunState runState) =>

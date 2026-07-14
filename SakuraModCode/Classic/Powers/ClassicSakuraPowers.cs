@@ -20,6 +20,7 @@ using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Relics;
 using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.Powers;
 using STS2RitsuLib.Combat.HandSize;
 using STS2RitsuLib.Scaffolding.Content;
 using STS2RitsuLib.Scaffolding.Content.Patches;
@@ -269,7 +270,7 @@ public class ClassicShieldWardPower : ClassicSakuraPower
         if (Owner.Side != side || !participants.Contains(Owner) || Amount <= 0)
             return;
 
-        await CreatureCmd.GainBlock(Owner, Amount, ValueProp.Move, null, false);
+        await CreatureCmd.GainBlock(Owner, Amount, SakuraPowerValueProps.Block, null, false);
     }
 }
 
@@ -461,7 +462,7 @@ public class ClassicEarthyPower : ClassicElementStatePower
     protected override Type PermanentPowerType => typeof(ClassicEarthyPermanentPower);
 
     protected override async Task TriggerElement(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await CreatureCmd.GainBlock(Owner, Block, ValueProp.Move, play, false);
+        await CreatureCmd.GainBlock(Owner, Block, SakuraPowerValueProps.Block, null, false);
 }
 
 public class ClassicEarthyPermanentPower : ClassicPermanentElementPower
@@ -471,7 +472,7 @@ public class ClassicEarthyPermanentPower : ClassicPermanentElementPower
 
 public class ClassicFireyPower : ClassicElementStatePower
 {
-    public const int HpLoss = 3;
+    public const int Damage = 3;
 
     protected override string IconFileName => "firey_power.png";
     protected override ClassicElement Element => ClassicElement.Firey;
@@ -482,7 +483,7 @@ public class ClassicFireyPower : ClassicElementStatePower
         var combatState = Owner.CombatState
             ?? throw new InvalidOperationException("Classic Firey requires an active combat.");
         foreach (var enemy in combatState.HittableEnemies.ToList())
-            await CreatureCmd.Damage(choiceContext, enemy, HpLoss, ValueProp.Unblockable, Owner, play.Card);
+            await CreatureCmd.Damage(choiceContext, enemy, Damage, SakuraPowerValueProps.Damage, Owner, null);
     }
 }
 
@@ -552,7 +553,7 @@ public class ClassicWavePower : ClassicSakuraPower
         if (Amount <= 0 || play.Card?.Owner?.Creature != Owner || play.Card.Type != CardType.Attack)
             return;
 
-        await CreatureCmd.GainBlock(Owner, Amount, ValueProp.Move, play, false);
+        await CreatureCmd.GainBlock(Owner, Amount, SakuraPowerValueProps.Block, null, false);
     }
 }
 
@@ -900,7 +901,7 @@ public class ClassicFloatPower : ClassicSakuraPower
     public override async Task AfterCardDrawn(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
     {
         if (Owner.Player == card.Owner && Amount > 0)
-            await CreatureCmd.GainBlock(Owner, Amount, ValueProp.Move, null, false);
+            await CreatureCmd.GainBlock(Owner, Amount, SakuraPowerValueProps.Block, null, false);
     }
 }
 
@@ -931,7 +932,7 @@ public class ClassicFreezePower : ClassicSakuraPower
             return;
 
         await CreatureCmd.Stun(Owner);
-        await CreatureCmd.GainBlock(Owner, BlockGain, ValueProp.Move, null, false);
+        await CreatureCmd.GainBlock(Owner, BlockGain, SakuraPowerValueProps.Block, null, false);
     }
 
     public override async Task BeforeSideTurnStart(
@@ -1173,12 +1174,12 @@ public class ClassicNothingPower : ClassicSakuraPower
         if (!IsOwnedClowOrSakura(play.Card))
             return;
 
-        await CreatureCmd.GainBlock(Owner, _block, ValueProp.Move, play, false);
+        await CreatureCmd.GainBlock(Owner, _block, SakuraPowerValueProps.Block, null, false);
 
         var combatState = Owner.CombatState
             ?? throw new InvalidOperationException("Classic Nothing requires an active combat.");
         foreach (var enemy in combatState.HittableEnemies.ToList())
-            await CreatureCmd.Damage(choiceContext, enemy, _damage, ValueProp.Unblockable | ValueProp.Unpowered, Owner, play.Card);
+            await CreatureCmd.Damage(choiceContext, enemy, _damage, SakuraPowerValueProps.HpLoss, Owner, null);
     }
 
     public override async Task AfterCombatEnd(CombatRoom room)

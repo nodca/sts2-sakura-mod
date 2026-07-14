@@ -9,7 +9,6 @@ using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
-using System.Threading;
 using SakuraMod.SakuraModCode;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
@@ -20,6 +19,13 @@ using STS2RitsuLib.Scaffolding.Content;
 using STS2RitsuLib.Scaffolding.Content.Patches;
 
 namespace SakuraMod.SakuraModCode.Powers;
+
+internal static class SakuraPowerValueProps
+{
+    public const ValueProp Block = ValueProp.Unpowered;
+    public const ValueProp Damage = ValueProp.Unpowered;
+    public const ValueProp HpLoss = ValueProp.Unblockable | ValueProp.Unpowered;
+}
 
 public abstract class ReflectionPowerBase : SakuraModPower
 {
@@ -40,7 +46,7 @@ public abstract class ReflectionPowerBase : SakuraModPower
 
         var reflectionDamage = CalculateReflectionDamage(damageResult.TotalDamage);
         if (reflectionDamage > 0)
-            await CreatureCmd.Damage(choiceContext, attacker, reflectionDamage, ValueProp.Unblockable, Owner, null);
+            await CreatureCmd.Damage(choiceContext, attacker, reflectionDamage, SakuraPowerValueProps.Damage, Owner, null);
         await PowerCmd.Decrement(this);
     }
 }
@@ -171,8 +177,8 @@ public class MiragePower : SakuraModPower
 
 public class LabyrinthPower : SakuraModPower
 {
-    private static readonly AsyncLocal<Creature?> ExistingStatusTarget = new();
     private readonly HashSet<Creature> _enemies = [];
+    private readonly List<CardPlay> _activeCardPlays = [];
     private int _playerTurnEndsUntilRelease = 1;
     private Creature? _pendingReleaseEnemy;
 
@@ -180,6 +186,9 @@ public class LabyrinthPower : SakuraModPower
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
+
+    internal static bool AllowsCardInteraction(CardModel? card, bool isTrapped, bool isAlive) =>
+        !isTrapped || !isAlive || card?.Type != CardType.Attack;
 
     public async Task Enter(IEnumerable<Creature> enemies)
     {
@@ -194,38 +203,36 @@ public class LabyrinthPower : SakuraModPower
         await RemoveIfEmpty();
     }
 
-    public static async Task AllowExistingStatusEffect(Creature target, Func<Task> effect)
+    public override Task BeforeCardPlayed(CardPlay play)
     {
-        // Existing statuses may create their own follow-up status (for example, Frostbite -> Freeze).
-        var power = target.CombatState?
-            .IterateHookListeners()
-            .OfType<LabyrinthPower>()
-            .FirstOrDefault(power => power._enemies.Contains(target));
-        if (power is null)
-        {
-            await effect();
-            return;
-        }
+        _activeCardPlays.Add(play);
+        return Task.CompletedTask;
+    }
 
-        var previousTarget = ExistingStatusTarget.Value;
-        ExistingStatusTarget.Value = target;
-        try
-        {
-            await effect();
-        }
-        finally
-        {
-            ExistingStatusTarget.Value = previousTarget;
-        }
+    public override Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        _activeCardPlays.Remove(play);
+        return Task.CompletedTask;
     }
 
     public override bool ShouldAllowHitting(Creature creature) =>
-        ExistingStatusTarget.Value == creature
-        || !_enemies.Contains(creature)
-        || !creature.IsAlive;
+        AllowsCardInteraction(
+            _activeCardPlays.LastOrDefault()?.Card,
+            _enemies.Contains(creature),
+            creature.IsAlive);
 
-    public override bool ShouldAllowTargeting(Creature target) =>
-        !_enemies.Contains(target) || !target.IsAlive;
+    public override decimal ModifyDamageMultiplicative(
+        Creature? target,
+        decimal amount,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource) =>
+        AllowsCardInteraction(
+            cardSource,
+            target is not null && _enemies.Contains(target),
+            target?.IsAlive == true)
+            ? 1m
+            : 0m;
 
     public override async Task BeforeSideTurnStart(
         PlayerChoiceContext choiceContext,
@@ -309,6 +316,7 @@ public class LabyrinthPower : SakuraModPower
         foreach (var enemy in _enemies.Where(enemy => enemy.CombatState?.ContainsCreature(enemy) == true))
             SakuraLabyrinthMove.Restore(enemy);
         _enemies.Clear();
+        _activeCardPlays.Clear();
         _pendingReleaseEnemy = null;
         return Task.CompletedTask;
     }
@@ -401,16 +409,13 @@ public class SakuraFrostbitePower : SakuraModPower
             return;
 
         await PowerCmd.Remove(this);
-        await LabyrinthPower.AllowExistingStatusEffect(Owner, async () =>
-        {
-            await PowerCmd.Apply<ClassicFreezePower>(
-                choiceContext,
-                Owner,
-                1,
-                applier ?? Applier ?? Owner,
-                cardSource,
-                false);
-        });
+        await PowerCmd.Apply<ClassicFreezePower>(
+            choiceContext,
+            Owner,
+            1,
+            applier ?? Applier ?? Owner,
+            cardSource,
+            false);
     }
 }
 

@@ -740,8 +740,7 @@ public class ClassicMoonBellRelic : ClassicSakuraRelic
             return;
 
         Used[this] = true;
-        Status = RelicStatus.Disabled;
-        RelicIconChanged();
+        ApplyUsedPresentation();
         Flash();
 
         // Heal is the revive path; SetCurrentHp(0) would re-enter Kill while death is being prevented.
@@ -754,6 +753,18 @@ public class ClassicMoonBellRelic : ClassicSakuraRelic
 
         var deckCard = Owner.RunState.CreateCard<SpellTurn>(Owner);
         await CardPileCmd.Add(deckCard, PileType.Deck, CardPilePosition.Bottom, this, skipVisuals: true);
+    }
+
+    internal void RestoreSavedPresentation()
+    {
+        if (Used[this])
+            ApplyUsedPresentation();
+    }
+
+    private void ApplyUsedPresentation()
+    {
+        Status = RelicStatus.Disabled;
+        RelicIconChanged();
     }
 }
 

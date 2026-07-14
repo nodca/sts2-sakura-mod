@@ -23,6 +23,7 @@ public readonly record struct GeneratedCardOptions
     public bool RemoveTemporary { get; init; }
     public bool RemoveManifestAtlasOrigin { get; init; }
     public bool AddTemporary { get; init; }
+    public bool PreventTemporaryMemoryReturn { get; init; }
     public bool AddManifestAtlasOrigin { get; init; }
     public bool FreeThisTurn { get; init; }
 }
@@ -55,14 +56,18 @@ internal static class SakuraGeneratedCardLifecycle
             card,
             RememberedCopyOptions(freeThisTurn, addTemporary: false));
 
-    public static async Task<CardModel?> AddTemporaryRememberedCopyToHand(
+    public static async Task<CardModel> AddTemporaryRememberedCardToHand(
         CardModel card,
         bool freeThisTurn,
         PlayerChoiceContext context) =>
-        await AddGeneratedCopyToHand(
+        await AddGeneratedCardToCombat(
             card,
-            RememberedCopyOptions(freeThisTurn, addTemporary: true),
-            context);
+            RememberedCopyOptions(freeThisTurn, addTemporary: true) with
+            {
+                Pile = PileType.Hand
+            },
+            context,
+            refreshGeneratedTransparentHandVisual: false);
 
     public static Task<CardModel> AddGeneratedCardToHand(
         CardModel card,
@@ -168,12 +173,12 @@ internal static class SakuraGeneratedCardLifecycle
         if (options.AddTemporary)
         {
             var hadTemporary = card.IsTemporary();
-            card.MakeTemporary();
+            card.MakeTemporary(returnsToMemory: !options.PreventTemporaryMemoryReturn);
             temporaryGranted = !hadTemporary;
         }
 
         if (options.FreeThisTurn)
-            card.SetToFreeThisTurn();
+            card.EnergyCost.SetThisTurnOrUntilPlayed(0, reduceOnly: true);
         if (options.AddManifestAtlasOrigin)
             card.MarkManifestAtlasOrigin();
 
@@ -375,7 +380,9 @@ internal static class SakuraGeneratedCardLifecycle
         new()
         {
             RemoveTemporary = true,
+            RemoveManifestAtlasOrigin = true,
             AddTemporary = addTemporary,
+            PreventTemporaryMemoryReturn = addTemporary,
             FreeThisTurn = freeThisTurn
         };
 

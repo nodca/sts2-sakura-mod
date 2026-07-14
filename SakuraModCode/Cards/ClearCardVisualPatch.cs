@@ -82,11 +82,8 @@ internal static class ClearCardLayout
 
     private const string DefaultHighlightTexturePath = "res://images/packed/card_template/card_frame_sdf.exr";
     private static readonly Dictionary<Type, SakuraCardTextureResource> ClearCardArtResources = [];
-    private static readonly Dictionary<Type, string> ClearCardEnglishNameCache = [];
     private static readonly Dictionary<(string Language, SakuraElement Element), string> ElementTitleCache = [];
     private static readonly Dictionary<string, string> ClearCardStatusTextCache = [];
-    private static readonly SakuraCardTextureResource ClearCardHighlightTextureResource =
-        SakuraCardTextureResource.FromFactory(CreateClearCardHighlightTexture);
     private static readonly SakuraCardTextureResource DefaultHighlightTextureResource =
         SakuraCardTextureResource.FromPath(DefaultHighlightTexturePath);
     private static readonly ConditionalWeakTable<NCard, ClearCardState> CardStates = new();
@@ -101,13 +98,10 @@ internal static class ClearCardLayout
 
     public static void PreloadVisualResources()
     {
-        foreach (var cardType in SakuraTransparentCardCatalog.TransparentCardTypes)
+        foreach (var cardType in SakuraTransparentCardCatalog.TransparentCardTypes.Concat(SakuraOptionCardCatalog.CardTypes))
             _ = ClearCardTexture(cardType);
         _ = ClearCardHighlightTexture();
     }
-
-    public static string CardArtPath(Type cardType) =>
-        ClearCardArtFileName(cardType).ClearCardAssetPath();
 
     public static void RestoreCardIfTracked(NCard card)
     {
@@ -361,7 +355,7 @@ internal static class ClearCardLayout
     private static void ApplyEnglishNameLayout(Label label, CardModel model)
     {
         ApplyBox(label, Spec.EnglishNameBox);
-        var text = ClearCardEnglishName(model.GetType());
+        var text = ClearCardVisualAssets.EnglishName(model);
         if (label.Text != text)
             label.Text = text;
         if (!label.Visible)
@@ -758,7 +752,7 @@ internal static class ClearCardLayout
     {
         if (!ClearCardArtResources.TryGetValue(cardType, out var resource))
         {
-            resource = SakuraCardTextureResource.FromPath(CardArtPath(cardType));
+            resource = SakuraCardTextureResource.FromPath(ClearCardVisualAssets.ArtPath(cardType));
             ClearCardArtResources[cardType] = resource;
         }
 
@@ -766,67 +760,11 @@ internal static class ClearCardLayout
     }
 
     private static Texture2D ClearCardHighlightTexture() =>
-        ClearCardHighlightTextureResource.ResolveRequired("Clear Card highlight");
-
-    private static Texture2D CreateClearCardHighlightTexture()
-    {
-        var box = Spec.HighlightBox;
-        var imageScale = Spec.HighlightTextureScale;
-        var width = Mathf.CeilToInt(box.Size.X * imageScale);
-        var height = Mathf.CeilToInt(box.Size.Y * imageScale);
-        var image = Image.CreateEmpty(width, height, false, Image.Format.Rgbaf);
-        var cardCenter = -box.Position + Spec.RootSize * 0.5f;
-        var cardHalfSize = Spec.RootSize * 0.5f;
-
-        for (var y = 0; y < height; y++)
-        {
-            for (var x = 0; x < width; x++)
-            {
-                var point = new Vector2((x + 0.5f) / imageScale, (y + 0.5f) / imageScale);
-                var distance = RoundedRectDistance(point - cardCenter, cardHalfSize, Spec.HighlightCornerRadius);
-                var alpha = 1f - Mathf.Clamp(Mathf.Abs(distance) / Spec.HighlightSdfRange, 0f, 1f);
-                image.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
-            }
-        }
-
-        return ImageTexture.CreateFromImage(image);
-    }
+        SakuraCardHighlightResources.ResolveClear();
 
     private static Texture2D? DefaultHighlightTexture()
     {
         return DefaultHighlightTextureResource.TryResolve(out var texture) ? texture : null;
-    }
-
-    private static float RoundedRectDistance(Vector2 point, Vector2 halfSize, float radius)
-    {
-        return SakuraCardVisualInfrastructure.RoundedRectDistance(point, halfSize, radius);
-    }
-
-    private static string ClearCardArtFileName(Type cardType)
-    {
-        var name = cardType.Name;
-        var builder = new StringBuilder(name.Length + 8);
-        for (var i = 0; i < name.Length; i++)
-        {
-            var character = name[i];
-            if (i > 0 && char.IsUpper(character) && char.IsLower(name[i - 1]))
-                builder.Append('_');
-
-            builder.Append(char.ToUpperInvariant(character));
-        }
-
-        builder.Append(".png");
-        return builder.ToString();
-    }
-
-    private static string ClearCardEnglishName(Type cardType)
-    {
-        if (ClearCardEnglishNameCache.TryGetValue(cardType, out var name))
-            return name;
-
-        name = Path.GetFileNameWithoutExtension(ClearCardArtFileName(cardType)).Replace('_', ' ');
-        ClearCardEnglishNameCache[cardType] = name;
-        return name;
     }
 
     private static Color NameTextColor(CardModel model) =>
@@ -1092,7 +1030,7 @@ internal static class ClearCardLayout
                 return;
 
             var highlight = card.CardHighlight!;
-            if (!IsSakuraRuntimeTexture(highlight.Texture))
+            if (!SakuraCardHighlightResources.IsSakuraHighlight(highlight.Texture))
                 return;
 
             ApplyCenteredAnchors(highlight);
@@ -1115,14 +1053,6 @@ internal static class ClearCardLayout
             if (highlight.MouseFilter != Control.MouseFilterEnum.Ignore)
                 highlight.MouseFilter = Control.MouseFilterEnum.Ignore;
             SetTextureIfDifferent(highlight, DefaultHighlightTexture());
-        }
-
-        private static bool IsSakuraRuntimeTexture(Texture2D? texture)
-        {
-            if (!IsGodotInstanceUsable(texture))
-                return true;
-
-            return string.IsNullOrEmpty(texture!.ResourcePath);
         }
 
     }
@@ -1304,9 +1234,6 @@ internal static class ClearCardLayout
         public Color UpgradedNameTextColor => SakuraCardVisualStyle.UpgradedNameTextColor;
         public Color NameTextOutlineColor { get; } = new(0.03f, 0.03f, 0.03f, 0.95f);
         public Color TitleTextShadowColor { get; } = new(0f, 0f, 0f, 0.1882353f);
-        public float HighlightCornerRadius { get; } = Scaled(16f);
-        public float HighlightSdfRange { get; } = Scaled(240f);
-        public float HighlightTextureScale { get; } = 2f;
         public float HeaderLineUnits { get; } = Scaled(14f);
         public Vector2 DefaultHighlightPosition { get; } = new(-381f, -475f);
         public Vector2 DefaultHighlightSize { get; } = new(759f, 951f);

@@ -15,12 +15,13 @@ internal static class SakuraContentRegistration
     {
         var registry = ModContentRegistry.For(MainFile.ModId);
 
+        SakuraMemoryPile.Register();
         SakuraCardTextCapabilities.Register();
         ClassicSakuraCardTextCapabilities.Register();
         ConfigureDefaultCardTextCapabilities(registry);
         registry.RegisterSingleton<SakuraDrawCountHook>();
         registry.RegisterCharacter<ClassicSakura>();
-        RegisterCards(registry, typeof(ClassicSakuraCardPool), ClassicSakuraCardPool.AllCardTypesForPool());
+        RegisterCards(registry, typeof(ClassicSakuraCardPool), AllCardTypesForRegistration());
         RegisterPowers(registry, AllPowerTypesForRegistration());
         RegisterRelics(registry, typeof(ClassicSakuraRelicPool), ClassicSakuraExclusiveRelics.AllClassicRelicTypes());
     }
@@ -68,4 +69,9 @@ internal static class SakuraContentRegistration
                 && typeof(PowerModel).IsAssignableFrom(type)
                 && type.Namespace?.StartsWith("SakuraMod.SakuraModCode", StringComparison.Ordinal) == true)
             .OrderBy(static type => type.FullName, StringComparer.Ordinal);
+
+    internal static IEnumerable<Type> AllCardTypesForRegistration() =>
+        ClassicSakuraCardPool.AllCardTypesForPool()
+            .Concat(SakuraOptionCardCatalog.CardTypes)
+            .Distinct();
 }

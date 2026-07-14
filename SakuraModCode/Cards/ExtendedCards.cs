@@ -61,7 +61,7 @@ public class Gravitation() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity
     }
 }
 
-public class Mirage() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
+public class Mirage() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
     protected override IEnumerable<IHoverTip> AdditionalHoverTips => [HoverTipFactory.FromPower<MiragePower>()];
@@ -165,7 +165,7 @@ public class Exchange() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, 
     }
 }
 
-public class Kindness() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Kindness() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
 
@@ -266,7 +266,7 @@ public class Reversal() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Un
     protected override void OnUpgrade() => DynamicVars["PileCardsPerDamage"].UpgradeValueBy(-1);
 }
 
-public class Rewind() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Rewind() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
 
@@ -314,32 +314,41 @@ public class Snooze() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Comm
 public class Spiral() : SakuraExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys => [SakuraMemoryPile.PileId];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DamageVar(4, ValueProp.Move),
-        new BlockVar(4, ValueProp.Move)
+        new BlockVar(4, ValueProp.Move),
+        new DynamicVar("MemoryScale", 1),
+        new CardsVar("ExtraCopies", 2)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var target = RequiredTarget(play);
-        var repetitions = this.IsTemporary() ? 2 : 1;
-        for (var i = 0; i < repetitions; i++)
-        {
-            await SakuraActions.Attack(choiceContext, this, target, DynamicVars.Damage.IntValue);
-            await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, play, false);
-        }
+        var memoryCount = SakuraMemoryPile.Count(Owner);
+        var memoryScale = DynamicVars["MemoryScale"].IntValue;
+        var damage = OutputWithMemory(DynamicVars.Damage.IntValue, memoryCount, memoryScale);
+        var block = OutputWithMemory(DynamicVars.Block.IntValue, memoryCount, memoryScale);
+        await SakuraActions.Attack(choiceContext, this, target, damage);
+        await CreatureCmd.GainBlock(Owner.Creature, block, ValueProp.Move, play, false);
         if (activation.IsActive)
             await ApplyExtraEffect(choiceContext, play);
     }
 
     private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await SakuraGeneratedCardLifecycle.AddTemporaryCopyToHand(
-            this,
-            freeThisTurn: false,
-            context: choiceContext);
+        for (var i = 0; i < DynamicVars["ExtraCopies"].IntValue; i++)
+        {
+            await SakuraGeneratedCardLifecycle.AddTemporaryCopyToHand(
+                this,
+                freeThisTurn: true,
+                context: choiceContext);
+        }
     }
+
+    internal static int OutputWithMemory(int baseValue, int memoryCount, int memoryScale = 1) =>
+        baseValue + Math.Max(0, memoryCount) * Math.Max(0, memoryScale);
 
     protected override void OnUpgrade()
     {
@@ -422,30 +431,53 @@ public class Transfer() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Un
 
 
 
-public class Blank() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Blank() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    private int _removedCardsThisPlay;
+    private static readonly PileType[] ForgottenTargetPileTypes =
+    [
+        PileType.Hand,
+        PileType.Draw,
+        PileType.Discard
+    ];
 
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(4, ValueProp.Move)];
+    internal static IReadOnlyList<PileType> TargetPileTypes => ForgottenTargetPileTypes;
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
 
-        var cards = CardPile.GetCards(Owner, PileType.Hand, PileType.Draw, PileType.Discard)
-            .Where(card => card.Type is CardType.Status or CardType.Curse)
+        var cards = CardPile.GetCards(Owner, ForgottenTargetPileTypes)
+            .Where(card => CanGainForgotten(card.Type, card.IsTemporary()))
             .ToList();
-        _removedCardsThisPlay = cards.Count;
 
+        var forgottenCards = 0;
         foreach (var card in cards)
-            await CardCmd.Exhaust(choiceContext, card);
+        {
+            if (await SakuraGeneratedCardLifecycle.GrantTemporary(choiceContext, card))
+                forgottenCards++;
+        }
+
+        if (forgottenCards > 0)
+        {
+            await PowerCmd.Apply<DrawCardsNextTurnPower>(
+                choiceContext,
+                Owner.Creature,
+                forgottenCards,
+                Owner.Creature,
+                this,
+                false);
+        }
 
         if (activation.IsActive)
-            await ApplyExtraEffect(choiceContext, play);
+            await ApplyExtraEffect();
     }
 
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
+    internal static bool CanGainForgotten(CardType type, bool isForgotten) =>
+        !isForgotten && type is CardType.Status or CardType.Curse;
+
+    private async Task ApplyExtraEffect()
     {
         foreach (var power in Owner.Creature.Powers.Where(IsOwnNegativePower).ToList())
             await PowerCmd.Remove(power);
@@ -457,9 +489,6 @@ public class Blank() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncom
                          .ToList())
                 await PowerCmd.Remove(power);
         }
-
-        if (_removedCardsThisPlay > 0)
-            await CardPileCmd.Draw(choiceContext, _removedCardsThisPlay, Owner, false);
     }
 
     private static bool IsOwnNegativePower(PowerModel power) =>
@@ -492,25 +521,26 @@ public class Mirror() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare
             var amount = DynamicVars["Repeat"].IntValue;
             if (activation.IsActive)
                 amount += DynamicVars["ExtraRepeat"].IntValue;
-            card.AddReplayThisTurn(amount);
+            card.BaseReplayCount += amount;
         }
     }
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
-public class Remind() : SakuraModCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Remind() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     private static LocString SelectionPrompt => CardLoc<Remind>("selectionPrompt");
 
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust];
-    internal override IEnumerable<string> ReferencedStaticHoverTipKeys => [SakuraCardHoverTips.RemindTipKey];
-    protected override bool HasEnergyCostX => true;
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [SakuraMemoryPile.PileId, SakuraCardHoverTips.RemindTipKey];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var choices = TemporaryCardMemory.CardsRemovedByTemporary(CombatState, Owner);
-        var recallCount = RecallCount();
+        var choices = SakuraMemoryPile.Get(Owner)?.Cards.ToList() ?? [];
+        var recallCount = DynamicVars.Cards.IntValue;
         var cards = (choices.Count <= recallCount
             ? choices.ToList()
             : await SakuraActions.SelectUpToFromCards(
@@ -522,27 +552,25 @@ public class Remind() : SakuraModCard(0, CardType.Skill, CardRarity.Rare, Target
                 prompt: SelectionPrompt,
                 minSelect: recallCount)).ToList();
 
-        TemporaryCardMemory.Consume(CombatState, Owner, cards);
+        var copies = await SakuraMemoryPile.Consume(Owner, cards);
 
-        foreach (var card in cards)
+        try
         {
-            await SakuraGeneratedCardLifecycle.AddTemporaryRememberedCopyToHand(
-                card,
-                freeThisTurn: true,
-                context: choiceContext);
+            foreach (var copy in copies)
+            {
+                await SakuraGeneratedCardLifecycle.AddTemporaryRememberedCardToHand(
+                    copy,
+                    freeThisTurn: true,
+                    context: choiceContext);
+            }
+        }
+        finally
+        {
+            SakuraGeneratedCardLifecycle.RemoveDetachedGeneratedChoices(copies);
         }
     }
 
-    private int RecallCount()
-    {
-        var energy = Math.Max(0, ResolveEnergyXValue());
-        return RecallCount(energy, IsUpgraded);
-    }
-
-    internal static int RecallCount(int energy, bool upgraded) =>
-        upgraded ? Math.Max(0, energy) * 2 + 1 : Math.Max(0, energy) + 1;
-
-    protected override void OnUpgrade() { }
+    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
 }
 
 public class Synchronize() : SakuraModCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
@@ -597,61 +625,82 @@ public class Time() : SakuraExtraEffectCard(3, CardType.Skill, CardRarity.Rare, 
 
 public class TrueOrFalse() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust, SakuraKeywords.Stabilize];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => IsUpgraded
+        ? [SakuraKeywords.Fire, SakuraKeywords.Stabilize]
+        : [SakuraKeywords.Fire, CardKeyword.Exhaust, SakuraKeywords.Stabilize];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new CardsVar(2),
-        new EnergyVar(1)
+        new EnergyVar(2)
     ];
+    protected override bool IsPlayable => SakuraModCard.UsesMagicChargeExtraEffect(this)
+        ? CanCompleteExtraEffect()
+        : CanUseVirtual() || CanUseReal();
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         if (activation.IsActive)
         {
-            await Virtual(choiceContext);
-            await Real(choiceContext);
+            if (await Virtual(choiceContext))
+                await Real(choiceContext);
             return;
         }
 
-        var virtualChoice = SakuraActions.CloneWithCurrentUpgrade<TrueOrFalseDrawChoice>(this);
-        var realChoice = SakuraActions.CloneWithCurrentUpgrade<TrueOrFalseEnergyChoice>(this);
-        virtualChoice.DynamicVars.Cards.BaseValue = DynamicVars.Cards.IntValue;
-        realChoice.DynamicVars.Energy.BaseValue = DynamicVars.Energy.IntValue;
+        List<CardModel> choices = [];
+        if (CanUseVirtual())
+        {
+            var virtualChoice = SakuraActions.CloneWithCurrentUpgrade<TrueOrFalseDrawChoice>(this);
+            virtualChoice.DynamicVars.Cards.BaseValue = DynamicVars.Cards.IntValue;
+            choices.Add(virtualChoice);
+        }
+        if (CanUseReal())
+        {
+            var realChoice = SakuraActions.CloneWithCurrentUpgrade<TrueOrFalseEnergyChoice>(this);
+            realChoice.DynamicVars.Energy.BaseValue = DynamicVars.Energy.IntValue;
+            choices.Add(realChoice);
+        }
 
-        var choice = await SakuraActions.SelectFromCards(this, choiceContext, [virtualChoice, realChoice], cancelable: false);
-        if (choice is TrueOrFalseEnergyChoice)
-            await Real(choiceContext);
-        else
+        var choice = choices.Count == 1
+            ? choices[0]
+            : await SakuraActions.SelectFromCards(this, choiceContext, choices, cancelable: false);
+        if (choice is TrueOrFalseDrawChoice)
             await Virtual(choiceContext);
+        else if (choice is TrueOrFalseEnergyChoice)
+            await Real(choiceContext);
     }
 
-    private async Task Virtual(PlayerChoiceContext choiceContext)
+    private bool CanUseVirtual() => SakuraActions.Hand(this).Any(CanBecomeTemporary);
+
+    private bool CanUseReal() => SakuraActions.StabilizeCandidates(this).Count > 0;
+
+    private bool CanCompleteExtraEffect() => CanUseVirtual();
+
+    private async Task<bool> Virtual(PlayerChoiceContext choiceContext)
     {
-        var card = SakuraActions.Hand(this).Any(CanBecomeTemporary)
-            ? await SakuraActions.SelectHandCard(this, choiceContext, CanBecomeTemporary, cancelable: false)
-            : null;
-        if (card is not null)
-            await SakuraGeneratedCardLifecycle.GrantTemporary(choiceContext, card);
+        var card = await SakuraActions.SelectHandCard(this, choiceContext, CanBecomeTemporary, cancelable: false);
+        if (card is null || !await SakuraGeneratedCardLifecycle.GrantTemporary(choiceContext, card))
+            return false;
+
         await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
+        return true;
     }
 
     private bool CanBecomeTemporary(CardModel card) =>
         card != this && !card.IsTemporary();
 
-    private async Task Real(PlayerChoiceContext choiceContext)
+    private async Task<bool> Real(PlayerChoiceContext choiceContext)
     {
-        var card = SakuraActions.StabilizeCandidates(this).Count > 0
-            ? await SakuraActions.SelectStabilizeCandidate(this, choiceContext, cancelable: false)
-            : null;
-        if (card is not null)
-            await card.Stabilize(choiceContext);
+        var card = await SakuraActions.SelectStabilizeCandidate(this, choiceContext, cancelable: false);
+        if (card is null)
+            return false;
+
+        await card.Stabilize(choiceContext);
+        if (card.IsTemporary())
+            return false;
 
         await PlayerCmd.GainEnergy(DynamicVars.Energy.IntValue, Owner);
+        return true;
     }
 
-    protected override void OnUpgrade()
-    {
-        DynamicVars.Cards.UpgradeValueBy(1);
-        DynamicVars.Energy.UpgradeValueBy(1);
-    }
+    protected override void OnUpgrade() => RemoveKeywordIfPresent(CardKeyword.Exhaust);
 }

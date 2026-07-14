@@ -1,10 +1,12 @@
 using Godot;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Context;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
@@ -122,7 +124,6 @@ internal static class SakuraElementStateHud
         MountedStates.Add(ui, state);
         root.TreeExiting += () => OnRootExiting(ui, state);
         state.Refresh(animateNewlyActive: false);
-        TaskHelper.RunSafely(state.RefreshUntilUnmounted());
     }
 
     public static void Unmount(NCombatUi ui)
@@ -146,9 +147,9 @@ internal static class SakuraElementStateHud
     private sealed class HudState : IDisposable
     {
         private readonly Player _player;
+        private readonly Creature _creature;
         private readonly CombatState _combatState;
         private readonly IReadOnlyList<ElementSlot> _slots;
-        private readonly CancellationTokenSource _cancellation = new();
         private SakuraActiveElementStates _activeStates;
         private SakuraElementFacet? _hoveredFacet;
         private bool _disposed;
@@ -156,6 +157,7 @@ internal static class SakuraElementStateHud
         public HudState(Player player, CombatState combatState, Control root)
         {
             _player = player;
+            _creature = player.Creature;
             _combatState = combatState;
             Root = root;
             _slots =
@@ -167,24 +169,13 @@ internal static class SakuraElementStateHud
             ];
             Root.GuiInput += OnGuiInput;
             Root.MouseExited += OnMouseExited;
+            _creature.PowerApplied += OnPowerApplied;
+            _creature.PowerIncreased += OnPowerIncreased;
+            _creature.PowerDecreased += OnPowerDecreased;
+            _creature.PowerRemoved += OnPowerRemoved;
         }
 
         public Control Root { get; }
-
-        public async Task RefreshUntilUnmounted()
-        {
-            try
-            {
-                while (IsMounted())
-                {
-                    await Root.AwaitProcessFrame(_cancellation.Token);
-                    Refresh(animateNewlyActive: true);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
 
         public void Refresh(bool animateNewlyActive)
         {
@@ -203,19 +194,53 @@ internal static class SakuraElementStateHud
             _activeStates = next;
         }
 
+        private void OnPowerApplied(PowerModel power) =>
+            RefreshForPower(power);
+
+        private void OnPowerIncreased(PowerModel power, int _, bool __) =>
+            RefreshForPower(power);
+
+        private void OnPowerDecreased(PowerModel power, bool _) =>
+            RefreshForPower(power);
+
+        private void OnPowerRemoved(PowerModel power) =>
+            RefreshForPower(power);
+
+        private void RefreshForPower(PowerModel power)
+        {
+            if (_disposed
+                || !GodotObject.IsInstanceValid(Root)
+                || !Root.IsInsideTree()
+                || !ReferenceEquals(_creature.CombatState, _combatState)
+                || !IsElementStatePower(power))
+            {
+                return;
+            }
+
+            Refresh(animateNewlyActive: true);
+        }
+
+        private static bool IsElementStatePower(PowerModel power) =>
+            power is ClassicEarthyPower
+                or ClassicFireyPower
+                or ClassicWateryPower
+                or ClassicWindyPower;
+
         public void Dispose()
         {
             if (_disposed)
                 return;
 
             _disposed = true;
-            _cancellation.Cancel();
+            _creature.PowerApplied -= OnPowerApplied;
+            _creature.PowerIncreased -= OnPowerIncreased;
+            _creature.PowerDecreased -= OnPowerDecreased;
+            _creature.PowerRemoved -= OnPowerRemoved;
             Root.GuiInput -= OnGuiInput;
             Root.MouseExited -= OnMouseExited;
             HideHoverTip();
             foreach (var slot in _slots)
                 slot.Dispose();
-            _cancellation.Dispose();
         }
 
         private void OnGuiInput(InputEvent inputEvent)
@@ -258,12 +283,6 @@ internal static class SakuraElementStateHud
 
         private void HideHoverTip() =>
             NHoverTipSet.Remove(Root);
-
-        private bool IsMounted() =>
-            !_disposed
-            && GodotObject.IsInstanceValid(Root)
-            && Root.IsInsideTree()
-            && ReferenceEquals(_player.Creature.CombatState, _combatState);
     }
 
     private sealed class ElementSlot : IDisposable

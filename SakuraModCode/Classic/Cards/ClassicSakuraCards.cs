@@ -234,7 +234,7 @@ public class SakuraJump() : ClassicSakuraConversionCard(1, CardType.Power, Targe
         await ApplyPower<ClassicJumpPower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
 
-public class ClowIllusion() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None)
+public class ClowIllusion() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
     public override ClassicElement Element => ClassicElement.Windy;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicBlockVar(7, ValueProp.Move), new DynamicVar("Magic", 2)];
@@ -309,7 +309,7 @@ public class SakuraMist() : ClassicSakuraConversionCard(1, CardType.Power, Targe
     }
 }
 
-public class ClowRain() : ClassicExtraClowCard(2, CardType.Skill, CardRarity.Common, TargetType.None)
+public class ClowRain() : ClassicExtraClowCard(2, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
     public override ClassicElement Element => ClassicElement.Watery;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
@@ -743,6 +743,8 @@ public class ClowCreate() : ClassicClowCard(CreateBaseCost, CardType.Power, Card
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Relics", CreateRewardCount)];
 
     public override void AfterCreated() => ApplyCostReduction();
+
+    protected override void AfterDeserialized() => ApplyCostReduction();
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -2218,6 +2220,7 @@ public class ClowTime() : ClassicExtraClowCard(2, CardType.Skill, CardRarity.Rar
             await PowerCmd.Apply<EnergyNextTurnPower>(choiceContext, Owner.Creature, energy, Owner.Creature, this, false);
 
         ClassicElementStatePower.PreserveAllForNextTurn(Owner.Creature);
+        await ClassicSakuraMagic.AddVoidToDrawPile(choiceContext, Owner);
         PlayerCmd.EndTurn(Owner, canBackOut: false);
     }
 
@@ -2302,9 +2305,7 @@ public class SpellRelease() : ClassicSpellCard(1, CardType.Skill, CardRarity.Bas
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var choices = CardPile.GetCards(Owner, PileType.Hand)
-            .OfType<ClassicSakuraCard>()
-            .Where(static card => card.IsClassicSourceCard)
-            .Cast<CardModel>()
+            .Where(CanRelease)
             .ToList();
         if (choices.Count > 0)
         {
@@ -2344,6 +2345,10 @@ public class SpellRelease() : ClassicSpellCard(1, CardType.Skill, CardRarity.Bas
 
         ClassicReleaseState.Apply(selected, ReleaseRate);
     }
+
+    internal static bool CanRelease(CardModel card) =>
+        SakuraCardCatalog.TryGetMetadata(card, out var metadata)
+        && metadata.Era is SourceEraClass.Clow or SourceEraClass.Sakura or SourceEraClass.Clear;
 }
 
 public class SpellTurn() : ClassicSpellCard(-2, CardType.Skill, CardRarity.Token, TargetType.None)

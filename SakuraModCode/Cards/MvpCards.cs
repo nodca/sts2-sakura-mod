@@ -18,7 +18,7 @@ using STS2RitsuLib.Cards.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Action() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Action() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new CardsVar("ExtraDraw", 1)];
@@ -171,7 +171,7 @@ internal static class BladeRules
     }
 }
 
-public class Hail() : SakuraExtraEffectCard(1, CardType.Attack, CardRarity.Common, TargetType.AllEnemies)
+public class Hail() : SakuraExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
 {
     private const int BaseHits = 2;
 
@@ -213,7 +213,7 @@ public class Hail() : SakuraExtraEffectCard(1, CardType.Attack, CardRarity.Commo
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(1);
 }
 
-public class Lucid() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Common, TargetType.Self)
+public class Lucid() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
 
@@ -321,36 +321,43 @@ internal sealed class SiegeBlockVar(decimal block, ValueProp props) : BlockVar(b
     }
 }
 
+internal static class SwingRules
+{
+    public static decimal WeakMultiplier(CardModel card, Creature? target) =>
+        WeakMultiplier(
+            target?.GetPower<WeakPower>()?.Amount ?? 0,
+            SakuraModCard.UsesMagicChargeExtraEffect(card));
+
+    internal static int WeakMultiplier(int weak, bool doubleWeakBonus) =>
+        Math.Max(0, weak) * (doubleWeakBonus ? 2 : 1);
+}
+
 public class Swing() : SakuraExtraEffectCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(9, ValueProp.Move),
+        new CalculationBaseVar(12),
         new PowerVar<WeakPower>(1),
-        new DamageVar("WeakDamage", 3, ValueProp.Move)
+        new ExtraDamageVar(3),
+        new CalculatedDamageVar(ValueProp.Move).WithMultiplier(SwingRules.WeakMultiplier)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var targets = CombatState!.HittableEnemies.ToList();
-        await PowerCmd.Apply<WeakPower>(choiceContext, targets, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
-
         foreach (var enemy in targets.Where(enemy => enemy.IsAlive))
-        {
-            var weak = Math.Max(0, enemy.GetPower<WeakPower>()?.Amount ?? 0);
-            var bonus = weak * DynamicVars["WeakDamage"].IntValue;
-            if (activation.IsActive)
-                bonus *= 2;
+            await SakuraActions.Attack(choiceContext, this, enemy, DynamicVars.CalculatedDamage);
 
-            await SakuraActions.Attack(choiceContext, this, enemy, DynamicVars.Damage.IntValue + bonus);
-        }
+        var survivingTargets = targets.Where(enemy => enemy.IsAlive).ToList();
+        if (survivingTargets.Count > 0)
+            await PowerCmd.Apply<WeakPower>(choiceContext, survivingTargets, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
     }
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Damage.UpgradeValueBy(3);
-        DynamicVars["WeakDamage"].UpgradeValueBy(1);
+        DynamicVars.CalculationBase.UpgradeValueBy(4);
+        DynamicVars.ExtraDamage.UpgradeValueBy(1);
     }
 }
 

@@ -8,6 +8,7 @@
         <AppOutputBase>$(MSBuildProjectDirectory)\</AppOutputBase>
         <PathMap>$(AppOutputBase)=.\</PathMap>
         <GodotDisabledSourceGenerators>GodotPluginsInitializer</GodotDisabledSourceGenerators>
+        <SakuraPackageRoot Condition="'$(SakuraPackageRoot)' == ''">$(ModsPath)$(MSBuildProjectName)/</SakuraPackageRoot>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -19,11 +20,11 @@
     <ItemGroup Condition="Exists('$(Sts2DataDir)')" >
         <Reference Include="0Harmony">
             <HintPath>$(Sts2DataDir)/0Harmony.dll</HintPath>
-            <Private>false</Private>
+            <Private>true</Private>
         </Reference>
         <Reference Include="sts2">
             <HintPath>$(Sts2DataDir)/sts2.dll</HintPath>
-            <Private>false</Private>
+            <Private>true</Private>
         </Reference>
     </ItemGroup>
 
@@ -38,12 +39,15 @@
         <Compile Remove="shaders/**" />
         <Compile Remove="images/**" />
         <Compile Remove="SakuraMod.Tests/**" />
+        <Compile Remove="tests/**" />
         <EmbeddedResource Remove="SakuraMod/**" />
         <EmbeddedResource Remove="materials/**" />
         <EmbeddedResource Remove="shaders/**" />
         <EmbeddedResource Remove="images/**" />
         <EmbeddedResource Remove="SakuraMod.Tests/**" />
+        <EmbeddedResource Remove="tests/**" />
         <None Remove="SakuraMod.Tests/**" />
+        <None Remove="tests/**" />
     </ItemGroup>
 
     <ItemGroup>
@@ -67,14 +71,14 @@
                 Condition="'$(Sts2DataDir)' == '' or !Exists('$(Sts2DataDir)')" />
     </Target>
     
-    <Target Name="CopyToModsFolderOnBuild" AfterTargets="PostBuildEvent">
+    <Target Name="CopyToModsFolderOnBuild" AfterTargets="PostBuildEvent" Condition="'$(SkipSakuraPackageCopy)' != 'true'">
         <Message Text="Copying .dll .pdb and .json to mods folder." Importance="high" />
-        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
-        <Copy SourceFiles="$(AssemblyName).json" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
-        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/" />
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SakuraPackageRoot)" />
+        <Copy SourceFiles="$(AssemblyName).json" DestinationFolder="$(SakuraPackageRoot)" />
+        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(SakuraPackageRoot)" />
         <Copy
             SourceFiles="@(SakuraExternalMusic)"
-            DestinationFiles="@(SakuraExternalMusic->'$(ModsPath)$(MSBuildProjectName)/music/%(RecursiveDir)%(Filename)%(Extension)')"
+            DestinationFiles="@(SakuraExternalMusic->'$(SakuraPackageRoot)music/%(RecursiveDir)%(Filename)%(Extension)')"
             SkipUnchangedFiles="true" />
     </Target>
 
@@ -83,10 +87,18 @@
                Condition="'$(GodotPath)' == '' or !Exists('$(GodotPath)')"/>
     </Target>
     
-    <Target Name="GodotPublish" AfterTargets="Publish" Condition="'$(GodotPath)' != '' and Exists('$(GodotPath)') and '$(IsInnerGodotExport)' != 'true'">
+    <Target Name="PrepareGodotExportProjectAssembly" BeforeTargets="GodotPublish" Condition="'$(IsInnerGodotExport)' != 'true'">
+        <MSBuild Projects="$(MSBuildProjectFullPath)"
+                 Targets="Build"
+                 Properties="Configuration=Debug;IsInnerGodotExport=true;SkipSakuraPackageCopy=true"
+                 BuildInParallel="false" />
+    </Target>
+
+    <Target Name="GodotPublish" AfterTargets="Publish" DependsOnTargets="PrepareGodotExportProjectAssembly" Condition="'$(GodotPath)' != '' and Exists('$(GodotPath)') and '$(IsInnerGodotExport)' != 'true'">
         <Message Text="Exporting Godot .pck to mods folder" Importance="high"/>
-        <Exec Command="&quot;$(GodotPath)&quot; --headless --export-pack &quot;BasicExport&quot; &quot;$(ModsPath)$(MSBuildProjectName)/$(MSBuildProjectName).pck&quot;"
-              EnvironmentVariables="IsInnerGodotExport=true;MSBUILDDISABLENODEREUSE=1"
-              ContinueOnError="WarnAndContinue"/>
+        <MakeDir Directories="$(SakuraPackageRoot)" />
+        <Exec Command="&quot;$(GodotPath)&quot; --headless --quiet --export-pack &quot;BasicExport&quot; &quot;$(SakuraPackageRoot)$(MSBuildProjectName).pck&quot;"
+              WorkingDirectory="$(MSBuildProjectDirectory)"
+              EnvironmentVariables="IsInnerGodotExport=true;MSBUILDDISABLENODEREUSE=1" />
     </Target>
 </Project>

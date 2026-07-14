@@ -1,6 +1,6 @@
 {
   "SAKURA_MOD_LABYRINTH.title": "迷宫",
-  "SAKURA_MOD_LABYRINTH.description": "该敌人迷失在迷宫中，无法行动，也不会成为牌或效果的目标；其已有状态仍正常结算。",
+  "SAKURA_MOD_LABYRINTH.description": "该敌人迷失在迷宫中，无法行动，也不受攻击牌影响。",
   "SAKURA_MOD_LABYRINTH_RELEASE_WARNING.title": "即将离开迷宫",
   "SAKURA_MOD_LABYRINTH_RELEASE_WARNING.description": "该敌人将在本回合结束时离开迷宫，旁边显示其下一步意图。"
 }

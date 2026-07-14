@@ -48,8 +48,11 @@ public static class StringExtensions
     public static string ClassicFullFaceImagePath(this string path) =>
         ResolveRequiredTexturePath(Path.Join(MainFile.ResPath, "images", "cards", "classic", "full_faces", path));
 
+    public static string DescriptionRegionAssetPath(this string path) =>
+        Path.Join(MainFile.ResPath, "images", "cards", "description_regions", path);
+
     public static string DescriptionRegionImagePath(this string path) =>
-        ResolveRequiredTexturePath(Path.Join(MainFile.ResPath, "images", "cards", "description_regions", path));
+        ResolveRequiredTexturePath(path.DescriptionRegionAssetPath());
 
     public static string IntentImagePath(this string path) =>
         ResolveRequiredTexturePath(Path.Join(MainFile.ResPath, "images", "intents", path));

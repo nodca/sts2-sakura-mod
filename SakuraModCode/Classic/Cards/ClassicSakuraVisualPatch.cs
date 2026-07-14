@@ -187,7 +187,6 @@ internal static class ClassicSakuraCardLayout
     private static readonly StringName HighlightWidthParameterName = new("width");
 
     private const string DefaultHighlightTexturePath = "res://images/packed/card_template/card_frame_sdf.exr";
-    private static readonly Dictionary<Vector2I, SakuraCardTextureResource> HighlightTextureResources = [];
     private static readonly SakuraCardTextureResource DefaultHighlightTextureResource =
         SakuraCardTextureResource.FromPath(DefaultHighlightTexturePath);
     private static readonly ConditionalWeakTable<NCard, ClassicCardState> CardStates = new();
@@ -241,7 +240,7 @@ internal static class ClassicSakuraCardLayout
             ? ClassicSakuraVisualAssets.FullFacePath(model)
             : ClassicSakuraVisualAssets.UnknownFullFacePath(model);
         var faceTexture = ClassicSakuraVisualAssets.Texture(facePath);
-        var highlightTexture = HighlightTexture(Spec.HighlightBox.Size);
+        var highlightTexture = HighlightTexture();
         var descriptionTexture = SakuraDescriptionRegion.AppliesTo(model)
             ? SakuraDescriptionRegion.ShapeTexture(model)
             : null;
@@ -290,7 +289,7 @@ internal static class ClassicSakuraCardLayout
         ApplyTextureLayer(state.GetOrCreateFace(card), Spec.RootBox, facePath, Spec.ArtZIndex);
 
         SakuraCardGeometryLifecycle.ApplyCardHighlight(highlight, Spec.HighlightBox, Spec.HighlightZIndex);
-        SetTextureIfDifferent(highlight, HighlightTexture(Spec.HighlightBox.Size));
+        SetTextureIfDifferent(highlight, HighlightTexture());
         ApplyTitleLayout(nodes.TitleLabel, model);
         ApplyEnglishNameLayout(
             state.GetOrCreateEnglishNameLabel(card),
@@ -646,48 +645,11 @@ internal static class ClassicSakuraCardLayout
         SakuraCardVisualInfrastructure.SetTextureIfDifferent(textureRect, texture);
     }
 
-    private static Texture2D HighlightTexture(Vector2 textureSize)
-    {
-        var key = new Vector2I(Mathf.CeilToInt(textureSize.X), Mathf.CeilToInt(textureSize.Y));
-        if (!HighlightTextureResources.TryGetValue(key, out var resource))
-        {
-            resource = SakuraCardTextureResource.FromFactory(() => CreateHighlightTexture(textureSize));
-            HighlightTextureResources[key] = resource;
-        }
-
-        return resource.ResolveRequired("Classic Sakura highlight");
-    }
-
-    private static Texture2D CreateHighlightTexture(Vector2 textureSize)
-    {
-        var imageScale = Spec.HighlightTextureScale;
-        var width = Mathf.CeilToInt(textureSize.X * imageScale);
-        var height = Mathf.CeilToInt(textureSize.Y * imageScale);
-        var image = Image.CreateEmpty(width, height, false, Image.Format.Rgbaf);
-        var cardCenter = textureSize * 0.5f;
-        var cardHalfSize = (Spec.RootSize + Spec.HighlightMargin * 0.25f) * 0.5f;
-
-        for (var y = 0; y < height; y++)
-        {
-            for (var x = 0; x < width; x++)
-            {
-                var point = new Vector2((x + 0.5f) / imageScale, (y + 0.5f) / imageScale);
-                var distance = RoundedRectDistance(point - cardCenter, cardHalfSize, Spec.HighlightCornerRadius);
-                var alpha = 1f - Mathf.Clamp(Mathf.Abs(distance) / Spec.HighlightSdfRange, 0f, 1f);
-                image.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
-            }
-        }
-
-        return ImageTexture.CreateFromImage(image);
-    }
+    private static Texture2D HighlightTexture() =>
+        SakuraCardHighlightResources.ResolveClassic();
 
     private static Texture2D? DefaultHighlightTexture() =>
         DefaultHighlightTextureResource.TryResolve(out var texture) ? texture : null;
-
-    private static float RoundedRectDistance(Vector2 point, Vector2 halfSize, float radius)
-    {
-        return SakuraCardVisualInfrastructure.RoundedRectDistance(point, halfSize, radius);
-    }
 
     private static bool HasAncestor<T>(Node node)
         where T : Node
@@ -970,7 +932,7 @@ internal static class ClassicSakuraCardLayout
                 return;
 
             var highlight = card.CardHighlight!;
-            if (!IsSakuraRuntimeTexture(highlight.Texture))
+            if (!SakuraCardHighlightResources.IsSakuraHighlight(highlight.Texture))
                 return;
 
             ApplyCenteredAnchors(highlight);
@@ -995,13 +957,6 @@ internal static class ClassicSakuraCardLayout
             SetTextureIfDifferent(highlight, DefaultHighlightTexture());
         }
 
-        private static bool IsSakuraRuntimeTexture(Texture2D? texture)
-        {
-            if (!IsGodotInstanceUsable(texture))
-                return true;
-
-            return string.IsNullOrEmpty(texture!.ResourcePath);
-        }
     }
 
     private sealed class ClassicCardNodes
@@ -1122,9 +1077,6 @@ internal static class ClassicSakuraCardLayout
         public Rect2 DescriptionBox { get; } = new(new Vector2(16f, 273f), new Vector2(190f, 140f));
         public Rect2 EnergyCostBox { get; } = new(new Vector2(-14f, -12f), new Vector2(56f, 56f));
         public Rect2 EnergyCostLabelBox { get; } = new(new Vector2(12f, -2f), new Vector2(44f, 44f));
-        public float HighlightCornerRadius { get; } = 18f;
-        public float HighlightSdfRange { get; } = 240f;
-        public float HighlightTextureScale { get; } = 2f;
         public Vector2 DefaultHighlightPosition { get; } = new(-381f, -475f);
         public Vector2 DefaultHighlightSize { get; } = new(759f, 951f);
         public Vector2 DefaultHighlightPivotOffset { get; } = new(150f, 211f);

@@ -280,7 +280,7 @@ public static class SakuraActions
         await SelectFromCards(source, context, StabilizeCandidates(source), cancelable);
 
     private static bool CanGenericStabilize(CardModel card) =>
-        card.IsTemporary() && card.CanStabilize();
+        card.IsTemporary();
 
 
     public static async Task<IReadOnlyList<CardModel>> SelectHandCards(

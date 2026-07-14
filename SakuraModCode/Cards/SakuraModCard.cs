@@ -66,7 +66,7 @@ public abstract class SakuraModCard : ModCardTemplate
 
     private bool UsesClearCardPortrait => SakuraCardVisualFamilies.UsesClearLayout(this);
 
-    private string ClearCardPortraitPath => ClearCardLayout.CardArtPath(GetType());
+    private string ClearCardPortraitPath => ClearCardVisualAssets.ArtPath(GetType());
 
     public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
     {
