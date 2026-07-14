@@ -40,8 +40,6 @@ internal static class ClearCardLayout
         "_banner",
         "_cardOverlay",
         "_cardVfxContainer",
-        "_enchantmentTab",
-        "_enchantmentVfxOverride",
         "_frame",
         "_lock",
         "_overlayContainer",

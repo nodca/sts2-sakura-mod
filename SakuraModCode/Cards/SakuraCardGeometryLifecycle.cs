@@ -54,6 +54,8 @@ internal static class SakuraCardGeometryLifecycle
                 hiddenNode as Control,
                 SakuraControlProperty.Position | SakuraControlProperty.Size);
         }
+        ledger.Borrow(card.EnchantmentTab, SakuraControlProperty.Position);
+        ledger.Borrow(card.EnchantmentVfxOverride, SakuraControlProperty.Position);
 
         ledger.BorrowViewportSize(transformVfxViewport);
     }
@@ -70,6 +72,8 @@ internal static class SakuraCardGeometryLifecycle
         EnsureTransformVfxViewportFits(transformVfxViewport, profile.RootSize);
         SakuraCardVisualInfrastructure.ApplySize(card, profile.RootSize, rootPivotOffset);
         SakuraCardVisualInfrastructure.ApplyBox(card.Body, rootBox);
+        ApplyNativeCenteredOverlay(card.EnchantmentTab);
+        ApplyNativeCenteredOverlay(card.EnchantmentVfxOverride);
     }
 
     public static void ApplyCardHighlight(
@@ -185,6 +189,16 @@ internal static class SakuraCardGeometryLifecycle
         SakuraCardVisualInfrastructure.ApplyBox(flash, box);
     }
 
+    private static void ApplyNativeCenteredOverlay(Control? control)
+    {
+        if (!SakuraCardVisualInfrastructure.IsGodotInstanceUsable(control))
+            return;
+
+        var position = SakuraCardGeometry.MapNativeCenteredOverlayPosition(control!.Position);
+        if (control.Position != position)
+            control.Position = position;
+    }
+
     private static void EnsureTransformVfxViewportFits(SubViewport? viewport, Vector2 rootSize)
     {
         if (viewport is null)
@@ -269,6 +283,9 @@ internal static class SakuraCardGeometry
     private const float ClearSizeScale = 1.05f;
 
     public static readonly Vector2 VanillaLayoutSize = new(300f, 422f);
+
+    public static Vector2 MapNativeCenteredOverlayPosition(Vector2 nativePosition) =>
+        nativePosition + VanillaLayoutSize * 0.5f;
 
     public static readonly Vector2 ClearLayoutSize = new(216.3f, 472.5f);
     public const float ClearSameLayoutAdjustment = -31.5f;

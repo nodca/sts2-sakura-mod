@@ -145,8 +145,6 @@ internal static class ClassicSakuraCardLayout
         "_banner",
         "_cardOverlay",
         "_cardVfxContainer",
-        "_enchantmentTab",
-        "_enchantmentVfxOverride",
         "_frame",
         "_lock",
         "_overlayContainer",
