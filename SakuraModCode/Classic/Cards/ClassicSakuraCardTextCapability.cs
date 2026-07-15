@@ -133,7 +133,8 @@ internal static class ClassicSakuraCardText
         if (!card.IsClassicSourceCard)
             return [];
 
-        return card.Identity is SourceCardIdentity.Earthy
+        return card.Identity is SourceCardIdentity.Cloud
+            or SourceCardIdentity.Earthy
             or SourceCardIdentity.Firey
             or SourceCardIdentity.Watery
             or SourceCardIdentity.Windy

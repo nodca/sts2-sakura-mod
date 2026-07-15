@@ -152,21 +152,23 @@ public static class SakuraActions
         if (card is ClassicSakuraCard classicCard)
             return classicCard.Element;
 
-        return card is not null && SakuraTransparentCardCatalog.IsTransparentCard(card)
-            ? ClassicElementSetFrom(ElementSetOf(card))
-            : ClassicElement.None;
+        return card is null
+            ? ClassicElement.None
+            : ClassicElementSetFrom(ElementSetOf(card));
     }
 
     public static bool HasClassicElement(CardModel? card, ClassicElement element) =>
         ClassicElementSetOf(card).HasElement(element);
 
-    public static async Task ApplyClassicElementStatesForTransparentCard(PlayerChoiceContext choiceContext, CardModel card)
+    public static async Task<bool> ApplyMissingClassicElementStates(PlayerChoiceContext choiceContext, CardModel card)
     {
-        if (!card.IsMutable || !SakuraTransparentCardCatalog.IsTransparentCard(card))
-            return;
+        if (!card.IsMutable)
+            return false;
 
+        var applied = false;
         foreach (var element in ClassicElementSetOf(card).AsElements())
-            await ApplyClassicElementStateIfMissing(choiceContext, card.Owner, element);
+            applied |= await ApplyClassicElementStateIfMissing(choiceContext, card.Owner, element);
+        return applied;
     }
 
     internal static ClassicElement ClassicElementSetFrom(SakuraElementSet elements)
@@ -188,19 +190,29 @@ public static class SakuraActions
             _ => ClassicElement.None
         };
 
-    private static Task ApplyClassicElementStateIfMissing(PlayerChoiceContext choiceContext, Player owner, ClassicElement element) =>
-        element switch
+    private static async Task<bool> ApplyClassicElementStateIfMissing(
+        PlayerChoiceContext choiceContext,
+        Player owner,
+        ClassicElement element)
+    {
+        switch (element)
         {
-            ClassicElement.Earthy when owner.Creature.GetPower<ClassicEarthyPower>() is null =>
-                PowerCmd.Apply<ClassicEarthyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false),
-            ClassicElement.Firey when owner.Creature.GetPower<ClassicFireyPower>() is null =>
-                PowerCmd.Apply<ClassicFireyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false),
-            ClassicElement.Watery when owner.Creature.GetPower<ClassicWateryPower>() is null =>
-                PowerCmd.Apply<ClassicWateryPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false),
-            ClassicElement.Windy when owner.Creature.GetPower<ClassicWindyPower>() is null =>
-                PowerCmd.Apply<ClassicWindyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false),
-            _ => Task.CompletedTask
-        };
+            case ClassicElement.Earthy when owner.Creature.GetPower<ClassicEarthyPower>() is null:
+                await PowerCmd.Apply<ClassicEarthyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
+                return true;
+            case ClassicElement.Firey when owner.Creature.GetPower<ClassicFireyPower>() is null:
+                await PowerCmd.Apply<ClassicFireyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
+                return true;
+            case ClassicElement.Watery when owner.Creature.GetPower<ClassicWateryPower>() is null:
+                await PowerCmd.Apply<ClassicWateryPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
+                return true;
+            case ClassicElement.Windy when owner.Creature.GetPower<ClassicWindyPower>() is null:
+                await PowerCmd.Apply<ClassicWindyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
+                return true;
+            default:
+                return false;
+        }
+    }
 
     public static CardKeyword KeywordFor(SakuraElement element) =>
         element switch

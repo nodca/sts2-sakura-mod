@@ -341,29 +341,29 @@ internal static class SakuraElementStateHud
     }
 }
 
-internal static class SakuraElementStateHudPatchRegistration
+internal static class SakuraCombatResourceHudPatchRegistration
 {
     public static void Register()
     {
-        var patcher = RitsuLibFramework.CreatePatcher(MainFile.ModId, "element-state-hud", "element state HUD");
-        patcher.RegisterPatch<SakuraElementStateHudActivatePatch>();
-        patcher.RegisterPatch<SakuraElementStateHudAnimOutPatch>();
-        patcher.RegisterPatch<SakuraElementStateHudDeactivatePatch>();
+        var patcher = RitsuLibFramework.CreatePatcher(MainFile.ModId, "combat-resource-hud", "combat resource HUD");
+        patcher.RegisterPatch<SakuraCombatResourceHudActivatePatch>();
+        patcher.RegisterPatch<SakuraCombatResourceHudAnimOutPatch>();
+        patcher.RegisterPatch<SakuraCombatResourceHudDeactivatePatch>();
 
         if (!RitsuLibFramework.ApplyRequiredPatcher(
                 patcher,
-                static () => MainFile.Logger.Error("Required Sakura element state HUD patches failed."),
-                "Required Sakura element state HUD patches failed. SakuraMod initialization will stop."))
+                static () => MainFile.Logger.Error("Required Sakura combat resource HUD patches failed."),
+                "Required Sakura combat resource HUD patches failed. SakuraMod initialization will stop."))
         {
-            throw new InvalidOperationException("Required Sakura element state HUD patches failed.");
+            throw new InvalidOperationException("Required Sakura combat resource HUD patches failed.");
         }
     }
 }
 
-internal sealed class SakuraElementStateHudActivatePatch : IPatchMethod
+internal sealed class SakuraCombatResourceHudActivatePatch : IPatchMethod
 {
-    public static string PatchId => "sakura_element_state_hud_activate";
-    public static string Description => "Mount Sakura's element state HUD after combat UI activation";
+    public static string PatchId => "sakura_combat_resource_hud_activate";
+    public static string Description => "Mount Sakura's combat resource HUDs after combat UI activation";
     public static bool IsCritical => true;
 
     public static ModPatchTarget[] GetTargets() =>
@@ -372,13 +372,13 @@ internal sealed class SakuraElementStateHudActivatePatch : IPatchMethod
     ];
 
     public static void Postfix(NCombatUi __instance, CombatState state) =>
-        SakuraElementStateHud.Mount(__instance, state);
+        SakuraCombatResourceHud.Mount(__instance, state);
 }
 
-internal sealed class SakuraElementStateHudAnimOutPatch : IPatchMethod
+internal sealed class SakuraCombatResourceHudAnimOutPatch : IPatchMethod
 {
-    public static string PatchId => "sakura_element_state_hud_anim_out";
-    public static string Description => "Unmount Sakura's element state HUD before combat UI animation out";
+    public static string PatchId => "sakura_combat_resource_hud_anim_out";
+    public static string Description => "Unmount Sakura's combat resource HUDs before combat UI animation out";
     public static bool IsCritical => true;
 
     public static ModPatchTarget[] GetTargets() =>
@@ -387,13 +387,13 @@ internal sealed class SakuraElementStateHudAnimOutPatch : IPatchMethod
     ];
 
     public static void Prefix(NCombatUi __instance) =>
-        SakuraElementStateHud.Unmount(__instance);
+        SakuraCombatResourceHud.Unmount(__instance);
 }
 
-internal sealed class SakuraElementStateHudDeactivatePatch : IPatchMethod
+internal sealed class SakuraCombatResourceHudDeactivatePatch : IPatchMethod
 {
-    public static string PatchId => "sakura_element_state_hud_deactivate";
-    public static string Description => "Unmount Sakura's element state HUD before combat UI deactivation";
+    public static string PatchId => "sakura_combat_resource_hud_deactivate";
+    public static string Description => "Unmount Sakura's combat resource HUDs before combat UI deactivation";
     public static bool IsCritical => true;
 
     public static ModPatchTarget[] GetTargets() =>
@@ -402,5 +402,5 @@ internal sealed class SakuraElementStateHudDeactivatePatch : IPatchMethod
     ];
 
     public static void Prefix(NCombatUi __instance) =>
-        SakuraElementStateHud.Unmount(__instance);
+        SakuraCombatResourceHud.Unmount(__instance);
 }

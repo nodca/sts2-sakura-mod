@@ -22,7 +22,7 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Gravitation() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Gravitation() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
 
@@ -290,25 +290,28 @@ public class Snooze() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Comm
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
 
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<WeakPower>(2), new PowerVar<SakuraSleepPower>(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new PowerVar<WeakPower>(1),
+        new PowerVar<VulnerablePower>(1),
+        new CardsVar(1)
+    ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var target = RequiredTarget(play);
-        await PowerCmd.Apply<WeakPower>(choiceContext, target, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
-        await CardPileCmd.Draw(choiceContext, 1, Owner, false);
-        if (activation.IsActive)
-            await ApplyExtraEffect(choiceContext, play);
+        var targets = activation.IsActive
+            ? CombatState!.HittableEnemies.ToList()
+            : [RequiredTarget(play)];
+        await PowerCmd.Apply<WeakPower>(choiceContext, targets, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
+        await PowerCmd.Apply<VulnerablePower>(choiceContext, targets, DynamicVars.Vulnerable.IntValue, Owner.Creature, this, false);
+        await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
     }
 
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override void OnUpgrade()
     {
-        var target = play.Target ?? CombatState?.HittableEnemies.FirstOrDefault();
-        if (target is not null)
-            await PowerCmd.Apply<SakuraSleepPower>(choiceContext, target, DynamicVars["SakuraSleepPower"].IntValue, Owner.Creature, this, false);
+        DynamicVars.Weak.UpgradeValueBy(1);
+        DynamicVars.Vulnerable.UpgradeValueBy(1);
     }
-
-    protected override void OnUpgrade() => DynamicVars.Weak.UpgradeValueBy(1);
 }
 
 public class Spiral() : SakuraExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
@@ -317,10 +320,11 @@ public class Spiral() : SakuraExtraEffectCard(1, CardType.Attack, CardRarity.Unc
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys => [SakuraMemoryPile.PileId];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(4, ValueProp.Move),
-        new BlockVar(4, ValueProp.Move),
+        new DamageVar(5, ValueProp.Move),
+        new BlockVar(5, ValueProp.Move),
         new DynamicVar("MemoryScale", 1),
-        new CardsVar("ExtraCopies", 2)
+        new CardsVar("NextTurnCopies", 1),
+        new CardsVar("ExtraCopies", 3)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
@@ -332,8 +336,27 @@ public class Spiral() : SakuraExtraEffectCard(1, CardType.Attack, CardRarity.Unc
         var block = OutputWithMemory(DynamicVars.Block.IntValue, memoryCount, memoryScale);
         await SakuraActions.Attack(choiceContext, this, target, damage);
         await CreatureCmd.GainBlock(Owner.Creature, block, ValueProp.Move, play, false);
+        if (IsUpgraded)
+            await ScheduleNextTurnCopies(choiceContext);
         if (activation.IsActive)
             await ApplyExtraEffect(choiceContext, play);
+    }
+
+    private async Task ScheduleNextTurnCopies(PlayerChoiceContext choiceContext)
+    {
+        var copies = DynamicVars["NextTurnCopies"].IntValue;
+        if (copies <= 0)
+            return;
+
+        var power = await PowerCmd.Apply<SpiralNextTurnPower>(
+            choiceContext,
+            Owner.Creature,
+            copies,
+            Owner.Creature,
+            this,
+            false);
+        for (var i = 0; i < copies; i++)
+            power?.QueueCopy(this);
     }
 
     private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
@@ -352,8 +375,8 @@ public class Spiral() : SakuraExtraEffectCard(1, CardType.Attack, CardRarity.Unc
 
     protected override void OnUpgrade()
     {
-        DynamicVars.Damage.UpgradeValueBy(2);
-        DynamicVars.Block.UpgradeValueBy(2);
+        DynamicVars.Damage.UpgradeValueBy(1);
+        DynamicVars.Block.UpgradeValueBy(1);
     }
 }
 

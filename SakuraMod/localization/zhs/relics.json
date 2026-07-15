@@ -1,6 +1,6 @@
 {
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.title": "封印之书",
-  "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.description": "打出库洛牌或小樱牌时获得魔力充能：通常获得 1 点，能力牌获得 2 点。达到 10 点充能时，下一张符合条件的牌消耗 10 点充能并触发额外效果。",
+  "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.description": "打出库洛牌、小樱牌和透明牌时获得魔力充能：通常获得 1 点，能力牌获得 2 点。",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.flavor": "库洛牌在封印的书页中等待。",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_WAND_RELIC.title": "封印之杖",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_WAND_RELIC.description": "每次击败非爪牙敌人时，获得 {ChargeGain} 点充能，精英和首领额外获得 {EliteBossExtraGain} 点充能；若由封印造成致命伤害，再额外获得 {SealExtraGain} 点充能。\n当充能达到 {TriggerThreshold} 点后的第一个回合开始阶段，消耗 {TriggerThreshold} 点充能，将 1 张转牌加入手牌。\n牌组中每有 1 张小樱牌或转牌，下次获得转牌所需充能增加 {TriggerIncrease} 点。\n下次转变还需 {RemainingCharge} 点充能。",

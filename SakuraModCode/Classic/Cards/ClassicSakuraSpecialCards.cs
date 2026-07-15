@@ -69,7 +69,7 @@ public class SakuraLegacy() : ClassicSakuraCard(1, CardType.Skill, CardRarity.An
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
-        await PowerCmd.Apply<ClassicMagicChargePower>(choiceContext, Owner.Creature, ReleasedMagic(), Owner.Creature, this, false);
+        await ClassicSakuraMagic.GainMagic(choiceContext, Owner, ReleasedMagic(), this);
     }
 
     protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);

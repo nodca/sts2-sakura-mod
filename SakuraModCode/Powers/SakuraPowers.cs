@@ -27,12 +27,14 @@ internal static class SakuraPowerValueProps
     public const ValueProp HpLoss = ValueProp.Unblockable | ValueProp.Unpowered;
 }
 
-public abstract class ReflectionPowerBase : SakuraModPower
+public class ReflectionPower : SakuraModPower
 {
+    protected override string IconFileName => "reflection.png";
+
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    protected abstract int CalculateReflectionDamage(int attackDamage);
+    internal static int ReflectedDamage(int attackDamage) => Math.Max(0, attackDamage);
 
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature creature, DamageResult damageResult, ValueProp damageProps, Creature? source, CardModel? card)
     {
@@ -44,25 +46,10 @@ public abstract class ReflectionPowerBase : SakuraModPower
             || damageResult.TotalDamage <= 0)
             return;
 
-        var reflectionDamage = CalculateReflectionDamage(damageResult.TotalDamage);
-        if (reflectionDamage > 0)
-            await CreatureCmd.Damage(choiceContext, attacker, reflectionDamage, SakuraPowerValueProps.Damage, Owner, null);
+        var reflectionDamage = ReflectedDamage(damageResult.TotalDamage);
+        await CreatureCmd.Damage(choiceContext, attacker, reflectionDamage, SakuraPowerValueProps.Damage, Owner, null);
         await PowerCmd.Decrement(this);
     }
-}
-
-public class ReflectionPower : ReflectionPowerBase
-{
-    protected override string IconFileName => "reflection.png";
-
-    protected override int CalculateReflectionDamage(int attackDamage) => (attackDamage + 1) / 2;
-}
-
-public class StrongReflectionPower : ReflectionPowerBase
-{
-    protected override string IconFileName => "reflection_strong.png";
-
-    protected override int CalculateReflectionDamage(int attackDamage) => attackDamage;
 }
 
 public class LucidGuardPower : SakuraModPower
@@ -370,6 +357,12 @@ public class SakuraFrostbitePower : SakuraModPower
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
+    internal static (int FreezeStacks, int RemainingFrostbite) ConvertToFreeze(int frostbite)
+    {
+        var amount = Math.Max(0, frostbite);
+        return (amount / FreezeThreshold, amount % FreezeThreshold);
+    }
+
     public override decimal ModifyDamageMultiplicative(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource) =>
         target == Owner && Amount > 0 && props.IsPoweredAttack()
             ? 1m + Amount / 10m
@@ -405,68 +398,23 @@ public class SakuraFrostbitePower : SakuraModPower
 
     private async Task ResolveFreeze(PlayerChoiceContext choiceContext, Creature? applier, CardModel? cardSource)
     {
-        if (Amount < FreezeThreshold)
+        var (freezeStacks, remainingFrostbite) = ConvertToFreeze(Amount);
+        if (freezeStacks <= 0)
             return;
 
-        await PowerCmd.Remove(this);
+        var freezeApplier = applier ?? Applier ?? Owner;
+        if (remainingFrostbite == 0)
+            await PowerCmd.Remove(this);
+        else
+            await PowerCmd.ModifyAmount(choiceContext, this, remainingFrostbite - Amount, freezeApplier, cardSource, false);
+
         await PowerCmd.Apply<ClassicFreezePower>(
             choiceContext,
             Owner,
-            1,
-            applier ?? Applier ?? Owner,
+            freezeStacks,
+            freezeApplier,
             cardSource,
             false);
-    }
-}
-
-public class SakuraSleepPower : SakuraModPower
-{
-    private const int MaxAmount = 2;
-
-    public override PowerType Type => PowerType.Debuff;
-    public override PowerStackType StackType => PowerStackType.Counter;
-
-    public override bool TryModifyPowerAmountReceived(PowerModel canonicalPower, Creature target, decimal amount, Creature? applier, out decimal modifiedAmount)
-    {
-        if (target == Owner && canonicalPower is SakuraSleepPower && amount > 0)
-        {
-            modifiedAmount = Math.Max(0m, Math.Min(amount, MaxAmount - Amount));
-            return true;
-        }
-
-        modifiedAmount = amount;
-        return false;
-    }
-
-    public override Task AfterApplied(Creature? applier, CardModel? cardSource)
-    {
-        SakuraSleepMove.Apply(Owner);
-        return Task.CompletedTask;
-    }
-
-    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
-    {
-        if (Amount <= 0
-            || side != Owner.Side
-            || !participants.Contains(Owner)
-            || !SakuraSleepMove.WasConsumedBy(Owner))
-            return;
-
-        await PowerCmd.Decrement(this);
-        if (Amount > 0)
-            SakuraSleepMove.Renew(Owner);
-    }
-
-    public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature creature, DamageResult damageResult, ValueProp damageProps, Creature? source, CardModel? card)
-    {
-        if (creature == Owner && damageResult.TotalDamage > 0 && damageProps.IsPoweredAttack())
-            await PowerCmd.Remove(this);
-    }
-
-    public override Task AfterRemoved(Creature oldOwner)
-    {
-        SakuraSleepMove.RestoreIfUnconsumed(oldOwner);
-        return Task.CompletedTask;
     }
 }
 
@@ -671,6 +619,34 @@ public class PromiseManifestPower : SakuraModPower
             return;
 
         await PowerCmd.Remove(this);
+    }
+}
+
+public class SpiralNextTurnPower : SakuraModPower
+{
+    private readonly Queue<CardModel> _sources = [];
+
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public void QueueCopy(CardModel source) =>
+        _sources.Enqueue(source);
+
+    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
+    {
+        if (player.Creature != Owner)
+            return;
+
+        while (_sources.TryDequeue(out var source))
+            await SakuraGeneratedCardLifecycle.AddTemporaryCopyToHand(source, false, choiceContext);
+
+        await PowerCmd.Remove(this);
+    }
+
+    public override Task AfterRemoved(Creature oldOwner)
+    {
+        _sources.Clear();
+        return Task.CompletedTask;
     }
 }
 

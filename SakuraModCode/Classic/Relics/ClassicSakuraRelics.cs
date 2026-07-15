@@ -453,7 +453,7 @@ public class ClassicTouyasBicycleRelic : ClassicSakuraRelic
             return;
 
         Flash();
-        await PowerCmd.Apply<ClassicMagicChargePower>(choiceContext, Owner.Creature, MagicCharge, Owner.Creature, null, false);
+        await ClassicSakuraMagic.GainMagic(choiceContext, Owner, MagicCharge);
     }
 }
 
@@ -814,13 +814,7 @@ internal static class ClassicRelicCombatActions
             return;
 
         relic.Flash();
-        await PowerCmd.Apply<ClassicMagicChargePower>(
-            choiceContext,
-            relic.Owner.Creature,
-            amount,
-            relic.Owner.Creature,
-            null,
-            false);
+        await ClassicSakuraMagic.GainMagic(choiceContext, relic.Owner, amount);
     }
 
     public static async Task MarkRandomEnemy(

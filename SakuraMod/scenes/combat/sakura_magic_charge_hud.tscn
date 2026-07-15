@@ -1,0 +1,86 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/magic_charge_hud/magic_charge_glow.png" id="1_glow"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/magic_charge_hud/magic_charge_emblem.png" id="2_emblem"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/magic_charge_hud/magic_charge_liquid.png" id="3_liquid"]
+
+[sub_resource type="Shader" id="Shader_magic_liquid"]
+code = "shader_type canvas_item;\n\nuniform float fill_ratio : hint_range(0.0, 1.0) = 0.0;\nuniform vec4 deep_magic : source_color = vec4(0.13, 0.46, 0.56, 0.58);\nuniform vec4 moonlight : source_color = vec4(0.64, 0.87, 0.88, 0.82);\n\nvoid fragment() {\n    vec4 mask = texture(TEXTURE, UV);\n    float ratio = clamp(fill_ratio, 0.0, 1.0);\n    float surface_y = mix(1.04, -0.04, ratio);\n    float wave = (sin(UV.x * 17.0 + TIME * 0.75) + sin(UV.x * 37.0 - TIME * 0.42) * 0.35) * 0.007;\n    float liquid = smoothstep(surface_y + wave - 0.012, surface_y + wave + 0.012, UV.y);\n    float drift_a = 0.5 + 0.5 * sin(UV.y * 18.0 + UV.x * 7.0 - TIME * 0.65);\n    float drift_b = 0.5 + 0.5 * sin(UV.y * 31.0 - UV.x * 11.0 + TIME * 0.38);\n    float shimmer = drift_a * 0.65 + drift_b * 0.35;\n    vec3 color = mix(deep_magic.rgb, moonlight.rgb, 0.16 + shimmer * 0.22);\n    float surface = 1.0 - smoothstep(0.0, 0.022, abs(UV.y - surface_y - wave));\n    float has_surface = step(0.001, ratio) * (1.0 - step(0.999, ratio));\n    color = mix(color, moonlight.rgb, surface * has_surface * 0.48);\n    float alpha = mask.a * liquid * (deep_magic.a + shimmer * 0.09);\n    alpha += mask.a * surface * has_surface * 0.22;\n    COLOR = vec4(color, clamp(alpha, 0.0, 0.82));\n}\n"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_magic_liquid"]
+resource_local_to_scene = true
+shader = SubResource("Shader_magic_liquid")
+shader_parameter/fill_ratio = 0.0
+
+[node name="SakuraMagicChargeHud" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 128.0
+offset_bottom = 128.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.8, 0.8)
+pivot_offset = Vector2(64, 64)
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+
+[node name="Glow" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("1_glow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Emblem" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_emblem")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ChargeLiquid" type="TextureRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_magic_liquid")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_liquid")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Amount" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 29.0
+offset_right = -24.0
+offset_bottom = -29.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.87451, 0.952941, 0.929412, 1)
+theme_override_colors/font_outline_color = Color(0.109804, 0.0588235, 0.133333, 1)
+theme_override_constants/outline_size = 14
+theme_override_font_sizes/font_size = 36
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1

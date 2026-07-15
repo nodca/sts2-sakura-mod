@@ -236,7 +236,7 @@ public class Lucid() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Uncom
     protected override void OnUpgrade() => DynamicVars["Look"].UpgradeValueBy(1);
 }
 
-public class Shade() : SakuraExtraEffectCard(2, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy)
+public class Shade() : SakuraExtraEffectCard(2, CardType.Skill, CardRarity.Common, TargetType.AllEnemies)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
 
@@ -245,8 +245,7 @@ public class Shade() : SakuraExtraEffectCard(2, CardType.Skill, CardRarity.Commo
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
-        var target = RequiredTarget(play);
-        await PowerCmd.Apply<WeakPower>(choiceContext, target, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
+        await PowerCmd.Apply<WeakPower>(choiceContext, CombatState!.HittableEnemies.ToList(), DynamicVars.Weak.IntValue, Owner.Creature, this, false);
         if (activation.IsActive)
             await ApplyExtraEffect(choiceContext, play);
     }
@@ -254,7 +253,11 @@ public class Shade() : SakuraExtraEffectCard(2, CardType.Skill, CardRarity.Commo
     private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PowerCmd.Apply<BlurPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
 
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(4);
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Block.UpgradeValueBy(2);
+        DynamicVars.Weak.UpgradeValueBy(1);
+    }
 }
 
 public class Siege() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Common, TargetType.Self)
@@ -290,7 +293,7 @@ public class Siege() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Commo
 
 internal static class SiegeRules
 {
-    internal const int BaseBlock = 1;
+    internal const int BaseBlock = 3;
 
     internal static int BlockAmount(int baseBlock, int blockPerEnemy, int enemyCount) =>
         baseBlock + blockPerEnemy * Math.Max(0, enemyCount);
@@ -435,12 +438,23 @@ public class Choice() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Unco
 public class Promise() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(6, ValueProp.Move), new PowerVar<PlatingPower>(4)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new BlockVar(6, ValueProp.Move),
+        new PowerVar<PromiseManifestPower>(2),
+        new PowerVar<PlatingPower>(4)
+    ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
-        await PowerCmd.Apply<PromiseManifestPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
+        await PowerCmd.Apply<PromiseManifestPower>(
+            choiceContext,
+            Owner.Creature,
+            DynamicVars["PromiseManifestPower"].IntValue,
+            Owner.Creature,
+            this,
+            false);
         if (activation.IsActive)
             await ApplyExtraEffect(choiceContext, play);
     }
@@ -457,12 +471,12 @@ public class Promise() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Unc
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(4);
 }
 
-public class Struggle() : SakuraExtraEffectCard(3, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+public class Struggle() : SakuraExtraEffectCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(18, ValueProp.Move),
+        new DamageVar(16, ValueProp.Move),
         new ExtraDamageVar(8)
     ];
 
@@ -498,7 +512,7 @@ public class Struggle() : SakuraExtraEffectCard(3, CardType.Attack, CardRarity.U
 
     private void ReduceCostBy(int amount) => EnergyCost.AddThisTurn(-amount);
 
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(4);
 }
 
 internal static class StruggleRules

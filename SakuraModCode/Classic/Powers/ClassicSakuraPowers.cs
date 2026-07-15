@@ -24,6 +24,7 @@ using SakuraMod.SakuraModCode.Powers;
 using STS2RitsuLib.Combat.HandSize;
 using STS2RitsuLib.Scaffolding.Content;
 using STS2RitsuLib.Scaffolding.Content.Patches;
+using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Classic.Powers;
 
@@ -37,9 +38,43 @@ public abstract class ClassicSakuraPower : ModPowerTemplate
 
 public class ClassicMagicChargePower : ClassicSakuraPower
 {
+    private static readonly SavedAttachedState<ClassicMagicChargePower, int> OpportunityToken =
+        new("SakuraMod_ClassicMagicChargeOpportunityToken", () => 0);
+
     protected override string IconFileName => "magick_charge_power.png";
+    protected override bool IsVisibleInternal => false;
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
+
+    internal event System.Action? ProjectionChanged;
+
+    internal int ArmedOpportunityGeneration => Math.Max(0, OpportunityToken[this]);
+
+    internal void ArmNextOpportunity()
+    {
+        var current = OpportunityToken[this];
+        var magnitude = current == int.MinValue ? int.MaxValue : Math.Abs(current);
+        OpportunityToken[this] = magnitude == int.MaxValue ? 1 : magnitude + 1;
+    }
+
+    internal void ExpireOpportunity()
+    {
+        var current = OpportunityToken[this];
+        if (current > 0)
+            OpportunityToken[this] = -current;
+    }
+
+    internal bool TryConsumeOpportunity(int generation)
+    {
+        if (generation <= 0 || OpportunityToken[this] != generation)
+            return false;
+
+        OpportunityToken[this] = -generation;
+        ProjectionChanged?.Invoke();
+        return true;
+    }
+
+    internal void NotifyProjectionChanged() => ProjectionChanged?.Invoke();
 }
 
 public class ClassicCreatePower : ClassicSakuraPower
@@ -627,7 +662,7 @@ public class ClassicGlowPower : ClassicSakuraPower
     public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
         if (Owner.Player == player && Amount > 0 && player.GetRelic<ClassicSealedBookRelic>() is not null)
-            await PowerCmd.Apply<ClassicMagicChargePower>(choiceContext, Owner, Amount, Owner, null, false);
+            await ClassicSakuraMagic.GainMagic(choiceContext, player, Amount);
     }
 }
 
@@ -946,23 +981,31 @@ public class ClassicFreezePower : ClassicSakuraPower
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task AfterApplied(Creature? applier, CardModel? cardSource)
+    public override async Task AfterApplied(Creature? applier, CardModel? cardSource) =>
+        await FreezeCurrentAttackIntent();
+
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
+    {
+        if (Owner.Side != side || !participants.Contains(Owner))
+            return;
+
+        if (Amount <= 1)
+        {
+            await PowerCmd.Remove(this);
+            return;
+        }
+
+        await FreezeCurrentAttackIntent();
+        await PowerCmd.Decrement(this);
+    }
+
+    private async Task FreezeCurrentAttackIntent()
     {
         if (!Owner.IsMonster || Owner.Monster?.IntendsToAttack != true)
             return;
 
         await CreatureCmd.Stun(Owner);
         await CreatureCmd.GainBlock(Owner, BlockGain, SakuraPowerValueProps.Block, null, false);
-    }
-
-    public override async Task BeforeSideTurnStart(
-        PlayerChoiceContext choiceContext,
-        CombatSide side,
-        IReadOnlyList<Creature> participants,
-        ICombatState combatState)
-    {
-        if (Owner.Side == side && participants.Contains(Owner))
-            await PowerCmd.Remove(this);
     }
 }
 

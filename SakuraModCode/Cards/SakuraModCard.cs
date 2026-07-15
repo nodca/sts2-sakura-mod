@@ -159,7 +159,6 @@ internal static class SakuraCardHoverTips
 {
     internal const string TemporaryTipKey = "SAKURAMOD-TEMPORARY";
     internal const string ReflectionTipKey = "SAKURAMOD-REFLECTION";
-    internal const string StrongReflectionTipKey = "SAKURAMOD-STRONG_REFLECTION";
     internal const string LabyrinthTipKey = "SAKURAMOD-ENTER_LABYRINTH";
     internal const string RemindTipKey = "SAKURAMOD-REMIND";
 

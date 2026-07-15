@@ -60,24 +60,24 @@ public class Reflect() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Com
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
-        [CurrentUpgradeLevel > 0 ? SakuraCardHoverTips.StrongReflectionTipKey : SakuraCardHoverTips.ReflectionTipKey];
+        [SakuraCardHoverTips.ReflectionTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new BlockVar("UpgradeBlock", 3, ValueProp.Move)
+        new BlockVar(5, ValueProp.Move),
+        new PowerVar<ReflectionPower>(1),
+        new DynamicVar("ExtraReflection", 2)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        if (IsUpgraded)
-            await CreatureCmd.GainBlock(Owner.Creature, DynamicVars["UpgradeBlock"].IntValue, ValueProp.Move, play, false);
-
+        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block, play, false);
+        var reflection = DynamicVars["ReflectionPower"].IntValue;
         if (activation.IsActive)
-            await PowerCmd.Apply<StrongReflectionPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
-        else
-            await PowerCmd.Apply<ReflectionPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
+            reflection += DynamicVars["ExtraReflection"].IntValue;
+        await PowerCmd.Apply<ReflectionPower>(choiceContext, Owner.Creature, reflection, Owner.Creature, this, false);
     }
 
-    protected override void OnUpgrade() { }
+    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
 
 public class Flight() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.Self)

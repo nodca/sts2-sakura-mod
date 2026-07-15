@@ -1,6 +1,6 @@
 {
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.title": "Sealed Book",
-  "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.description": "Clow and Sakura cards grant Magic Charge when played: 1 normally, 2 for Powers. At 10 charge, the next eligible card spends 10 charge for its Extra effect.",
+  "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.description": "Clow, Sakura, and Transparent Cards grant Magic Charge when played: 1 normally, 2 for Powers.",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.flavor": "The Clow Cards wait in the sealed pages.",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_WAND_RELIC.title": "Sealed Wand",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_WAND_RELIC.description": "When a non-secondary enemy dies, gain {ChargeGain} charge. Gain {EliteBossExtraGain} additional charge in Elite and Boss rooms, and {SealExtraGain} additional charge if Seal dealt the killing damage.\nAt the start of the first turn after your charge reaches {TriggerThreshold}, spend {TriggerThreshold} charge and add 1 Turn to your hand.\nEach Sakura card or Turn in your deck increases the charge required for your next Turn by {TriggerIncrease}.\nNext convert needs {RemainingCharge} more charge.",

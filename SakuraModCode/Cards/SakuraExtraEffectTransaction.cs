@@ -13,9 +13,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 public readonly record struct SakuraExtraEffectActivation(bool IsActive);
 
 internal readonly record struct SakuraExtraEffectPostPlayPlan(
-    bool ApplyClassicElementStates,
+    bool ApplyExtraElementStates,
     bool AddSakuraVoid,
-    bool ApplyTransparentElementStates,
     bool GainTransparentMagic,
     bool MayGainClassicMagic)
 {
@@ -23,19 +22,17 @@ internal readonly record struct SakuraExtraEffectPostPlayPlan(
         CardModel card,
         SakuraExtraEffectActivation activation) =>
         new(
-            ApplyClassicElementStates: activation.IsActive && card is ClassicSakuraCard { IsClowCard: true },
+            ApplyExtraElementStates: activation.IsActive,
             AddSakuraVoid: !activation.IsActive && card is ClassicSakuraCard { AddsVoidOnNormalSakuraPlay: true },
-            ApplyTransparentElementStates: false,
             GainTransparentMagic: false,
             MayGainClassicMagic: false);
 
-    internal static SakuraExtraEffectPostPlayPlan ForAfterCardPlayed(CardModel card, bool didActivate)
+    internal static SakuraExtraEffectPostPlayPlan ForAfterCardPlayed(CardModel card)
     {
         var isTransparent = card is SakuraModCard && SakuraTransparentCardCatalog.IsTransparentCard(card);
         return new(
-            ApplyClassicElementStates: false,
+            ApplyExtraElementStates: false,
             AddSakuraVoid: false,
-            ApplyTransparentElementStates: isTransparent && didActivate,
             GainTransparentMagic: isTransparent,
             MayGainClassicMagic: card is ClassicSakuraCard { GrantsMagicCharge: true });
     }
@@ -88,6 +85,7 @@ internal static class SakuraExtraEffectTransaction
 
         var capability = card as ISakuraExtraEffectCard;
         var activation = new SakuraExtraEffectActivation(capability is not null && CanActivate(card.Owner));
+        var opportunity = ClassicSakuraMagic.CaptureOpportunity(card.Owner);
 
         await ExecuteCore(
             card,
@@ -102,7 +100,7 @@ internal static class SakuraExtraEffectTransaction
             () => capability is not null
                 ? capability.PlayWithExtraEffect(choiceContext, play, activation)
                 : playWithoutExtraEffect(choiceContext, play),
-            () => ApplyGameplayPostEffects(card, choiceContext, activation));
+            () => ApplyGameplayPostEffects(card, choiceContext, activation, opportunity));
     }
 
     internal static Task ExecuteCoreForTests(
@@ -123,9 +121,7 @@ internal static class SakuraExtraEffectTransaction
         if (play.Card != card)
             return;
 
-        var plan = SakuraExtraEffectPostPlayPlan.ForAfterCardPlayed(card, DidActivate(play));
-        if (plan.ApplyTransparentElementStates)
-            await SakuraActions.ApplyClassicElementStatesForTransparentCard(choiceContext, card);
+        var plan = SakuraExtraEffectPostPlayPlan.ForAfterCardPlayed(card);
 
         if (plan.GainTransparentMagic)
         {
@@ -143,11 +139,20 @@ internal static class SakuraExtraEffectTransaction
     private static async Task ApplyGameplayPostEffects(
         CardModel card,
         PlayerChoiceContext choiceContext,
-        SakuraExtraEffectActivation activation)
+        SakuraExtraEffectActivation activation,
+        ClassicMagicChargeOpportunity? opportunity)
     {
         var plan = SakuraExtraEffectPostPlayPlan.ForGameplay(card, activation);
-        if (plan.ApplyClassicElementStates)
-            await ((ClassicSakuraCard)card).ApplyMagicChargeElementStates(choiceContext);
+        if (plan.ApplyExtraElementStates)
+        {
+            await SakuraActions.ApplyMissingClassicElementStates(choiceContext, card);
+        }
+        else if (opportunity is { } captured
+                 && await SakuraActions.ApplyMissingClassicElementStates(choiceContext, card))
+        {
+            ClassicSakuraMagic.TryConsumeOpportunity(card.Owner, captured);
+        }
+
         if (plan.AddSakuraVoid)
             await ClassicSakuraMagic.AddVoidToDrawPile(choiceContext, card.Owner);
     }

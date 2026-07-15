@@ -64,28 +64,6 @@ public abstract class ClassicSakuraCard(
 
     protected abstract Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play);
 
-    internal async Task ApplyMagicChargeElementStates(PlayerChoiceContext choiceContext)
-    {
-        foreach (var element in Element.AsElements())
-            await ApplyElementStateIfMissing(choiceContext, element);
-    }
-
-    private Task ApplyElementStateIfMissing(PlayerChoiceContext choiceContext, ClassicElement element) =>
-        element switch
-        {
-            ClassicElement.Earthy => ApplyElementStateIfMissing<ClassicEarthyPower>(choiceContext),
-            ClassicElement.Firey => ApplyElementStateIfMissing<ClassicFireyPower>(choiceContext),
-            ClassicElement.Watery => ApplyElementStateIfMissing<ClassicWateryPower>(choiceContext),
-            ClassicElement.Windy => ApplyElementStateIfMissing<ClassicWindyPower>(choiceContext),
-            _ => Task.CompletedTask
-        };
-
-    private async Task ApplyElementStateIfMissing<T>(PlayerChoiceContext choiceContext) where T : PowerModel
-    {
-        if (Owner.Creature.GetPower<T>() is null)
-            await ApplyPower<T>(choiceContext, Owner.Creature, 1);
-    }
-
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await SakuraExtraEffectTransaction.AfterCardPlayed(this, choiceContext, play);
@@ -545,6 +523,7 @@ internal sealed class ClassicReturnRechargeVar() : DynamicVar("Magic", 15)
 
 internal static class ClassicSakuraMagic
 {
+    public const int ElementOpportunityThreshold = 5;
     public const int ExtraEffectCost = 10;
     public const int SwordExtraHpLoss = 15;
     public const int ShieldMetallicizeBlock = 3;
@@ -554,38 +533,124 @@ internal static class ClassicSakuraMagic
     public static bool CanSpendMagic(Player? owner) =>
         owner?.Creature.GetPower<ClassicMagicChargePower>()?.Amount >= ExtraEffectCost;
 
-    public static async Task SpendMagic(PlayerChoiceContext choiceContext, Player owner, int amount)
+    internal static ClassicMagicChargeBand BandFor(int amount) =>
+        amount >= ExtraEffectCost
+            ? ClassicMagicChargeBand.Full
+            : amount >= ElementOpportunityThreshold
+                ? ClassicMagicChargeBand.Resonant
+                : ClassicMagicChargeBand.Low;
+
+    internal static ClassicMagicChargeOpportunityTransition OpportunityTransition(int previousAmount, int currentAmount)
+    {
+        var previousBand = BandFor(previousAmount);
+        var currentBand = BandFor(currentAmount);
+        if (currentBand == ClassicMagicChargeBand.Resonant && previousBand != ClassicMagicChargeBand.Resonant)
+            return ClassicMagicChargeOpportunityTransition.Arm;
+        if (currentBand != ClassicMagicChargeBand.Resonant)
+            return ClassicMagicChargeOpportunityTransition.Expire;
+        return ClassicMagicChargeOpportunityTransition.Preserve;
+    }
+
+    internal static ClassicMagicChargeOpportunity? CaptureOpportunity(Player owner)
     {
         var power = owner.Creature.GetPower<ClassicMagicChargePower>();
-        if (power is not null)
-            await PowerCmd.ModifyAmount(choiceContext, power, -amount, owner.Creature, null, false);
+        if (power is null || BandFor(power.Amount) != ClassicMagicChargeBand.Resonant)
+            return null;
+
+        var generation = power.ArmedOpportunityGeneration;
+        return generation > 0
+            ? new ClassicMagicChargeOpportunity(power, generation)
+            : null;
+    }
+
+    internal static bool TryConsumeOpportunity(Player owner, ClassicMagicChargeOpportunity opportunity) =>
+        ReferenceEquals(owner.Creature.GetPower<ClassicMagicChargePower>(), opportunity.Power)
+        && opportunity.Power.TryConsumeOpportunity(opportunity.Generation);
+
+    public static async Task SpendMagic(PlayerChoiceContext choiceContext, Player owner, int amount)
+    {
+        if (amount > 0)
+            await ModifyMagic(choiceContext, owner, -amount, null, false);
     }
 
     public static async Task SpendUpToMagic(PlayerChoiceContext choiceContext, Player owner, int amount)
     {
-        var power = owner.Creature.GetPower<ClassicMagicChargePower>();
-        if (power is null || amount <= 0)
+        var current = owner.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0;
+        if (current <= 0 || amount <= 0)
             return;
 
-        var spend = Math.Min(power.Amount, amount);
-        await PowerCmd.ModifyAmount(choiceContext, power, -spend, owner.Creature, null, false);
+        await ModifyMagic(choiceContext, owner, -Math.Min(current, amount), null, false);
     }
 
     public static async Task<int> SpendAllMagic(PlayerChoiceContext choiceContext, Player owner)
     {
-        var power = owner.Creature.GetPower<ClassicMagicChargePower>();
-        if (power is null || power.Amount <= 0)
+        var amount = owner.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0;
+        if (amount <= 0)
             return 0;
 
-        var amount = power.Amount;
-        await PowerCmd.ModifyAmount(choiceContext, power, -amount, owner.Creature, null, false);
+        await ModifyMagic(choiceContext, owner, -amount, null, false);
         return amount;
     }
 
     public static async Task GainMagic(PlayerChoiceContext choiceContext, CardModel card)
     {
         var amount = card.Type == CardType.Power ? 2 : 1;
-        await PowerCmd.Apply<ClassicMagicChargePower>(choiceContext, card.Owner.Creature, amount, card.Owner.Creature, card, false);
+        await GainMagic(choiceContext, card.Owner, amount, card);
+    }
+
+    public static async Task GainMagic(
+        PlayerChoiceContext choiceContext,
+        Player owner,
+        int amount,
+        CardModel? cardSource = null,
+        bool fast = false)
+    {
+        if (amount > 0)
+            await ModifyMagic(choiceContext, owner, amount, cardSource, fast);
+    }
+
+    private static async Task ModifyMagic(
+        PlayerChoiceContext choiceContext,
+        Player owner,
+        int delta,
+        CardModel? cardSource,
+        bool fast)
+    {
+        if (delta == 0)
+            return;
+
+        var previousAmount = owner.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0;
+        if (delta > 0)
+        {
+            await PowerCmd.Apply<ClassicMagicChargePower>(
+                choiceContext,
+                owner.Creature,
+                delta,
+                owner.Creature,
+                cardSource,
+                fast);
+        }
+        else if (owner.Creature.GetPower<ClassicMagicChargePower>() is { } power)
+        {
+            await PowerCmd.ModifyAmount(choiceContext, power, delta, owner.Creature, cardSource, fast);
+        }
+
+        var currentPower = owner.Creature.GetPower<ClassicMagicChargePower>();
+        var currentAmount = currentPower?.Amount ?? 0;
+        if (currentPower is not null)
+        {
+            switch (OpportunityTransition(previousAmount, currentAmount))
+            {
+                case ClassicMagicChargeOpportunityTransition.Arm:
+                    currentPower.ArmNextOpportunity();
+                    break;
+                case ClassicMagicChargeOpportunityTransition.Expire:
+                    currentPower.ExpireOpportunity();
+                    break;
+            }
+
+            currentPower.NotifyProjectionChanged();
+        }
     }
 
     public static void SetFreeForRestOfTurn(CardModel card)
@@ -618,6 +683,24 @@ internal static class ClassicSakuraMagic
     }
 
 }
+
+internal enum ClassicMagicChargeBand
+{
+    Low,
+    Resonant,
+    Full
+}
+
+internal enum ClassicMagicChargeOpportunityTransition
+{
+    Preserve,
+    Arm,
+    Expire
+}
+
+internal readonly record struct ClassicMagicChargeOpportunity(
+    ClassicMagicChargePower Power,
+    int Generation);
 
 internal static class ClassicCreateRewards
 {
