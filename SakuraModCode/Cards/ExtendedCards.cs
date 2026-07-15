@@ -224,7 +224,7 @@ public class Repair() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Unco
     protected override void OnUpgrade() => DynamicVars["RegenPower"].UpgradeValueBy(1);
 }
 
-public class Reversal() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
+public class Reversal() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
 

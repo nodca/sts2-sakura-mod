@@ -186,9 +186,9 @@
   "SAKURA_MOD_POWER_CLASSIC_TEMPORARY_STRENGTH_LOSS_POWER.description": "本回合内，造成的攻击伤害降低。回合结束时移除。",
   "SAKURA_MOD_POWER_CLASSIC_TEMPORARY_STRENGTH_LOSS_POWER.smartDescription": "本回合攻击伤害降低。",
   "SAKURA_MOD_POWER_CLASSIC_WOOD_POWER.title": "树",
-  "SAKURA_MOD_POWER_CLASSIC_WOOD_POWER.description": "敌方回合开始时，所有中毒的敌人本回合失去 {Amount} 点力量。",
-  "SAKURA_MOD_POWER_CLASSIC_WOOD_POWER.smartDescription": "敌方回合开始：中毒敌人本回合失去 {Amount} 点力量。",
+  "SAKURA_MOD_POWER_CLASSIC_WOOD_POWER.description": "敌方回合开始时，对每个敌人：若其没有中毒，给予其 3 层中毒；否则使其本回合失去 {Amount} 点力量。",
+  "SAKURA_MOD_POWER_CLASSIC_WOOD_POWER.smartDescription": "敌方回合开始：无中毒的敌人获得 3 层中毒，否则本回合失去 {Amount} 点力量。",
   "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.title": "树",
-  "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.description": "敌方回合开始时，所有中毒的敌人获得 2 层中毒，并在本回合失去 {Amount} 点力量。",
-  "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.smartDescription": "敌方回合开始：中毒敌人获得 2 层中毒，并本回合失去 {Amount} 点力量。"
+  "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.description": "敌方回合开始时，所有敌人获得 2 层中毒，并在本回合失去 {Amount} 点力量。",
+  "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.smartDescription": "敌方回合开始：所有敌人获得 2 层中毒，并本回合失去 {Amount} 点力量。"
 }

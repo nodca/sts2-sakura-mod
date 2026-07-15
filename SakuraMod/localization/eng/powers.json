@@ -186,9 +186,9 @@
   "SAKURA_MOD_POWER_CLASSIC_TEMPORARY_STRENGTH_LOSS_POWER.description": "Attack damage dealt is reduced this turn. Removed at end of turn.",
   "SAKURA_MOD_POWER_CLASSIC_TEMPORARY_STRENGTH_LOSS_POWER.smartDescription": "Lose attack damage this turn.",
   "SAKURA_MOD_POWER_CLASSIC_WOOD_POWER.title": "Wood",
-  "SAKURA_MOD_POWER_CLASSIC_WOOD_POWER.description": "At the start of the enemy turn, all enemies with [gold]Poison[/gold] lose {Amount} [gold]Strength[/gold] this turn.",
-  "SAKURA_MOD_POWER_CLASSIC_WOOD_POWER.smartDescription": "Enemy turn start: enemies with [gold]Poison[/gold] lose {Amount} [gold]Strength[/gold] this turn.",
+  "SAKURA_MOD_POWER_CLASSIC_WOOD_POWER.description": "At the start of the enemy turn, for each enemy: if it has no [gold]Poison[/gold], apply 3 [gold]Poison[/gold] to it; otherwise, it loses {Amount} [gold]Strength[/gold] this turn.",
+  "SAKURA_MOD_POWER_CLASSIC_WOOD_POWER.smartDescription": "Enemy turn start: enemies without [gold]Poison[/gold] gain 3 [gold]Poison[/gold]; otherwise, they lose {Amount} [gold]Strength[/gold] this turn.",
   "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.title": "Wood",
-  "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.description": "At the start of the enemy turn, all enemies with [gold]Poison[/gold] gain 2 [gold]Poison[/gold] and lose {Amount} [gold]Strength[/gold] this turn.",
-  "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.smartDescription": "Enemy turn start: enemies with [gold]Poison[/gold] gain 2 [gold]Poison[/gold] and lose {Amount} [gold]Strength[/gold] this turn."
+  "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.description": "At the start of the enemy turn, all enemies gain 2 [gold]Poison[/gold] and lose {Amount} [gold]Strength[/gold] this turn.",
+  "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.smartDescription": "Enemy turn start: all enemies gain 2 [gold]Poison[/gold] and lose {Amount} [gold]Strength[/gold] this turn."
 }

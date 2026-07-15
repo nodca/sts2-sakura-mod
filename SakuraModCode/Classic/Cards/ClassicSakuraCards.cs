@@ -1295,20 +1295,17 @@ public class ClowShot() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.Co
     private const int ExtraVulnerable = 3;
 
     public override ClassicElement Element => ClassicElement.Firey;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicDamageVar(3, ValueProp.Move), new PowerVar<PoisonPower>(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new ClassicDamageVar(3, ValueProp.Move),
+        new DynamicVar("Hits", Hits),
+        new PowerVar<VigorPower>(2)
+    ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var target = RequiredTarget(play);
-        await using var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, this);
-        for (var i = 0; i < Hits; i++)
-        {
-            if (!target.IsAlive)
-                break;
-
-            await DealDamageHit(attack, choiceContext, target, ReleasedDamage());
-            await ApplyPower<PoisonPower>(choiceContext, target, ReleasedValue("PoisonPower"));
-        }
+        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage(), hitCount: Hits);
+        await ApplyPower<VigorPower>(choiceContext, Owner.Creature, ReleasedValue("VigorPower"));
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -1320,7 +1317,6 @@ public class ClowShot() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.Co
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(1);
-        DynamicVars["PoisonPower"].UpgradeValueBy(1);
     }
 }
 
@@ -1949,6 +1945,7 @@ public class ClowWood() : ClassicClowCard(1, CardType.Power, CardRarity.Uncommon
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new PowerVar<ThornsPower>(BaseThorns),
+        new PowerVar<PoisonPower>(ClassicWoodPower.InitialPoison),
         new PowerVar<StrengthPower>("StrengthLoss", ClassicWoodPower.DefaultStrengthLoss)
     ];
 

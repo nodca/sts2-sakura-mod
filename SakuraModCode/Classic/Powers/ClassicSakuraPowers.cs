@@ -277,6 +277,7 @@ public class ClassicShieldWardPower : ClassicSakuraPower
 public class ClassicWoodPower : ClassicSakuraPower
 {
     public const int DefaultStrengthLoss = 2;
+    public const int InitialPoison = 3;
 
     protected override string IconFileName => "earthy_power.png";
     public override PowerType Type => PowerType.Buff;
@@ -291,33 +292,52 @@ public class ClassicWoodPower : ClassicSakuraPower
         if (side != CombatSide.Enemy || Owner.Side != CombatSide.Player || Amount <= 0)
             return;
 
-        var poisonedEnemies = combatState.Enemies
-            .Where(static enemy => enemy.IsAlive && enemy.GetPower<PoisonPower>() is { Amount: > 0 })
-            .ToList();
-        if (poisonedEnemies.Count == 0)
-            return;
+        var poisonTargets = new List<Creature>();
+        var strengthLossTargets = new List<Creature>();
+        foreach (var enemy in combatState.Enemies.Where(static enemy => enemy.IsAlive))
+        {
+            if (AppliesBothBranches)
+            {
+                poisonTargets.Add(enemy);
+                strengthLossTargets.Add(enemy);
+            }
+            else if (enemy.GetPower<PoisonPower>() is { Amount: > 0 })
+            {
+                strengthLossTargets.Add(enemy);
+            }
+            else
+            {
+                poisonTargets.Add(enemy);
+            }
+        }
 
         var poisonAmount = PoisonAmount(Amount);
-        if (poisonAmount > 0)
+        if (poisonTargets.Count > 0 && poisonAmount > 0)
             // BeforeSideTurnStart runs before the vanilla PoisonPower trigger.
-            await PowerCmd.Apply<PoisonPower>(choiceContext, poisonedEnemies, poisonAmount, Owner, null, false);
+            await PowerCmd.Apply<PoisonPower>(choiceContext, poisonTargets, poisonAmount, Owner, null, false);
 
-        await PowerCmd.Apply<ClassicTemporaryStrengthLossPower>(
-            choiceContext,
-            poisonedEnemies,
-            Amount,
-            Owner,
-            null,
-            false);
+        if (strengthLossTargets.Count > 0)
+            await PowerCmd.Apply<ClassicTemporaryStrengthLossPower>(
+                choiceContext,
+                strengthLossTargets,
+                Amount,
+                Owner,
+                null,
+                false);
     }
 
-    protected virtual int PoisonAmount(int strengthLoss) => 0;
+    protected virtual bool AppliesBothBranches => false;
+
+    protected virtual int PoisonAmount(int strengthLoss) =>
+        strengthLoss / DefaultStrengthLoss * InitialPoison;
 }
 
 public class ClassicSakuraWoodPower : ClassicWoodPower
 {
     public const int StrengthLoss = 4;
     public const int PoisonPerTrigger = 2;
+
+    protected override bool AppliesBothBranches => true;
 
     protected override int PoisonAmount(int strengthLoss) =>
         strengthLoss / StrengthLoss * PoisonPerTrigger;
