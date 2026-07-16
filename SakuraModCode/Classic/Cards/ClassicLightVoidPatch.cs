@@ -11,7 +11,7 @@ internal static class ClassicLightVoidPatch
     [HarmonyPrefix]
     private static bool SkipVoidEnergyLossWhenLightIsActive(StsVoid __instance, CardModel card, ref Task __result)
     {
-        if (card != __instance || __instance.Owner?.Creature.GetPower<ClassicLightPower>() is null)
+        if (card != __instance || !ClassicLightPowerBase.IsActive(__instance.Owner?.Creature))
             return true;
 
         __result = Task.CompletedTask;

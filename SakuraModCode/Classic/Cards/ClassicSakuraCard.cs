@@ -77,8 +77,7 @@ public abstract class ClassicSakuraCard(
         return Task.CompletedTask;
     }
 
-    protected int ReleasedValue(string varName) =>
-        ClassicReleaseState.ReleasedValue(this, varName, DynamicVars[varName].IntValue);
+    protected int ReleasedValue(string varName) => DynamicVars[varName].IntValue;
 
     protected int ReleasedDamage() => ReleasedValue("Damage");
     protected int ReleasedBlock() => ReleasedValue("Block");
@@ -406,7 +405,20 @@ internal static class ClassicStarterScaling
     }
 }
 
-internal sealed class ClassicDamageVar : DamageVar
+internal interface IClassicEffectiveValueVar
+{
+    int EffectiveValue(CardModel card);
+}
+
+internal static class ClassicCardValues
+{
+    public static int EffectiveValue(CardModel card, DynamicVar variable) =>
+        variable is IClassicEffectiveValueVar effectiveValueVar
+            ? effectiveValueVar.EffectiveValue(card)
+            : variable.IntValue;
+}
+
+internal sealed class ClassicDamageVar : DamageVar, IClassicEffectiveValueVar
 {
     private readonly SourceCardIdentity? _starterIdentity;
 
@@ -424,7 +436,7 @@ internal sealed class ClassicDamageVar : DamageVar
 
     public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks)
     {
-        var baseValue = AdjustedBase(card);
+        decimal baseValue = EffectiveValue(card);
         var preview = baseValue;
         if (card.Enchantment is not null)
         {
@@ -440,12 +452,19 @@ internal sealed class ClassicDamageVar : DamageVar
         PreviewValue = preview;
     }
 
-    private decimal AdjustedBase(CardModel card)
+    public int EffectiveValue(CardModel card)
     {
         var baseValue = (int)BaseValue;
         if (card.Owner is not null && _starterIdentity is { } identity)
-            baseValue = ClassicStarterScaling.ScaledValue(card.Owner, identity, baseValue);
-        return ClassicReleaseState.ReleasedValue(card, Name, baseValue);
+        {
+            return ClassicReleaseState.AdjustedReleasedValue(
+                card,
+                Name,
+                baseValue,
+                value => ClassicStarterScaling.ScaledValue(card.Owner, identity, value));
+        }
+
+        return baseValue;
     }
 }
 
@@ -484,11 +503,11 @@ internal sealed class ClassicCombatHistoryCountVar(Func<CardModel, int> hitCount
 }
 
 internal sealed class ClassicBlockVar(decimal block, ValueProp props, SourceCardIdentity? starterIdentity = null) :
-    BlockVar(block, props)
+    BlockVar(block, props), IClassicEffectiveValueVar
 {
     public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks)
     {
-        var baseValue = AdjustedBase(card);
+        decimal baseValue = EffectiveValue(card);
         var preview = baseValue;
         if (card.Enchantment is not null)
         {
@@ -504,12 +523,19 @@ internal sealed class ClassicBlockVar(decimal block, ValueProp props, SourceCard
         PreviewValue = preview;
     }
 
-    private decimal AdjustedBase(CardModel card)
+    public int EffectiveValue(CardModel card)
     {
         var baseValue = (int)BaseValue;
         if (card.Owner is not null && starterIdentity is { } identity)
-            baseValue = ClassicStarterScaling.ScaledValue(card.Owner, identity, baseValue);
-        return ClassicReleaseState.ReleasedValue(card, Name, baseValue);
+        {
+            return ClassicReleaseState.AdjustedReleasedValue(
+                card,
+                Name,
+                baseValue,
+                value => ClassicStarterScaling.ScaledValue(card.Owner, identity, value));
+        }
+
+        return baseValue;
     }
 }
 
@@ -739,7 +765,6 @@ internal static class ClassicCreateRewards
 internal static class ClassicReleaseState
 {
     private static readonly ConditionalWeakTable<CardModel, ReleaseMarker> ReleasedCards = new();
-    private static readonly string[] NonMagicVarNames = ["Damage", "Block", "Cards"];
 
     public static bool IsReleased(CardModel card) =>
         ReleasedCards.TryGetValue(card, out _);
@@ -765,7 +790,7 @@ internal static class ClassicReleaseState
                 AddReleaseKeyword(card, CardKeyword.Ethereal, marker);
         }
 
-        foreach (var variable in card.DynamicVars.Values.Where(variable => !NonMagicVarNames.Contains(variable.Name)))
+        foreach (var variable in card.DynamicVars.Values)
         {
             var delta = ReleaseDelta(variable.IntValue, releaseRate);
             if (delta == 0)
@@ -778,22 +803,18 @@ internal static class ClassicReleaseState
         ReleasedCards.Add(card, marker);
     }
 
-    public static int ReleasedValue(CardModel card, string varName, int baseValue)
+    public static int AdjustedReleasedValue(
+        CardModel card,
+        string varName,
+        int currentValue,
+        Func<int, int> adjust)
     {
         if (!ReleasedCards.TryGetValue(card, out var marker))
-            return baseValue;
+            return adjust(currentValue);
 
-        return marker.DynamicVarDeltas.ContainsKey(varName)
-            ? baseValue
-            : baseValue + ReleaseDelta(baseValue, marker.Rate);
-    }
-
-    public static int ReleasedValue(CardModel card, int baseValue)
-    {
-        if (!ReleasedCards.TryGetValue(card, out var marker))
-            return baseValue;
-
-        return baseValue + ReleaseDelta(baseValue, marker.Rate);
+        var releaseDelta = marker.DynamicVarDeltas.GetValueOrDefault(varName);
+        var adjustedValue = adjust(currentValue - releaseDelta);
+        return adjustedValue + ReleaseDelta(adjustedValue, marker.Rate);
     }
 
     public static void Reset(CardModel card)

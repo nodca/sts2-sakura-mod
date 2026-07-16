@@ -79,6 +79,17 @@ public abstract class SakuraModCard : ModCardTemplate
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await SakuraExtraEffectTransaction.AfterCardPlayed(this, choiceContext, play);
+
+        if (play.Card == this && play.IsLastInSeries)
+            ClassicReleaseState.Reset(this);
+    }
+
+    public override Task AfterCardExhausted(PlayerChoiceContext choiceContext, CardModel card, bool causedByEthereal)
+    {
+        if (card == this)
+            ClassicReleaseState.Reset(this);
+
+        return Task.CompletedTask;
     }
 
     protected static Creature RequiredTarget(CardPlay play) =>

@@ -122,8 +122,7 @@ public class ClowSword() : ClassicExtraClowCard(1, CardType.Attack, CardRarity.B
     protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicDamageVar(6, ValueProp.Move, SourceCardIdentity.Sword)];
     protected override HashSet<CardTag> CanonicalTags => [CardTag.Strike];
 
-    private int CurrentDamage() =>
-        ClassicReleaseState.ReleasedValue(this, ClassicStarterScaling.ScaledValue(Owner, SourceCardIdentity.Sword, DynamicVars.Damage.IntValue));
+    private int CurrentDamage() => ClassicCardValues.EffectiveValue(this, DynamicVars.Damage);
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await DealDamage(choiceContext, RequiredTarget(play), CurrentDamage());
@@ -161,8 +160,7 @@ public class ClowShield() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.B
     ];
     protected override HashSet<CardTag> CanonicalTags => [CardTag.Defend];
 
-    private int CurrentBlock() =>
-        ClassicReleaseState.ReleasedValue(this, ClassicStarterScaling.ScaledValue(Owner, SourceCardIdentity.Shield, DynamicVars.Block.IntValue));
+    private int CurrentBlock() => ClassicCardValues.EffectiveValue(this, DynamicVars.Block);
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await GainBlock(play, CurrentBlock());
@@ -1129,24 +1127,12 @@ public class ClowLight() : ClassicClowCard(1, CardType.Power, CardRarity.Rare, T
     }
 }
 
-public class SakuraLight() : ClassicSakuraConversionCard(1, CardType.Skill, TargetType.None)
+public class SakuraLight() : ClassicSakuraConversionCard(1, CardType.Power, TargetType.None)
 {
     public override ClassicElement Element => ClassicElement.Earthy | ClassicElement.Firey;
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        var cards = CardPile.GetCards(Owner, PileType.Hand, PileType.Draw, PileType.Discard)
-            .Where(static card => card.Type is CardType.Status or CardType.Curse)
-            .ToList();
-        foreach (var card in cards)
-            await CardCmd.Exhaust(choiceContext, card);
-
-        if (cards.Count <= 0)
-            return;
-
-        await CreatureCmd.Heal(Owner.Creature, cards.Count);
-        await CardPileCmd.Draw(choiceContext, cards.Count, Owner, false);
-    }
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        await ApplyPower<ClassicLightSakuraPower>(choiceContext, Owner.Creature, 1);
 }
 
 public class ClowLock() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None)
@@ -1515,17 +1501,31 @@ public class ClowLibra() : ClassicExtraClowCard(0, CardType.Skill, CardRarity.Co
     }
 }
 
-public class SakuraLibra() : ClassicSakuraConversionCard(1, CardType.Skill, TargetType.None)
+public class SakuraLibra() : ClassicSakuraConversionCard(0, CardType.Skill, TargetType.None)
 {
+    private const int ChargePerEnergy = 3;
+
     public override ClassicElement Element => ClassicElement.Firey;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new ClassicBlockVar(3, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new ClassicBlockVar(3, ValueProp.Move),
+        new DynamicVar("Magic", ChargePerEnergy),
+        new EnergyVar(1)
+    ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var charge = await ClassicSakuraMagic.SpendAllMagic(choiceContext, Owner);
         for (var i = 0; i < charge; i++)
             await GainBlock(play, ReleasedBlock());
+
+        var energy = EnergyFromCharge(charge) * ReleasedValue("Energy");
+        if (energy > 0)
+            await PlayerCmd.GainEnergy(energy, Owner);
     }
+
+    internal static int EnergyFromCharge(int charge) =>
+        Math.Max(0, charge) / ChargePerEnergy;
 }
 
 public class ClowChange() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None)
@@ -1673,7 +1673,8 @@ public class ClowFloat() : ClassicClowCard(1, CardType.Power, CardRarity.Uncommo
 public class SakuraFloat() : ClassicSakuraConversionCard(1, CardType.Power, TargetType.None)
 {
     public override ClassicElement Element => ClassicElement.Windy;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 1)];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Innate];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 2)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicFloatSakuraPower>(choiceContext, Owner.Creature, ReleasedMagic());

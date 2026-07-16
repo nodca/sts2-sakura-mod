@@ -228,7 +228,7 @@ public class ClassicDreamPower : ClassicSakuraPower
 
 public class ClassicDarkPower : ClassicSakuraPower
 {
-    private static readonly LocString Prompt = new("cards", "SAKURAMOD-CLASSIC_DARK.selectionPrompt");
+    internal static readonly LocString SelectionPrompt = new("cards", "SAKURAMOD-CLASSIC_DARK.selectionPrompt");
 
     protected override string IconFileName => "dark_power.png";
     public override PowerType Type => PowerType.Buff;
@@ -246,7 +246,7 @@ public class ClassicDarkPower : ClassicSakuraPower
         var selected = (await CardSelectCmd.FromHand(
             choiceContext,
             player,
-            new CardSelectorPrefs(Prompt, 0, Math.Min(Amount, hand.Count))
+            new CardSelectorPrefs(SelectionPrompt, 0, Math.Min(Amount, hand.Count))
             {
                 Cancelable = true
             },
@@ -277,11 +277,24 @@ public class ClassicDarkSakuraPower : ClassicSakuraPower
         if (hand.Count == 0)
             return;
 
-        foreach (var card in hand)
+        var selected = (await CardSelectCmd.FromHand(
+            choiceContext,
+            player,
+            new CardSelectorPrefs(ClassicDarkPower.SelectionPrompt, 0, hand.Count)
+            {
+                Cancelable = true
+            },
+            hand.Contains,
+            this)).ToList();
+
+        if (selected.Count == 0)
+            return;
+
+        foreach (var card in selected)
             await CardCmd.Exhaust(choiceContext, card, false);
 
         var replacements = new List<CardModel>();
-        for (var i = 0; i < hand.Count; i++)
+        for (var i = 0; i < selected.Count; i++)
         {
             var card = ClassicSakuraCardCatalog.CreateRandomDarkClowCard(player);
             if (card.IsUpgradable)
@@ -614,7 +627,7 @@ public class ClassicWavePower : ClassicSakuraPower
 
 public class ClassicBigPower : ClassicSakuraPower
 {
-    private const decimal DamageMultiplier = 1.33m;
+    internal const decimal DamageMultiplier = 1.66m;
 
     protected override string IconFileName => "big_power_sakuracard.png";
     public override PowerType Type => PowerType.Buff;
@@ -707,14 +720,6 @@ public class ClassicLockSakuraPower : ClassicSakuraPower
     protected override string IconFileName => "lock_power_sakuracard.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
-
-    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
-    {
-        if (Owner.Side != side || !participants.Contains(Owner))
-            return;
-
-        await PowerCmd.Decrement(this);
-    }
 }
 
 public class ClassicLoopPower : ClassicSakuraPower
@@ -760,7 +765,13 @@ public class ClassicLoopSakuraPower : ClassicSakuraPower
     }
 }
 
-public class ClassicLightPower : ClassicSakuraPower, IMaxHandSizeModifier
+public abstract class ClassicLightPowerBase : ClassicSakuraPower
+{
+    internal static bool IsActive(Creature? owner) =>
+        owner?.Powers.Any(static power => power is ClassicLightPowerBase) == true;
+}
+
+public class ClassicLightPower : ClassicLightPowerBase, IMaxHandSizeModifier
 {
     private const int ExtraHandSize = 2;
     private bool _upgraded;
@@ -825,6 +836,48 @@ public class ClassicLightPower : ClassicSakuraPower, IMaxHandSizeModifier
 
     private bool IsOwnedVoid(CardModel? card) =>
         card is MegaCrit.Sts2.Core.Models.Cards.Void && card.Owner?.Creature == Owner;
+}
+
+public class ClassicLightSakuraPower : ClassicLightPowerBase
+{
+    protected override string IconFileName => "light_power.png";
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override bool TryModifyKeywordsInCombat(CardModel card, ISet<CardKeyword> keywords)
+    {
+        if (!IsOwnedStatusOrCurse(card))
+            return false;
+
+        var changed = keywords.Remove(CardKeyword.Unplayable);
+        changed |= keywords.Add(CardKeyword.Exhaust);
+        return changed;
+    }
+
+    public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
+        CardModel card,
+        bool isAutoPlay,
+        ResourceInfo resources,
+        PileType pileType,
+        CardPilePosition position) =>
+        IsOwnedStatusOrCurse(card)
+            ? (PileType.Exhaust, position)
+            : (pileType, position);
+
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        if (!IsOwnedStatusOrCurse(play.Card) || Owner.Player is not { } player)
+            return;
+
+        await CardPileCmd.Draw(choiceContext, 1, player, false);
+        await CreatureCmd.Heal(Owner, 1);
+    }
+
+    internal static bool IsStatusOrCurse(CardType type) =>
+        type is CardType.Status or CardType.Curse;
+
+    private bool IsOwnedStatusOrCurse(CardModel? card) =>
+        card?.Owner?.Creature == Owner && IsStatusOrCurse(card.Type);
 }
 
 public class ClassicTwinPower : ClassicSakuraPower
@@ -966,11 +1019,16 @@ public class ClassicFloatSakuraPower : ClassicSakuraPower
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
-    {
-        if (Owner.Player == player && Amount > 0)
-            await PowerCmd.Apply<DexterityPower>(choiceContext, Owner, Amount, Owner, null, false);
-    }
+    internal static decimal ExtraBlock(bool ownsTarget, decimal block, int amount) =>
+        ownsTarget && block > 0m && amount > 0 ? amount : 0m;
+
+    public override decimal ModifyBlockAdditive(
+        Creature target,
+        decimal block,
+        ValueProp props,
+        CardModel? cardSource,
+        CardPlay? cardPlay) =>
+        ExtraBlock(target == Owner, block, Amount);
 }
 
 public class ClassicFreezePower : ClassicSakuraPower

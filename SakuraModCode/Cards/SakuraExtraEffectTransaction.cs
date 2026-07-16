@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -11,6 +12,12 @@ using System.Runtime.CompilerServices;
 namespace SakuraMod.SakuraModCode.Cards;
 
 public readonly record struct SakuraExtraEffectActivation(bool IsActive);
+
+internal enum SakuraExtraEffectActivationCost
+{
+    MagicCharge,
+    LockSakura
+}
 
 internal readonly record struct SakuraExtraEffectPostPlayPlan(
     bool ApplyExtraElementStates,
@@ -61,7 +68,10 @@ internal static class SakuraExtraEffectTransaction
     internal static bool CanActivate(int magicCharge, bool isLocked) =>
         magicCharge >= ClassicSakuraMagic.ExtraEffectCost && !isLocked;
 
-    internal static bool RequiresStandardSpend(bool hasLockSakura) => !hasLockSakura;
+    internal static SakuraExtraEffectActivationCost ActivationCost(bool hasLockSakura) =>
+        hasLockSakura
+            ? SakuraExtraEffectActivationCost.LockSakura
+            : SakuraExtraEffectActivationCost.MagicCharge;
 
     internal static bool ShouldShowAsActive(CardModel? card) =>
         card is { IsMutable: true, Owner: not null }
@@ -93,8 +103,21 @@ internal static class SakuraExtraEffectTransaction
             activation,
             async () =>
             {
-                if (RequiresStandardSpend(card.Owner.Creature.GetPower<ClassicLockSakuraPower>() is not null))
-                    await ClassicSakuraMagic.SpendMagic(choiceContext, card.Owner, ClassicSakuraMagic.ExtraEffectCost);
+                var lockSakura = card.Owner.Creature.GetPower<ClassicLockSakuraPower>();
+                switch (ActivationCost(lockSakura is not null))
+                {
+                    case SakuraExtraEffectActivationCost.MagicCharge:
+                        await ClassicSakuraMagic.SpendMagic(
+                            choiceContext,
+                            card.Owner,
+                            ClassicSakuraMagic.ExtraEffectCost);
+                        break;
+                    case SakuraExtraEffectActivationCost.LockSakura:
+                        await PowerCmd.Decrement(lockSakura!);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             },
             () => SakuraActions.RecordExtraEffectTriggeredThisTurn(choiceContext, play),
             () => capability is not null
