@@ -60,17 +60,39 @@ public class SakuraHope() : ClassicSpecialSakuraCard(4, CardType.Power, TargetTy
         await ApplyPower<ClassicHopePower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
 
-public class SakuraLegacy() : ClassicSakuraCard(1, CardType.Skill, CardRarity.Ancient, TargetType.None)
+public class GrowingMagic() :
+    ClassicSakuraAncientCard(1, CardType.Attack, TargetType.AnyEnemy)
 {
-    internal override bool GrantsMagicCharge => false;
-    internal override bool AddsVoidOnNormalSakuraPlay => false;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new DynamicVar("Magic", 2)];
+    internal const int MagicChargeOnKill = 5;
+
+    protected override string AncientPortraitFileName => "growing_magic.png";
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new ClassicDamageVar(18, ValueProp.Move),
+        new DynamicVar("Magic", MagicChargeOnKill)
+    ];
+
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage());
+
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(6);
+}
+
+public class AnotherMe() :
+    ClassicSakuraAncientCard(2, CardType.Power, TargetType.None)
+{
+    internal const int MagicChargeAmount = 5;
+
+    protected override string AncientPortraitFileName => "another_me.png";
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+        [new DynamicVar("Magic", MagicChargeAmount)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
         await ClassicSakuraMagic.GainMagic(choiceContext, Owner, ReleasedMagic(), this);
+        await ApplyPower<AnotherMePower>(choiceContext, Owner.Creature, ReleasedMagic());
     }
 
-    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }

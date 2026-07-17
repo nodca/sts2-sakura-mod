@@ -6,6 +6,7 @@ using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Classic.Relics;
 using SakuraMod.SakuraModCode.Powers;
 using STS2RitsuLib.Content;
+using STS2RitsuLib;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -20,10 +21,14 @@ internal static class SakuraContentRegistration
         ClassicSakuraCardTextCapabilities.Register();
         ConfigureDefaultCardTextCapabilities(registry);
         registry.RegisterSingleton<SakuraDrawCountHook>();
+        registry.RegisterSingleton<GrowingMagicDamageHook>();
         registry.RegisterCharacter<ClassicSakura>();
         RegisterCards(registry, typeof(ClassicSakuraCardPool), AllCardTypesForRegistration());
         RegisterPowers(registry, AllPowerTypesForRegistration());
         RegisterRelics(registry, typeof(ClassicSakuraRelicPool), ClassicSakuraExclusiveRelics.AllClassicRelicTypes());
+        RitsuLibFramework.RegisterTouchOfOrobasRefinementMapping<ClassicSealedWandRelic, ClassicStarWandRelic>(MainFile.ModId);
+        RitsuLibFramework.RegisterArchaicToothTranscendenceMapping<SpellSeal, GrowingMagic>(MainFile.ModId);
+        RitsuLibFramework.RegisterDustyTomeCard<ClassicSakura, AnotherMe>(MainFile.ModId);
     }
 
     private static void RegisterCards(ModContentRegistry registry, Type poolType, IEnumerable<Type> cardTypes)

@@ -31,6 +31,9 @@ public static class StringExtensions
             "Could not find big card image path: ",
             static () => Path.Join(MainFile.ResPath, "images", "card_portraits", "big", "card.png"));
 
+    public static string AncientCardImagePath(this string path) =>
+        ResolveRequiredTexturePath(Path.Join(MainFile.ResPath, "images", "card_portraits", "ancient", path));
+
     public static string ClearCardImagePath(this string path) =>
         ResolveCached(
             path.ClearCardAssetPath(),

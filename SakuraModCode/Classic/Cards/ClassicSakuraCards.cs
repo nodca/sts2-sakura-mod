@@ -951,7 +951,7 @@ public class ClowDream() : ClassicExtraClowCard(1, CardType.Skill, CardRarity.Co
     }
 }
 
-public class SakuraDream() : ClassicSakuraConversionCard(1, CardType.Skill, TargetType.None)
+public class SakuraDream() : ClassicSakuraConversionCard(0, CardType.Skill, TargetType.None)
 {
     public override ClassicElement Element => ClassicElement.Windy;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];

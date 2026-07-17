@@ -21,7 +21,6 @@ using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Extensions;
-using SakuraMod.SakuraModCode.Relics;
 using STS2RitsuLib.Scaffolding.Content;
 using STS2RitsuLib.Utils;
 using CoreVoid = MegaCrit.Sts2.Core.Models.Cards.Void;
@@ -44,7 +43,7 @@ public class ClassicSealedBookRelic : ClassicSakuraRelic
     public override RelicRarity Rarity => RelicRarity.Starter;
 }
 
-public class ClassicSealedWandRelic : ClassicSakuraRelic, ISakuraUpgradeableStarterRelic
+public class ClassicSealedWandRelic : ClassicSakuraRelic
 {
     private const string ChargeGainVar = "ChargeGain";
     private const string EliteBossExtraGainVar = "EliteBossExtraGain";
@@ -88,9 +87,6 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic, ISakuraUpgradeableStar
         new SealedWandRemainingChargeVar(BaseTriggerAmount)
     ];
 
-    public virtual RelicModel? GetUpgradeReplacement() =>
-        ModelDb.Relic<ClassicStarWandRelic>();
-
     public override async Task BeforeCombatStart()
     {
         _chargedDeathsThisCombat.Clear();
@@ -106,7 +102,7 @@ public class ClassicSealedWandRelic : ClassicSakuraRelic, ISakuraUpgradeableStar
         Creature target,
         CardModel? cardSource)
     {
-        if (cardSource is SpellSeal
+        if (ClassicSealKillPolicy.IsSealCard(cardSource)
             && result.WasTargetKilled
             && target.Side == CombatSide.Enemy
             && !target.IsSecondaryEnemy)
@@ -286,9 +282,6 @@ public class ClassicStarWandRelic : ClassicSealedWandRelic
     public override bool IsAllowed(IRunState runState) =>
         runState.Players.Any(static player => ClassicUltimateWandRecipe.FindExactSealedWand(player) is not null);
 
-    public override RelicModel? GetUpgradeReplacement() =>
-        null;
-
     public override async Task AfterObtained()
     {
         var sealedWand = ClassicUltimateWandRecipe.FindExactSealedWand(Owner);
@@ -350,9 +343,6 @@ public class ClassicUltimateWandRelic : ClassicSealedWandRelic
 
     public override bool IsAllowed(IRunState runState) =>
         false;
-
-    public override RelicModel? GetUpgradeReplacement() =>
-        null;
 
     public override async Task BeforeCombatStart()
     {

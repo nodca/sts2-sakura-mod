@@ -117,7 +117,7 @@ internal static class ClassicSakuraCardText
         new("cards", $"{ModelDb.GetId(card.GetType()).Entry}.extraDescription");
 
     internal static bool ReferencesMagicChargeTip(ClassicSakuraCard card) =>
-        card is SakuraLegacy
+        card is GrowingMagic or AnotherMe
         || card.Identity is SourceCardIdentity.Bubbles
             or SourceCardIdentity.Fight
             or SourceCardIdentity.Glow

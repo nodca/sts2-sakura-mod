@@ -272,7 +272,6 @@ internal static class SakuraCardVisualLifecycle
     public static void BeforeCardUpdateVisuals(NCard card)
     {
         RestoreAllCardVisualsIfTracked(card);
-        SakuraLegacyAncientCardFrameRestorer.RestoreIfSakuraLegacy(card);
         SakuraVanillaCardVisualRestorer.RestoreCurrentModelCostIfVanillaRoute(card);
     }
 

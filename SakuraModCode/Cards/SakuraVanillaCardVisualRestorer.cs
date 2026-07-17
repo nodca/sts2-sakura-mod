@@ -23,7 +23,6 @@ internal static class SakuraVanillaCardVisualRestorer
 
     private static bool ShouldRestoreCurrentModelCost(CardModel? model) =>
         model is not null
-        && model is not SakuraLegacy
         && SakuraCardVisualFamilies.Layout(model) == SakuraCardVisualLayout.None;
 
     private static void RestoreCurrentModelCost(NCard card, CardModel model)

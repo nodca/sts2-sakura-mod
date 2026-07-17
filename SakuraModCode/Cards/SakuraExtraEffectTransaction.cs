@@ -84,6 +84,10 @@ internal static class SakuraExtraEffectTransaction
 
     internal static bool DidActivate(CardPlay play) => ActivatedPlays.TryGetValue(play, out _);
 
+    internal static bool DidSpendMagicCharge(CardPlay play) =>
+        ActivatedPlays.TryGetValue(play, out var activation)
+        && activation.Cost == SakuraExtraEffectActivationCost.MagicCharge;
+
     internal static async Task Execute(
         CardModel card,
         PlayerChoiceContext choiceContext,
@@ -96,6 +100,10 @@ internal static class SakuraExtraEffectTransaction
         var capability = card as ISakuraExtraEffectCard;
         var activation = new SakuraExtraEffectActivation(capability is not null && CanActivate(card.Owner));
         var opportunity = ClassicSakuraMagic.CaptureOpportunity(card.Owner);
+        var lockSakura = activation.IsActive
+            ? card.Owner.Creature.GetPower<ClassicLockSakuraPower>()
+            : null;
+        var activationCost = ActivationCost(lockSakura is not null);
 
         await ExecuteCore(
             card,
@@ -103,8 +111,7 @@ internal static class SakuraExtraEffectTransaction
             activation,
             async () =>
             {
-                var lockSakura = card.Owner.Creature.GetPower<ClassicLockSakuraPower>();
-                switch (ActivationCost(lockSakura is not null))
+                switch (activationCost)
                 {
                     case SakuraExtraEffectActivationCost.MagicCharge:
                         await ClassicSakuraMagic.SpendMagic(
@@ -123,7 +130,8 @@ internal static class SakuraExtraEffectTransaction
             () => capability is not null
                 ? capability.PlayWithExtraEffect(choiceContext, play, activation)
                 : playWithoutExtraEffect(choiceContext, play),
-            () => ApplyGameplayPostEffects(card, choiceContext, activation, opportunity));
+            () => ApplyGameplayPostEffects(card, choiceContext, activation, opportunity),
+            activationCost);
     }
 
     internal static Task ExecuteCoreForTests(
@@ -133,8 +141,9 @@ internal static class SakuraExtraEffectTransaction
         Func<Task> spend,
         Func<Task> record,
         Func<Task> gameplay,
-        Func<Task> postPlay) =>
-        ExecuteCore(card, play, activation, spend, record, gameplay, postPlay);
+        Func<Task> postPlay,
+        SakuraExtraEffectActivationCost activationCost = SakuraExtraEffectActivationCost.MagicCharge) =>
+        ExecuteCore(card, play, activation, spend, record, gameplay, postPlay, activationCost);
 
     internal static async Task AfterCardPlayed(
         CardModel card,
@@ -180,7 +189,7 @@ internal static class SakuraExtraEffectTransaction
             await ClassicSakuraMagic.AddVoidToDrawPile(choiceContext, card.Owner);
     }
 
-    private sealed record ActivatedPlay;
+    private sealed record ActivatedPlay(SakuraExtraEffectActivationCost Cost);
 
     private static async Task ExecuteCore(
         CardModel card,
@@ -189,7 +198,8 @@ internal static class SakuraExtraEffectTransaction
         Func<Task> spend,
         Func<Task> record,
         Func<Task> gameplay,
-        Func<Task> postPlay)
+        Func<Task> postPlay,
+        SakuraExtraEffectActivationCost activationCost)
     {
         ActiveProjectionStack? projections = null;
         if (activation.IsActive)
@@ -203,7 +213,7 @@ internal static class SakuraExtraEffectTransaction
             if (activation.IsActive)
             {
                 await spend();
-                ActivatedPlays.Add(play, new ActivatedPlay());
+                ActivatedPlays.Add(play, new ActivatedPlay(activationCost));
                 await record();
             }
 

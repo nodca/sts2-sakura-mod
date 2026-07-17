@@ -5,7 +5,6 @@ using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Runs;
 using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Classic.Relics;
-using SakuraMod.SakuraModCode.Relics;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -59,18 +58,4 @@ public static class SakuraStarterCompatibility
             ClassicUltimateWandRecipe.CreateStarWandReplacement(sealedWand));
         return false;
     }
-
-    public static bool TryUseCustomStarterRelicUpgrade(RelicModel starterRelic, ref RelicModel result)
-    {
-        if (starterRelic is not ISakuraUpgradeableStarterRelic customStarter)
-            return true;
-
-        var replacement = customStarter.GetUpgradeReplacement();
-        if (replacement is null || replacement.Id == starterRelic.Id)
-            return true;
-
-        result = replacement;
-        return false;
-    }
-
 }

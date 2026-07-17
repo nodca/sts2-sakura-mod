@@ -43,7 +43,6 @@ public enum SourceCardIdentity
     Illusion,
     Kindness,
     Labyrinth,
-    Legacy,
     Lucid,
     Sword,
     Shield,
@@ -222,9 +221,10 @@ internal static class SakuraCardCatalog
                 if (entry.Era != SourceEraClass.Clear && entry.VisualRoute == SakuraSourceCardVisualRoute.Clear)
                     throw new InvalidOperationException($"Non-Clear card {entry.CardType.Name} cannot use the Clear visual route.");
             }
-            else if (!typeof(ClassicSpellCard).IsAssignableFrom(entry.CardType))
+            else if (!typeof(ClassicSpellCard).IsAssignableFrom(entry.CardType)
+                     && !typeof(ClassicSakuraAncientCard).IsAssignableFrom(entry.CardType))
             {
-                throw new InvalidOperationException($"Source Card metadata is required for {entry.CardType.Name}.");
+                throw new InvalidOperationException($"Era-neutral catalog metadata is not allowed for {entry.CardType.Name}.");
             }
         }
 
@@ -246,6 +246,9 @@ internal static class SakuraCardCatalog
 
         void AddSpell<TCard>() where TCard : ClassicSpellCard =>
             entries.Add(new(typeof(TCard), null, null, entries.Count, SakuraSourceCardVisualRoute.Classic));
+
+        void AddAncient<TCard>() where TCard : ClassicSakuraAncientCard =>
+            entries.Add(new(typeof(TCard), null, null, entries.Count, SakuraSourceCardVisualRoute.Vanilla));
 
         AddClassic<ClowSword>(SourceCardIdentity.Sword, SourceEraClass.Clow);
         AddClassic<ClowShield>(SourceCardIdentity.Shield, SourceEraClass.Clow);
@@ -356,7 +359,8 @@ internal static class SakuraCardCatalog
         AddClassic<ClowNothing>(SourceCardIdentity.Nothing, SourceEraClass.Clow);
         AddClassic<SakuraLove>(SourceCardIdentity.Love, SourceEraClass.Sakura);
         AddClassic<SakuraHope>(SourceCardIdentity.Hope, SourceEraClass.Sakura);
-        Add<SakuraLegacy>(SourceCardIdentity.Legacy, SourceEraClass.Sakura, SakuraSourceCardVisualRoute.Vanilla);
+        AddAncient<GrowingMagic>();
+        AddAncient<AnotherMe>();
 
         AddSpell<SpellSeal>();
         AddSpell<SpellRelease>();

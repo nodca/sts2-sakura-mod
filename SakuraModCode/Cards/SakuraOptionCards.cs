@@ -31,12 +31,12 @@ public abstract class SakuraOptionCard(CardType type) :
 internal static class SakuraOptionCardCatalog
 {
     public static IReadOnlyList<Type> CardTypes { get; } =
-        typeof(SakuraOptionCard).Assembly.GetTypes()
-            .Where(static type =>
-                !type.IsAbstract
-                && typeof(SakuraOptionCard).IsAssignableFrom(type))
-            .OrderBy(static type => type.FullName, StringComparer.Ordinal)
-            .ToList();
+    [
+        typeof(ChoiceDrawChoice),
+        typeof(ChoiceManifestChoice),
+        typeof(TrueOrFalseDrawChoice),
+        typeof(TrueOrFalseEnergyChoice)
+    ];
 }
 
 public class ChoiceManifestChoice() : SakuraOptionCard(CardType.Skill)

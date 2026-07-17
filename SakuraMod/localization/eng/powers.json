@@ -190,5 +190,8 @@
   "SAKURA_MOD_POWER_CLASSIC_WOOD_POWER.smartDescription": "Enemy turn start: enemies without [gold]Poison[/gold] gain 3 [gold]Poison[/gold]; otherwise, they lose {Amount} [gold]Strength[/gold] this turn.",
   "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.title": "Wood",
   "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.description": "At the start of the enemy turn, all enemies gain 2 [gold]Poison[/gold] and lose {Amount} [gold]Strength[/gold] this turn.",
-  "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.smartDescription": "Enemy turn start: all enemies gain 2 [gold]Poison[/gold] and lose {Amount} [gold]Strength[/gold] this turn."
+  "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.smartDescription": "Enemy turn start: all enemies gain 2 [gold]Poison[/gold] and lose {Amount} [gold]Strength[/gold] this turn.",
+  "SAKURA_MOD_POWER_ANOTHER_ME_POWER.title": "Another Me",
+  "SAKURA_MOD_POWER_ANOTHER_ME_POWER.description": "Whenever Magic Charge is spent to activate an Extra effect, refund {Amount} Magic Charge.",
+  "SAKURA_MOD_POWER_ANOTHER_ME_POWER.smartDescription": "Paid Extra effects refund {Amount} Magic Charge."
 }

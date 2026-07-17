@@ -61,7 +61,7 @@ internal static class ClassicMagicChargeAuraVisual
         {
             Name = AuraNodeName,
             ZAsRelative = true,
-            ZIndex = -1,
+            ZIndex = 0,
             Position = AuraOffset,
             Scale = Vector2.One * PulseBaseScale,
             Modulate = Colors.Transparent,

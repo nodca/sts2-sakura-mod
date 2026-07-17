@@ -36,6 +36,30 @@ public abstract class ClassicSakuraPower : ModPowerTemplate
     public override string CustomBigIconPath => IconFileName.BigPowerImagePath();
 }
 
+public class AnotherMePower : ClassicSakuraPower
+{
+    protected override string IconFileName => "another_me.png";
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        if (!ShouldRefund(
+                play.Card.Owner?.Creature == Owner,
+                SakuraExtraEffectTransaction.DidSpendMagicCharge(play)))
+        {
+            return;
+        }
+
+        Flash();
+        if (Owner.Player is { } player)
+            await ClassicSakuraMagic.GainMagic(choiceContext, player, Amount);
+    }
+
+    internal static bool ShouldRefund(bool ownsCard, bool spentMagicCharge) =>
+        ownsCard && spentMagicCharge;
+}
+
 public class ClassicMagicChargePower : ClassicSakuraPower
 {
     private static readonly SavedAttachedState<ClassicMagicChargePower, int> OpportunityToken =

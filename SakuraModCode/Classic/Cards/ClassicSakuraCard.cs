@@ -213,12 +213,52 @@ public abstract class ClassicSpecialSakuraCard(int cost, CardType type, TargetTy
     public override int MaxUpgradeLevel => 0;
 }
 
+public abstract class ClassicSakuraAncientCard(
+    int cost,
+    CardType type,
+    TargetType target) :
+    ClassicSakuraCard(cost, type, CardRarity.Ancient, target)
+{
+    protected abstract string AncientPortraitFileName { get; }
+    private string AncientPortraitPath => AncientPortraitFileName.AncientCardImagePath();
+
+    internal override bool GrantsMagicCharge => false;
+    internal override bool AddsVoidOnNormalSakuraPlay => false;
+    public override bool CanBeGeneratedInCombat => false;
+    public sealed override string CustomPortraitPath => AncientPortraitPath;
+    public sealed override string PortraitPath => AncientPortraitPath;
+    public sealed override string BetaPortraitPath => AncientPortraitPath;
+    public sealed override CardAssetProfile AssetProfile =>
+        SakuraAncientCardAssets.Create(Type, AncientPortraitPath);
+}
+
 public abstract class ClassicSpellCard(int cost, CardType type, CardRarity rarity, TargetType target) :
     ClassicSakuraCard(cost, type, rarity, target)
 {
     public override bool CanBeGeneratedInCombat => false;
 
     internal override bool GrantsMagicCharge => false;
+}
+
+internal static class SakuraAncientCardAssets
+{
+    public static CardAssetProfile Create(CardType type, string portraitPath)
+    {
+        var native = ContentAssetProfiles.AncientCard("ironclad", "break", type);
+        return new CardAssetProfile(
+            PortraitPath: portraitPath,
+            BetaPortraitPath: portraitPath,
+            AncientBorderPath: native.AncientBorderPath,
+            AncientTextBgPath: native.AncientTextBgPath,
+            AncientBannerPath: native.AncientBannerPath,
+            VisualStyle: native.VisualStyle);
+    }
+}
+
+internal static class ClassicSealKillPolicy
+{
+    public static bool IsSealCard(CardModel? card) =>
+        card is SpellSeal or GrowingMagic;
 }
 
 [Flags]

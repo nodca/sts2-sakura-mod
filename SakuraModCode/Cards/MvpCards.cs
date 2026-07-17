@@ -47,17 +47,23 @@ public class Action() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare
     }
 }
 
-public class Appear() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.Self)
+public class Appear() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Common, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("Copies", 1)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation) =>
-        await SakuraManifestLoop.AddTemporaryTransparentCopyToHand(
-            this,
-            choiceContext,
-            freeThisTurn: activation.IsActive);
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
+    {
+        for (var i = 0; i < DynamicVars["Copies"].IntValue; i++)
+        {
+            await SakuraManifestLoop.AddTemporaryTransparentCopyToHand(
+                this,
+                choiceContext,
+                freeThisTurn: activation.IsActive);
+        }
+    }
 
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+    protected override void OnUpgrade() => DynamicVars["Copies"].UpgradeValueBy(1);
 }
 
 public class Aqua() : SakuraExtraEffectCard(0, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
@@ -136,7 +142,7 @@ internal static class BladeRules
     private const int CardsPerDamageBonus = 2;
 
     public static decimal DamageBonusCount(CardModel card, Creature? _) =>
-        DamageBonusCount(PlayedSwordCount(card));
+        DamageBonusCount(PlayedSwordOrBladeCount(card));
 
     internal static int DamageBonusCount(int playedSwordCount) =>
         Math.Max(0, playedSwordCount / CardsPerDamageBonus);
@@ -154,11 +160,12 @@ internal static class BladeRules
         return Math.Max(0, hits);
     }
 
-    internal static bool IsSword(CardModel card) =>
-        SakuraCardCatalog.TryGetMetadata(card, out var metadata)
-        && metadata.Identity == SourceCardIdentity.Sword;
+    internal static bool CountsForDamageBonus(CardModel card) =>
+        card is Blade
+        || (SakuraCardCatalog.TryGetMetadata(card, out var metadata)
+            && metadata.Identity == SourceCardIdentity.Sword);
 
-    private static int PlayedSwordCount(CardModel card)
+    private static int PlayedSwordOrBladeCount(CardModel card)
     {
         if (card.Owner is not { } owner || card.CombatState is null)
             return 0;
@@ -166,8 +173,7 @@ internal static class BladeRules
         return CombatManager.Instance.History.CardPlaysFinished
             .Where(entry => entry is CardPlayFinishedEntry { CardPlay.Card.Owner: var cardOwner } && cardOwner == owner)
             .Select(entry => ((CardPlayFinishedEntry)entry).CardPlay.Card)
-            .Where(playedCard => playedCard != card)
-            .Count(IsSword);
+            .Count(CountsForDamageBonus);
     }
 }
 
@@ -440,7 +446,7 @@ public class Promise() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Unc
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new BlockVar(6, ValueProp.Move),
+        new BlockVar(5, ValueProp.Move),
         new PowerVar<PromiseManifestPower>(2),
         new PowerVar<PlatingPower>(4)
     ];
@@ -468,7 +474,7 @@ public class Promise() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Unc
             this,
             false);
 
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(4);
+    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
 
 public class Struggle() : SakuraExtraEffectCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
