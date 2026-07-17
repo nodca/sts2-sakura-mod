@@ -1684,6 +1684,9 @@ internal static class ClassicFreezeRules
 {
     public static int FrostbiteAmount(int baseFrostbite, int normalTargetBonus, bool isEliteOrBossTarget) =>
         baseFrostbite + (isEliteOrBossTarget ? 0 : normalTargetBonus);
+
+    public static int DoubledApplicationAmount(int existingFrostbite, int appliedFrostbite) =>
+        Math.Max(0, existingFrostbite) + 2 * Math.Max(0, appliedFrostbite);
 }
 
 public class ClowFreeze() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
@@ -1693,7 +1696,7 @@ public class ClowFreeze() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.
     [
         new ClassicDamageVar(14, ValueProp.Move),
         new ClassicBlockVar(6, ValueProp.Move),
-        new PowerVar<SakuraFrostbitePower>(1)
+        new PowerVar<SakuraFrostbitePower>(2)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -1701,7 +1704,7 @@ public class ClowFreeze() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.
         var target = RequiredTarget(play);
         await DealDamage(choiceContext, target, ReleasedDamage());
         await GainBlock(play, ReleasedBlock());
-        await ApplyPower<SakuraFrostbitePower>(choiceContext, target, 1);
+        await ApplyPower<SakuraFrostbitePower>(choiceContext, target, ReleasedValue("SakuraFrostbitePower"));
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -1709,10 +1712,12 @@ public class ClowFreeze() : ClassicExtraClowCard(2, CardType.Attack, CardRarity.
         var target = RequiredTarget(play);
         await DealDamage(choiceContext, target, ReleasedDamage());
         await GainBlock(play, ReleasedBlock());
-        await ApplyPower<SakuraFrostbitePower>(choiceContext, target, 1);
-
-        if (target.GetPower<SakuraFrostbitePower>() is { Amount: > 0 } frostbite)
-            await PowerCmd.ModifyAmount(choiceContext, frostbite, frostbite.Amount, Owner.Creature, this, false);
+        var frostbite = ReleasedValue("SakuraFrostbitePower");
+        var existingFrostbite = target.GetPower<SakuraFrostbitePower>()?.Amount ?? 0;
+        await ApplyPower<SakuraFrostbitePower>(
+            choiceContext,
+            target,
+            ClassicFreezeRules.DoubledApplicationAmount(existingFrostbite, frostbite));
     }
 
     protected override void OnUpgrade()

@@ -278,7 +278,7 @@
   "SAKURA_MOD_CARD_SAKURA_FLOAT.description": "[gold]小樱牌[/gold] [gold]风[/gold]\n每当你获得格挡时，额外获得 {Magic:diff()} 点格挡。",
   "SAKURA_MOD_CARD_CLOW_FREEZE.title": "冻",
   "SAKURA_MOD_CARD_CLOW_FREEZE.description": "[gold]水[/gold]\n造成 {Damage:diff()} 点伤害。\n获得 {Block:diff()} 点[gold]格挡[/gold]。\n给予 {SakuraFrostbitePower:diff()} 层[gold]冻伤[/gold]。",
-  "SAKURA_MOD_CARD_CLOW_FREEZE.extraDescription": "[gold]额外效果：[/gold]额外给予 1 层[gold]冻伤[/gold]。\n将其[gold]冻伤[/gold]翻倍。",
+  "SAKURA_MOD_CARD_CLOW_FREEZE.extraDescription": "[gold]额外效果：[/gold]将其[gold]冻伤[/gold]翻倍。",
   "SAKURA_MOD_CARD_SAKURA_FREEZE.title": "冻",
   "SAKURA_MOD_CARD_SAKURA_FREEZE.description": "[gold]小樱牌[/gold] [gold]水[/gold]\n造成 {Damage:diff()} 点伤害。\n获得 {Block:diff()} 点[gold]格挡[/gold]。\n给予 {SakuraFrostbitePower:diff()} 层[gold]冻伤[/gold]。\n若目标不是精英或首领，额外给予 {ExtraFrostbite:diff()} 层[gold]冻伤[/gold]。",
   "SAKURA_MOD_CARD_CLOW_STORM.title": "岚",

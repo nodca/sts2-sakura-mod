@@ -57,7 +57,7 @@ public abstract class SakuraModCard : ModCardTemplate
     internal static bool ShouldShowMagicChargeExtraEffectDescription(CardModel card) =>
         card is SakuraModCard sakuraCard
         && SakuraTransparentCardCatalog.IsTransparentCard(sakuraCard)
-        && SakuraExtraEffectTransaction.ShouldShowAsActive(sakuraCard);
+        && SakuraExtraEffectTransaction.ShouldShowDescription(sakuraCard);
 
     internal static bool HasMagicChargeExtraEffect(CardModel? card) =>
         card is SakuraModCard sakuraCard

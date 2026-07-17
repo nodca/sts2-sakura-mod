@@ -73,10 +73,19 @@ internal static class SakuraExtraEffectTransaction
             ? SakuraExtraEffectActivationCost.LockSakura
             : SakuraExtraEffectActivationCost.MagicCharge;
 
-    internal static bool ShouldShowAsActive(CardModel? card) =>
-        card is { IsMutable: true, Owner: not null }
+    internal static bool ShouldShowDescription(CardModel? card) =>
+        ShouldShowDescription(card, card?.CombatState is not null);
+
+    internal static bool ShouldShowDescription(CardModel? card, bool isInCombat) =>
+        card is not null
         && Supports(card)
-        && (IsActivelyProjected(card) || CanActivate(card.Owner));
+        && (!isInCombat || ShouldShowAsActive(card));
+
+    internal static bool ShouldShowAsActive(CardModel? card) =>
+        card is { IsMutable: true }
+        && Supports(card)
+        && (IsActivelyProjected(card)
+            || card.Owner is { } owner && CanActivate(owner));
 
     internal static bool IsActivelyProjected(CardModel card) =>
         ActiveProjections.TryGetValue(card, out var projections)

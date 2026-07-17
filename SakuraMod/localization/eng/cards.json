@@ -278,7 +278,7 @@
   "SAKURA_MOD_CARD_SAKURA_FLOAT.description": "[gold]Sakura Card[/gold] [gold]Windy[/gold]\nWhenever you gain Block, gain {Magic:diff()} additional Block.",
   "SAKURA_MOD_CARD_CLOW_FREEZE.title": "Freeze",
   "SAKURA_MOD_CARD_CLOW_FREEZE.description": "[gold]Watery[/gold]\nDeal {Damage:diff()} damage.\nGain {Block:diff()} [gold]Block[/gold].\nApply {SakuraFrostbitePower:diff()} [gold]Frostbite[/gold].",
-  "SAKURA_MOD_CARD_CLOW_FREEZE.extraDescription": "[gold]Extra:[/gold] Apply 1 additional [gold]Frostbite[/gold].\nDouble its [gold]Frostbite[/gold].",
+  "SAKURA_MOD_CARD_CLOW_FREEZE.extraDescription": "[gold]Extra:[/gold] Double its [gold]Frostbite[/gold].",
   "SAKURA_MOD_CARD_SAKURA_FREEZE.title": "Freeze",
   "SAKURA_MOD_CARD_SAKURA_FREEZE.description": "[gold]Sakura Card[/gold] [gold]Watery[/gold]\nDeal {Damage:diff()} damage.\nGain {Block:diff()} [gold]Block[/gold].\nApply {SakuraFrostbitePower:diff()} [gold]Frostbite[/gold].\nIf the target is not an Elite or Boss, apply {ExtraFrostbite:diff()} additional [gold]Frostbite[/gold].",
   "SAKURA_MOD_CARD_CLOW_STORM.title": "Storm",

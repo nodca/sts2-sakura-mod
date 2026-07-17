@@ -111,7 +111,7 @@ internal static class ClassicSakuraCardText
     }
 
     internal static bool ShouldShowMagicChargeExtraDescription(ClassicExtraClowCard card) =>
-        card.IsMutable && SakuraExtraEffectTransaction.CanActivate(card.Owner);
+        SakuraExtraEffectTransaction.ShouldShowDescription(card);
 
     internal static LocString MagicChargeExtraDescription(ClassicExtraClowCard card) =>
         new("cards", $"{ModelDb.GetId(card.GetType()).Entry}.extraDescription");
