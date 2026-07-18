@@ -227,7 +227,7 @@ public sealed class TemporaryModifier : SakuraCardStateCapability
 
     protected override void ModifyDescriptionPost(Creature? target, ref string description)
     {
-        if (!description.Contains("[red]Temporary[/red]") && !description.Contains("[red]临时[/red]"))
+        if (!description.Contains("[red]Forgotten[/red]") && !description.Contains("[red]遗忘[/red]"))
             description += SakuraStateText.TemporaryLine();
     }
 
@@ -442,7 +442,7 @@ internal static class SakuraStateText
         $"\n{TemporaryLabel()}{SentenceEnding()}";
 
     public static string TemporaryLabel() =>
-        IsSimplifiedChinese() ? "[red]临时[/red]" : "[red]Temporary[/red]";
+        IsSimplifiedChinese() ? "[red]遗忘[/red]" : "[red]Forgotten[/red]";
 
     public static string ClearCardLabel() =>
         IsSimplifiedChinese() ? "透明牌" : "Clear Card";
@@ -476,8 +476,8 @@ internal static class SakuraStateText
 
     public static IReadOnlyList<string> KnownStatusLabels { get; } =
     [
-        "[red]临时[/red]",
-        "[red]Temporary[/red]",
+        "[red]遗忘[/red]",
+        "[red]Forgotten[/red]",
         "透明牌",
         "Clear Card"
     ];

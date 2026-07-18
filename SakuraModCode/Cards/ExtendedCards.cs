@@ -15,6 +15,7 @@ using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Extensions;
 using SakuraMod.SakuraModCode.Powers;
@@ -145,6 +146,8 @@ public class Record() : SakuraExtraEffectCard(2, CardType.Skill, CardRarity.Rare
 public class Exchange() : SakuraModCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [SakuraCardHoverTips.TemporaryTipKey];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
@@ -272,7 +275,13 @@ public class Rewind() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var card = await SakuraActions.SelectFromCards(this, choiceContext, CardPile.Get(PileType.Exhaust, Owner)!.Cards, cancelable: false);
+        var choices = CardPile.Get(PileType.Exhaust, Owner)!.Cards
+            .Where(ClassicSakuraCardCatalog.CanBeTargetedByClearCardEffects)
+            .ToList();
+        if (choices.Count == 0)
+            return;
+
+        var card = await SakuraActions.SelectFromCards(this, choiceContext, choices, cancelable: false);
         if (card is null)
             return;
 
@@ -317,7 +326,8 @@ public class Snooze() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Comm
 public class Spiral() : SakuraExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
-    internal override IEnumerable<string> ReferencedStaticHoverTipKeys => [SakuraMemoryPile.PileId];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [SakuraMemoryPile.PileId, SakuraCardHoverTips.TemporaryTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DamageVar(5, ValueProp.Move),
@@ -464,6 +474,8 @@ public class Blank() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare,
     ];
 
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [SakuraCardHoverTips.TemporaryTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(4, ValueProp.Move)];
     internal static IReadOnlyList<PileType> TargetPileTypes => ForgottenTargetPileTypes;
 
@@ -538,7 +550,10 @@ public class Mirror() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var card = await SakuraActions.SelectHandCard(this, choiceContext, card => card != this);
+        var card = await SakuraActions.SelectHandCard(
+            this,
+            choiceContext,
+            card => card != this && ClassicSakuraCardCatalog.CanBeTargetedByClearCardEffects(card));
         if (card is not null)
         {
             var amount = DynamicVars["Repeat"].IntValue;
@@ -651,6 +666,8 @@ public class TrueOrFalse() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity
     public override IEnumerable<CardKeyword> CanonicalKeywords => IsUpgraded
         ? [SakuraKeywords.Fire, SakuraKeywords.Stabilize]
         : [SakuraKeywords.Fire, CardKeyword.Exhaust, SakuraKeywords.Stabilize];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [SakuraCardHoverTips.TemporaryTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new CardsVar(2),

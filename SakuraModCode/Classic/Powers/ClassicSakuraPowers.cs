@@ -444,13 +444,15 @@ public class ClassicSweetPower : ClassicSakuraPower
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
+    internal static int HealAmount(int maxHp, int percent) =>
+        Math.Max(0, maxHp) * Math.Max(0, percent) / 100;
+
     public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
         if (Owner.Player != player || Amount <= 0)
             return;
 
-        var missingHp = Math.Max(0, Owner.MaxHp - Owner.CurrentHp);
-        var heal = missingHp * Amount / 100;
+        var heal = HealAmount(Owner.MaxHp, Amount);
         if (heal > 0)
             await CreatureCmd.Heal(Owner, heal);
     }

@@ -5,7 +5,7 @@
   "SAKURA_MOD_CARDPILE_MEMORY.description": "本场战斗中，拥有遗忘的牌会在回合结束时进入此牌堆。",
   "SAKURA_MOD_CARDPILE_MEMORY.empty": "记忆区中没有牌。",
   "SAKURAMOD-REFLECTION.title": "反射",
-  "SAKURAMOD-REFLECTION.description": "每层反射一次受到的敌方攻击伤害，随后移除 1 层。",
+  "SAKURAMOD-REFLECTION.description": "每层反射使攻击者受到本次攻击伤害的一半。\n每次受到攻击后，移除 1 层反射。\n敌方回合结束时，移除 1 层反射。",
   "SAKURAMOD-ENTER_LABYRINTH.title": "进入迷宫",
   "SAKURAMOD-ENTER_LABYRINTH.description": "迷宫中的敌人无法行动，也不受攻击牌影响。从你的下回合结束时起，每当你的回合结束时，随机 1 名在迷宫中的敌人离开迷宫。",
   "SAKURAMOD-REMIND.title": "想起",

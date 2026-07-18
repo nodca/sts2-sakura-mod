@@ -61,6 +61,10 @@ internal static class SakuraContentRegistration
             "SakuraMod:DefaultSakuraCardText",
             static (_, capabilities) => capabilities.Add<SakuraCardHoverTipCapability>(),
             0);
+        registry.ConfigureDefaultModelCapabilities<SakuraOptionCard>(
+            "SakuraMod:DefaultSakuraOptionCardText",
+            static (_, capabilities) => capabilities.Add<SakuraCardHoverTipCapability>(),
+            0);
         registry.ConfigureDefaultModelCapabilities<ClassicSakuraCard>(
             "SakuraMod:DefaultClassicSakuraCardText",
             static (_, capabilities) => capabilities.Add<ClassicSakuraCardTextCapability>(),

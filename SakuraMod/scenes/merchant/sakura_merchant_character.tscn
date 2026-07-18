@@ -4,6 +4,6 @@
 
 [node name="Visuals" type="Sprite2D"]
 unique_name_in_owner = true
-position = Vector2(0, -234)
-scale = Vector2(0.28, 0.28)
+position = Vector2(0, -468.16)
+scale = Vector2(0.56, 0.56)
 texture = ExtResource("1_sakura_standee")

@@ -23,6 +23,8 @@ public abstract class SakuraOptionCard(CardType type) :
     public override string BetaPortraitPath => SakuraCardFrameVisuals.PortraitPath(this);
     public override Material? CustomFrameMaterial => SakuraCardFrameVisuals.PlainFrameMaterial;
     protected override IEnumerable<string> ExtraRunAssetPaths => SakuraCardFrameVisuals.RunAssetPaths(this);
+    internal virtual IEnumerable<CardKeyword> ReferencedKeywords => [];
+    internal virtual IEnumerable<string> ReferencedStaticHoverTipKeys => [];
 
     protected override Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
         Task.CompletedTask;
@@ -57,6 +59,8 @@ public class ChoiceDrawChoice() : SakuraOptionCard(CardType.Skill)
 public class TrueOrFalseDrawChoice() : SakuraOptionCard(CardType.Skill)
 {
     public override string EnglishName => "FALSE";
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [SakuraCardHoverTips.TemporaryTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2)];
 }
 

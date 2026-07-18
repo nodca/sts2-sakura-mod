@@ -151,10 +151,10 @@ internal sealed class SakuraCardHoverTipCapability : CardCapability, ICardHoverT
 
     public IEnumerable<IHoverTip> GetHoverTips(CardModel card)
     {
-        if (card is not SakuraModCard sakuraCard)
+        if (card is not SakuraModCard && card is not SakuraOptionCard)
             return [];
 
-        return SakuraCardHoverTips.HoverTips(sakuraCard);
+        return SakuraCardHoverTips.HoverTips(card);
     }
 }
 
@@ -173,18 +173,18 @@ internal static class SakuraCardHoverTips
     internal const string LabyrinthTipKey = "SAKURAMOD-ENTER_LABYRINTH";
     internal const string RemindTipKey = "SAKURAMOD-REMIND";
 
-    internal static IEnumerable<IHoverTip> HoverTips(SakuraModCard card) =>
+    internal static IEnumerable<IHoverTip> HoverTips(CardModel card) =>
         KeywordTips(card).Select(HoverTipFactory.FromKeyword)
             .Concat(StaticTipKeys(card).Select(key => (IHoverTip)StaticTip(key)))
             .Distinct();
 
-    internal static IEnumerable<CardKeyword> KeywordTips(SakuraModCard card) =>
-        card.ReferencedKeywords
+    internal static IEnumerable<CardKeyword> KeywordTips(CardModel card) =>
+        ReferencedKeywords(card)
             .Concat(ElementKeywords(SakuraActions.StaticElementSetOf(card)))
             .Distinct();
 
-    internal static IEnumerable<string> StaticTipKeys(SakuraModCard card) =>
-        card.ReferencedStaticHoverTipKeys.Distinct();
+    internal static IEnumerable<string> StaticTipKeys(CardModel card) =>
+        ReferencedStaticHoverTipKeys(card).Distinct();
 
     internal static IEnumerable<CardKeyword> ElementKeywords(SakuraElementSet elements) =>
         elements.AsElements().Select(SakuraActions.KeywordFor).Distinct();
@@ -193,4 +193,20 @@ internal static class SakuraCardHoverTips
         new(
             new LocString("static_hover_tips", $"{key}.title"),
             new LocString("static_hover_tips", $"{key}.description"));
+
+    private static IEnumerable<CardKeyword> ReferencedKeywords(CardModel card) =>
+        card switch
+        {
+            SakuraModCard sakuraCard => sakuraCard.ReferencedKeywords,
+            SakuraOptionCard optionCard => optionCard.ReferencedKeywords,
+            _ => []
+        };
+
+    private static IEnumerable<string> ReferencedStaticHoverTipKeys(CardModel card) =>
+        card switch
+        {
+            SakuraModCard sakuraCard => sakuraCard.ReferencedStaticHoverTipKeys,
+            SakuraOptionCard optionCard => optionCard.ReferencedStaticHoverTipKeys,
+            _ => []
+        };
 }

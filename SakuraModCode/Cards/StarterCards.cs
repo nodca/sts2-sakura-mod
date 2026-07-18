@@ -56,7 +56,7 @@ internal static class GaleRules
         1 + Math.Max(0, drawCount) / 2;
 }
 
-public class Reflect() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.Self)
+public class Reflect() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
@@ -64,7 +64,7 @@ public class Reflect() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Com
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new BlockVar(5, ValueProp.Move),
-        new PowerVar<ReflectionPower>(1),
+        new PowerVar<ReflectionPower>(2),
         new DynamicVar("ExtraReflection", 2)
     ];
 
@@ -77,7 +77,11 @@ public class Reflect() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Com
         await PowerCmd.Apply<ReflectionPower>(choiceContext, Owner.Creature, reflection, Owner.Creature, this, false);
     }
 
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Block.UpgradeValueBy(3);
+        DynamicVars["ReflectionPower"].UpgradeValueBy(1);
+    }
 }
 
 public class Flight() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.Self)

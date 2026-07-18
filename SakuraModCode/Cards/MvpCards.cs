@@ -49,7 +49,7 @@ public class Action() : SakuraExtraEffectCard(1, CardType.Skill, CardRarity.Rare
 
 public class Appear() : SakuraExtraEffectCard(0, CardType.Skill, CardRarity.Common, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("Copies", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
@@ -560,6 +560,8 @@ internal static class BlazeRules
 public class Dreaming() : SakuraModCard(2, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [SakuraCardHoverTips.TemporaryTipKey];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
         => await PowerCmd.Apply<DreamingPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);

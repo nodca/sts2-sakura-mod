@@ -55,6 +55,8 @@ public class ClassicSakura : ModCharacterTemplate<ClassicSakuraCardPool, Classic
     public override string CustomCharacterSelectLockedIconPath => "char_select_char_name_locked.png".CharacterUiPath();
     public override string CustomMapMarkerPath => "map_marker_char_name.png".CharacterUiPath();
     public override string CustomVisualsPath => "charui/sakura_battle_standee.png".ImagePath();
+    public override string CustomMerchantAnimPath =>
+        Path.Join(MainFile.ResPath, "scenes", "merchant", "sakura_merchant_character.tscn");
     public override string CustomEnergyCounterPath =>
         Path.Join(MainFile.ResPath, "scenes", "combat", "energy_counters", "classic_sakura_energy_counter.tscn");
 

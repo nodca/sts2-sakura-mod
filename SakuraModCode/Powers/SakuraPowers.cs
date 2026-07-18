@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.Classic.Cards;
 using SakuraMod.SakuraModCode.Classic.Powers;
 using SakuraMod.SakuraModCode.Extensions;
 using STS2RitsuLib.Combat.HandSize;
@@ -34,7 +35,8 @@ public class ReflectionPower : SakuraModPower
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    internal static int ReflectedDamage(int attackDamage) => Math.Max(0, attackDamage);
+    internal static int ReflectedDamage(int attackDamage, int reflectionStacks) =>
+        (int)Math.Floor(Math.Max(0, attackDamage) * Math.Max(0, reflectionStacks) / 2m);
 
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature creature, DamageResult damageResult, ValueProp damageProps, Creature? source, CardModel? card)
     {
@@ -46,9 +48,15 @@ public class ReflectionPower : SakuraModPower
             || damageResult.TotalDamage <= 0)
             return;
 
-        var reflectionDamage = ReflectedDamage(damageResult.TotalDamage);
+        var reflectionDamage = ReflectedDamage(damageResult.TotalDamage, (int)Amount);
         await CreatureCmd.Damage(choiceContext, attacker, reflectionDamage, SakuraPowerValueProps.Damage, Owner, null);
         await PowerCmd.Decrement(this);
+    }
+
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
+    {
+        if (side == CombatSide.Enemy && Owner.Side == CombatSide.Player && Amount > 0)
+            await PowerCmd.Decrement(this);
     }
 }
 
@@ -781,6 +789,7 @@ public class KindnessPower : SakuraModPower
             || _targetCard is not null
             || _pendingEffects.Count == 0
             || card.Owner?.Creature != Owner
+            || !ClassicSakuraCardCatalog.CanBeTargetedByClearCardEffects(card)
             || pileType != PileType.Exhaust)
             return (pileType, position);
 

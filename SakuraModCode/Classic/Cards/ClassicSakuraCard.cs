@@ -128,6 +128,27 @@ public abstract class ClassicSakuraCard(
             .Execute(choiceContext);
     }
 
+    protected async Task TriggerCurrentPoison(
+        PlayerChoiceContext choiceContext,
+        IEnumerable<Creature> targets,
+        int triggerCount)
+    {
+        if (triggerCount <= 0)
+            return;
+
+        foreach (var target in targets.Where(static target => target.IsAlive).ToList())
+        {
+            for (var i = 0; i < triggerCount && target.IsAlive; i++)
+            {
+                var poison = target.GetPower<PoisonPower>()?.Amount ?? 0;
+                if (poison <= 0)
+                    break;
+
+                await DealDamage(choiceContext, target, poison, ValueProp.Unblockable);
+            }
+        }
+    }
+
     protected async Task DealDamageHit(AttackContext attackContext, PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move)
     {
         if (!target.IsAlive)
@@ -378,6 +399,11 @@ internal static class ClassicSakuraCardCatalog
         && SakuraTypeFor(identity) is not null
         && !HasSakuraIdentity(card.Owner, identity);
 
+    // Clear effects must not replay or recover Turn, otherwise one generated
+    // Turn can repeatedly convert Clow Cards into Sakura Cards.
+    internal static bool CanBeTargetedByClearCardEffects(CardModel card) =>
+        card is not SpellTurn;
+
     private static CardModel TypeToCard(Type type) =>
         ModelDb.GetById<CardModel>(ModelDb.GetId(type));
 
@@ -589,6 +615,8 @@ internal sealed class ClassicReturnRechargeVar() : DynamicVar("Magic", 15)
 
 internal static class ClassicSakuraMagic
 {
+    public const int NormalMagicChargeGain = 1;
+    public const int PowerMagicChargeGain = 2;
     public const int ElementOpportunityThreshold = 5;
     public const int ExtraEffectCost = 10;
     public const int SwordExtraHpLoss = 15;
@@ -660,7 +688,7 @@ internal static class ClassicSakuraMagic
 
     public static async Task GainMagic(PlayerChoiceContext choiceContext, CardModel card)
     {
-        var amount = card.Type == CardType.Power ? 2 : 1;
+        var amount = card.Type == CardType.Power ? PowerMagicChargeGain : NormalMagicChargeGain;
         await GainMagic(choiceContext, card.Owner, amount, card);
     }
 
@@ -907,12 +935,10 @@ internal static class ClassicSakuraAssetPaths
 
 internal static class ClassicCombatHistory
 {
-    public static int PlayedClassicCardsThisCombat(Player owner, CardModel excludedCard, Func<ClassicSakuraCard, bool> predicate) =>
+    public static int PlayedCardsThisCombat(Player owner, Func<CardModel, bool> predicate) =>
         CombatManager.Instance.History.CardPlaysFinished
             .Where(entry => entry is CardPlayFinishedEntry { CardPlay.Card.Owner: var cardOwner } && cardOwner == owner)
             .Select(entry => ((CardPlayFinishedEntry)entry).CardPlay.Card)
-            .Where(card => card != excludedCard)
-            .OfType<ClassicSakuraCard>()
             .Count(predicate);
 }
 
@@ -920,14 +946,11 @@ internal static class ClassicSnowRules
 {
     public const string PerCardDamageVar = "SnowDamage";
 
-    public static int PlayedWateryClowCards(CardModel card) =>
-        PlayedCards(card, static playedCard =>
-            playedCard.IsClowCard
-            && playedCard.Element.HasElement(ClassicElement.Watery));
-
     public static int PlayedWateryCards(CardModel card) =>
-        PlayedCards(card, static playedCard =>
-            playedCard.Element.HasElement(ClassicElement.Watery));
+        PlayedCards(card, CountsAsWateryCard);
+
+    internal static bool CountsAsWateryCard(CardModel card) =>
+        SakuraActions.HasClassicElement(card, ClassicElement.Watery);
 
     public static IEnumerable<Creature> FrostbiteReceivers(AttackCommand? attack) =>
         attack?.Results
@@ -959,10 +982,10 @@ internal static class ClassicSnowRules
         }
     }
 
-    private static int PlayedCards(CardModel card, Func<ClassicSakuraCard, bool> predicate) =>
+    private static int PlayedCards(CardModel card, Func<CardModel, bool> predicate) =>
         card.Owner is null || card.CombatState is null
             ? 0
-            : ClassicCombatHistory.PlayedClassicCardsThisCombat(card.Owner, card, predicate);
+            : ClassicCombatHistory.PlayedCardsThisCombat(card.Owner, predicate);
 }
 
 internal static class ClassicPowerRules
