@@ -333,7 +333,7 @@ internal static class SakuraGeneratedCardLifecycle
         return scope.CreateCard(source, owner);
     }
 
-    public static CardModel CreateGeneratedChoice(SakuraModCard source, CardModel card, bool upgraded)
+    public static CardModel CreateGeneratedChoice(SakuraCardModel source, CardModel card, bool upgraded)
     {
         var targetUpgradeLevel = upgraded
             ? Math.Max(1, card.CurrentUpgradeLevel)
@@ -413,7 +413,7 @@ internal static class SakuraGeneratedCardLifecycle
             FreeThisTurn = freeThisTurn
         };
 
-    private static CardModel CreateCardFromTemplate(SakuraModCard source, CardModel card)
+    private static CardModel CreateCardFromTemplate(SakuraCardModel source, CardModel card)
     {
         var scope = source.CardScope
             ?? throw new InvalidOperationException($"Cannot create generated {card.Id.Entry} without a card scope.");

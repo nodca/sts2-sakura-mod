@@ -344,10 +344,10 @@ internal static class ClearCardLayout
             title.VerticalAlignment = VerticalAlignment.Center;
         if (title.AutowrapMode != TextServer.AutowrapMode.Off)
             title.AutowrapMode = TextServer.AutowrapMode.Off;
-        if (title.MinFontSize != 16)
-            title.MinFontSize = 16;
-        if (title.MaxFontSize != 26)
-            title.MaxFontSize = 26;
+        if (title.MinFontSize != SakuraCardVisualStyle.NativeTitleMinFontSize)
+            title.MinFontSize = SakuraCardVisualStyle.NativeTitleMinFontSize;
+        if (title.MaxFontSize != SakuraCardVisualStyle.NativeTitleMaxFontSize)
+            title.MaxFontSize = SakuraCardVisualStyle.NativeTitleMaxFontSize;
     }
 
     private static void ApplyEnglishNameLayout(Label label, CardModel model)
@@ -438,7 +438,7 @@ internal static class ClearCardLayout
             return;
 
         if (IsExtraEffectDescriptionLine(text, start, end)
-            && !SakuraModCard.ShouldShowMagicChargeExtraEffectDescription(model))
+            && !SakuraCardModel.ShouldShowMagicChargeExtraEffectDescription(model))
             return;
 
         if (builder.Length > 0)
@@ -1075,7 +1075,7 @@ internal static class ClearCardLayout
                 : currentText;
             var language = CurrentLanguageKey();
             var temporary = model.IsTemporary();
-            var showExtraEffectDescription = SakuraModCard.ShouldShowMagicChargeExtraEffectDescription(model);
+            var showExtraEffectDescription = SakuraCardModel.ShouldShowMagicChargeExtraEffectDescription(model);
             var elements = SakuraActions.ElementSetOf(model);
             var synchronizedLine = SakuraStateText.SynchronizedLine(model);
 
@@ -1236,10 +1236,10 @@ internal static class ClearCardLayout
         public Vector2 DefaultHighlightPosition { get; } = new(-381f, -475f);
         public Vector2 DefaultHighlightSize { get; } = new(759f, 951f);
         public Vector2 DefaultHighlightPivotOffset { get; } = new(150f, 211f);
-        public int TitleTextFontSize { get; } = ScaledToInt(26);
-        public int TitleTextOutlineSize { get; } = ScaledToInt(12);
-        public int TitleTextShadowOffset { get; } = ScaledToInt(2);
-        public int TitleTextShadowOutlineSize { get; } = ScaledToInt(12);
+        public int TitleTextFontSize => SakuraCardVisualStyle.NativeTitleFontSize;
+        public int TitleTextOutlineSize => SakuraCardVisualStyle.NativeTitleOutlineSize;
+        public int TitleTextShadowOffset => SakuraCardVisualStyle.NativeTitleShadowOffset;
+        public int TitleTextShadowOutlineSize => SakuraCardVisualStyle.NativeTitleShadowOutlineSize;
         public int EnglishNameFontSize { get; } = ScaledToInt(22);
         public int NameTextOutlineSize { get; } = ScaledToInt(3);
         public int DescriptionPanelCornerRadius { get; } = ScaledToInt(4);

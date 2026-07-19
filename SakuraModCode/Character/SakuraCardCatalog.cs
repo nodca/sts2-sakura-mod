@@ -1,7 +1,6 @@
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Cards;
-using SakuraMod.SakuraModCode.Classic.Cards;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -143,11 +142,11 @@ internal static class SakuraCardCatalog
     public static IReadOnlyList<SakuraCardMetadata> Entries => EntriesInternal;
     public static IReadOnlyList<Type> PoolCardTypes { get; } =
         Array.AsReadOnly(EntriesInternal.Select(static entry => entry.CardType).ToArray());
-    public static IReadOnlyList<Type> ClassicCardTypes { get; } =
+    public static IReadOnlyList<Type> ClassicLayoutCardTypes { get; } =
         Array.AsReadOnly(
             EntriesInternal
                 .Where(static entry => entry.Era is SourceEraClass.Clow or SourceEraClass.Sakura
-                    || typeof(ClassicSpellCard).IsAssignableFrom(entry.CardType))
+                    || typeof(SpellCard).IsAssignableFrom(entry.CardType))
                 .Select(static entry => entry.CardType)
                 .ToArray());
 
@@ -221,8 +220,8 @@ internal static class SakuraCardCatalog
                 if (entry.Era != SourceEraClass.Clear && entry.VisualRoute == SakuraSourceCardVisualRoute.Clear)
                     throw new InvalidOperationException($"Non-Clear card {entry.CardType.Name} cannot use the Clear visual route.");
             }
-            else if (!typeof(ClassicSpellCard).IsAssignableFrom(entry.CardType)
-                     && !typeof(ClassicSakuraAncientCard).IsAssignableFrom(entry.CardType))
+            else if (!typeof(SpellCard).IsAssignableFrom(entry.CardType)
+                     && !typeof(SakuraAncientCard).IsAssignableFrom(entry.CardType))
             {
                 throw new InvalidOperationException($"Era-neutral catalog metadata is not allowed for {entry.CardType.Name}.");
             }
@@ -244,10 +243,10 @@ internal static class SakuraCardCatalog
             where TCard : CardModel =>
             Add<TCard>(identity, era, SakuraSourceCardVisualRoute.Classic);
 
-        void AddSpell<TCard>() where TCard : ClassicSpellCard =>
+        void AddSpell<TCard>() where TCard : SpellCard =>
             entries.Add(new(typeof(TCard), null, null, entries.Count, SakuraSourceCardVisualRoute.Classic));
 
-        void AddAncient<TCard>() where TCard : ClassicSakuraAncientCard =>
+        void AddAncient<TCard>() where TCard : SakuraAncientCard =>
             entries.Add(new(typeof(TCard), null, null, entries.Count, SakuraSourceCardVisualRoute.Vanilla));
 
         AddClassic<ClowSword>(SourceCardIdentity.Sword, SourceEraClass.Clow);

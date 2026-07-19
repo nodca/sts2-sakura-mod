@@ -1,4 +1,5 @@
 {
   "SAKURAMOD-ENABLE_SAKURA_VOICE.title": "Sakura voice",
+  "SAKURAMOD-ENABLE_SAKURA_VOICE.description": "Play Sakura voice cues on the first eligible spell cards each combat.",
   "SAKURAMOD-TELEMETRY_CONSENT.description": "Sends completed Standard-mode Kinomoto Sakura run history, correlated card reward choices, aggregate card draw counts, an opaque run key, exact ascension/player count, SakuraMod version, and loaded gameplay Mod ids/versions for balance diagnostics. SakuraMod adds no card-play data, card text, local path, or personal identifier."
 }

@@ -1,4 +1,5 @@
 {
   "SAKURAMOD-ENABLE_SAKURA_VOICE.title": "小樱语音",
+  "SAKURAMOD-ENABLE_SAKURA_VOICE.description": "每场战斗首次打出对应符咒牌时播放小樱语音。",
   "SAKURAMOD-TELEMETRY_CONSENT.description": "发送标准模式下木之本樱对局的完整结算历史、关联后的卡牌奖励选项与选择、卡牌抽取聚合计数、随机对局标识、准确进阶和玩家人数、SakuraMod 版本，以及已加载且会影响游戏玩法的 Mod ID/版本，用于平衡诊断。SakuraMod 不发送卡牌打出数据、卡牌文本、本地路径或个人身份信息。"
 }

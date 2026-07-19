@@ -4,7 +4,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Classic.Cards;
+using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Extensions;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -45,7 +45,7 @@ internal static class SakuraDescriptionRegion
         return SakuraCardCatalog.TryGetMetadata(card, out var metadata)
             && metadata.VisualRoute is SakuraSourceCardVisualRoute.Classic or SakuraSourceCardVisualRoute.Clear
             && (metadata.Era is SourceEraClass.Clow or SourceEraClass.Sakura or SourceEraClass.Clear
-                || card is ClassicSpellCard);
+                || card is SpellCard);
     }
 
     public static bool ShouldShow(
@@ -233,11 +233,11 @@ internal static class SakuraDescriptionRegion
 
     private static int BracketedIdentityKeywordCount(CardModel card)
     {
-        if (card is ClassicSpellCard spell)
-            return 1 + spell.Element.AsElements().Count();
-        if (card is ClassicSakuraCard classic)
+        if (card is SpellCard spell)
+            return 1 + spell.Elements.AsElements().Count();
+        if (card is SakuraSourceCard classic)
         {
-            var elementCount = classic.Element.AsElements().Count();
+            var elementCount = classic.Elements.AsElements().Count();
             return classic.IsSakuraCard
                 ? 1 + elementCount
                 : elementCount;

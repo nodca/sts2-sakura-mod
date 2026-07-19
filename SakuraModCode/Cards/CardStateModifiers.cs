@@ -646,7 +646,6 @@ public static class SakuraCardStates
         if (!card.RemoveTemporaryForStabilize())
             return;
 
-        SakuraVoicePlayback.TryPlay(SakuraVoiceTrigger.Stabilize, card.CombatState);
         await SakuraManifestLoop.OnTemporaryStabilized(choiceContext, card);
     }
 

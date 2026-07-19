@@ -12,8 +12,7 @@ using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
-using SakuraMod.SakuraModCode.Classic.Cards;
-using SakuraMod.SakuraModCode.Classic.Powers;
+using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
@@ -37,7 +36,7 @@ public static class SakuraActions
         await PowerCmd.Apply<SakuraExtraEffectCountThisTurnPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
     }
 
-    public static async Task ReduceCostThisTurn(PlayerChoiceContext choiceContext, SakuraModCard source, CardModel card, int amount = 1)
+    public static async Task ReduceCostThisTurn(PlayerChoiceContext choiceContext, SakuraCardModel source, CardModel card, int amount = 1)
     {
         if (amount <= 0)
             return;
@@ -49,7 +48,7 @@ public static class SakuraActions
 
     public static async Task Attack(
         PlayerChoiceContext context,
-        SakuraModCard source,
+        SakuraCardModel source,
         Creature target,
         decimal damage,
         ValueProp props = ValueProp.Move,
@@ -62,7 +61,7 @@ public static class SakuraActions
 
     public static async Task Attack(
         PlayerChoiceContext context,
-        SakuraModCard source,
+        SakuraCardModel source,
         Creature target,
         CalculatedDamageVar damage,
         int hitCount = 1)
@@ -78,7 +77,7 @@ public static class SakuraActions
 
     public static async Task Attack(
         PlayerChoiceContext context,
-        SakuraModCard source,
+        SakuraCardModel source,
         IEnumerable<Creature> targets,
         decimal damage,
         ValueProp props = ValueProp.Move,
@@ -99,7 +98,7 @@ public static class SakuraActions
 
     public static async Task Attack(
         PlayerChoiceContext context,
-        SakuraModCard source,
+        SakuraCardModel source,
         IEnumerable<Creature> targets,
         CalculatedDamageVar damage,
         int hitCount = 1)
@@ -118,7 +117,7 @@ public static class SakuraActions
     }
 
     public static AttackCommand AttackCommand(
-        SakuraModCard source,
+        SakuraCardModel source,
         Creature target,
         decimal damage,
         ValueProp props = ValueProp.Move,
@@ -133,80 +132,58 @@ public static class SakuraActions
             .Targeting(target)
             .WithHitFx(vfx, sfx, tmpSfx);
 
-    internal static ValueProp AttackProps(SakuraModCard source, ValueProp props) =>
+    internal static ValueProp AttackProps(SakuraCardModel source, ValueProp props) =>
         LucidPiercePower.ShouldPierce(source.Owner.Creature, source)
             ? props | ValueProp.Unblockable
             : props;
 
-    public static SakuraElementSet ElementSetOf(CardModel card) =>
-        ElementSetFromKeywords(card.Keywords);
+    public static SakuraElementSet ElementSetOf(CardModel? card) =>
+        card switch
+        {
+            SakuraSourceCard sourceCard => sourceCard.Elements,
+            null => SakuraElementSet.None,
+            _ => ElementSetFromKeywords(card.Keywords)
+        };
 
     public static SakuraElementSet StaticElementSetOf(CardModel card) =>
-        ElementSetFromKeywords(card.CanonicalKeywords);
+        card is SakuraSourceCard sourceCard
+            ? sourceCard.Elements
+            : ElementSetFromKeywords(card.CanonicalKeywords);
 
     public static IReadOnlyList<SakuraElement> ElementsOf(CardModel card) =>
         ElementSetOf(card).AsElements().ToList();
 
-    public static ClassicElement ClassicElementSetOf(CardModel? card)
-    {
-        if (card is ClassicSakuraCard classicCard)
-            return classicCard.Element;
+    public static bool HasElement(CardModel? card, SakuraElement element) =>
+        ElementSetOf(card).HasElement(element);
 
-        return card is null
-            ? ClassicElement.None
-            : ClassicElementSetFrom(ElementSetOf(card));
-    }
-
-    public static bool HasClassicElement(CardModel? card, ClassicElement element) =>
-        ClassicElementSetOf(card).HasElement(element);
-
-    public static async Task<bool> ApplyMissingClassicElementStates(PlayerChoiceContext choiceContext, CardModel card)
+    public static async Task<bool> ApplyMissingElementStates(PlayerChoiceContext choiceContext, CardModel card)
     {
         if (!card.IsMutable)
             return false;
 
         var applied = false;
-        foreach (var element in ClassicElementSetOf(card).AsElements())
-            applied |= await ApplyClassicElementStateIfMissing(choiceContext, card.Owner, element);
+        foreach (var element in ElementSetOf(card).AsElements())
+            applied |= await ApplyElementStateIfMissing(choiceContext, card.Owner, element);
         return applied;
     }
 
-    internal static ClassicElement ClassicElementSetFrom(SakuraElementSet elements)
-    {
-        var classicElements = ClassicElement.None;
-        foreach (var element in elements.AsElements())
-            classicElements |= ClassicElementFrom(element);
-
-        return classicElements;
-    }
-
-    private static ClassicElement ClassicElementFrom(SakuraElement element) =>
-        element switch
-        {
-            SakuraElement.Wind => ClassicElement.Windy,
-            SakuraElement.Water => ClassicElement.Watery,
-            SakuraElement.Fire => ClassicElement.Firey,
-            SakuraElement.Earth => ClassicElement.Earthy,
-            _ => ClassicElement.None
-        };
-
-    private static async Task<bool> ApplyClassicElementStateIfMissing(
+    private static async Task<bool> ApplyElementStateIfMissing(
         PlayerChoiceContext choiceContext,
         Player owner,
-        ClassicElement element)
+        SakuraElement element)
     {
         switch (element)
         {
-            case ClassicElement.Earthy when owner.Creature.GetPower<ClassicEarthyPower>() is null:
+            case SakuraElement.Earth when owner.Creature.GetPower<ClassicEarthyPower>() is null:
                 await PowerCmd.Apply<ClassicEarthyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
                 return true;
-            case ClassicElement.Firey when owner.Creature.GetPower<ClassicFireyPower>() is null:
+            case SakuraElement.Fire when owner.Creature.GetPower<ClassicFireyPower>() is null:
                 await PowerCmd.Apply<ClassicFireyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
                 return true;
-            case ClassicElement.Watery when owner.Creature.GetPower<ClassicWateryPower>() is null:
+            case SakuraElement.Water when owner.Creature.GetPower<ClassicWateryPower>() is null:
                 await PowerCmd.Apply<ClassicWateryPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
                 return true;
-            case ClassicElement.Windy when owner.Creature.GetPower<ClassicWindyPower>() is null:
+            case SakuraElement.Wind when owner.Creature.GetPower<ClassicWindyPower>() is null:
                 await PowerCmd.Apply<ClassicWindyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
                 return true;
             default:
@@ -258,7 +235,7 @@ public static class SakuraActions
     }
 
     public static async Task<CardModel?> SelectHandCard(
-        SakuraModCard source,
+        SakuraCardModel source,
         PlayerChoiceContext context,
         Func<CardModel, bool> predicate,
         bool cancelable = true)
@@ -282,11 +259,11 @@ public static class SakuraActions
             .Where(CanGenericStabilize)
             .ToList();
 
-    public static IReadOnlyList<CardModel> StabilizeCandidates(SakuraModCard source) =>
+    public static IReadOnlyList<CardModel> StabilizeCandidates(SakuraCardModel source) =>
         StabilizeCandidates(source.Owner);
 
     public static async Task<CardModel?> SelectStabilizeCandidate(
-        SakuraModCard source,
+        SakuraCardModel source,
         PlayerChoiceContext context,
         bool cancelable = true) =>
         await SelectFromCards(source, context, StabilizeCandidates(source), cancelable);
@@ -296,7 +273,7 @@ public static class SakuraActions
 
 
     public static async Task<IReadOnlyList<CardModel>> SelectHandCards(
-        SakuraModCard source,
+        SakuraCardModel source,
         PlayerChoiceContext context,
         Func<CardModel, bool> predicate,
         int count,
@@ -324,11 +301,11 @@ public static class SakuraActions
         return selected.ToList();
     }
 
-    public static IEnumerable<CardModel> Hand(SakuraModCard source) =>
+    public static IEnumerable<CardModel> Hand(SakuraCardModel source) =>
         CardPile.Get(PileType.Hand, source.Owner)!.Cards;
 
     public static async Task<CardModel?> SelectFromCards(
-        SakuraModCard source,
+        SakuraCardModel source,
         PlayerChoiceContext context,
         IEnumerable<CardModel> cards,
         bool cancelable = true) =>
@@ -379,7 +356,7 @@ public static class SakuraActions
     }
 
     public static async Task<CardModel?> SelectFromCardPreviews(
-        SakuraModCard source,
+        SakuraCardModel source,
         PlayerChoiceContext context,
         IReadOnlyList<CardModel> cards,
         bool cancelable = true) =>
@@ -426,7 +403,7 @@ public static class SakuraActions
     }
 
     public static async Task<IReadOnlyList<CardModel>> SelectUpToFromCards(
-        SakuraModCard source,
+        SakuraCardModel source,
         PlayerChoiceContext context,
         IEnumerable<CardModel> cards,
         int count,
@@ -507,7 +484,7 @@ public static class SakuraActions
     }
 
     internal static bool HasExchangeableEnergyCost(CardModel card) =>
-        card is not ClassicSakuraCard { ShowsEnergyCost: false }
+        card is not SakuraSourceCard { ShowsEnergyCost: false }
         && !card.EnergyCost.CostsX
         && card.EnergyCost.GetWithModifiers(CostModifiers.None) >= 0;
 

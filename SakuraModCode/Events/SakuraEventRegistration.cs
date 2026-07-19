@@ -1,5 +1,5 @@
 using MegaCrit.Sts2.Core.Models.Acts;
-using SakuraMod.SakuraModCode.Classic.Events;
+using SakuraMod.SakuraModCode.Events;
 using STS2RitsuLib.Content;
 
 namespace SakuraMod.SakuraModCode.Events;

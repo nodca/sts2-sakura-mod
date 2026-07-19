@@ -2,7 +2,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.addons.mega_text;
-using SakuraMod.SakuraModCode.Classic.Cards;
+using SakuraMod.SakuraModCode.Cards;
 using STS2RitsuLib.Patching;
 using System.Reflection;
 

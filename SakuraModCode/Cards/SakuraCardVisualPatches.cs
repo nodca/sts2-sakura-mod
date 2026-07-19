@@ -21,6 +21,7 @@ internal static class SakuraCardVisualPatchRegistration
 
         patcher.RegisterPatch<SakuraCardReloadPortraitSynchronizationPatch>();
         patcher.RegisterPatch<SakuraCardUpdateVisualsPatch>();
+        patcher.RegisterPatch<SakuraCardEnchantmentChangedGeometryPatch>();
         patcher.RegisterPatch<SakuraGeneratedTransparentCardUpdateVisualsPatch>();
         patcher.RegisterPatch<KinomotoSakuraCardRewardGlowPatch>();
         patcher.RegisterPatch<KinomotoSakuraCardCurrentSizePatch>();
@@ -64,6 +65,9 @@ internal static class SakuraCardVisualPatchRegistration
 
     internal static ModPatchTarget NCardReloadTarget() =>
         PatchTarget.Method<NCard>("Reload", Type.EmptyTypes);
+
+    internal static ModPatchTarget NCardOnEnchantmentChangedTarget() =>
+        PatchTarget.Method<NCard>("OnEnchantmentChanged", Type.EmptyTypes);
 }
 
 internal sealed class SakuraCardReloadPortraitSynchronizationPatch : IPatchMethod
@@ -103,6 +107,23 @@ internal sealed class SakuraCardUpdateVisualsPatch : IPatchMethod
     public static void Postfix(NCard __instance)
     {
         SakuraCardLifecycle.AfterCardUpdateVisuals(__instance);
+    }
+}
+
+internal sealed class SakuraCardEnchantmentChangedGeometryPatch : IPatchMethod
+{
+    public static string PatchId => "sakura_card_enchantment_changed_geometry";
+    public static string Description => "Restore Sakura card enchantment tab geometry after a live enchantment change";
+    public static bool IsCritical => true;
+
+    public static ModPatchTarget[] GetTargets() =>
+    [
+        SakuraCardVisualPatchRegistration.NCardOnEnchantmentChangedTarget()
+    ];
+
+    public static void Postfix(NCard __instance)
+    {
+        SakuraCardGeometryLifecycle.AfterNativeEnchantmentChanged(__instance);
     }
 }
 

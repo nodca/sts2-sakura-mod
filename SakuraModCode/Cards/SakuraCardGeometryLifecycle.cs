@@ -54,8 +54,8 @@ internal static class SakuraCardGeometryLifecycle
                 hiddenNode as Control,
                 SakuraControlProperty.Position | SakuraControlProperty.Size);
         }
-        ledger.Borrow(card.EnchantmentTab, SakuraControlProperty.Position);
-        ledger.Borrow(card.EnchantmentVfxOverride, SakuraControlProperty.Position);
+        ledger.BorrowPositionBaseline(card.EnchantmentTab);
+        ledger.BorrowPositionBaseline(card.EnchantmentVfxOverride);
 
         ledger.BorrowViewportSize(transformVfxViewport);
     }
@@ -72,8 +72,15 @@ internal static class SakuraCardGeometryLifecycle
         EnsureTransformVfxViewportFits(transformVfxViewport, profile.RootSize);
         SakuraCardVisualInfrastructure.ApplySize(card, profile.RootSize, rootPivotOffset);
         SakuraCardVisualInfrastructure.ApplyBox(card.Body, rootBox);
-        ApplyNativeCenteredOverlay(card.EnchantmentTab);
-        ApplyNativeCenteredOverlay(card.EnchantmentVfxOverride);
+        var ledger = SakuraCardMutationLedgers.For(card);
+        ApplyNativeCenteredOverlay(ledger, card.EnchantmentTab);
+        ApplyNativeCenteredOverlay(ledger, card.EnchantmentVfxOverride);
+    }
+
+    public static void AfterNativeEnchantmentChanged(NCard card)
+    {
+        if (SakuraCardGeometry.TryProfile(SakuraCardVisualFamilies.Layout(card), out _))
+            ApplyNativeCenteredOverlay(SakuraCardMutationLedgers.For(card), card.EnchantmentTab);
     }
 
     public static void ApplyCardHighlight(
@@ -189,14 +196,20 @@ internal static class SakuraCardGeometryLifecycle
         SakuraCardVisualInfrastructure.ApplyBox(flash, box);
     }
 
-    private static void ApplyNativeCenteredOverlay(Control? control)
+    private static void ApplyNativeCenteredOverlay(
+        SakuraCardMutationLedger ledger,
+        Control? control)
     {
         if (!SakuraCardVisualInfrastructure.IsGodotInstanceUsable(control))
             return;
 
-        var position = SakuraCardGeometry.MapNativeCenteredOverlayPosition(control!.Position);
-        if (control.Position != position)
-            control.Position = position;
+        var usableControl = control!;
+        var nativePosition = ledger.TryGetPositionBaseline(usableControl, out var baseline)
+            ? baseline
+            : usableControl.Position;
+        var position = SakuraCardGeometry.MapNativeCenteredOverlayPosition(nativePosition);
+        if (usableControl.Position != position)
+            usableControl.Position = position;
     }
 
     private static void EnsureTransformVfxViewportFits(SubViewport? viewport, Vector2 rootSize)

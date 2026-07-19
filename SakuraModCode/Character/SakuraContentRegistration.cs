@@ -1,10 +1,8 @@
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Cards;
-using SakuraMod.SakuraModCode.Classic.Cards;
-using SakuraMod.SakuraModCode.Classic.Character;
-using SakuraMod.SakuraModCode.Classic.Powers;
-using SakuraMod.SakuraModCode.Classic.Relics;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
+using SakuraMod.SakuraModCode.Relics;
 using STS2RitsuLib.Content;
 using STS2RitsuLib;
 
@@ -18,14 +16,14 @@ internal static class SakuraContentRegistration
 
         SakuraMemoryPile.Register();
         SakuraCardTextCapabilities.Register();
-        ClassicSakuraCardTextCapabilities.Register();
+        SakuraSourceCardTextCapabilities.Register();
         ConfigureDefaultCardTextCapabilities(registry);
         registry.RegisterSingleton<SakuraDrawCountHook>();
         registry.RegisterSingleton<GrowingMagicDamageHook>();
         registry.RegisterCharacter<ClassicSakura>();
         RegisterCards(registry, typeof(ClassicSakuraCardPool), AllCardTypesForRegistration());
         RegisterPowers(registry, AllPowerTypesForRegistration());
-        RegisterRelics(registry, typeof(ClassicSakuraRelicPool), ClassicSakuraExclusiveRelics.AllClassicRelicTypes());
+        RegisterRelics(registry, typeof(ClassicSakuraRelicPool), SakuraRelicCatalog.AllRelicTypes());
         RitsuLibFramework.RegisterTouchOfOrobasRefinementMapping<ClassicSealedWandRelic, ClassicStarWandRelic>(MainFile.ModId);
         RitsuLibFramework.RegisterArchaicToothTranscendenceMapping<SpellSeal, GrowingMagic>(MainFile.ModId);
         RitsuLibFramework.RegisterDustyTomeCard<ClassicSakura, AnotherMe>(MainFile.ModId);
@@ -57,7 +55,7 @@ internal static class SakuraContentRegistration
 
     private static void ConfigureDefaultCardTextCapabilities(ModContentRegistry registry)
     {
-        registry.ConfigureDefaultModelCapabilities<SakuraModCard>(
+        registry.ConfigureDefaultModelCapabilities<SakuraCardModel>(
             "SakuraMod:DefaultSakuraCardText",
             static (_, capabilities) => capabilities.Add<SakuraCardHoverTipCapability>(),
             0);
@@ -65,9 +63,9 @@ internal static class SakuraContentRegistration
             "SakuraMod:DefaultSakuraOptionCardText",
             static (_, capabilities) => capabilities.Add<SakuraCardHoverTipCapability>(),
             0);
-        registry.ConfigureDefaultModelCapabilities<ClassicSakuraCard>(
+        registry.ConfigureDefaultModelCapabilities<SakuraSourceCard>(
             "SakuraMod:DefaultClassicSakuraCardText",
-            static (_, capabilities) => capabilities.Add<ClassicSakuraCardTextCapability>(),
+            static (_, capabilities) => capabilities.Add<SakuraSourceCardTextCapability>(),
             0);
     }
 

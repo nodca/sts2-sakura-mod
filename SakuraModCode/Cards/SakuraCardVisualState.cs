@@ -46,6 +46,7 @@ internal sealed class SakuraCardMutationLedger
 {
     private readonly List<ISakuraCardMutation> _mutations = [];
     private readonly HashSet<SakuraMutationKey> _keys = new(SakuraMutationKeyComparer.Instance);
+    private readonly Dictionary<Control, Vector2> _positionBaselines = new(ReferenceEqualityComparer.Instance);
     private SakuraCardRendererId? _renderer;
     private bool _isApplied;
 
@@ -187,6 +188,24 @@ internal sealed class SakuraCardMutationLedger
                     target.IsVerticallyBound = value.IsVerticallyBound;
                 });
         }
+    }
+
+    public void BorrowPositionBaseline(Control? control)
+    {
+        if (!SakuraCardVisualInfrastructure.IsGodotInstanceUsable(control))
+            return;
+
+        _positionBaselines.TryAdd(control!, control!.Position);
+        Borrow(control, SakuraControlProperty.Position);
+    }
+
+    public bool TryGetPositionBaseline(Control? control, out Vector2 position)
+    {
+        if (control is not null && _positionBaselines.TryGetValue(control, out position))
+            return true;
+
+        position = default;
+        return false;
     }
 
     public void BorrowVisibility(CanvasItem? item)
@@ -352,6 +371,7 @@ internal sealed class SakuraCardMutationLedger
 
         _mutations.Clear();
         _keys.Clear();
+        _positionBaselines.Clear();
         _renderer = null;
         _isApplied = false;
     }

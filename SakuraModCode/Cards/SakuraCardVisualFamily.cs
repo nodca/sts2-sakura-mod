@@ -5,7 +5,7 @@ using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Classic.Cards;
+using SakuraMod.SakuraModCode.Cards;
 using STS2RitsuLib.Patching;
 using System.Reflection;
 using System.Runtime.CompilerServices;

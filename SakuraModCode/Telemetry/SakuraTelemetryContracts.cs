@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Classic.Cards;
+using SakuraMod.SakuraModCode.Cards;
 using STS2RitsuLib.Compat;
 
 namespace SakuraMod.SakuraModCode.Telemetry;
@@ -140,7 +140,7 @@ internal static class SakuraTelemetryCardClassifier
             return true;
         }
 
-        if (typeof(ClassicSpellCard).IsAssignableFrom(cardType))
+        if (typeof(SpellCard).IsAssignableFrom(cardType))
         {
             category = "spell";
             owner = MainFile.ModId;

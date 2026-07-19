@@ -5,11 +5,11 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardLibrary;
-using SakuraMod.SakuraModCode.Classic.Character;
+using SakuraMod.SakuraModCode.Character;
 
 namespace SakuraMod.SakuraModCode.Character;
 
-// RitsuLib 0.4.59 owns compendium filter-row placement, but not the card order inside NCardLibraryGrid.
+// RitsuLib 0.4.60 owns compendium filter-row placement, but not the card order inside NCardLibraryGrid.
 [HarmonyPatch(typeof(NCardGrid), nameof(NCardGrid.SetCards))]
 internal static class SakuraCardLibrarySortPatch
 {

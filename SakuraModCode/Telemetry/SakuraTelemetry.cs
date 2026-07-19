@@ -19,7 +19,7 @@ using STS2RitsuLib.Content;
 using STS2RitsuLib.RunData;
 using STS2RitsuLib.Settings;
 using STS2RitsuLib.Telemetry;
-using ClassicSakuraCharacter = SakuraMod.SakuraModCode.Classic.Character.ClassicSakura;
+using SakuraCharacterModel = SakuraMod.SakuraModCode.Character.ClassicSakura;
 
 namespace SakuraMod.SakuraModCode.Telemetry;
 
@@ -42,7 +42,7 @@ internal static class SakuraTelemetry
     private const string RunSavedDataKey = "balance_run_v1";
 
     internal static readonly string SakuraCharacterEntry =
-        ModContentRegistry.GetCompoundId(MainFile.ModId, "CHARACTER", ClassicSakuraCharacter.CharacterId);
+        ModContentRegistry.GetCompoundId(MainFile.ModId, "CHARACTER", SakuraCharacterModel.CharacterId);
 
     private static RunSavedData<BalanceRunIdentity>? _runData;
     private static bool _registered;

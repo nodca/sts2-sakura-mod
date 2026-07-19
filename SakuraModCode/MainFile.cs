@@ -3,8 +3,6 @@ using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Modding;
 using SakuraMod.SakuraModCode.Cards;
-using SakuraMod.SakuraModCode.Classic.Cards;
-using SakuraMod.SakuraModCode.Classic.Character;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Events;
 using SakuraMod.SakuraModCode.Telemetry;
@@ -23,9 +21,11 @@ public partial class MainFile : Node
     public static void Initialize()
     {
         ModTypeDiscoveryHub.RegisterModAssembly(ModId, Assembly.GetExecutingAssembly());
+        SakuraModConfig.Register();
 
         SakuraKeywords.Register();
         SakuraCardStates.Register();
+        SakuraVoicePlayback.Register();
         SakuraContentRegistration.Register();
         SakuraEventRegistration.Register();
         SakuraTelemetry.Register();
@@ -35,7 +35,7 @@ public partial class MainFile : Node
         harmony.PatchAll();
         SakuraCardVisualPatchRegistration.Register();
         SakuraCombatResourceHudPatchRegistration.Register();
-        ClassicSakuraRunHooks.Register();
+        SakuraRunHooks.Register();
         ClearCardLayout.PreloadVisualResources();
     }
 }

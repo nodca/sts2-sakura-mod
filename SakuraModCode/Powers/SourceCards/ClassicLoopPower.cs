@@ -1,0 +1,59 @@
+using MegaCrit.Sts2.Core.CardSelection;
+using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.Powers;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
+using MegaCrit.Sts2.Core.Rooms;
+using MegaCrit.Sts2.Core.ValueProps;
+using SakuraMod.SakuraModCode;
+using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.Relics;
+using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.Powers;
+using STS2RitsuLib.Combat.HandSize;
+using STS2RitsuLib.Scaffolding.Content;
+using STS2RitsuLib.Scaffolding.Content.Patches;
+using STS2RitsuLib.Utils;
+
+namespace SakuraMod.SakuraModCode.Powers;
+
+public class ClassicLoopPower : SakuraPowerModel
+{
+    protected override string IconFileName => "loop_power.png";
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+
+    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
+    {
+        if (Owner.Player != player || Amount <= 0)
+            return;
+
+        await CardPileCmd.Draw(choiceContext, Amount, player, false);
+        var hand = CardPile.GetCards(player, PileType.Hand).ToList();
+        if (hand.Count == 0)
+            return;
+
+        var selected = (await CardSelectCmd.FromHand(
+            choiceContext,
+            player,
+            new CardSelectorPrefs(CardSelectorPrefs.DiscardSelectionPrompt, 0, Math.Min(Amount, hand.Count))
+            {
+                Cancelable = true
+            },
+            hand.Contains,
+            this)).ToList();
+        if (selected.Count > 0)
+            await CardCmd.Discard(choiceContext, selected);
+    }
+}
+

@@ -24,7 +24,7 @@ public static class SakuraManifestLoop
     private static readonly ConditionalWeakTable<ICombatState, Dictionary<Player, Type>> CaptureCandidatesByCombat = new();
 
     public static Task<IReadOnlyList<CardModel>> Manifest(
-        SakuraModCard source,
+        SakuraCardModel source,
         PlayerChoiceContext context,
         int amount,
         bool stabilize = false,
@@ -86,7 +86,7 @@ public static class SakuraManifestLoop
     }
 
     public static async Task<CardModel?> AddTemporaryTransparentCopyToHand(
-        SakuraModCard source,
+        SakuraCardModel source,
         PlayerChoiceContext context,
         bool freeThisTurn)
     {

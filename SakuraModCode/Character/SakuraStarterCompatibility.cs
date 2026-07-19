@@ -3,8 +3,8 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Runs;
-using SakuraMod.SakuraModCode.Classic.Character;
-using SakuraMod.SakuraModCode.Classic.Relics;
+using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.Relics;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -24,7 +24,7 @@ public static class SakuraStarterCompatibility
         Player player,
         ref bool result)
     {
-        var sealedWand = ClassicUltimateWandRecipe.FindExactSealedWand(player);
+        var sealedWand = SakuraUltimateWandRecipe.FindExactSealedWand(player);
         if (sealedWand is null)
             return true;
 
@@ -41,7 +41,7 @@ public static class SakuraStarterCompatibility
         var owner = touchOfOrobas.Owner;
         var starterRelic = touchOfOrobas.StarterRelic is { } starterRelicId
             ? owner.GetRelicById(starterRelicId)
-            : ClassicUltimateWandRecipe.FindExactSealedWand(owner);
+            : SakuraUltimateWandRecipe.FindExactSealedWand(owner);
         if (starterRelic is not ClassicSealedWandRelic sealedWand
             || starterRelic.GetType() != typeof(ClassicSealedWandRelic))
         {
@@ -55,7 +55,7 @@ public static class SakuraStarterCompatibility
 
         result = RelicCmd.Replace(
             sealedWand,
-            ClassicUltimateWandRecipe.CreateStarWandReplacement(sealedWand));
+            SakuraUltimateWandRecipe.CreateStarWandReplacement(sealedWand));
         return false;
     }
 }

@@ -3,7 +3,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
-using SakuraMod.SakuraModCode.Classic.Cards;
+using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using STS2RitsuLib.Patching;
 using System.Reflection;
@@ -41,8 +41,8 @@ internal static class SakuraHandHighlightPolicy
     }
 
     private static bool SupportsGoldExtraEffectHighlight(CardModel model) =>
-        model is ClassicExtraClowCard
-        || SakuraModCard.HasMagicChargeExtraEffect(model);
+        model is ClowExtraEffectCard
+        || SakuraCardModel.HasMagicChargeExtraEffect(model);
 }
 
 internal static class SakuraHandHighlightVisual

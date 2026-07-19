@@ -1,7 +1,7 @@
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
-using SakuraMod.SakuraModCode.Classic.Cards;
+using SakuraMod.SakuraModCode.Cards;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -158,13 +158,13 @@ internal static class SakuraCardVisualLifecycle
         SakuraCardMutationLedger ledger)
     {
         ClearCardLayout.ApplyHolderVisuals(holder, ledger);
-        ClassicSakuraCardLayout.ApplyHolderVisuals(holder, ledger);
+        ClassicCardLayout.ApplyHolderVisuals(holder, ledger);
     }
 
     public static void ApplyDescriptionVisibility(NCard? card, bool visible)
     {
         ClearCardLayout.ApplyDescriptionVisibility(card, visible);
-        ClassicSakuraCardLayout.ApplyDescriptionVisibility(card, visible);
+        ClassicCardLayout.ApplyDescriptionVisibility(card, visible);
     }
 
     public static void CompleteHolderVisuals(SakuraHolderVisualMutation mutation)
@@ -215,7 +215,7 @@ internal static class SakuraCardVisualLifecycle
         return layout switch
         {
             SakuraCardVisualLayout.Clear => ClearCardLayout.TryRestoreOwnedTexturesForRecovery(card),
-            SakuraCardVisualLayout.Classic => ClassicSakuraCardLayout.TryRestoreOwnedTexturesForRecovery(card),
+            SakuraCardVisualLayout.Classic => ClassicCardLayout.TryRestoreOwnedTexturesForRecovery(card),
             _ => false,
         };
     }
@@ -254,19 +254,19 @@ internal static class SakuraCardVisualLifecycle
         if (currentLayout != SakuraCardVisualLayout.Clear)
             ClearCardLayout.RestoreCardIfTracked(card);
         if (currentLayout != SakuraCardVisualLayout.Classic)
-            ClassicSakuraCardLayout.RestoreCardIfTracked(card);
+            ClassicCardLayout.RestoreCardIfTracked(card);
     }
 
     private static void RestoreAllCardVisualsIfTracked(NCard card)
     {
         ClearCardLayout.RestoreCardIfTracked(card);
-        ClassicSakuraCardLayout.RestoreCardIfTracked(card);
+        ClassicCardLayout.RestoreCardIfTracked(card);
     }
 
     private static void ApplyCardVisuals(NCard card)
     {
         ClearCardLayout.Apply(card);
-        ClassicSakuraCardLayout.Apply(card);
+        ClassicCardLayout.Apply(card);
     }
 
     public static void BeforeCardUpdateVisuals(NCard card)
