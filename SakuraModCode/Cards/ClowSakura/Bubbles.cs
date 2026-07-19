@@ -32,18 +32,28 @@ public class ClowBubbles() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, ReleasedDamage());
-        var removed = await RemoveRandomBuff(choiceContext, target);
-        await GainUpgradeMagicCharge(choiceContext, removed);
+        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        {
+            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+            {
+                await DealDamage(choiceContext, target, ReleasedDamage());
+                var removed = await RemoveRandomBuff(choiceContext, target);
+                await GainUpgradeMagicCharge(choiceContext, removed);
+            }
+        });
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, ReleasedDamage());
-        var removed = await RemoveAllBuffs(target);
-        await GainUpgradeMagicCharge(choiceContext, removed);
+        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        {
+            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+            {
+                await DealDamage(choiceContext, target, ReleasedDamage());
+                var removed = await RemoveAllBuffs(target);
+                await GainUpgradeMagicCharge(choiceContext, removed);
+            }
+        });
     }
 
     protected override void OnUpgrade() { }
@@ -95,4 +105,3 @@ public class SakuraBubbles() : SakuraFormCard(0, CardType.Attack, TargetType.All
         }
     }
 }
-

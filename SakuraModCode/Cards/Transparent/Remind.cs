@@ -29,7 +29,7 @@ public class Remind() : TransparentCard(1, CardType.Skill, CardRarity.Rare, Targ
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
         [SakuraMemoryPile.PileId, SakuraCardHoverTips.RemindTipKey];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
@@ -66,4 +66,3 @@ public class Remind() : TransparentCard(1, CardType.Skill, CardRarity.Rare, Targ
 
     protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
 }
-

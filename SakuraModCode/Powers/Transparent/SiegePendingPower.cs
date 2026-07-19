@@ -60,17 +60,6 @@ public class SiegePendingPower : SakuraPowerModel
                 }
             }
 
-            if (pendingEffects.Length > 0)
-            {
-                await PowerCmd.Apply<SiegeGrowthPower>(
-                    choiceContext,
-                    Owner,
-                    SiegeRules.GrowthPerTrigger * pendingEffects.Length,
-                    Owner,
-                    null,
-                    false);
-            }
-
             foreach (var extraEffect in pendingEffects.Where(static extraEffect => extraEffect))
             {
                 var damage = SiegeRules.ExtraDamage(Owner.Block);
@@ -96,4 +85,3 @@ public class SiegePendingPower : SakuraPowerModel
         return Task.CompletedTask;
     }
 }
-

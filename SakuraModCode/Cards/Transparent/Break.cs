@@ -21,27 +21,28 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class Break() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(9, ValueProp.Move), new PowerVar<VulnerablePower>(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(7, ValueProp.Move), new PowerVar<VulnerablePower>(1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var target = RequiredTarget(play);
-        var hadBlock = target.Block > 0;
-        if (IsUpgraded && hadBlock)
-            await CreatureCmd.LoseBlock(target, target.Block);
+        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        {
+            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+            {
+                var hadBlock = target.Block > 0;
+                if (hadBlock)
+                    await CreatureCmd.LoseBlock(target, target.Block);
 
-        var damage = DynamicVars.Damage.IntValue * (hadBlock ? 2 : 1);
-        await SakuraActions.Attack(choiceContext, this, target, damage);
-        if (activation.IsActive)
-            await ApplyExtraEffect(choiceContext, play);
+                var damage = DynamicVars.Damage.IntValue * (hadBlock ? 2 : 1);
+                await SakuraActions.Attack(choiceContext, this, target, damage);
+                if (activation.IsActive)
+                    await ApplyExtraEffect(choiceContext, target);
+            }
+        });
     }
 
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
+    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, Creature target)
     {
-        var target = play.Target ?? CombatState?.HittableEnemies.FirstOrDefault();
-        if (target is null)
-            return;
-
         if (target.HasPower<ArtifactPower>())
             await PowerCmd.Apply<ArtifactPower>(choiceContext, target, -1, Owner.Creature, this, false);
         await PowerCmd.Apply<VulnerablePower>(choiceContext, target, DynamicVars.Vulnerable.IntValue, Owner.Creature, this, false);
@@ -53,4 +54,3 @@ public class Break() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity
         DynamicVars.Vulnerable.UpgradeValueBy(1);
     }
 }
-

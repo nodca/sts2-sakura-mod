@@ -36,8 +36,11 @@ public class ClowSleep() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Unc
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        foreach (var enemy in CombatState!.HittableEnemies.ToList())
-            await ApplySleep(choiceContext, enemy);
+        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        {
+            foreach (var enemy in CombatState!.HittableEnemies.ToList())
+                await ApplySleep(choiceContext, enemy);
+        });
     }
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
@@ -60,4 +63,3 @@ public class SakuraSleep() : SakuraFormCard(1, CardType.Skill, TargetType.AnyEne
         await ApplyPower<ClassicSleepPower>(choiceContext, target, ReleasedMagic());
     }
 }
-

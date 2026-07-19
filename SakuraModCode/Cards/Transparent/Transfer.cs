@@ -35,10 +35,15 @@ public class Transfer() : TransparentExtraEffectCard(1, CardType.Skill, CardRari
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         ApplyExtraEffectExhaustChange(activation);
-        var target = RequiredTarget(play);
-        await PowerCmd.Apply<StrengthPower>(choiceContext, target, -DynamicVars["EnemyStrengthLoss"].IntValue, Owner.Creature, this, false);
-        await PowerCmd.Apply<StrengthPower>(choiceContext, Owner.Creature, DynamicVars["StrengthGain"].IntValue, Owner.Creature, this, false);
-        await PowerCmd.Apply<DexterityPower>(choiceContext, Owner.Creature, DynamicVars["DexterityGain"].IntValue, Owner.Creature, this, false);
+        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        {
+            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+            {
+                await PowerCmd.Apply<StrengthPower>(choiceContext, target, -DynamicVars["EnemyStrengthLoss"].IntValue, Owner.Creature, this, false);
+                await PowerCmd.Apply<StrengthPower>(choiceContext, Owner.Creature, DynamicVars["StrengthGain"].IntValue, Owner.Creature, this, false);
+                await PowerCmd.Apply<DexterityPower>(choiceContext, Owner.Creature, DynamicVars["DexterityGain"].IntValue, Owner.Creature, this, false);
+            }
+        });
     }
 
     protected override PileType GetResultPileTypeForCardPlay() =>
@@ -60,7 +65,6 @@ public class Transfer() : TransparentExtraEffectCard(1, CardType.Skill, CardRari
         DynamicVars["StrengthGain"].UpgradeValueBy(1);
     }
 }
-
 
 
 

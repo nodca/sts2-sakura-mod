@@ -46,4 +46,3 @@ public class ClassicWindyPower : SakuraElementStatePower
         await CardPileCmd.Draw(choiceContext, 1, Owner.Player!, false);
     }
 }
-

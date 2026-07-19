@@ -18,7 +18,6 @@ internal static class SakuraContentRegistration
         SakuraCardTextCapabilities.Register();
         SakuraSourceCardTextCapabilities.Register();
         ConfigureDefaultCardTextCapabilities(registry);
-        registry.RegisterSingleton<SakuraDrawCountHook>();
         registry.RegisterSingleton<GrowingMagicDamageHook>();
         registry.RegisterCharacter<ClassicSakura>();
         RegisterCards(registry, typeof(ClassicSakuraCardPool), AllCardTypesForRegistration());

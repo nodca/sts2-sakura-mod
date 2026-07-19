@@ -38,23 +38,33 @@ public class ClowFreeze() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.U
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, ReleasedDamage());
         await GainBlock(play, ReleasedBlock());
-        await ApplyPower<SakuraFrostbitePower>(choiceContext, target, ReleasedValue("SakuraFrostbitePower"));
+        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        {
+            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+            {
+                await DealDamage(choiceContext, target, ReleasedDamage());
+                await ApplyPower<SakuraFrostbitePower>(choiceContext, target, ReleasedValue("SakuraFrostbitePower"));
+            }
+        });
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, ReleasedDamage());
         await GainBlock(play, ReleasedBlock());
-        var frostbite = ReleasedValue("SakuraFrostbitePower");
-        var existingFrostbite = target.GetPower<SakuraFrostbitePower>()?.Amount ?? 0;
-        await ApplyPower<SakuraFrostbitePower>(
-            choiceContext,
-            target,
-            SakuraFreezeRules.DoubledApplicationAmount(existingFrostbite, frostbite));
+        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        {
+            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+            {
+                await DealDamage(choiceContext, target, ReleasedDamage());
+                var frostbite = ReleasedValue("SakuraFrostbitePower");
+                var existingFrostbite = target.GetPower<SakuraFrostbitePower>()?.Amount ?? 0;
+                await ApplyPower<SakuraFrostbitePower>(
+                    choiceContext,
+                    target,
+                    SakuraFreezeRules.DoubledApplicationAmount(existingFrostbite, frostbite));
+            }
+        });
     }
 
     protected override void OnUpgrade()
@@ -78,14 +88,19 @@ public class SakuraFreeze() : SakuraFormCard(2, CardType.Attack, TargetType.AnyE
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, ReleasedDamage());
         await GainBlock(play, ReleasedBlock());
-        var isEliteOrBossTarget = SakuraEnemyRules.IsEliteOrBossTarget(target);
-        var frostbite = SakuraFreezeRules.FrostbiteAmount(
-            ReleasedValue("SakuraFrostbitePower"),
-            ReleasedValue("ExtraFrostbite"),
-            isEliteOrBossTarget);
-        await ApplyPower<SakuraFrostbitePower>(choiceContext, target, frostbite);
+        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        {
+            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+            {
+                await DealDamage(choiceContext, target, ReleasedDamage());
+                var isEliteOrBossTarget = SakuraEnemyRules.IsEliteOrBossTarget(target);
+                var frostbite = SakuraFreezeRules.FrostbiteAmount(
+                    ReleasedValue("SakuraFrostbitePower"),
+                    ReleasedValue("ExtraFrostbite"),
+                    isEliteOrBossTarget);
+                await ApplyPower<SakuraFrostbitePower>(choiceContext, target, frostbite);
+            }
+        });
     }
 }

@@ -9,7 +9,7 @@
   "SAKURAMOD-ENTER_LABYRINTH.title": "Enter the Labyrinth",
   "SAKURAMOD-ENTER_LABYRINTH.description": "Enemies in the Labyrinth cannot act and are unaffected by Attack cards. Starting at the end of your next turn, whenever your turn ends, a random enemy in the Labyrinth leaves it.",
   "SAKURAMOD-REMIND.title": "Remind",
-  "SAKURAMOD-REMIND.description": "Choose N cards from [gold]Memory[/gold]; if fewer than N are available, choose all of them.\nConsume them and add copies to your hand. They gain [red]Forgotten[/red] and cost 0 this turn. Cards recalled by Remind leave combat at end of turn instead of entering [gold]Memory[/gold].",
+  "SAKURAMOD-REMIND.description": "Choose N cards from [gold]Memory[/gold]; if fewer than N are available, choose all of them.\nConsume them and add copies to your hand. They gain [red]Forgotten[/red] and cost 0 this turn. Cards recalled by Remind do not enter [gold]Memory[/gold].",
   "SAKURAMOD-SPELL_CARD.title": "Spell",
   "SAKURAMOD-SPELL_CARD.description": "A special card type that is not a Clow Card, usually consumed after use.",
   "SAKURAMOD-UNREAL.title": "Unreal",

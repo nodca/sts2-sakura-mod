@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.Powers;
 using STS2RitsuLib.Content;
 using STS2RitsuLib.Models.Capabilities;
 
@@ -57,6 +58,9 @@ internal static class SakuraSourceCardText
                 tips.Add(HoverTipFactory.FromCard(sakuraCard));
         }
 
+        if (ReferencesThroughTip(card))
+            tips.Add(HoverTipFactory.FromPower<ClassicThroughPower>());
+
         foreach (var key in StaticTipKeys(card))
             tips.Add(StaticTip(key));
         foreach (var keyword in KeywordTips(card))
@@ -69,6 +73,9 @@ internal static class SakuraSourceCardText
         card is ClowCard { Identity: { } identity }
             ? identity
             : null;
+
+    internal static bool ReferencesThroughTip(SakuraSourceCard card) =>
+        card is ClowThrough or SakuraThrough;
 
     internal static IEnumerable<string> StaticTipKeys(SakuraSourceCard card)
     {

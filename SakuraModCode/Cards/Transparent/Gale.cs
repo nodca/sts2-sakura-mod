@@ -1,58 +1,72 @@
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
-using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Gale() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+public class Gale() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [SakuraCardHoverTips.TemporaryTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(3, ValueProp.Move),
-        new GaleHitsVar(),
-        new CardsVar("ExtraDraw", 3)
+        new DamageVar(6, ValueProp.Move),
+        new CardsVar("Cards", 2),
+        new CardsVar("ExtraCopies", 2)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var target = RequiredTarget(play);
-        var hits = GaleRules.HitCount(this);
         await SakuraActions.AttackCommand(this, target, DynamicVars.Damage.IntValue, DynamicVars.Damage.Props)
-            .WithHitCount(hits)
             .WithHitVfxNode(target => SakuraCardPlayVfx.CreateGaleWindBlade(Owner.Creature, target))
             .Execute(choiceContext);
 
         if (activation.IsActive)
-            await ApplyExtraEffect(choiceContext, play);
+            await ApplyExtraEffect(choiceContext);
     }
 
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await CardPileCmd.Draw(choiceContext, DynamicVars["ExtraDraw"].IntValue, Owner, false);
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        await base.AfterCardPlayed(choiceContext, play);
 
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(1);
-}
+        if (play.Card != this || !GaleRules.ShouldDrawAfterPlay(GaleRules.PlayedCount(Owner)))
+            return;
 
-internal sealed class GaleHitsVar() : DynamicVar("Hits", 1)
-{
-    public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks) =>
-        PreviewValue = GaleRules.HitCount(card);
+        await CardPileCmd.Draw(choiceContext, DynamicVars["Cards"].IntValue, Owner, false);
+    }
+
+    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext)
+    {
+        for (var i = 0; i < DynamicVars["ExtraCopies"].IntValue; i++)
+        {
+            await SakuraGeneratedCardLifecycle.AddTemporaryCopyToHand(
+                this,
+                freeThisTurn: false,
+                context: choiceContext);
+        }
+    }
+
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
 }
 
 internal static class GaleRules
 {
-    public static int HitCount(CardModel card) =>
-        HitCount(SakuraDrawCountHook.DrawCountThisTurn(card));
+    private const int PlaysPerDraw = 3;
 
-    internal static int HitCount(int drawCount) =>
-        1 + Math.Max(0, drawCount) / 2;
+    internal static int PlayedCount(Player owner) =>
+        SakuraCombatHistory.PlayedCardsThisCombat(owner, CountsAsGale);
+
+    internal static bool CountsAsGale(CardModel card) => card is Gale;
+
+    internal static bool ShouldDrawAfterPlay(int playedCount) =>
+        playedCount > 0 && playedCount % PlaysPerDraw == 0;
 }
-

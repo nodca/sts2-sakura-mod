@@ -53,9 +53,13 @@ public class SakuraSword() : SakuraFormCard(1, CardType.Attack, TargetType.AnyEn
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, ReleasedDamage());
-        await DealDamage(choiceContext, target, target.CurrentHp * ReleasedMagic() / 100, ValueProp.Unblockable);
+        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        {
+            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+            {
+                await DealDamage(choiceContext, target, ReleasedDamage());
+                await DealDamage(choiceContext, target, target.CurrentHp * ReleasedMagic() / 100, ValueProp.Unblockable);
+            }
+        });
     }
 }
-

@@ -23,12 +23,12 @@
   "SAKURA_MOD_POWER_SAKURA_EXTRA_EFFECT_COUNT_THIS_TURN_POWER.title": "额外效果计数",
   "SAKURA_MOD_POWER_SAKURA_EXTRA_EFFECT_COUNT_THIS_TURN_POWER.description": "本回合触发过[gold]额外效果[/gold]。",
   "SAKURA_MOD_POWER_SAKURA_EXTRA_EFFECT_COUNT_THIS_TURN_POWER.smartDescription": "本回合额外效果计数。",
-  "SAKURA_MOD_POWER_SIEGE_GROWTH_POWER.title": "围攻成长",
-  "SAKURA_MOD_POWER_SIEGE_GROWTH_POWER.description": "本场战斗中所有[gold]围攻[/gold]的基础格挡增加。",
-  "SAKURA_MOD_POWER_SIEGE_GROWTH_POWER.smartDescription": "[gold]围攻[/gold]的基础格挡增加 {Amount} 点。",
-  "SAKURA_MOD_POWER_SIEGE_PENDING_POWER.title": "围攻",
-  "SAKURA_MOD_POWER_SIEGE_PENDING_POWER.description": "敌人回合结束时，若仍有[gold]格挡[/gold]，结算[gold]围攻[/gold]。",
-  "SAKURA_MOD_POWER_SIEGE_PENDING_POWER.smartDescription": "待结算 {Amount} 次[gold]围攻[/gold]。",
+  "SAKURA_MOD_POWER_SIEGE_GROWTH_POWER.title": "包围成长",
+  "SAKURA_MOD_POWER_SIEGE_GROWTH_POWER.description": "为兼容旧存档而保留的旧版包围成长状态。",
+  "SAKURA_MOD_POWER_SIEGE_GROWTH_POWER.smartDescription": "旧版包围成长状态。",
+  "SAKURA_MOD_POWER_SIEGE_PENDING_POWER.title": "包围",
+  "SAKURA_MOD_POWER_SIEGE_PENDING_POWER.description": "敌人回合结束时，若仍有[gold]格挡[/gold]，结算[gold]包围[/gold]。",
+  "SAKURA_MOD_POWER_SIEGE_PENDING_POWER.smartDescription": "待结算 {Amount} 次[gold]包围[/gold]。",
   "SAKURA_MOD_POWER_REPAIR_REGENERATION_POWER.title": "修复",
   "SAKURA_MOD_POWER_REPAIR_REGENERATION_POWER.description": "你的[gold]再生[/gold]不再在回合结束时减少。",
   "SAKURA_MOD_POWER_REPAIR_REGENERATION_POWER.smartDescription": "再生不再衰减。",
@@ -199,5 +199,8 @@
   "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.smartDescription": "敌方回合开始：所有敌人获得 2 层中毒，并本回合失去 {Amount} 点力量。",
   "SAKURA_MOD_POWER_ANOTHER_ME_POWER.title": "另一个我",
   "SAKURA_MOD_POWER_ANOTHER_ME_POWER.description": "每当为额外效果消耗魔力充能后，返还 {Amount} 点魔力充能。",
-  "SAKURA_MOD_POWER_ANOTHER_ME_POWER.smartDescription": "为额外效果消耗魔力充能后，返还 {Amount} 点。"
+  "SAKURA_MOD_POWER_ANOTHER_ME_POWER.smartDescription": "为额外效果消耗魔力充能后，返还 {Amount} 点。",
+  "SAKURA_MOD_POWER_CLASSIC_THROUGH_POWER.title": "穿透",
+  "SAKURA_MOD_POWER_CLASSIC_THROUGH_POWER.description": "每回合打出的首张以单个敌人为目标的库洛牌、小樱牌、透明牌或符咒牌，会对目标及其右侧所有生物结算效果。且该牌每次攻击时，会造成无视格挡的追加伤害。",
+  "SAKURA_MOD_POWER_CLASSIC_THROUGH_POWER.smartDescription": "每回合首张符合条件的单体目标牌穿透右侧生物；每段伤害造成无视格挡的追加伤害。"
 }

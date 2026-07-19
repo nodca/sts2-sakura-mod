@@ -24,8 +24,8 @@
   "SAKURA_MOD_POWER_SAKURA_EXTRA_EFFECT_COUNT_THIS_TURN_POWER.description": "Extra effects triggered this turn.",
   "SAKURA_MOD_POWER_SAKURA_EXTRA_EFFECT_COUNT_THIS_TURN_POWER.smartDescription": "Extra effects this turn.",
   "SAKURA_MOD_POWER_SIEGE_GROWTH_POWER.title": "Siege Growth",
-  "SAKURA_MOD_POWER_SIEGE_GROWTH_POWER.description": "The base Block of ALL [gold]Siege[/gold] cards is increased this combat.",
-  "SAKURA_MOD_POWER_SIEGE_GROWTH_POWER.smartDescription": "[gold]Siege[/gold] base Block is increased by {Amount}.",
+  "SAKURA_MOD_POWER_SIEGE_GROWTH_POWER.description": "Legacy Siege growth state retained for save compatibility.",
+  "SAKURA_MOD_POWER_SIEGE_GROWTH_POWER.smartDescription": "Legacy Siege growth state.",
   "SAKURA_MOD_POWER_SIEGE_PENDING_POWER.title": "Siege",
   "SAKURA_MOD_POWER_SIEGE_PENDING_POWER.description": "At the end of the enemy turn, if you still have [gold]Block[/gold], resolve [gold]Siege[/gold].",
   "SAKURA_MOD_POWER_SIEGE_PENDING_POWER.smartDescription": "{Amount} [gold]Siege[/gold] effect(s) pending.",
@@ -199,5 +199,8 @@
   "SAKURA_MOD_POWER_CLASSIC_SAKURA_WOOD_POWER.smartDescription": "Enemy turn start: all enemies gain 2 [gold]Poison[/gold] and lose {Amount} [gold]Strength[/gold] this turn.",
   "SAKURA_MOD_POWER_ANOTHER_ME_POWER.title": "Another Me",
   "SAKURA_MOD_POWER_ANOTHER_ME_POWER.description": "Whenever Magic Charge is spent to activate an Extra effect, refund {Amount} Magic Charge.",
-  "SAKURA_MOD_POWER_ANOTHER_ME_POWER.smartDescription": "Paid Extra effects refund {Amount} Magic Charge."
+  "SAKURA_MOD_POWER_ANOTHER_ME_POWER.smartDescription": "Paid Extra effects refund {Amount} Magic Charge.",
+  "SAKURA_MOD_POWER_CLASSIC_THROUGH_POWER.title": "Through",
+  "SAKURA_MOD_POWER_CLASSIC_THROUGH_POWER.description": "The first Clow, Sakura, Clear, or Spell card you play each turn that targets one enemy resolves its effects on that target and all creatures to its right. Each time that card attacks, it deals unblocked bonus damage.",
+  "SAKURA_MOD_POWER_CLASSIC_THROUGH_POWER.smartDescription": "Your first eligible single-target card each turn pierces creatures to the right and adds unblocked damage to every damage segment."
 }

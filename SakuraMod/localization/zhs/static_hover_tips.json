@@ -9,7 +9,7 @@
   "SAKURAMOD-ENTER_LABYRINTH.title": "进入迷宫",
   "SAKURAMOD-ENTER_LABYRINTH.description": "迷宫中的敌人无法行动，也不受攻击牌影响。从你的下回合结束时起，每当你的回合结束时，随机 1 名在迷宫中的敌人离开迷宫。",
   "SAKURAMOD-REMIND.title": "想起",
-  "SAKURAMOD-REMIND.description": "从[gold]记忆区[/gold]选择 N 张牌；若不足 N 张，则选择全部。\n消耗这些牌，将其复制加入手牌。复制获得[red]遗忘[/red]，且本回合能耗为 0。由想起取回的牌在回合结束时会离开战斗，不会进入[gold]记忆区[/gold]。",
+  "SAKURAMOD-REMIND.description": "从[gold]记忆区[/gold]选择 N 张牌；若不足 N 张，则选择全部。\n消耗这些牌，将其复制加入手牌。复制获得[red]遗忘[/red]，且本回合能耗为 0。由想起取回的牌不会进入[gold]记忆区[/gold]。",
   "SAKURAMOD-SPELL_CARD.title": "符咒",
   "SAKURAMOD-SPELL_CARD.description": "不属于[gold]库洛牌[/gold]的一类特殊卡牌，多为消耗性牌。",
   "SAKURAMOD-UNREAL.title": "虚幻",

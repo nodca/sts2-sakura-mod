@@ -31,10 +31,10 @@ public class Mirage() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
     {
         var targets = activation.IsActive
             ? CombatState!.HittableEnemies.ToList()
-            : [RequiredTarget(play)];
-        await PowerCmd.Apply<MiragePower>(choiceContext, targets, 1, Owner.Creature, this, false);
+            : SakuraThroughResolution.TargetsFor(play);
+        await SakuraThroughResolution.WithPropagationSuppressed(() =>
+            PowerCmd.Apply<MiragePower>(choiceContext, targets, 1, Owner.Creature, this, false));
     }
 
     protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Retain);
 }
-
