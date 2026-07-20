@@ -26,5 +26,5 @@ public class SakuraTemporaryDexterityPower : TemporaryDexterityPower, IModPowerA
     public string? CustomIconPath => ModelDb.Power<DexterityPower>().PackedIconPath;
     public string? CustomBigIconPath => ModelDb.Power<DexterityPower>().ResolvedBigIconPath;
     public override AbstractModel OriginModel => ModelDb.Card<Flight>();
+    protected override bool IsVisibleInternal => false;
 }
-

@@ -46,9 +46,11 @@ internal static class SakuraSourceCardText
 
     public static IEnumerable<IHoverTip> HoverTips(
         SakuraSourceCard card,
-        Func<SourceCardIdentity, CardModel?>? sakuraTemplateFor = null)
+        Func<SourceCardIdentity, CardModel?>? sakuraTemplateFor = null,
+        Func<Type, CardModel?>? generatedSpellTemplateFor = null)
     {
         sakuraTemplateFor ??= SakuraSourceCardRules.SakuraTemplateFor;
+        generatedSpellTemplateFor ??= static type => ModelDb.GetById<CardModel>(ModelDb.GetId(type));
 
         var tips = new List<IHoverTip>();
         if (CounterpartPreviewIdentity(card) is { } identity)
@@ -56,6 +58,13 @@ internal static class SakuraSourceCardText
             var sakuraCard = sakuraTemplateFor(identity);
             if (sakuraCard is not null)
                 tips.Add(HoverTipFactory.FromCard(sakuraCard));
+        }
+
+        if (GeneratedSpellPreviewType(card) is { } spellType)
+        {
+            var spellCard = generatedSpellTemplateFor(spellType);
+            if (spellCard is not null)
+                tips.Add(HoverTipFactory.FromCard(spellCard));
         }
 
         if (ReferencesThroughTip(card))
@@ -73,6 +82,16 @@ internal static class SakuraSourceCardText
         card is ClowCard { Identity: { } identity }
             ? identity
             : null;
+
+    internal static Type? GeneratedSpellPreviewType(SakuraSourceCard card) =>
+        card switch
+        {
+            ClowEarthy => typeof(SpellLeiDi),
+            ClowFirey => typeof(SpellHuoShen),
+            ClowWatery => typeof(SpellShuiLong),
+            ClowWindy => typeof(SpellFengHua),
+            _ => null
+        };
 
     internal static bool ReferencesThroughTip(SakuraSourceCard card) =>
         card is ClowThrough or SakuraThrough;

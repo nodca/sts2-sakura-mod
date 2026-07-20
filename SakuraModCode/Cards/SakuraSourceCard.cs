@@ -332,25 +332,33 @@ internal static class SakuraSourceCardRules
             .OfType<SakuraFormCard>()
             .Any(card => card.Identity == identity);
 
-    public static CardModel CreateMirrorCopySource(CardModel source)
+    public static CardModel CreateMirrorCopySource(CardModel source) =>
+        CreateMirrorCopySource(
+            source,
+            identity => HasSakuraIdentity(source.Owner, identity),
+            type => CreateCombatCardFromType(source, type),
+            static card => card.CreateClone());
+
+    internal static CardModel CreateMirrorCopySource(
+        CardModel source,
+        Func<SourceCardIdentity, bool> hasSakuraIdentity,
+        Func<Type, CardModel> createCanonicalCombatCard,
+        Func<CardModel, CardModel> cloneSource)
     {
         if (source is SakuraLove)
-            return CreateCombatCardFromType<SpellEmptySpell>(source);
+            return createCanonicalCombatCard(typeof(SpellEmptySpell));
 
         if (source is SakuraHope)
-            return CreateCombatCardFromType<ClowNothing>(source);
+            return createCanonicalCombatCard(typeof(ClowNothing));
 
-        if (source is SakuraFormCard { Identity: { } identity } && HasSakuraIdentity(source.Owner, identity))
+        if (source is SakuraFormCard { Identity: { } identity } && hasSakuraIdentity(identity))
         {
             var clowType = ClowTypeFor(identity)
                 ?? throw new InvalidOperationException($"Missing Clow mirror source for {identity}.");
-            var canonicalClow = ModelDb.GetById<CardModel>(ModelDb.GetId(clowType));
-            var clowCopy = source.CombatState!.CreateCard(canonicalClow, source.Owner);
-            MatchStatEquivalentCopy(clowCopy, source);
-            return clowCopy;
+            return createCanonicalCombatCard(clowType);
         }
 
-        return source.CreateClone();
+        return cloneSource(source);
     }
 
     public static bool HasSpecialCard<T>(Player owner) where T : CardModel =>
@@ -377,9 +385,9 @@ internal static class SakuraSourceCardRules
     private static CardModel TypeToCard(Type type) =>
         ModelDb.GetById<CardModel>(ModelDb.GetId(type));
 
-    private static CardModel CreateCombatCardFromType<T>(CardModel source) where T : CardModel
+    private static CardModel CreateCombatCardFromType(CardModel source, Type type)
     {
-        var canonical = ModelDb.GetById<CardModel>(ModelDb.GetId(typeof(T)));
+        var canonical = ModelDb.GetById<CardModel>(ModelDb.GetId(type));
         return source.CombatState!.CreateCard(canonical, source.Owner);
     }
 
@@ -401,26 +409,6 @@ internal static class SakuraSourceCardRules
         var combatState = owner.Creature.CombatState
             ?? throw new InvalidOperationException($"{poolName} generated cards require an active combat.");
         return combatState.CreateCard(template, owner);
-    }
-
-    private static void MatchUpgradeLevel(CardModel target, CardModel source)
-    {
-        while (target.CurrentUpgradeLevel < source.CurrentUpgradeLevel && target.IsUpgradable)
-            target.UpgradeInternal();
-    }
-
-    private static void MatchStatEquivalentCopy(CardModel target, CardModel source)
-    {
-        MatchUpgradeLevel(target, source);
-
-        if (!source.EnergyCost.CostsX && !target.EnergyCost.CostsX)
-            target.EnergyCost.SetCustomBaseCost(Math.Max(0, source.EnergyCost.GetWithModifiers(CostModifiers.Local)));
-
-        foreach (var (name, sourceVar) in source.DynamicVars)
-        {
-            if (target.DynamicVars.TryGetValue(name, out var targetVar))
-                targetVar.BaseValue = sourceVar.BaseValue;
-        }
     }
 
     private static IEnumerable<CardModel> CardsInAllKnownPiles(Player owner) =>

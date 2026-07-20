@@ -200,6 +200,9 @@
   "SAKURA_MOD_POWER_ANOTHER_ME_POWER.title": "另一个我",
   "SAKURA_MOD_POWER_ANOTHER_ME_POWER.description": "每当为额外效果消耗魔力充能后，返还 {Amount} 点魔力充能。",
   "SAKURA_MOD_POWER_ANOTHER_ME_POWER.smartDescription": "为额外效果消耗魔力充能后，返还 {Amount} 点。",
+  "SAKURA_MOD_POWER_SAKURA_ERASE_POWER.title": "消",
+  "SAKURA_MOD_POWER_SAKURA_ERASE_POWER.description": "回合结束时，失去最大生命 {Amount}% 的生命。",
+  "SAKURA_MOD_POWER_SAKURA_ERASE_POWER.smartDescription": "回合结束时，失去最大生命 {Amount}% 的生命。",
   "SAKURA_MOD_POWER_CLASSIC_THROUGH_POWER.title": "穿透",
   "SAKURA_MOD_POWER_CLASSIC_THROUGH_POWER.description": "每回合打出的首张以单个敌人为目标的库洛牌、小樱牌、透明牌或符咒牌，会对目标及其右侧所有生物结算效果。且该牌每次攻击时，会造成无视格挡的追加伤害。",
   "SAKURA_MOD_POWER_CLASSIC_THROUGH_POWER.smartDescription": "每回合首张符合条件的单体目标牌穿透右侧生物；每段伤害造成无视格挡的追加伤害。"

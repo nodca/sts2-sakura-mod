@@ -60,11 +60,15 @@ public class ClowErase() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Co
     }
 }
 
-public class SakuraErase() : SakuraFormCard(3, CardType.Attack, TargetType.AnyEnemy)
+public class SakuraErase() : SakuraFormCard(1, CardType.Skill, TargetType.AnyEnemy)
 {
-    private const int EliteBossEnergyRefund = 3;
-
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DynamicVar("Percent", SakuraEraseRules.NormalHpLossPercent),
+        new DynamicVar("MaxHpLoss", SakuraEraseRules.EliteBossMaxHpLoss)
+    ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -77,17 +81,27 @@ public class SakuraErase() : SakuraFormCard(3, CardType.Attack, TargetType.AnyEn
 
     private async Task ResolveTarget(PlayerChoiceContext choiceContext, Creature target)
     {
-        if (SakuraEnemyRules.IsEliteOrBossCombat(target))
+        if (SakuraEnemyRules.IsEliteOrBossTarget(target))
         {
-            await PlayerCmd.GainEnergy(EliteBossEnergyRefund, Owner);
+            await CreatureCmd.LoseMaxHp(choiceContext, target, ReleasedValue("MaxHpLoss"), isFromCard: true);
             return;
         }
 
-        foreach (var power in target.Powers.ToList())
-            await PowerCmd.Remove(power);
+        if (target.GetPower<SakuraErasePower>() is null)
+            await ApplyPower<SakuraErasePower>(choiceContext, target, ReleasedValue("Percent"));
+    }
+}
 
-        var hpLoss = Math.Max(0, target.CurrentHp - 1);
-        if (hpLoss > 0)
-            await CreatureCmd.Damage(choiceContext, target, hpLoss, ValueProp.Unblockable | ValueProp.Unpowered, Owner.Creature, this);
+internal static class SakuraEraseRules
+{
+    internal const int NormalHpLossPercent = 33;
+    internal const int EliteBossMaxHpLoss = 33;
+
+    internal static int NormalHpLoss(int maxHp, int percent = NormalHpLossPercent)
+    {
+        if (maxHp <= 0 || percent <= 0)
+            return 0;
+
+        return Math.Max(1, (int)((long)maxHp * percent / 100));
     }
 }
