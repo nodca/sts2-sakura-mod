@@ -64,8 +64,7 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
             Owner.Creature,
             this,
             false);
-        for (var i = 0; i < copies; i++)
-            power?.QueueCopy(this);
+        power?.SetSourceCard(this);
     }
 
     private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)

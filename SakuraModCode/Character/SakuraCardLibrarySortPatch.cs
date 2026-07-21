@@ -9,7 +9,7 @@ using SakuraMod.SakuraModCode.Character;
 
 namespace SakuraMod.SakuraModCode.Character;
 
-// RitsuLib 0.4.60 owns compendium filter-row placement, but not the card order inside NCardLibraryGrid.
+// RitsuLib 0.4.62 owns compendium filter-row placement, but not the card order inside NCardLibraryGrid.
 [HarmonyPatch(typeof(NCardGrid), nameof(NCardGrid.SetCards))]
 internal static class SakuraCardLibrarySortPatch
 {

@@ -22,29 +22,41 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class SpiralNextTurnPower : SakuraPowerModel
 {
-    private readonly Queue<CardModel> _sources = [];
+    private sealed class Data
+    {
+        public CardModel? Source;
+    }
 
     public override PowerType Type => PowerType.Buff;
+    public override PowerInstanceType InstanceType => PowerInstanceType.Instanced;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public void QueueCopy(CardModel source) =>
-        _sources.Enqueue(source);
+    protected override object InitInternalData() => new Data();
 
-    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
+    public void SetSourceCard(CardModel source) =>
+        GetInternalData<Data>().Source = source.CreateClone();
+
+    public override async Task BeforeHandDraw(
+        Player player,
+        PlayerChoiceContext choiceContext,
+        ICombatState combatState)
     {
         if (player.Creature != Owner)
             return;
 
-        while (_sources.TryDequeue(out var source))
-            await SakuraGeneratedCardLifecycle.AddTemporaryCopyToHand(source, false, choiceContext);
+        var source = GetInternalData<Data>().Source;
+        if (source is not null)
+        {
+            for (var i = 0; i < Amount; i++)
+                await SakuraGeneratedCardLifecycle.AddTemporaryCopyToHand(source, false, choiceContext);
+        }
 
         await PowerCmd.Remove(this);
     }
 
     public override Task AfterRemoved(Creature oldOwner)
     {
-        _sources.Clear();
+        GetInternalData<Data>().Source = null;
         return Task.CompletedTask;
     }
 }
-
