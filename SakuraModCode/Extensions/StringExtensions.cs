@@ -19,26 +19,8 @@ public static class StringExtensions
         return Path.Join(MainFile.ResPath, "images", path);
     }
 
-    public static string CardImagePath(this string path) =>
-        ResolveCached(
-            Path.Join(MainFile.ResPath, "images", "card_portraits", path),
-            "Could not find card image path: ",
-            static () => Path.Join(MainFile.ResPath, "images", "card_portraits", "card.png"));
-
-    public static string BigCardImagePath(this string path) =>
-        ResolveCached(
-            Path.Join(MainFile.ResPath, "images", "card_portraits", "big", path),
-            "Could not find big card image path: ",
-            static () => Path.Join(MainFile.ResPath, "images", "card_portraits", "big", "card.png"));
-
     public static string AncientCardImagePath(this string path) =>
         ResolveRequiredTexturePath(Path.Join(MainFile.ResPath, "images", "card_portraits", "ancient", path));
-
-    public static string ClearCardImagePath(this string path) =>
-        ResolveCached(
-            path.ClearCardAssetPath(),
-            "Could not find clear card image path: ",
-            static () => Path.Join(MainFile.ResPath, "images", "card_portraits", "big", "card.png"));
 
     public static string ClearCardAssetPath(this string path)
     {

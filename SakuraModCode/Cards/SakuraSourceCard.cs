@@ -52,9 +52,9 @@ public abstract class SakuraSourceCard(
     internal virtual bool AddsVoidOnNormalSakuraPlay => IsSakuraCard;
     internal bool ShowsSakuraCardVoidTip => AddsVoidOnNormalSakuraPlay;
 
-    public override string CustomPortraitPath => "card.png".BigCardImagePath();
-    public override string PortraitPath => "card.png".CardImagePath();
-    public override string BetaPortraitPath => "card.png".CardImagePath();
+    public override string CustomPortraitPath => CardModel.MissingPortraitPath;
+    public override string PortraitPath => CardModel.MissingPortraitPath;
+    public override string BetaPortraitPath => CardModel.MissingPortraitPath;
     protected override IEnumerable<string> ExtraRunAssetPaths => ClassicCardVisualAssets.RunAssetPaths(this);
 
     protected sealed override Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>

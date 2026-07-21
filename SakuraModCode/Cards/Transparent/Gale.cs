@@ -19,6 +19,7 @@ public class Gale() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DamageVar(6, ValueProp.Move),
+        new GalePlaysUntilDrawVar(),
         new CardsVar("Cards", 2),
         new CardsVar("ExtraCopies", 2)
     ];
@@ -69,4 +70,25 @@ internal static class GaleRules
 
     internal static bool ShouldDrawAfterPlay(int playedCount) =>
         playedCount > 0 && playedCount % PlaysPerDraw == 0;
+
+    internal static int PlaysUntilNextDraw(int playedCount)
+    {
+        var remainder = Math.Max(0, playedCount) % PlaysPerDraw;
+        return remainder == 0 ? PlaysPerDraw : PlaysPerDraw - remainder;
+    }
+}
+
+internal sealed class GalePlaysUntilDrawVar() : DynamicVar("PlaysUntilDraw", 3)
+{
+    public override void UpdateCardPreview(
+        CardModel card,
+        CardPreviewMode previewMode,
+        Creature? target,
+        bool runGlobalHooks)
+    {
+        var playedCount = card.IsMutable && card.CombatState is not null
+            ? GaleRules.PlayedCount(card.Owner)
+            : 0;
+        PreviewValue = GaleRules.PlaysUntilNextDraw(playedCount);
+    }
 }

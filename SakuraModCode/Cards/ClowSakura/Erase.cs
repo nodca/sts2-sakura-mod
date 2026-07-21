@@ -63,7 +63,7 @@ public class ClowErase() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Co
 public class SakuraErase() : SakuraFormCard(1, CardType.Skill, TargetType.AnyEnemy)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Innate, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DynamicVar("Percent", SakuraEraseRules.NormalHpLossPercent),

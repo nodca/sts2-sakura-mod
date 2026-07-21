@@ -53,14 +53,11 @@ internal static class ClassicCardVisualAssets
                 yield return energyIconPath;
             if (TextEnergyIconPath(card) is { } textEnergyIconPath)
                 yield return textEnergyIconPath;
-            yield return card.PortraitPath;
             yield return FlashPath();
             foreach (var path in SakuraDescriptionRegion.AssetPaths(card))
                 yield return path;
             yield break;
         }
-
-        yield return card.PortraitPath;
     }
 
     public static Texture2D Texture(string path)

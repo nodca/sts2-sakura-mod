@@ -13,6 +13,15 @@ public sealed class SakuraModConfig
     internal const string VoiceTitleKey = "SAKURAMOD-ENABLE_SAKURA_VOICE.title";
     internal const string VoiceDescriptionKey = "SAKURAMOD-ENABLE_SAKURA_VOICE.description";
 
+    internal static IModSettingsValueBinding<bool> UseChibiCombatArtBinding { get; } =
+        ModSettingsBindings.WithDefault(
+            ModSettingsBindings.Global<SakuraModConfig, bool>(
+                MainFile.ModId,
+                DataKey,
+                static config => config.UseChibiCombatArt,
+                static (config, value) => config.UseChibiCombatArt = value),
+            static () => false);
+
     internal static IModSettingsValueBinding<bool> EnableSakuraVoiceBinding { get; } =
         ModSettingsBindings.WithDefault(
             ModSettingsBindings.Global<SakuraModConfig, bool>(
@@ -23,8 +32,10 @@ public sealed class SakuraModConfig
             static () => false);
 
     public bool EnableSakuraVoice { get; set; }
+    public bool UseChibiCombatArt { get; set; }
 
     internal static bool IsSakuraVoiceEnabled() => EnableSakuraVoiceBinding.Read();
+    internal static bool IsChibiCombatArtEnabled() => UseChibiCombatArtBinding.Read();
 
     public static void Register()
     {

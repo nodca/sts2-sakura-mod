@@ -18,17 +18,60 @@ public static class SakuraStandeeVisuals
     private static readonly Vector2 CombatVisualTopLeft = new(-132f, -468f);
     private static readonly Vector2 CombatVisualCenter = new(0f, -234f);
 
+    private readonly record struct StandeeLayout(
+        float Scale,
+        Vector2 VisualPosition,
+        Rect2 Bounds,
+        Vector2 CenterPosition,
+        Vector2 IntentPosition,
+        Vector2 OrbPosition,
+        Vector2 TalkPosition);
+
     public static NCreatureVisuals Create(string visualPath, string label) =>
         Create(visualPath, label, CombatVisualScale);
 
     public static NCreatureVisuals Create(string visualPath, string label, float combatVisualScale)
     {
+        var layout = StandardLayout(combatVisualScale);
+        return Create(visualPath, label, layout, animate: true);
+    }
+
+    internal static NCreatureVisuals CreateStatic(
+        string visualPath,
+        string label,
+        float scale,
+        Vector2 visualPosition,
+        Rect2 bounds,
+        Vector2 centerPosition,
+        Vector2 intentPosition,
+        Vector2 orbPosition,
+        Vector2 talkPosition) =>
+        Create(
+            visualPath,
+            label,
+            new StandeeLayout(
+                scale,
+                visualPosition,
+                bounds,
+                centerPosition,
+                intentPosition,
+                orbPosition,
+                talkPosition),
+            animate: false);
+
+    private static NCreatureVisuals Create(
+        string visualPath,
+        string label,
+        StandeeLayout layout,
+        bool animate)
+    {
         try
         {
             var visuals = RitsuGodotNodeFactories.CreateFromResource<NCreatureVisuals>(visualPath);
-            ApplyCombatVisualLayout(visuals, combatVisualScale);
+            ApplyCombatVisualLayout(visuals, layout);
             var body = visuals.GetNode<Node2D>("%Visuals");
-            StartCombatStandeeAnimation(body);
+            if (animate)
+                StartCombatStandeeAnimation(body, layout.VisualPosition);
             return visuals;
         }
         catch (Exception ex)
@@ -38,35 +81,46 @@ public static class SakuraStandeeVisuals
         }
     }
 
-    private static void ApplyCombatVisualLayout(NCreatureVisuals visuals, float combatVisualScale)
+    private static StandeeLayout StandardLayout(float scale) =>
+        new(
+            scale,
+            CombatVisualCenter,
+            new Rect2(CombatVisualTopLeft, CombatVisualSize),
+            CombatVisualCenter,
+            new Vector2(0f, CombatVisualTopLeft.Y - 40f),
+            new Vector2(0f, -190f),
+            new Vector2(0f, -420f));
+
+    private static void ApplyCombatVisualLayout(NCreatureVisuals visuals, StandeeLayout layout)
     {
         var body = visuals.GetNode<Node2D>("%Visuals");
         body.Visible = true;
         body.Modulate = Colors.White;
-        body.Position = CombatVisualCenter;
-        body.Scale = Vector2.One * combatVisualScale;
+        body.Position = layout.VisualPosition;
+        body.Scale = Vector2.One * layout.Scale;
+        body.Rotation = 0f;
 
         var bounds = visuals.GetNode<Control>("%Bounds");
-        bounds.Position = CombatVisualTopLeft;
-        bounds.Size = CombatVisualSize;
-        bounds.CustomMinimumSize = CombatVisualSize;
-        bounds.PivotOffset = CombatVisualSize * 0.5f;
+        bounds.Position = layout.Bounds.Position;
+        bounds.Size = layout.Bounds.Size;
+        bounds.CustomMinimumSize = layout.Bounds.Size;
+        bounds.PivotOffset = layout.Bounds.Size * 0.5f;
 
-        MoveMarker(visuals, "%CenterPos", CombatVisualCenter);
-        MoveMarker(visuals, "%IntentPos", new Vector2(0f, CombatVisualTopLeft.Y - 40f));
-        MoveMarker(visuals, "%OrbPos", new Vector2(0f, -190f));
-        MoveMarker(visuals, "%TalkPos", new Vector2(0f, -420f));
+        MoveMarker(visuals, "%CenterPos", layout.CenterPosition);
+        MoveMarker(visuals, "%IntentPos", layout.IntentPosition);
+        MoveMarker(visuals, "%OrbPos", layout.OrbPosition);
+        MoveMarker(visuals, "%TalkPos", layout.TalkPosition);
     }
 
-    private static void StartCombatStandeeAnimation(Node2D body)
+    private static void StartCombatStandeeAnimation(Node2D body, Vector2 restPosition)
     {
         if (TestMode.IsOn)
             return;
 
-        TaskHelper.RunSafely(StartCombatStandeeAnimationWhenReady(body));
+        TaskHelper.RunSafely(StartCombatStandeeAnimationWhenReady(body, restPosition));
     }
 
-    private static async Task StartCombatStandeeAnimationWhenReady(Node2D body)
+    private static async Task StartCombatStandeeAnimationWhenReady(Node2D body, Vector2 restPosition)
     {
         if (!GodotObject.IsInstanceValid(body))
             return;
@@ -76,8 +130,6 @@ public static class SakuraStandeeVisuals
 
         if (!GodotObject.IsInstanceValid(body) || !body.IsInsideTree())
             return;
-
-        var restPosition = CombatVisualCenter;
 
         body.Position = restPosition + Vector2.Down * StandeeEntryOffsetY;
         body.Rotation = 0f;

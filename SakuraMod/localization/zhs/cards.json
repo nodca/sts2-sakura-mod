@@ -7,7 +7,7 @@
   "SAKURAMOD-GENERIC.temporaryCardPrompt": "选择 1 张拥有遗忘的牌。",
   "SAKURAMOD-GENERIC.capabilityDescriptionFragment": "{Text}",
   "SAKURA_MOD_CARD_GALE.title": "疾风",
-  "SAKURA_MOD_CARD_GALE.description": "造成 {Damage:diff()} 点伤害。\n本场战斗中，每打出疾风 3 次，抽 {Cards:diff()} 张牌。\n[gold]额外效果：[/gold]将 {ExtraCopies:diff()} 张拥有[red]遗忘[/red]的[gold]{IfUpgraded:show:疾风+|疾风}[/gold]复制加入手牌。",
+  "SAKURA_MOD_CARD_GALE.description": "造成 {Damage:diff()} 点伤害。\n本场战斗中，再打出 {PlaysUntilDraw:diff()} 张疾风后，抽 {Cards:diff()} 张牌。\n[gold]额外效果：[/gold]将 {ExtraCopies:diff()} 张拥有[red]遗忘[/red]的[gold]{IfUpgraded:show:疾风+|疾风}[/gold]复制加入手牌。",
   "SAKURA_MOD_CARD_REFLECT.title": "反射",
   "SAKURA_MOD_CARD_REFLECT.description": "获得 {Block:diff()} 点[gold]格挡[/gold]。\n获得 {ReflectionPower:diff()} 层[gold]反射[/gold]。\n[gold]额外效果：[/gold]额外获得 {ExtraReflection:diff()} 层[gold]反射[/gold]。",
   "SAKURA_MOD_CARD_FLIGHT.title": "飞翔",

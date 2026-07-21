@@ -1,5 +1,4 @@
 using Godot;
-using SakuraMod.SakuraModCode.Extensions;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
@@ -17,9 +16,9 @@ public abstract class SakuraOptionCard(CardType type) :
     public override CardPoolModel Pool => ModelDb.CardPool<ClassicSakuraCardPool>();
     public override bool CanBeGeneratedInCombat => false;
 
-    public override string CustomPortraitPath => SakuraCardFrameVisuals.BigPortraitPath(this);
-    public override string PortraitPath => SakuraCardFrameVisuals.PortraitPath(this);
-    public override string BetaPortraitPath => SakuraCardFrameVisuals.PortraitPath(this);
+    public override string CustomPortraitPath => CardModel.MissingPortraitPath;
+    public override string PortraitPath => CardModel.MissingPortraitPath;
+    public override string BetaPortraitPath => CardModel.MissingPortraitPath;
     public override Material? CustomFrameMaterial => SakuraCardFrameVisuals.PlainFrameMaterial;
     protected override IEnumerable<string> ExtraRunAssetPaths => SakuraCardFrameVisuals.RunAssetPaths(this);
     internal virtual IEnumerable<CardKeyword> ReferencedKeywords => [];

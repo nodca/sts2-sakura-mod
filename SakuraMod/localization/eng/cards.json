@@ -7,7 +7,7 @@
   "SAKURAMOD-GENERIC.temporaryCardPrompt": "Choose a card with Forgotten.",
   "SAKURAMOD-GENERIC.capabilityDescriptionFragment": "{Text}",
   "SAKURA_MOD_CARD_GALE.title": "Gale",
-  "SAKURA_MOD_CARD_GALE.description": "Deal {Damage:diff()} damage.\nWhenever you play Gale 3 times this combat, draw {Cards:diff()} cards.\n[gold]Extra:[/gold] Put {ExtraCopies:diff()} [gold]{IfUpgraded:show:Gale+|Gale}[/gold] copies with [red]Forgotten[/red] into your hand.",
+  "SAKURA_MOD_CARD_GALE.description": "Deal {Damage:diff()} damage.\nAfter you play {PlaysUntilDraw:diff()} more Gale cards this combat, draw {Cards:diff()} cards.\n[gold]Extra:[/gold] Put {ExtraCopies:diff()} [gold]{IfUpgraded:show:Gale+|Gale}[/gold] copies with [red]Forgotten[/red] into your hand.",
   "SAKURA_MOD_CARD_REFLECT.title": "Reflect",
   "SAKURA_MOD_CARD_REFLECT.description": "Gain {Block:diff()} [gold]Block[/gold].\nGain {ReflectionPower:diff()} [gold]Reflection[/gold].\n[gold]Extra:[/gold] Gain {ExtraReflection:diff()} additional [gold]Reflection[/gold].",
   "SAKURA_MOD_CARD_FLIGHT.title": "Flight",

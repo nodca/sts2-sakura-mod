@@ -8,6 +8,7 @@ using SakuraMod.SakuraModCode.Relics;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
 using STS2RitsuLib.Scaffolding.Characters;
+using STS2RitsuLib.Scaffolding.Visuals.StateMachine;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -59,9 +60,16 @@ public class ClassicSakura : ModCharacterTemplate<ClassicSakuraCardPool, Classic
         Path.Join(MainFile.ResPath, "scenes", "merchant", "sakura_merchant_character.tscn");
     public override string CustomEnergyCounterPath =>
         Path.Join(MainFile.ResPath, "scenes", "combat", "energy_counters", "sakura_energy_counter.tscn");
+    public override string CustomRestSiteAnimPath =>
+        Path.Join(MainFile.ResPath, "scenes", "rest_site", "sakura_rest_site_character.tscn");
 
     protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
-        SakuraStandeeVisuals.Create(CustomVisualsPath, "Sakura Kinomoto");
+        SakuraCombatVisuals.CreateSelected(CustomVisualsPath);
+
+    protected override ModAnimStateMachine SetupCustomRestSiteAnimationStateMachine(
+        Node restSiteRoot,
+        CharacterModel character) =>
+        ModAnimStateMachines.StandardRestSiteCue(restSiteRoot, character, "rest_idle");
 
     public override string CustomCharacterSelectBgPath =>
         Path.Join(MainFile.ResPath, "scenes", "screens", "char_select", "sakura_character_select_background.tscn");

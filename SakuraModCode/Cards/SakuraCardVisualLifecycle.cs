@@ -209,7 +209,7 @@ internal static class SakuraCardVisualLifecycle
         var layout = SakuraCardVisualFamilies.Layout(card);
         if (owner == SakuraCardContentOwner.Vanilla)
             return layout == SakuraCardVisualLayout.None;
-        if (source == nameof(NCard._EnterTree) || layout == SakuraCardVisualLayout.None)
+        if (layout == SakuraCardVisualLayout.None)
             return true;
 
         return layout switch
