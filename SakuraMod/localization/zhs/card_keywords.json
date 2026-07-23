@@ -28,5 +28,5 @@
   "SAKURAMOD-LONER.title": "独行",
   "SAKURAMOD-LONER.description": "牌组中每少 1 张同名牌，其数值提高20%。",
   "SAKURAMOD-FROSTBITE.title": "冻伤",
-  "SAKURAMOD-FROSTBITE.description": "每层使该敌人受到的攻击伤害提高 10%。达到 6 层时，移除所有冻伤并给予[gold]冻结[/gold]。冻伤在敌人回合结束时减少 1 层。"
+  "SAKURAMOD-FROSTBITE.description": "每层使该敌人受到的攻击伤害提高 10%。每 6 层转化为 1 层[gold]冻结[/gold]。冻伤在敌人回合结束时减少 1 层。"
 }

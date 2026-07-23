@@ -17,7 +17,7 @@
   "SAKURA_MOD_CARD_APPEAR.title": "Appear",
   "SAKURA_MOD_CARD_APPEAR.description": "[gold]Manifest[/gold] {Copies:diff()}.\n[gold]Extra:[/gold] Copies cost 0 this turn.",
   "SAKURA_MOD_CARD_AQUA.title": "Aqua",
-  "SAKURA_MOD_CARD_AQUA.description": "Deal {Damage:diff()} damage to ALL enemies.\nApply {SakuraFrostbitePower:diff()} [gold]Frostbite[/gold] to enemies that have [gold]Frostbite[/gold].\nApply {WeakPower:diff()} [gold]Weak[/gold] to ALL enemies.\n[gold]Extra:[/gold] This play does not [gold]Exhaust[/gold].",
+  "SAKURA_MOD_CARD_AQUA.description": "Deal {Damage:diff()} damage to ALL enemies.\nIf at least 1 enemy has [gold]Frostbite[/gold], gain {Energy:diff()} [gold]Energy[/gold] and draw cards equal to the highest enemy [gold]Frostbite[/gold].\n[gold]Extra:[/gold] Increase both the Energy gained and cards drawn from [gold]Frostbite[/gold] by 1.",
   "SAKURA_MOD_CARD_BLADE.title": "Blade",
   "SAKURA_MOD_CARD_BLADE.description": "Deal {CalculatedDamage:diff()} damage {Hits:diff()} times.\nFor every 2 Sword or Blade cards played this combat, each hit deals 2 additional damage.\n[gold]Extra:[/gold] Attack 2 additional times.",
   "SAKURA_MOD_CARD_HAIL.title": "Hail",

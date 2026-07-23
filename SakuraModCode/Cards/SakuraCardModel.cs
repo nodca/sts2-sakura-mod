@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+using SakuraMod.SakuraModCode.Powers;
 using STS2RitsuLib.Content;
 using STS2RitsuLib.Models.Capabilities;
 using STS2RitsuLib.Scaffolding.Content;
@@ -161,10 +162,14 @@ internal static class SakuraCardHoverTips
     internal const string LabyrinthTipKey = "SAKURAMOD-ENTER_LABYRINTH";
     internal const string RemindTipKey = "SAKURAMOD-REMIND";
 
-    internal static IEnumerable<IHoverTip> HoverTips(CardModel card) =>
-        KeywordTips(card).Select(HoverTipFactory.FromKeyword)
+    internal static IEnumerable<IHoverTip> HoverTips(CardModel card)
+    {
+        var keywordTips = KeywordTips(card).ToArray();
+        return keywordTips.Select(HoverTipFactory.FromKeyword)
+            .Concat(DependentPowerTips(keywordTips))
             .Concat(StaticTipKeys(card).Select(key => (IHoverTip)StaticTip(key)))
             .Distinct();
+    }
 
     internal static IEnumerable<CardKeyword> KeywordTips(CardModel card) =>
         ReferencedKeywords(card)
@@ -173,6 +178,15 @@ internal static class SakuraCardHoverTips
 
     internal static IEnumerable<string> StaticTipKeys(CardModel card) =>
         ReferencedStaticHoverTipKeys(card).Distinct();
+
+    internal static IEnumerable<IHoverTip> DependentPowerTips(IEnumerable<CardKeyword> keywordTips)
+    {
+        if (ShouldIncludeFreezePowerTip(keywordTips))
+            yield return HoverTipFactory.FromPower<ClassicFreezePower>();
+    }
+
+    internal static bool ShouldIncludeFreezePowerTip(IEnumerable<CardKeyword> keywordTips) =>
+        keywordTips.Contains(SakuraKeywords.Frostbite);
 
     internal static IEnumerable<CardKeyword> ElementKeywords(SakuraElementSet elements) =>
         elements.AsElements().Select(SakuraActions.KeywordFor).Distinct();

@@ -17,7 +17,7 @@
   "SAKURA_MOD_CARD_APPEAR.title": "显现",
   "SAKURA_MOD_CARD_APPEAR.description": "[gold]显现[/gold] {Copies:diff()}。\n[gold]额外效果：[/gold]复制本回合能耗变为 0。",
   "SAKURA_MOD_CARD_AQUA.title": "水源",
-  "SAKURA_MOD_CARD_AQUA.description": "对所有敌人造成 {Damage:diff()} 点伤害。\n给予拥有[gold]冻伤[/gold]的敌人 {SakuraFrostbitePower:diff()} 层[gold]冻伤[/gold]。\n给予所有敌人 {WeakPower:diff()} 层[gold]虚弱[/gold]。\n[gold]额外效果：[/gold]本次打出后不[gold]消耗[/gold]。",
+  "SAKURA_MOD_CARD_AQUA.description": "对所有敌人造成 {Damage:diff()} 点伤害。\n若至少一名敌人拥有[gold]冻伤[/gold]，获得 {Energy:diff()} 点能量，并抽取等同于敌人最高[gold]冻伤[/gold]层数的牌。\n[gold]额外效果：[/gold]因[gold]冻伤[/gold]获得的能量和抽牌数量各增加 1。",
   "SAKURA_MOD_CARD_BLADE.title": "双剑",
   "SAKURA_MOD_CARD_BLADE.description": "造成 {CalculatedDamage:diff()} 点伤害 {Hits:diff()} 次。\n本场战斗中每打出过 2 张“剑”或“双剑”，此牌每次造成的伤害增加 2 点。\n[gold]额外效果：[/gold]额外攻击 2 次。",
   "SAKURA_MOD_CARD_HAIL.title": "冰雹",

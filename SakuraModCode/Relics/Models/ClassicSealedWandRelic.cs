@@ -36,7 +36,7 @@ public class ClassicSealedWandRelic : SakuraRelicModel
     private const string RemainingChargeVar = "RemainingCharge";
 
     private const int DefaultBaseTrigger = 40;
-    private const int DefaultTriggerIncrease = 20;
+    private const int DefaultTriggerIncrease = 10;
     private const int DefaultBaseChargeGain = 3;
     private const int DefaultEliteBossExtraGain = 2;
     private const int DefaultSealExtraGain = 2;
@@ -181,7 +181,16 @@ public class ClassicSealedWandRelic : SakuraRelicModel
         TriggerThreshold(Owner, BaseTriggerAmount, TriggerIncreaseAmount);
 
     private static int TriggerThreshold(Player owner, int baseTrigger, int triggerIncrease) =>
-        baseTrigger + triggerIncrease * SakuraSourceCardRules.ConvertedSakuraCount(owner);
+        TriggerThresholdFor(
+            SakuraSourceCardRules.ConvertedSakuraCount(owner),
+            baseTrigger,
+            triggerIncrease);
+
+    internal static int TriggerThresholdFor(
+        int convertedSakuraCount,
+        int baseTrigger = DefaultBaseTrigger,
+        int triggerIncrease = DefaultTriggerIncrease) =>
+        baseTrigger + triggerIncrease * Math.Max(0, convertedSakuraCount);
 
     private int DisplayTriggerThreshold()
     {
@@ -271,4 +280,3 @@ public class ClassicSealedWandRelic : SakuraRelicModel
             _owner is ClassicSealedWandRelic relic ? relic.DisplayRemainingCharge() : fallbackValue;
     }
 }
-

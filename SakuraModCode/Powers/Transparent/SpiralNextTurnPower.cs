@@ -30,6 +30,7 @@ public class SpiralNextTurnPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerInstanceType InstanceType => PowerInstanceType.Instanced;
     public override PowerStackType StackType => PowerStackType.Counter;
+    protected override bool IsVisibleInternal => false;
 
     protected override object InitInternalData() => new Data();
 

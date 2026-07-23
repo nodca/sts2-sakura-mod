@@ -72,8 +72,10 @@ internal static class SakuraSourceCardText
 
         foreach (var key in StaticTipKeys(card))
             tips.Add(StaticTip(key));
-        foreach (var keyword in KeywordTips(card))
+        var keywordTips = KeywordTips(card).ToArray();
+        foreach (var keyword in keywordTips)
             tips.Add(HoverTipFactory.FromKeyword(keyword));
+        tips.AddRange(SakuraCardHoverTips.DependentPowerTips(keywordTips));
 
         return tips.Distinct();
     }
