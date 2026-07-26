@@ -67,7 +67,7 @@
   "SAKURA_MOD_CARD_SNOOZE.title": "Snooze",
   "SAKURA_MOD_CARD_SNOOZE.description": "Apply {WeakPower:diff()} [gold]Weak[/gold] and {VulnerablePower:diff()} [gold]Vulnerable[/gold].\nDraw {Cards:diff()} card.\n[gold]Extra:[/gold] Apply them to ALL enemies instead.",
   "SAKURA_MOD_CARD_SPIRAL.title": "Spiral",
-  "SAKURA_MOD_CARD_SPIRAL.description": "Deal {Damage:diff()} damage.\nGain {Block:diff()} [gold]Block[/gold].{IfUpgraded:show:\nAfter this is played, add {NextTurnCopies:diff()} copy of Spiral to your hand next turn. It gains [red]Forgotten[/red].|}\nEach card in [gold]Memory[/gold] increases the damage and [gold]Block[/gold] by {MemoryScale:diff()}.\n[gold]Extra:[/gold] Add {ExtraCopies:diff()} Spiral copies to your hand. They gain [red]Forgotten[/red] and cost 0 this turn.",
+  "SAKURA_MOD_CARD_SPIRAL.description": "Deal {Damage:diff()} damage.\nGain {Block:diff()} [gold]Block[/gold].{IfUpgraded:show:\nAfter this is played, add {NextTurnCopies:diff()} [gold]Spiral+[/gold] to your hand next turn. Give it [red]Forgotten[/red].|}\nEach card in [gold]Memory[/gold] increases the damage and [gold]Block[/gold] by {MemoryScale:diff()}.\n[gold]Extra:[/gold] Add {ExtraCopies:diff()} Spiral to your hand. Give them [red]Forgotten[/red]. They cost 0 this turn.",
   "SAKURA_MOD_CARD_TRANSFER.title": "Transfer",
   "SAKURA_MOD_CARD_TRANSFER.description": "An enemy loses {EnemyStrengthLoss:diff()} [gold]Strength[/gold].\nGain {StrengthGain:diff()} [gold]Strength[/gold] and {DexterityGain:diff()} [gold]Dexterity[/gold].\n[gold]Extra:[/gold] No longer [gold]Exhaust[/gold].",
   "SAKURA_MOD_CARD_BLANK.title": "Blank",

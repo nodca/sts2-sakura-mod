@@ -57,24 +57,23 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
         if (copies <= 0)
             return;
 
-        var power = await PowerCmd.Apply<SpiralNextTurnPower>(
+        await PowerCmd.Apply<SpiralNextTurnPower>(
             choiceContext,
             Owner.Creature,
             copies,
             Owner.Creature,
             this,
             false);
-        power?.SetSourceCard(this);
     }
 
     private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
     {
         for (var i = 0; i < DynamicVars["ExtraCopies"].IntValue; i++)
         {
-            await SakuraGeneratedCardLifecycle.AddTemporaryCopyToHand(
-                this,
+            await SakuraGeneratedCardLifecycle.AddTemporaryGeneratedCardToHand<Spiral>(
+                Owner,
                 freeThisTurn: true,
-                context: choiceContext);
+                choiceContext);
         }
     }
 

@@ -563,7 +563,7 @@ internal sealed class SakuraSourceBlockVar(decimal block, ValueProp props, Sourc
     }
 }
 
-internal sealed class SakuraReturnRechargeVar() : DynamicVar("Magic", 15)
+internal sealed class SakuraReturnRechargeVar() : DynamicVar("Magic", ClassicSealedWandRelic.DefaultReturnRechargeAmount)
 {
     public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks) =>
         PreviewValue = card.Owner is { } owner

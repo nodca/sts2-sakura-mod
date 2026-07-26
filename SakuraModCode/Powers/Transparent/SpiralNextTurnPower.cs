@@ -22,20 +22,10 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class SpiralNextTurnPower : SakuraPowerModel
 {
-    private sealed class Data
-    {
-        public CardModel? Source;
-    }
-
     public override PowerType Type => PowerType.Buff;
     public override PowerInstanceType InstanceType => PowerInstanceType.Instanced;
     public override PowerStackType StackType => PowerStackType.Counter;
     protected override bool IsVisibleInternal => false;
-
-    protected override object InitInternalData() => new Data();
-
-    public void SetSourceCard(CardModel source) =>
-        GetInternalData<Data>().Source = source.CreateClone();
 
     public override async Task BeforeHandDraw(
         Player player,
@@ -45,19 +35,16 @@ public class SpiralNextTurnPower : SakuraPowerModel
         if (player.Creature != Owner)
             return;
 
-        var source = GetInternalData<Data>().Source;
-        if (source is not null)
+        for (var i = 0; i < Amount; i++)
         {
-            for (var i = 0; i < Amount; i++)
-                await SakuraGeneratedCardLifecycle.AddTemporaryCopyToHand(source, false, choiceContext);
+            var card = combatState.CreateCard<Spiral>(player);
+            card.UpgradeInternal();
+            await SakuraGeneratedCardLifecycle.AddTemporaryGeneratedCardToHand(
+                card,
+                freeThisTurn: false,
+                choiceContext);
         }
 
         await PowerCmd.Remove(this);
-    }
-
-    public override Task AfterRemoved(Creature oldOwner)
-    {
-        GetInternalData<Data>().Source = null;
-        return Task.CompletedTask;
     }
 }

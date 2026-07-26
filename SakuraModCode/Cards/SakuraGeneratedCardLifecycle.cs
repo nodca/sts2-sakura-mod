@@ -51,6 +51,23 @@ internal static class SakuraGeneratedCardLifecycle
             TemporaryCopyOptions(freeThisTurn),
             context);
 
+    public static async Task<CardModel> AddTemporaryGeneratedCardToHand<T>(
+        Player owner,
+        bool freeThisTurn,
+        PlayerChoiceContext context) where T : CardModel
+    {
+        var combatState = owner.Creature.CombatState
+            ?? throw new InvalidOperationException($"Generated {typeof(T).Name} requires an active combat.");
+        var card = combatState.CreateCard<T>(owner);
+        return await AddTemporaryGeneratedCardToHand(card, freeThisTurn, context);
+    }
+
+    public static Task<CardModel> AddTemporaryGeneratedCardToHand(
+        CardModel card,
+        bool freeThisTurn,
+        PlayerChoiceContext context) =>
+        AddGeneratedCardToCombat(card, TemporaryCopyOptions(freeThisTurn), context);
+
     public static async Task<CardModel?> AddRememberedCopyToHand(CardModel card, bool freeThisTurn) =>
         await AddGeneratedCopyToHand(
             card,

@@ -52,7 +52,14 @@ public class ClassicSealedWandRelic : SakuraRelicModel
     public override bool ShowCounter => true;
     public override int DisplayAmount => Charge[this];
     public int ChargeAmount => Charge[this];
-    public int ReturnRechargeAmount => ReturnRechargeAmountForThreshold(TriggerThreshold());
+    public int ReturnRechargeAmount => ReturnRechargeAmountForThreshold(
+        TriggerThreshold(),
+        BaseTriggerAmount,
+        TriggerIncreaseAmount);
+    internal static int DefaultReturnRechargeAmount => ReturnRechargeAmountForThreshold(
+        DefaultBaseTrigger,
+        DefaultBaseTrigger,
+        DefaultTriggerIncrease);
     protected virtual int BaseTriggerAmount => DefaultBaseTrigger;
     protected virtual int TriggerIncreaseAmount => DefaultTriggerIncrease;
     protected virtual int BaseChargeGainAmount => DefaultBaseChargeGain;
@@ -214,10 +221,13 @@ public class ClassicSealedWandRelic : SakuraRelicModel
     public static int ReturnRechargeAmountFor(Player owner) =>
         owner.GetRelic<ClassicSealedWandRelic>() is { } wand
             ? wand.ReturnRechargeAmount
-            : ReturnRechargeAmountForThreshold(TriggerThreshold(owner, DefaultBaseTrigger, DefaultTriggerIncrease));
+            : ReturnRechargeAmountForThreshold(
+                TriggerThreshold(owner, DefaultBaseTrigger, DefaultTriggerIncrease),
+                DefaultBaseTrigger,
+                DefaultTriggerIncrease);
 
-    private static int ReturnRechargeAmountForThreshold(int threshold) =>
-        Math.Max(0, (threshold - DefaultTriggerIncrease) * 3 / 4);
+    internal static int ReturnRechargeAmountForThreshold(int currentThreshold, int baseTrigger, int triggerIncrease) =>
+        Math.Max(baseTrigger, currentThreshold - triggerIncrease) * 3 / 4;
 
     private async Task DowngradeDuplicateSakuraCards()
     {
