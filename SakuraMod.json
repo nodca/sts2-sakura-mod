@@ -3,14 +3,14 @@
   "name": "Sakura Kinomoto",
   "author": "nodca",
   "description": "Slay the Spire 2 character mod scaffold for Sakura Kinomoto using RitsuLib",
-  "version": "v1.4.6",
+  "version": "v1.4.7",
   "min_game_version": "v0.107.1",
   "has_pck": true,
   "has_dll": true,
   "dependencies": [
     {
       "id": "STS2-RitsuLib",
-      "min_version": "v0.4.64"
+      "min_version": "v0.4.66"
     }
   ],
   "affects_gameplay": true

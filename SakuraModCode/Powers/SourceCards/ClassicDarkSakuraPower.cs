@@ -11,7 +11,6 @@ using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Powers;
-using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode;
@@ -67,8 +66,6 @@ public class ClassicDarkSakuraPower : SakuraPowerModel
             replacements.Add(card);
         }
         CardCmd.PreviewCardPileAdd(
-            await SakuraGeneratedCardLifecycle.AddGeneratedCardsToCombatWithResults(replacements, PileType.Discard, player, CardPilePosition.Bottom),
-            style: CardPreviewStyle.GridLayout);
+            await SakuraGeneratedCardLifecycle.AddGeneratedCardsToCombatWithResults(replacements, PileType.Discard, player, CardPilePosition.Bottom));
     }
 }
-
