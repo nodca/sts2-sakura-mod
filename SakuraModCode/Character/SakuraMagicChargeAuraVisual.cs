@@ -19,8 +19,11 @@ namespace SakuraMod.SakuraModCode.Character;
 internal static class SakuraMagicChargeAuraVisualPatch
 {
     [HarmonyPostfix]
-    private static void ReadyPostfix(NCreature __instance) =>
+    private static void ReadyPostfix(NCreature __instance)
+    {
         SakuraMagicChargeAuraVisual.Mount(__instance);
+        SakuraKeroCombatCompanion.Mount(__instance);
+    }
 }
 
 internal static class SakuraMagicChargeAuraVisual

@@ -2,5 +2,11 @@
   "SAKURA_MOD_LABYRINTH.title": "Labyrinth",
   "SAKURA_MOD_LABYRINTH.description": "This enemy is lost in the Labyrinth. It cannot act and is unaffected by Attack cards.",
   "SAKURA_MOD_LABYRINTH_RELEASE_WARNING.title": "Leaving the Labyrinth",
-  "SAKURA_MOD_LABYRINTH_RELEASE_WARNING.description": "This enemy will leave the Labyrinth at the end of this turn. Its next intent is shown beside this icon."
+  "SAKURA_MOD_LABYRINTH_RELEASE_WARNING.description": "This enemy will leave the Labyrinth at the end of this turn. Its next intent is shown beside this icon.",
+  "SAKURA_MOD_SUMMON_DASH.title": "Summon Dash",
+  "SAKURA_MOD_SUMMON_DASH.description": "Windy will summon Dash into the attendant slot.",
+  "SAKURA_MOD_SUMMON_FLOAT.title": "Summon Float",
+  "SAKURA_MOD_SUMMON_FLOAT.description": "Windy will summon Float into the attendant slot.",
+  "SAKURA_MOD_SUMMON_SLEEP.title": "Summon Sleep",
+  "SAKURA_MOD_SUMMON_SLEEP.description": "Windy will summon Sleep into the attendant slot."
 }

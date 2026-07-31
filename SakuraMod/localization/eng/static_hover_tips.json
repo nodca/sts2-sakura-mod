@@ -37,5 +37,7 @@
   "SAKURAMOD-WINDY_SPELL_CARD.title": "Windy",
   "SAKURAMOD-WINDY_SPELL_CARD.description": "A Windy spell. Counts as a Windy card.",
   "SAKURAMOD-WINDY_STATE.title": "Windy state",
-  "SAKURAMOD-WINDY_STATE.description": "Whenever you play 2 Windy cards, draw 1 card."
+  "SAKURAMOD-WINDY_STATE.description": "Whenever you play 2 Windy cards, draw 1 card.",
+  "SAKURAMOD-SLEEPING.title": "Sleeping",
+  "SAKURAMOD-SLEEPING.description": "Cannot be played. Wakes when its owner takes positive unblocked enemy Attack damage or Sleep is defeated."
 }

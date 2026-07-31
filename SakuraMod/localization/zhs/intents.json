@@ -2,5 +2,11 @@
   "SAKURA_MOD_LABYRINTH.title": "迷宫",
   "SAKURA_MOD_LABYRINTH.description": "该敌人迷失在迷宫中，无法行动，也不受攻击牌影响。",
   "SAKURA_MOD_LABYRINTH_RELEASE_WARNING.title": "即将离开迷宫",
-  "SAKURA_MOD_LABYRINTH_RELEASE_WARNING.description": "该敌人将在本回合结束时离开迷宫，旁边显示其下一步意图。"
+  "SAKURA_MOD_LABYRINTH_RELEASE_WARNING.description": "该敌人将在本回合结束时离开迷宫，旁边显示其下一步意图。",
+  "SAKURA_MOD_SUMMON_DASH.title": "召唤疾",
+  "SAKURA_MOD_SUMMON_DASH.description": "风将在随从位置召唤疾。",
+  "SAKURA_MOD_SUMMON_FLOAT.title": "召唤浮",
+  "SAKURA_MOD_SUMMON_FLOAT.description": "风将在随从位置召唤浮。",
+  "SAKURA_MOD_SUMMON_SLEEP.title": "召唤眠",
+  "SAKURA_MOD_SUMMON_SLEEP.description": "风将在随从位置召唤眠。"
 }

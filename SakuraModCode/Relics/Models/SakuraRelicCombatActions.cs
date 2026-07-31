@@ -51,14 +51,23 @@ internal static class SakuraRelicCombatActions
         if (target is null)
             return;
 
+        var previousMarkAmount = target.GetPower<ClassicCerberusMarkPower>()?.Amount;
         relic.Flash();
-        await PowerCmd.Apply<ClassicCerberusMarkPower>(
+        var appliedMark = await PowerCmd.Apply<ClassicCerberusMarkPower>(
             choiceContext,
             target,
             amount,
             relic.Owner.Creature,
             null,
             false);
+
+        // Existing powers bypass AfterApplied, so publish only when stacking changed the mark.
+        if (previousMarkAmount is { } previousAmount
+            && appliedMark is not null
+            && appliedMark.Amount != previousAmount)
+        {
+            ClassicCerberusMarkPower.NotifyApplied(relic.Owner.Creature);
+        }
     }
 
     public static void UpgradeRandomHandCards(SakuraRelicModel relic, int upgrades)
@@ -81,4 +90,3 @@ internal static class SakuraRelicCombatActions
         }
     }
 }
-

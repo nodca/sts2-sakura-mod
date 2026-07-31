@@ -31,6 +31,8 @@ public class ClassicCerberusMarkPower : SakuraPowerModel
 {
     private const decimal DamageMultiplierPerStack = 0.25m;
 
+    internal static event Action<Creature>? MarkApplied;
+
     protected override string IconFileName => "cerberus_mark.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Single;
@@ -45,10 +47,19 @@ public class ClassicCerberusMarkPower : SakuraPowerModel
             ? 1m + DamageMultiplierPerStack * Amount
             : 1m;
 
+    public override Task AfterApplied(Creature? applier, CardModel? cardSource)
+    {
+        if (applier is not null)
+            NotifyApplied(applier);
+        return Task.CompletedTask;
+    }
+
+    internal static void NotifyApplied(Creature applier) =>
+        MarkApplied?.Invoke(applier);
+
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
         if (Owner.Side == side && participants.Contains(Owner))
             await PowerCmd.Remove(this);
     }
 }
-

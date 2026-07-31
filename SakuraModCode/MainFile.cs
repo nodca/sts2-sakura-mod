@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Modding;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Events;
+using SakuraMod.SakuraModCode.FourthAct.Wind.CardState;
 using SakuraMod.SakuraModCode.Telemetry;
 using STS2RitsuLib.Interop;
 
@@ -25,6 +26,7 @@ public partial class MainFile : Node
 
         SakuraKeywords.Register();
         SakuraCardStates.Register();
+        WindSleepingCards.Register();
         SakuraVoicePlayback.Register();
         SakuraContentRegistration.Register();
         SakuraEventRegistration.Register();
