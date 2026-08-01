@@ -228,8 +228,12 @@ public sealed class WindyBattlePower : SakuraPowerModel
             unresolved.Add(amount);
             for (var index = 0; index < amount; index++)
             {
-                var dazed = player.RunState.CreateCard<Dazed>(player);
-                await CardPileCmd.AddGeneratedCardToCombat(dazed, PileType.Draw, null, CardPilePosition.Random);
+                var dazed = CombatState.CreateCard<Dazed>(player);
+                await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
+                    dazed,
+                    PileType.Draw,
+                    player,
+                    CardPilePosition.Random);
             }
 
             await PowerCmd.Remove(bind);

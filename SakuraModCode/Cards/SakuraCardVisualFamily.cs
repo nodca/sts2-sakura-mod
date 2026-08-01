@@ -31,13 +31,18 @@ internal enum SakuraCardVisualLayout
     Classic
 }
 
+public interface ISakuraClearLayoutCard
+{
+    CardType DescriptionShapeCardType { get; }
+}
+
 internal static class SakuraCardVisualFamilies
 {
     public static SakuraCardContentOwner ContentOwner(NCard? card) =>
         ContentOwner(card?.Model);
 
     public static SakuraCardContentOwner ContentOwner(CardModel? card) =>
-        card is SakuraOptionCard
+        card is SakuraOptionCard or ISakuraClearLayoutCard
             || card is not null && SakuraCardCatalog.TryGetMetadata(card, out _)
             ? SakuraCardContentOwner.Sakura
             : SakuraCardContentOwner.Vanilla;
@@ -61,7 +66,7 @@ internal static class SakuraCardVisualFamilies
 
     public static SakuraCardVisualLayout Layout(CardModel? card)
     {
-        if (card is SakuraOptionCard)
+        if (card is SakuraOptionCard or ISakuraClearLayoutCard)
             return SakuraCardVisualLayout.Clear;
 
         if (card is null || !SakuraCardCatalog.TryGetMetadata(card, out var metadata))

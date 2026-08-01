@@ -24,8 +24,8 @@ public class Promise() : TransparentExtraEffectCard(1, CardType.Skill, CardRarit
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new BlockVar(5, ValueProp.Move),
-        new PowerVar<PromiseManifestPower>(2),
+        new BlockVar(6, ValueProp.Move),
+        new PowerVar<PromiseManifestPower>(1),
         new PowerVar<PlatingPower>(4)
     ];
 
@@ -52,5 +52,6 @@ public class Promise() : TransparentExtraEffectCard(1, CardType.Skill, CardRarit
             this,
             false);
 
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
+    protected override void OnUpgrade() =>
+        DynamicVars["PromiseManifestPower"].UpgradeValueBy(1);
 }

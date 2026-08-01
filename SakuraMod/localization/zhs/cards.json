@@ -362,5 +362,7 @@
   "SAKURA_MOD_CARD_SPELL_FENG_HUA.title": "风华",
   "SAKURA_MOD_CARD_SPELL_FENG_HUA.description": "[gold]符咒[/gold] [gold]风[/gold]\n造成 {Magic:diff()} 次 {Damage:diff()} 点伤害。",
   "SAKURA_MOD_CARD_SPELL_SHUI_LONG.title": "水龙",
-  "SAKURA_MOD_CARD_SPELL_SHUI_LONG.description": "[gold]符咒[/gold] [gold]水[/gold]\n对所有敌人造成 {Damage:diff()} 点伤害。"
+  "SAKURA_MOD_CARD_SPELL_SHUI_LONG.description": "[gold]符咒[/gold] [gold]水[/gold]\n对所有敌人造成 {Damage:diff()} 点伤害。",
+  "SAKURA_MOD_CARD_MICRO_LIGHT.title": "微光",
+  "SAKURA_MOD_CARD_MICRO_LIGHT.description": "获得 1 层[gold]光[/gold]。\n无法获得[red]遗忘[/red]。\n[gold]虚无[/gold]。[gold]消耗[/gold]。"
 }

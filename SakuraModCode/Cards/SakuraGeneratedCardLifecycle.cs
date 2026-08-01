@@ -34,7 +34,7 @@ internal static class SakuraGeneratedCardLifecycle
 
     public static async Task<bool> GrantTemporary(PlayerChoiceContext context, CardModel card)
     {
-        if (card.IsTemporary())
+        if (card.IsTemporary() || card is ISakuraForgottenImmune)
             return false;
 
         card.MakeTemporary();
@@ -191,7 +191,7 @@ internal static class SakuraGeneratedCardLifecycle
         {
             var hadTemporary = card.IsTemporary();
             card.MakeTemporary(returnsToMemory: !options.PreventTemporaryMemoryReturn);
-            temporaryGranted = !hadTemporary;
+            temporaryGranted = !hadTemporary && card.IsTemporary();
         }
 
         if (options.FreeThisTurn)

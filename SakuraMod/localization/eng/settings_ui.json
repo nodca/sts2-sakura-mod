@@ -1,6 +1,8 @@
 {
   "SAKURAMOD-ENABLE_SAKURA_VOICE.title": "Sakura voice",
   "SAKURAMOD-ENABLE_SAKURA_VOICE.description": "Play Sakura voice cues on the first eligible spell cards each combat.",
+  "SAKURAMOD-ENABLE_FOURTH_ACT.title": "Enable Act 4 (experimental)",
+  "SAKURAMOD-ENABLE_FOURTH_ACT.description": "Enter SakuraMod's unfinished fourth act after Act 3.",
   "SAKURAMOD-COMBAT_ART.label": "Combat Art",
   "SAKURAMOD-COMBAT_ART.standard": "[ Standard ]",
   "SAKURAMOD-COMBAT_ART.chibi": "[ Chibi ]",

@@ -225,5 +225,18 @@
   "SAKURA_MOD_POWER_WIND_SLEEP_SELECTION_POWER.title": "Drowsy",
   "SAKURA_MOD_POWER_WIND_SLEEP_SELECTION_POWER.description": "After the next normal draw, a random playable card in this player's hand becomes Sleeping.",
   "SAKURA_MOD_POWER_WIND_SLEEP_WAKE_POWER.title": "Sleeping Cards",
-  "SAKURA_MOD_POWER_WIND_SLEEP_WAKE_POWER.description": "Positive unblocked enemy Attack damage wakes all of this player's Sleeping cards."
+  "SAKURA_MOD_POWER_WIND_SLEEP_WAKE_POWER.description": "Positive unblocked enemy Attack damage wakes all of this player's Sleeping cards.",
+  "SAKURA_MOD_POWER_DARK_LIGHT_POWER.title": "Light",
+  "SAKURA_MOD_POWER_DARK_LIGHT_POWER.description": "The party's Light can break the Dark's veil or reduce Night.",
+  "SAKURA_MOD_POWER_DARK_NIGHT_POWER.title": "Night",
+  "SAKURA_MOD_POWER_DARK_NIGHT_POWER.description": "Empowers the Dark's attacks, Block, and debuffs. At 5, the Dark prepares Eternal Darkness.",
+  "SAKURA_MOD_POWER_DARK_VEIL_POWER.title": "Dark Veil",
+  "SAKURA_MOD_POWER_DARK_VEIL_POWER.description": "Takes 80% less damage from players while the veil is active.",
+  "SAKURA_MOD_POWER_DARK_SOVEREIGNTY_POWER.title": "Dark Sovereignty",
+  "SAKURA_MOD_POWER_DARK_SOVEREIGNTY_POWER.description": "Players cannot gain temporary or permanent Wind or Water state.",
+  "SAKURA_MOD_POWER_DARK_BATTLE_POWER.title": "Dark's Trial",
+  "SAKURA_MOD_POWER_DARK_BATTLE_POWER.description": "Before each living player's normal draw, adds 5 Micro Lights to that player's hand while the Dark can generate them.",
+  "SAKURA_MOD_POWER_DARK_CONFINEMENT_SELECTION_POWER.title": "Confinement",
+  "SAKURA_MOD_POWER_DARK_CONFINEMENT_SELECTION_POWER.description": "After your next normal draw, choose a card in your hand other than Micro Light or a card with an Affliction. It gains Forgotten and Confinement.",
+  "SAKURA_MOD_POWER_DARK_CONFINEMENT_SELECTION_POWER.selectionPrompt": "Choose a card for the Dark to confine."
 }

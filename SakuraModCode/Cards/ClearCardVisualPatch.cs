@@ -38,11 +38,9 @@ internal static class ClearCardLayout
         "_ancientPortrait",
         "_ancientTextBg",
         "_banner",
-        "_cardOverlay",
         "_cardVfxContainer",
         "_frame",
         "_lock",
-        "_overlayContainer",
         "_portrait",
         "_portraitBorder",
         "_portraitCanvasGroup",
@@ -96,7 +94,9 @@ internal static class ClearCardLayout
 
     public static void PreloadVisualResources()
     {
-        foreach (var cardType in SakuraTransparentCardCatalog.TransparentCardTypes.Concat(SakuraOptionCardCatalog.CardTypes))
+        foreach (var cardType in SakuraTransparentCardCatalog.TransparentCardTypes
+                     .Concat(SakuraOptionCardCatalog.CardTypes)
+                     .Concat(SakuraContentRegistration.ClearLayoutOnlyCardTypes))
             _ = ClearCardTexture(cardType);
         _ = ClearCardHighlightTexture();
     }

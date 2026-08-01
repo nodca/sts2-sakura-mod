@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
 using SakuraMod.SakuraModCode.Extensions;
 using System.Runtime.CompilerServices;
 
@@ -129,10 +130,10 @@ public static class SakuraManifestLoop
             .Select(SakuraTransparentCardCatalog.CardTemplate)
             .ToList();
 
-    public static Task OnTemporaryStabilized(PlayerChoiceContext context, CardModel card)
+    public static async Task OnTemporaryStabilized(PlayerChoiceContext context, CardModel card)
     {
         RememberCaptureCandidate(card);
-        return Task.CompletedTask;
+        await DarkLightCoordinator.OnTemporaryStabilized(context, card);
     }
 
     internal static IReadOnlyList<Type> CaptureCandidateTypes(ICombatState combatState, Player owner)

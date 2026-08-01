@@ -27,11 +27,18 @@ using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
-public class ClassicLightSakuraPower : SakuraLightPowerBase
+public class ClassicLightSakuraPower : SakuraLightPowerBase, IMaxHandSizeModifier
 {
+    private const int ExtraHandSize = 2;
     protected override string IconFileName => "light_power.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
+
+    public int ModifyMaxHandSize(Player player, int currentMaxHandSize) =>
+        player.Creature == Owner ? currentMaxHandSize + ExtraHandSize : currentMaxHandSize;
+
+    public int ModifyMaxHandSizeLate(Player player, int currentMaxHandSize) =>
+        currentMaxHandSize;
 
     public override bool TryModifyKeywordsInCombat(CardModel card, ISet<CardKeyword> keywords)
     {
@@ -68,4 +75,3 @@ public class ClassicLightSakuraPower : SakuraLightPowerBase
     private bool IsOwnedStatusOrCurse(CardModel? card) =>
         card?.Owner?.Creature == Owner && IsStatusOrCurse(card.Type);
 }
-

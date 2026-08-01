@@ -22,6 +22,7 @@ internal static class SakuraCardVisualPatchRegistration
         patcher.RegisterPatch<SakuraCardReloadPortraitSynchronizationPatch>();
         patcher.RegisterPatch<SakuraCardUpdateVisualsPatch>();
         patcher.RegisterPatch<SakuraCardEnchantmentChangedGeometryPatch>();
+        patcher.RegisterPatch<SakuraCardAfflictionChangedGeometryPatch>();
         patcher.RegisterPatch<SakuraGeneratedTransparentCardUpdateVisualsPatch>();
         patcher.RegisterPatch<KinomotoSakuraCardRewardGlowPatch>();
         patcher.RegisterPatch<KinomotoSakuraCardCurrentSizePatch>();
@@ -68,6 +69,26 @@ internal static class SakuraCardVisualPatchRegistration
 
     internal static ModPatchTarget NCardOnEnchantmentChangedTarget() =>
         PatchTarget.Method<NCard>("OnEnchantmentChanged", Type.EmptyTypes);
+
+    internal static ModPatchTarget NCardOnAfflictionChangedTarget() =>
+        PatchTarget.Method<NCard>("OnAfflictionChanged", Type.EmptyTypes);
+}
+
+internal sealed class SakuraCardAfflictionChangedGeometryPatch : IPatchMethod
+{
+    public static string PatchId => "sakura_card_affliction_changed_geometry";
+    public static string Description => "Restore Sakura card Affliction overlay geometry after a live Affliction change";
+    public static bool IsCritical => true;
+
+    public static ModPatchTarget[] GetTargets() =>
+    [
+        SakuraCardVisualPatchRegistration.NCardOnAfflictionChangedTarget()
+    ];
+
+    public static void Postfix(NCard __instance)
+    {
+        SakuraCardGeometryLifecycle.AfterNativeAfflictionChanged(__instance);
+    }
 }
 
 internal sealed class SakuraCardReloadPortraitSynchronizationPatch : IPatchMethod

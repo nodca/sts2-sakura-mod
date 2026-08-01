@@ -362,5 +362,7 @@
   "SAKURA_MOD_CARD_SPELL_FENG_HUA.title": "Feng Hua",
   "SAKURA_MOD_CARD_SPELL_FENG_HUA.description": "[gold]Spell[/gold] [gold]Windy[/gold].\nDeal {Damage:diff()} damage {Magic:diff()} times.",
   "SAKURA_MOD_CARD_SPELL_SHUI_LONG.title": "Shui Long",
-  "SAKURA_MOD_CARD_SPELL_SHUI_LONG.description": "[gold]Spell[/gold] [gold]Watery[/gold].\nDeal {Damage:diff()} damage to all enemies."
+  "SAKURA_MOD_CARD_SPELL_SHUI_LONG.description": "[gold]Spell[/gold] [gold]Watery[/gold].\nDeal {Damage:diff()} damage to all enemies.",
+  "SAKURA_MOD_CARD_MICRO_LIGHT.title": "Micro Light",
+  "SAKURA_MOD_CARD_MICRO_LIGHT.description": "Gain 1 [gold]Light[/gold].\nCannot gain [red]Forgotten[/red].\n[gold]Ethereal[/gold]. [gold]Exhaust[/gold]."
 }

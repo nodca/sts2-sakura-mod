@@ -36,6 +36,9 @@ internal static class SakuraDescriptionRegion
 
     public static bool AppliesTo(CardModel? card)
     {
+        if (card is ISakuraClearLayoutCard)
+            return true;
+
         if (card is null || card.Type is not (CardType.Attack or CardType.Skill or CardType.Power))
             return false;
 
@@ -59,12 +62,15 @@ internal static class SakuraDescriptionRegion
         if (!AppliesTo(card))
             throw new ArgumentException($"Card {card.GetType().Name} does not use the Sakura description region.", nameof(card));
 
-        return card.Type switch
+        var descriptionType = card is ISakuraClearLayoutCard clearLayoutCard
+            ? clearLayoutCard.DescriptionShapeCardType
+            : card.Type;
+        return descriptionType switch
         {
             CardType.Attack => SakuraDescriptionShape.Attack,
             CardType.Skill => SakuraDescriptionShape.Skill,
             CardType.Power => SakuraDescriptionShape.Power,
-            _ => throw new ArgumentOutOfRangeException(nameof(card), card.Type, "Unsupported Sakura description card type.")
+            _ => throw new ArgumentOutOfRangeException(nameof(card), descriptionType, "Unsupported Sakura description card type.")
         };
     }
 

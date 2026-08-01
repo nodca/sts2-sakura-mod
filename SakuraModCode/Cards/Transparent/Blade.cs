@@ -18,13 +18,13 @@ using STS2RitsuLib.Cards.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Blade() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+public class Blade() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new CalculationBaseVar(4),
+        new CalculationBaseVar(6),
         new ExtraDamageVar(2),
         new CalculatedDamageVar(ValueProp.Move).WithMultiplier(BladeRules.DamageBonusCount),
         new BladeHitsVar(2)
@@ -37,7 +37,7 @@ public class Blade() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity
         await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage, hitCount: hits);
     }
 
-    protected override void OnUpgrade() => DynamicVars.CalculationBase.UpgradeValueBy(1);
+    protected override void OnUpgrade() => DynamicVars.CalculationBase.UpgradeValueBy(2);
 }
 
 internal sealed class BladeHitsVar(decimal hits) : DynamicVar("Hits", hits)
@@ -85,4 +85,3 @@ internal static class BladeRules
             .Count(CountsForDamageBonus);
     }
 }
-

@@ -8,12 +8,15 @@ using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using STS2RitsuLib.Content;
 using STS2RitsuLib.Models.Capabilities;
 
 namespace SakuraMod.SakuraModCode.Cards;
+
+public interface ISakuraForgottenImmune;
 
 public sealed class SynchronizedCardPairModifier : SakuraCardStateCapability
 {
@@ -293,6 +296,7 @@ public sealed class TemporaryModifier : SakuraCardStateCapability
         }
 
         TemporaryDissolveVfx.Play(card);
+        DarkLightCoordinator.ClearSourceMarker(card);
         await CardPileCmd.RemoveFromCombat(card, true);
     }
 
@@ -597,6 +601,9 @@ public static class SakuraCardStates
 
     public static void MakeTemporary(this CardModel card, bool returnsToMemory = true)
     {
+        if (card is ISakuraForgottenImmune)
+            return;
+
         var modifier = SakuraCardStateCapability.Modifiers(card)
             .OfType<TemporaryModifier>()
             .FirstOrDefault();
@@ -652,6 +659,7 @@ public static class SakuraCardStates
     public static void StabilizeWithoutTrigger(this CardModel card)
     {
         card.RemoveTemporaryForStabilize();
+        DarkLightCoordinator.ClearSourceMarker(card);
     }
 
     public static void SynchronizeWith(this CardModel first, CardModel second)
@@ -667,6 +675,7 @@ public static class SakuraCardStates
     {
         foreach (var modifier in SakuraCardStateCapability.Modifiers(card).OfType<TemporaryModifier>().ToArray())
             SakuraCardStateCapability.RemoveModifier(card, modifier);
+        DarkLightCoordinator.ClearSourceMarker(card);
     }
 
     private static bool RemoveTemporaryForStabilize(this CardModel card)

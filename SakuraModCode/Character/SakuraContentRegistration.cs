@@ -3,6 +3,11 @@ using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Relics;
+using SakuraMod.SakuraModCode.FourthAct.Dark.Afflictions;
+using SakuraMod.SakuraModCode.FourthAct.Dark.Cards;
+using SakuraMod.SakuraModCode.FourthAct.Dark;
+using SakuraMod.SakuraModCode.FourthAct.Wind;
+using SakuraMod.SakuraModCode.FourthAct.Routing;
 using STS2RitsuLib.Content;
 using STS2RitsuLib;
 
@@ -21,11 +26,28 @@ internal static class SakuraContentRegistration
         registry.RegisterSingleton<GrowingMagicDamageHook>();
         registry.RegisterCharacter<ClassicSakura>();
         RegisterCards(registry, typeof(ClassicSakuraCardPool), AllCardTypesForRegistration());
+        registry.RegisterAffliction<DarkConfinementAffliction>();
+        RegisterFourthAct(registry);
+        foreach (var monsterType in WindEnemyCatalog.MonsterTypes.Concat(DarkEnemyCatalog.MonsterTypes))
+            registry.RegisterMonster(monsterType);
         RegisterPowers(registry, AllPowerTypesForRegistration());
         RegisterRelics(registry, typeof(ClassicSakuraRelicPool), SakuraRelicCatalog.AllRelicTypes());
         RitsuLibFramework.RegisterTouchOfOrobasRefinementMapping<ClassicSealedWandRelic, ClassicStarWandRelic>(MainFile.ModId);
         RitsuLibFramework.RegisterArchaicToothTranscendenceMapping<SpellSeal, GrowingMagic>(MainFile.ModId);
         RitsuLibFramework.RegisterDustyTomeCard<ClassicSakura, AnotherMe>(MainFile.ModId);
+    }
+
+    private static void RegisterFourthAct(ModContentRegistry registry)
+    {
+        if (!FourthActEntryRegistration.RegisterIfComplete<SakuraFourthAct>(
+                registry,
+                FourthActRouteCatalog.DraftRoutes))
+        {
+            return;
+        }
+
+        foreach (var encounterType in FourthActRouteCatalog.CompleteEncounterTypes)
+            registry.RegisterActEncounter(typeof(SakuraFourthAct), encounterType);
     }
 
     private static void RegisterCards(ModContentRegistry registry, Type poolType, IEnumerable<Type> cardTypes)
@@ -79,5 +101,10 @@ internal static class SakuraContentRegistration
     internal static IEnumerable<Type> AllCardTypesForRegistration() =>
         ClassicSakuraCardPool.AllCardTypesForPool()
             .Concat(SakuraOptionCardCatalog.CardTypes)
+            .Append(typeof(MicroLight))
             .Distinct();
+
+    internal static IEnumerable<Type> ClearLayoutOnlyCardTypes =>
+        AllCardTypesForRegistration()
+            .Where(static type => typeof(ISakuraClearLayoutCard).IsAssignableFrom(type));
 }

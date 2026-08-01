@@ -56,7 +56,6 @@ internal static class SakuraCardGeometryLifecycle
         }
         ledger.BorrowPositionBaseline(card.EnchantmentTab);
         ledger.BorrowPositionBaseline(card.EnchantmentVfxOverride);
-
         ledger.BorrowViewportSize(transformVfxViewport);
     }
 
@@ -75,12 +74,18 @@ internal static class SakuraCardGeometryLifecycle
         var ledger = SakuraCardMutationLedgers.For(card);
         ApplyNativeCenteredOverlay(ledger, card.EnchantmentTab);
         ApplyNativeCenteredOverlay(ledger, card.EnchantmentVfxOverride);
+        SakuraAfflictionVisualLayout.Apply(card, ledger);
     }
 
     public static void AfterNativeEnchantmentChanged(NCard card)
     {
         if (SakuraCardGeometry.TryProfile(SakuraCardVisualFamilies.Layout(card), out _))
             ApplyNativeCenteredOverlay(SakuraCardMutationLedgers.For(card), card.EnchantmentTab);
+    }
+
+    public static void AfterNativeAfflictionChanged(NCard card)
+    {
+        SakuraAfflictionVisualLayout.Apply(card, SakuraCardMutationLedgers.For(card));
     }
 
     public static void ApplyCardHighlight(

@@ -34,6 +34,13 @@ internal enum SakuraControlProperty
     RichTextLayout = 1 << 17,
 }
 
+[Flags]
+internal enum SakuraNode2DProperty
+{
+    None = 0,
+    Position = 1 << 0,
+}
+
 internal static class SakuraCardMutationLedgers
 {
     private static readonly ConditionalWeakTable<GodotObject, SakuraCardMutationLedger> Ledgers = new();
@@ -197,6 +204,21 @@ internal sealed class SakuraCardMutationLedger
 
         _positionBaselines.TryAdd(control!, control!.Position);
         Borrow(control, SakuraControlProperty.Position);
+    }
+
+    public void Borrow(Node2D? node, SakuraNode2DProperty properties)
+    {
+        if (!SakuraCardVisualInfrastructure.IsGodotInstanceUsable(node))
+            return;
+
+        if (properties.HasFlag(SakuraNode2DProperty.Position))
+        {
+            Capture(
+                node!,
+                SakuraMutationProperty.Node2DPosition,
+                node!.Position,
+                static (target, value) => target.Position = value);
+        }
     }
 
     public bool TryGetPositionBaseline(Control? control, out Vector2 position)
@@ -561,6 +583,7 @@ internal sealed class SakuraCardMutationLedger
         ViewportSize,
         ShaderState,
         OwnedVisibility,
+        Node2DPosition,
     }
 
     private interface ISakuraCardMutation
