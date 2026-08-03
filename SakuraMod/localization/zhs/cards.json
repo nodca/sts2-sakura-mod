@@ -364,5 +364,5 @@
   "SAKURA_MOD_CARD_SPELL_SHUI_LONG.title": "水龙",
   "SAKURA_MOD_CARD_SPELL_SHUI_LONG.description": "[gold]符咒[/gold] [gold]水[/gold]\n对所有敌人造成 {Damage:diff()} 点伤害。",
   "SAKURA_MOD_CARD_MICRO_LIGHT.title": "微光",
-  "SAKURA_MOD_CARD_MICRO_LIGHT.description": "获得 1 层[gold]光[/gold]。\n无法获得[red]遗忘[/red]。\n[gold]虚无[/gold]。[gold]消耗[/gold]。"
+  "SAKURA_MOD_CARD_MICRO_LIGHT.description": "使「暗」失去 {DarkVeilPower:diff()} 层[gold]暗幕[/gold]。\n永夜期间，改为使「暗」获得 {DarkLightPower:diff()} 层[gold]微光[/gold]。\n无法获得[red]遗忘[/red]。"
 }

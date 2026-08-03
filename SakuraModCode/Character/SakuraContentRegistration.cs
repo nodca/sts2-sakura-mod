@@ -7,6 +7,7 @@ using SakuraMod.SakuraModCode.FourthAct.Dark.Afflictions;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Dark;
 using SakuraMod.SakuraModCode.FourthAct.Wind;
+using SakuraMod.SakuraModCode.FourthAct.Wind.CardState;
 using SakuraMod.SakuraModCode.FourthAct.Routing;
 using STS2RitsuLib.Content;
 using STS2RitsuLib;
@@ -27,6 +28,7 @@ internal static class SakuraContentRegistration
         registry.RegisterCharacter<ClassicSakura>();
         RegisterCards(registry, typeof(ClassicSakuraCardPool), AllCardTypesForRegistration());
         registry.RegisterAffliction<DarkConfinementAffliction>();
+        registry.RegisterAffliction<SleepingAffliction>();
         RegisterFourthAct(registry);
         foreach (var monsterType in WindEnemyCatalog.MonsterTypes.Concat(DarkEnemyCatalog.MonsterTypes))
             registry.RegisterMonster(monsterType);

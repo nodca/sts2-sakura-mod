@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.MonsterMoves;
 using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Intents;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Powers;
 
@@ -38,7 +39,8 @@ public sealed class WindyMonster : WindMonsterTemplate
         new MultiAttackIntent(BaseMultiDamage, MultiHits),
         new SingleAttackIntent(BaseSingleDamage),
         new SingleAttackIntent(BaseHeavyDamage),
-        new SummonIntent()
+        new SummonIntent(),
+        new DebuffIntent(strong: true)
     ];
 
     public override int MinInitialHp =>
@@ -61,15 +63,21 @@ public sealed class WindyMonster : WindMonsterTemplate
 
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
-        var firstMulti = new MoveState("FIRST_GUSTS", MultiAttack, new MultiAttackIntent(MultiDamage, MultiHits));
-        var firstSingle = new MoveState("FIRST_GUST", SingleAttack, new SingleAttackIntent(() => SingleDamage));
-        var secondMulti = new MoveState("SECOND_GUSTS", MultiAttack, new MultiAttackIntent(MultiDamage, MultiHits));
-        var secondSingle = new MoveState("SECOND_GUST", SingleAttack, new SingleAttackIntent(() => SingleDamage));
+        var firstMulti = new MoveState("FIRST_GUSTS", targets => MultiAttack(targets, WindyAction.FirstGusts),
+            new MultiAttackIntent(MultiDamage, MultiHits), new DebuffIntent(strong: true));
+        var firstSingle = new MoveState("FIRST_GUST", targets => SingleAttack(targets, WindyAction.FirstGust),
+            new SingleAttackIntent(() => SingleDamage), new DebuffIntent(strong: true));
+        var secondMulti = new MoveState("SECOND_GUSTS", targets => MultiAttack(targets, WindyAction.SecondGusts),
+            new MultiAttackIntent(MultiDamage, MultiHits), new DebuffIntent(strong: true));
+        var secondSingle = new MoveState("SECOND_GUST", targets => SingleAttack(targets, WindyAction.SecondGust),
+            new SingleAttackIntent(() => SingleDamage), new DebuffIntent(strong: true));
         var summon = new MoveState(
             "SUMMON_ATTENDANT",
-            SummonAttendant,
-            new WindAttendantSummonIntent(() => _preparedAttendant));
-        var heavy = new MoveState("HEAVY_GALE", HeavyAttack, new SingleAttackIntent(() => HeavyDamage));
+            targets => SummonAttendant(targets, WindyAction.SummonAttendant),
+            new WindAttendantSummonIntent(() => _preparedAttendant),
+            new DebuffIntent(strong: true));
+        var heavy = new MoveState("HEAVY_GALE", targets => HeavyAttack(targets, WindyAction.HeavyGale),
+            new SingleAttackIntent(() => HeavyDamage), new DebuffIntent(strong: true));
         var firstLight = new RandomBranchState("FIRST_LIGHT_BRANCH");
         var attendantCheck = new ConditionalBranchState("ATTENDANT_CHECK");
         var secondLight = new RandomBranchState("SECOND_LIGHT_BRANCH");
@@ -92,30 +100,60 @@ public sealed class WindyMonster : WindMonsterTemplate
             firstLight);
     }
 
-    private Task MultiAttack(IReadOnlyList<Creature> targets) =>
-        DamageCmd.Attack(MultiDamage).FromMonster(this).WithHitCount(MultiHits).WithNoAttackerAnim().Execute(null);
-
-    private Task SingleAttack(IReadOnlyList<Creature> targets) =>
-        DamageCmd.Attack(SingleDamage).FromMonster(this).WithNoAttackerAnim().Execute(null);
-
-    private Task HeavyAttack(IReadOnlyList<Creature> targets) =>
-        DamageCmd.Attack(HeavyDamage).FromMonster(this).WithNoAttackerAnim().Execute(null);
-
-    private async Task SummonAttendant(IReadOnlyList<Creature> targets)
+    private async Task MultiAttack(IReadOnlyList<Creature> targets, WindyAction action)
     {
-        if (HasAttendant)
-            return;
-
-        var selected = _preparedAttendant ?? SelectAttendant();
-        _preparedAttendant = null;
-        _attendantBag.Remove(selected);
-        if (selected == typeof(DashMonster))
-            await CreatureCmd.Add<DashMonster>(CombatState, "ATTENDANT");
-        else if (selected == typeof(FloatMonster))
-            await CreatureCmd.Add<FloatMonster>(CombatState, "ATTENDANT");
-        else
-            await CreatureCmd.Add<SleepMonster>(CombatState, "ATTENDANT");
+        await FourthActEnemyActionCmd.AttackAsync(
+            Creature,
+            DamageCmd.Attack(MultiDamage).FromMonster(this).WithHitCount(MultiHits));
+        await ApplyWindBind(action);
     }
+
+    private async Task SingleAttack(IReadOnlyList<Creature> targets, WindyAction action)
+    {
+        await FourthActEnemyActionCmd.AttackAsync(
+            Creature,
+            DamageCmd.Attack(SingleDamage).FromMonster(this));
+        await ApplyWindBind(action);
+    }
+
+    private async Task HeavyAttack(IReadOnlyList<Creature> targets, WindyAction action)
+    {
+        await FourthActEnemyActionCmd.AttackAsync(
+            Creature,
+            DamageCmd.Attack(HeavyDamage).FromMonster(this),
+            FourthActAttackStyle.HeavyWind);
+        await ApplyWindBind(action);
+    }
+
+    private async Task SummonAttendant(IReadOnlyList<Creature> targets, WindyAction action)
+    {
+        await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Summon, async () =>
+        {
+            if (!HasAttendant)
+            {
+                var selected = _preparedAttendant ?? SelectAttendant();
+                _preparedAttendant = null;
+                _attendantBag.Remove(selected);
+                if (selected == typeof(DashMonster))
+                    await CreatureCmd.Add<DashMonster>(CombatState, "ATTENDANT");
+                else if (selected == typeof(FloatMonster))
+                    await CreatureCmd.Add<FloatMonster>(CombatState, "ATTENDANT");
+                else
+                    await CreatureCmd.Add<SleepMonster>(CombatState, "ATTENDANT");
+            }
+        });
+
+        await ApplyWindBind(action);
+    }
+
+    private Task ApplyWindBind(WindyAction action) =>
+        PowerCmd.Apply<WindBindPower>(
+            new ThrowingPlayerChoiceContext(),
+            CombatState.Players.Where(static player => player.Creature.IsAlive).Select(static player => player.Creature),
+            WindEnemyRules.WindBindForAction(action),
+            Creature,
+            null,
+            silent: false);
 
     private bool PrepareAttendant()
     {

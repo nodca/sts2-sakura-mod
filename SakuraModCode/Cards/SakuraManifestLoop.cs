@@ -133,7 +133,7 @@ public static class SakuraManifestLoop
     public static async Task OnTemporaryStabilized(PlayerChoiceContext context, CardModel card)
     {
         RememberCaptureCandidate(card);
-        await DarkLightCoordinator.OnTemporaryStabilized(context, card);
+        await DarkMicroLightCoordinator.OnTemporaryStabilized(context, card);
     }
 
     internal static IReadOnlyList<Type> CaptureCandidateTypes(ICombatState combatState, Player owner)

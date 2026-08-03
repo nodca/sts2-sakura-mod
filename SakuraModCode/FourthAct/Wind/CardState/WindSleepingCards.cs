@@ -1,48 +1,48 @@
+using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.HoverTips;
-using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
-using STS2RitsuLib.Models.Capabilities;
-using STS2RitsuLib.Content;
+using SakuraMod.SakuraModCode.FourthAct.Wind.Visuals;
 using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Wind.CardState;
 
-public sealed class SleepingCardCapability : CardCapability, ICardPlayStateContributor, ICardHoverTipContributor
+public sealed class SleepingAffliction : ModAfflictionTemplate
 {
-    public bool? CanPlay(CardModel card) => false;
+    public const string OverlayScenePath =
+        MainFile.ResPath + "/scenes/cards/overlays/sleeping_affliction.tscn";
 
-    public IEnumerable<IHoverTip> GetHoverTips(CardModel card) =>
-    [
-        new HoverTip(
-            new LocString("static_hover_tips", "SAKURAMOD-SLEEPING.title"),
-            new LocString("static_hover_tips", "SAKURAMOD-SLEEPING.description").GetFormattedText())
-    ];
+    public override AfflictionAssetProfile AssetProfile => new(OverlayScenePath);
+
+    internal static bool ShouldBlockPlay(
+        CardModel candidate,
+        CardModel afflictedCard,
+        AutoPlayType autoPlayType) =>
+        ReferenceEquals(candidate, afflictedCard) && autoPlayType == AutoPlayType.None;
+
+    public override bool ShouldPlay(CardModel card, AutoPlayType autoPlayType) =>
+        !ShouldBlockPlay(card, Card, autoPlayType);
 }
 
 public static class WindSleepingCards
 {
-    public static void Register() =>
-        ModContentRegistry.For(MainFile.ModId).RegisterModelCapability<SleepingCardCapability>();
+    public static bool IsSleeping(CardModel card) => card.Affliction is SleepingAffliction;
 
-    public static bool IsSleeping(CardModel card) =>
-        card.Capabilities().All.OfType<SleepingCardCapability>().Any();
-
-    public static void MarkSleeping(CardModel card)
-    {
-        if (!IsSleeping(card))
-            card.AddCapability(ModelCapabilityRegistry.Create<SleepingCardCapability>(), allowMerge: false);
-    }
+    public static async Task<bool> MarkSleeping(CardModel card) =>
+        await CardCmd.Afflict<SleepingAffliction>(card, 1) is not null;
 
     public static void Wake(CardModel card)
     {
-        foreach (var capability in card.Capabilities().All.OfType<SleepingCardCapability>().ToArray())
-            card.Capabilities().Remove(capability);
+        if (!IsSleeping(card))
+            return;
+
+        SleepingCardVisuals.PlayWake(card);
+        CardCmd.ClearAffliction(card);
     }
 
     public static void WakeAll(Player player)
     {
-        foreach (var card in player.PlayerCombatState?.AllCards ?? [])
+        foreach (var card in player.PlayerCombatState?.AllCards.ToArray() ?? [])
             Wake(card);
     }
 }

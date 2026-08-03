@@ -18,14 +18,14 @@ mods/SakuraMod/SakuraMod.pck
 This mod requires RitsuLib. Install STS2-RitsuLib first and keep it enabled alongside
 SakuraMod.
 
-## Local Baseline
+## Development Docs
 
-- Slay the Spire 2: `v0.107.1` on this machine
-- Godot: `4.5.1.stable.mono`
-- .NET SDK: `9.0.117`
-- Template package: `Alchyr.Sts2.Templates 2.4.3`
-- Runtime RitsuLib: `0.5.3` (`STS2 0.107.1` compatibility build)
-- Mod id / assembly: `SakuraMod`
+The public install and build flow is kept here. Current domain language,
+implementation contracts, local tool versions, and validation rules live in
+[CONTEXT.md](CONTEXT.md), [docs/README.md](docs/README.md), and the
+[Trellis specification map](.trellis/spec/index.md). The pinned package and
+game versions are maintained in the project file and runtime safety spec,
+rather than duplicated in this README.
 
 ## Local Setup
 

@@ -1,7 +1,6 @@
 using Godot;
-using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes.Combat;
-using MegaCrit.Sts2.Core.TestSupport;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using STS2RitsuLib.Scaffolding.Godot;
 
 namespace SakuraMod.SakuraModCode.Character;
@@ -9,11 +8,6 @@ namespace SakuraMod.SakuraModCode.Character;
 public static class SakuraStandeeVisuals
 {
     private const float CombatVisualScale = 0.28f;
-    private const float StandeeEntryOffsetY = 16f;
-    private const float StandeeEntryDuration = 0.42f;
-    private const float StandeeIdleLift = 3.4f;
-    private const float StandeeIdleHalfDuration = 1.85f;
-    private const float StandeeIdleTilt = 0.005f;
     private static readonly Vector2 CombatVisualSize = new(264f, 468f);
     private static readonly Vector2 CombatVisualTopLeft = new(-132f, -468f);
     private static readonly Vector2 CombatVisualCenter = new(0f, -234f);
@@ -71,7 +65,11 @@ public static class SakuraStandeeVisuals
             ApplyCombatVisualLayout(visuals, layout);
             var body = visuals.GetNode<Node2D>("%Visuals");
             if (animate)
-                StartCombatStandeeAnimation(body, layout.VisualPosition);
+                SakuraStandeeActionController.Attach(
+                    body,
+                    layout.VisualPosition,
+                    Vector2.One * layout.Scale,
+                    visualPath);
             return visuals;
         }
         catch (Exception ex)
@@ -110,67 +108,6 @@ public static class SakuraStandeeVisuals
         MoveMarker(visuals, "%IntentPos", layout.IntentPosition);
         MoveMarker(visuals, "%OrbPos", layout.OrbPosition);
         MoveMarker(visuals, "%TalkPos", layout.TalkPosition);
-    }
-
-    private static void StartCombatStandeeAnimation(Node2D body, Vector2 restPosition)
-    {
-        if (TestMode.IsOn)
-            return;
-
-        TaskHelper.RunSafely(StartCombatStandeeAnimationWhenReady(body, restPosition));
-    }
-
-    private static async Task StartCombatStandeeAnimationWhenReady(Node2D body, Vector2 restPosition)
-    {
-        if (!GodotObject.IsInstanceValid(body))
-            return;
-
-        if (!body.IsInsideTree())
-            await body.ToSignal(body, Node.SignalName.TreeEntered);
-
-        if (!GodotObject.IsInstanceValid(body) || !body.IsInsideTree())
-            return;
-
-        body.Position = restPosition + Vector2.Down * StandeeEntryOffsetY;
-        body.Rotation = 0f;
-        body.Modulate = new Color(1f, 1f, 1f, 0.86f);
-
-        var entry = body.CreateTween().SetParallel();
-        entry.TweenProperty(body, "position", restPosition, StandeeEntryDuration)
-            .SetEase(Tween.EaseType.Out)
-            .SetTrans(Tween.TransitionType.Cubic);
-        entry.TweenProperty(body, "modulate", Colors.White, StandeeEntryDuration * 0.8f)
-            .SetEase(Tween.EaseType.Out)
-            .SetTrans(Tween.TransitionType.Quad);
-        entry.Chain().TweenCallback(Callable.From(() => StartCombatStandeeIdle(body, restPosition)));
-    }
-
-    private static void StartCombatStandeeIdle(Node2D body, Vector2 restPosition)
-    {
-        if (!GodotObject.IsInstanceValid(body) || !body.IsInsideTree())
-            return;
-
-        body.Position = restPosition;
-        body.Rotation = 0f;
-        body.Modulate = Colors.White;
-
-        var liftedPosition = restPosition + Vector2.Up * StandeeIdleLift;
-        var settledPosition = restPosition + Vector2.Down * (StandeeIdleLift * 0.35f);
-
-        var idle = body.CreateTween().SetLoops();
-        idle.TweenProperty(body, "position", liftedPosition, StandeeIdleHalfDuration)
-            .SetEase(Tween.EaseType.InOut)
-            .SetTrans(Tween.TransitionType.Sine);
-        idle.Parallel().TweenProperty(body, "rotation", -StandeeIdleTilt, StandeeIdleHalfDuration)
-            .SetEase(Tween.EaseType.InOut)
-            .SetTrans(Tween.TransitionType.Sine);
-
-        idle.TweenProperty(body, "position", settledPosition, StandeeIdleHalfDuration)
-            .SetEase(Tween.EaseType.InOut)
-            .SetTrans(Tween.TransitionType.Sine);
-        idle.Parallel().TweenProperty(body, "rotation", StandeeIdleTilt * 0.55f, StandeeIdleHalfDuration)
-            .SetEase(Tween.EaseType.InOut)
-            .SetTrans(Tween.TransitionType.Sine);
     }
 
     private static void MoveMarker(Node root, string nodePath, Vector2 position)

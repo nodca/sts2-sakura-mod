@@ -26,7 +26,6 @@ public partial class MainFile : Node
 
         SakuraKeywords.Register();
         SakuraCardStates.Register();
-        WindSleepingCards.Register();
         SakuraVoicePlayback.Register();
         SakuraContentRegistration.Register();
         SakuraEventRegistration.Register();

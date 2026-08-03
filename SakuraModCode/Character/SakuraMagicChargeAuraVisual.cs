@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.TestSupport;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -23,6 +24,7 @@ internal static class SakuraMagicChargeAuraVisualPatch
     {
         SakuraMagicChargeAuraVisual.Mount(__instance);
         SakuraKeroCombatCompanion.Mount(__instance);
+        FourthActCombatFeedbackVisuals.Mount(__instance);
     }
 }
 

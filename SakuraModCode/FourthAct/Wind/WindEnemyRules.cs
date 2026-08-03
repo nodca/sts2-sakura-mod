@@ -1,8 +1,31 @@
 namespace SakuraMod.SakuraModCode.FourthAct.Wind;
 
+public enum WindyAction
+{
+    FirstGusts,
+    FirstGust,
+    SecondGusts,
+    SecondGust,
+    SummonAttendant,
+    HeavyGale
+}
+
 public static class WindEnemyRules
 {
     public const int BindPerPlayer = 5;
+
+    public static int WindBindForAction(WindyAction action) => action switch
+    {
+        WindyAction.FirstGusts
+            or WindyAction.FirstGust
+            or WindyAction.SecondGusts
+            or WindyAction.SecondGust
+            or WindyAction.SummonAttendant
+            or WindyAction.HeavyGale => BindPerPlayer,
+        _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
+    };
+
+    public static int WindBindForAttendantAction() => 0;
 
     public static int WallFromUnresolvedBind(int unresolvedBind) =>
         Math.Max(0, unresolvedBind + 1) / 2;

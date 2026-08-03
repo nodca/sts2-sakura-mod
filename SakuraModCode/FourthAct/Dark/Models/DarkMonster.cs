@@ -13,6 +13,7 @@ using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Dark.Models;
@@ -26,22 +27,26 @@ public sealed class DarkMonster : ModMonsterTemplate
 
     public DarkPhase Phase { get; private set; } = DarkPhase.Veiled;
     public DarkRegularAction NextRegularAction { get; private set; } = DarkRegularAction.Confinement;
-    public int CombatStartPlayerCount { get; private set; } = 1;
     public int VeilBreakSidesRemaining { get; private set; }
 
     public override int MinInitialHp =>
         AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, DarkEnemyRules.ToughHp, DarkEnemyRules.BaseHp);
     public override int MaxInitialHp => MinInitialHp;
     public override string? CustomVisualsPath => DarkEnemyAssets.Standee;
-    public override bool HasDeathSfx => false;
-    public override string? HurtSfx => null;
+    public override bool HasDeathSfx => true;
+    public override string DeathSfx => "event:/sfx/enemy/enemy_attacks/obscura/obscura_die";
+    public override string? HurtSfx => "event:/sfx/enemy/enemy_attacks/magi_knight/magi_knight_hurt";
+    public override float DeathAnimLengthOverride => SakuraStandeeActionController.DeathDuration;
     public bool IsDeadly => AscensionHelper.GetValueIfAscension(AscensionLevel.DeadlyEnemies, 1, 0) == 1;
     public int Night => Creature.GetPower<DarkNightPower>()?.Amount ?? 1;
     public bool IsVeilActive => Phase == DarkPhase.Veiled && VeilBreakSidesRemaining == 0;
-    public bool CanGenerateMicroLight => Phase == DarkPhase.EternalNight || IsVeilActive;
 
     public override IEnumerable<string> AssetPaths =>
-        DeclaredIntents().SelectMany(static intent => intent.AssetPaths).Prepend(DarkEnemyAssets.Standee).Distinct();
+        DeclaredIntents()
+            .SelectMany(static intent => intent.AssetPaths)
+            .Prepend(DarkEnemyAssets.Action)
+            .Prepend(DarkEnemyAssets.Standee)
+            .Distinct();
 
     protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
         SakuraStandeeVisuals.Create(DarkEnemyAssets.Standee, "The Dark");
@@ -49,16 +54,10 @@ public sealed class DarkMonster : ModMonsterTemplate
     public override async Task AfterAddedToRoom()
     {
         await base.AfterAddedToRoom();
-        CombatStartPlayerCount = Math.Max(1, CombatState.Players.Count);
         var context = new ThrowingPlayerChoiceContext();
         await PowerCmd.Apply<DarkSovereigntyPower>(context, Creature, 1, Creature, null, true);
-        await PowerCmd.Apply<DarkVeilPower>(context, Creature, 1, Creature, null, true);
+        await PowerCmd.Apply<DarkVeilPower>(context, Creature, DarkEnemyRules.InitialVeilLayers, Creature, null, true);
         await PowerCmd.Apply<DarkBattlePower>(context, Creature, 1, Creature, null, true);
-        foreach (var player in CombatState.Players)
-        {
-            var light = await PowerCmd.Apply<DarkLightPower>(context, player.Creature, 1, Creature, null, true);
-            light?.SetLight(0);
-        }
     }
 
     public async Task BeginTransition()
@@ -77,9 +76,27 @@ public sealed class DarkMonster : ModMonsterTemplate
             return;
 
         VeilBreakSidesRemaining = DarkEnemyRules.VeilBreakPlayerSides;
+        await FourthActCombatFeedbackVisuals.PlayDarkVeilBreakAsync(Creature);
         await CreatureCmd.LoseBlock(Creature, Creature.Block);
         await PowerCmd.Remove(Creature.GetPower<DarkVeilPower>());
         await PowerCmd.Apply<VulnerablePower>(choiceContext, Creature, 1, Creature, null, false);
+        FourthActCombatFeedbackVisuals.RefreshDarkVeilWindow(Creature);
+    }
+
+    public async Task ReduceVeil(PlayerChoiceContext choiceContext, int amount, Creature applier)
+    {
+        if (!IsVeilActive || amount <= 0 || Creature.GetPower<DarkVeilPower>() is not { } veil)
+            return;
+
+        var remaining = await PowerCmd.ModifyAmount(
+            choiceContext,
+            veil,
+            -Math.Min(amount, veil.Amount),
+            applier,
+            null,
+            false);
+        if (remaining <= 0)
+            await BreakVeil(choiceContext);
     }
 
     public async Task AdvanceVeilWindow(PlayerChoiceContext choiceContext)
@@ -88,8 +105,15 @@ public sealed class DarkMonster : ModMonsterTemplate
             return;
 
         VeilBreakSidesRemaining--;
+        FourthActCombatFeedbackVisuals.RefreshDarkVeilWindow(Creature);
         if (VeilBreakSidesRemaining == 0)
-            await PowerCmd.Apply<DarkVeilPower>(choiceContext, Creature, 1, Creature, null, true);
+            await PowerCmd.Apply<DarkVeilPower>(
+                choiceContext,
+                Creature,
+                DarkEnemyRules.InitialVeilLayers,
+                Creature,
+                null,
+                true);
     }
 
     public void RefreshPhaseTwoIntent()
@@ -141,8 +165,11 @@ public sealed class DarkMonster : ModMonsterTemplate
         AttackAndArmConfinement(targets, DarkEnemyRules.AttackDamage(DarkRegularAction.Confinement, 1, IsDeadly));
 
     private Task PhaseOneNonConfinement(IReadOnlyList<Creature> targets) =>
-        DamageCmd.Attack(DarkEnemyRules.AttackDamage(DarkRegularAction.NonConfinement, 1, IsDeadly))
-            .FromMonster(this).WithNoAttackerAnim().Execute(null);
+        FourthActEnemyActionCmd.AttackAsync(
+            Creature,
+            DamageCmd.Attack(DarkEnemyRules.AttackDamage(DarkRegularAction.NonConfinement, 1, IsDeadly))
+                .FromMonster(this),
+            FourthActAttackStyle.Dark);
 
     private async Task PhaseTwoConfinement(IReadOnlyList<Creature> targets)
     {
@@ -162,8 +189,11 @@ public sealed class DarkMonster : ModMonsterTemplate
     private async Task PhaseTwoNonConfinement(IReadOnlyList<Creature> targets)
     {
         var night = Night;
-        await DamageCmd.Attack(DarkEnemyRules.AttackDamage(DarkRegularAction.NonConfinement, night, IsDeadly))
-            .FromMonster(this).WithNoAttackerAnim().Execute(null);
+        await FourthActEnemyActionCmd.AttackAsync(
+            Creature,
+            DamageCmd.Attack(DarkEnemyRules.AttackDamage(DarkRegularAction.NonConfinement, night, IsDeadly))
+                .FromMonster(this),
+            FourthActAttackStyle.Dark);
         await CreatureCmd.GainBlock(Creature, DarkEnemyRules.Block(night), ValueProp.Move, null, false);
         NextRegularAction = DarkRegularAction.Confinement;
         await IncreaseNight(new ThrowingPlayerChoiceContext());
@@ -171,8 +201,11 @@ public sealed class DarkMonster : ModMonsterTemplate
 
     private async Task PhaseTwoUltimate(IReadOnlyList<Creature> targets)
     {
-        await DamageCmd.Attack(IsDeadly ? DarkEnemyRules.DeadlyUltimateDamage : DarkEnemyRules.BaseUltimateDamage)
-            .FromMonster(this).WithNoAttackerAnim().Execute(null);
+        await FourthActEnemyActionCmd.AttackAsync(
+            Creature,
+            DamageCmd.Attack(IsDeadly ? DarkEnemyRules.DeadlyUltimateDamage : DarkEnemyRules.BaseUltimateDamage)
+                .FromMonster(this),
+            FourthActAttackStyle.Dark);
         var context = new ThrowingPlayerChoiceContext();
         foreach (var player in CombatState.Players)
             await SakuraMagicCharge.AddVoidToDrawPile(context, player);
@@ -181,7 +214,10 @@ public sealed class DarkMonster : ModMonsterTemplate
 
     private async Task AttackAndArmConfinement(IReadOnlyList<Creature> targets, int damage)
     {
-        await DamageCmd.Attack(damage).FromMonster(this).WithNoAttackerAnim().Execute(null);
+        await FourthActEnemyActionCmd.AttackAsync(
+            Creature,
+            DamageCmd.Attack(damage).FromMonster(this),
+            FourthActAttackStyle.Dark);
         var context = new ThrowingPlayerChoiceContext();
         foreach (var target in targets.Where(static target => target.IsAlive && target.Player is not null))
             await PowerCmd.Apply<DarkConfinementSelectionPower>(context, target, 1, Creature, null, false);
@@ -192,16 +228,22 @@ public sealed class DarkMonster : ModMonsterTemplate
         if (Creature.IsDead)
             return;
 
-        await PowerCmd.Remove(Creature.GetPower<DarkVeilPower>());
-        Phase = DarkPhase.EternalNight;
-        NextRegularAction = DarkRegularAction.NonConfinement;
-        await PowerCmd.Apply<DarkNightPower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, true);
+        await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Cast, async () =>
+        {
+            await PowerCmd.Remove(Creature.GetPower<DarkVeilPower>());
+            Phase = DarkPhase.EternalNight;
+            NextRegularAction = DarkRegularAction.NonConfinement;
+            var context = new ThrowingPlayerChoiceContext();
+            await PowerCmd.Apply<DarkNightPower>(context, Creature, 1, Creature, null, true);
+            var microLight = await PowerCmd.Apply<DarkLightPower>(context, Creature, 1, Creature, null, true);
+            microLight?.SetMicroLight(0);
+        });
     }
 
     private async Task IncreaseNight(PlayerChoiceContext choiceContext)
     {
         await SetNight(choiceContext, Math.Min(DarkEnemyRules.MaximumNight, Night + 1));
-        await DarkLightCoordinator.ResolveThresholds(choiceContext, this);
+        await DarkMicroLightCoordinator.ResolveEternalNightThresholds(choiceContext, this);
     }
 
     private async Task SetNight(PlayerChoiceContext choiceContext, int value)

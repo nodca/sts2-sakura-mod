@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
 using MegaCrit.Sts2.Core.ValueProps;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Powers;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Wind.Models;
@@ -47,7 +48,9 @@ public sealed class DashMonster : WindAttendantMonster
 
     private async Task Attack(IReadOnlyList<Creature> targets)
     {
-        await DamageCmd.Attack(Damage).FromMonster(this).WithNoAttackerAnim().Execute(null);
+        await FourthActEnemyActionCmd.AttackAsync(
+            Creature,
+            DamageCmd.Attack(Damage).FromMonster(this));
         _growth += Growth;
     }
 }
@@ -84,8 +87,15 @@ public sealed class FloatMonster : WindAttendantMonster
         if (counter is null || windy is null)
             return;
 
-        await CreatureCmd.GainBlock(windy, counter.DrawCount * BlockPerDraw, ValueProp.Move, null, false);
-        counter.Reset();
+        await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Buff, async () =>
+        {
+            await FourthActCombatFeedbackVisuals.PlayTransferAsync(
+                Creature,
+                windy,
+                new Godot.Color(0.55f, 0.96f, 0.86f, 0.94f));
+            await CreatureCmd.GainBlock(windy, counter.DrawCount * BlockPerDraw, ValueProp.Move, null, false);
+            counter.Reset();
+        });
     }
 }
 
@@ -109,7 +119,11 @@ public sealed class SleepMonster : WindAttendantMonster
 
     private async Task ArmSleep(IReadOnlyList<Creature> targets)
     {
-        foreach (var target in targets.Where(static target => target.IsAlive))
-            await PowerCmd.Apply<WindSleepSelectionPower>(new ThrowingPlayerChoiceContext(), target, 1, Creature, null, true);
+        await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Cast, async () =>
+        {
+            foreach (var target in targets.Where(static target => target.IsAlive))
+                await PowerCmd.Apply<WindSleepSelectionPower>(
+                    new ThrowingPlayerChoiceContext(), target, 1, Creature, null, false);
+        });
     }
 }

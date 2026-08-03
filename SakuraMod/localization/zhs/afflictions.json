@@ -1,4 +1,6 @@
 {
   "SAKURA_MOD_AFFLICTION_DARK_CONFINEMENT_AFFLICTION.title": "禁锢",
-  "SAKURA_MOD_AFFLICTION_DARK_CONFINEMENT_AFFLICTION.description": "此牌被暗之力禁锢。将其稳定后会产生光。"
+  "SAKURA_MOD_AFFLICTION_DARK_CONFINEMENT_AFFLICTION.description": "此牌被暗之力禁锢。将其稳定后会产生光。",
+  "SAKURA_MOD_AFFLICTION_SLEEPING_AFFLICTION.title": "睡眠",
+  "SAKURA_MOD_AFFLICTION_SLEEPING_AFFLICTION.description": "无法手动打出。其拥有者受到敌方攻击造成的正数未格挡伤害，或眠被击败时唤醒。"
 }

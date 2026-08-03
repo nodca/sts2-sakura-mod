@@ -364,5 +364,5 @@
   "SAKURA_MOD_CARD_SPELL_SHUI_LONG.title": "Shui Long",
   "SAKURA_MOD_CARD_SPELL_SHUI_LONG.description": "[gold]Spell[/gold] [gold]Watery[/gold].\nDeal {Damage:diff()} damage to all enemies.",
   "SAKURA_MOD_CARD_MICRO_LIGHT.title": "Micro Light",
-  "SAKURA_MOD_CARD_MICRO_LIGHT.description": "Gain 1 [gold]Light[/gold].\nCannot gain [red]Forgotten[/red].\n[gold]Ethereal[/gold]. [gold]Exhaust[/gold]."
+  "SAKURA_MOD_CARD_MICRO_LIGHT.description": "The Dark loses {DarkVeilPower:diff()} [gold]Dark Veil[/gold].\nDuring Eternal Night, the Dark gains {DarkLightPower:diff()} [gold]Micro Light[/gold] instead.\nCannot gain [red]Forgotten[/red]."
 }

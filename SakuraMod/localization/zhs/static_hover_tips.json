@@ -37,7 +37,5 @@
   "SAKURAMOD-WINDY_SPELL_CARD.title": "风",
   "SAKURAMOD-WINDY_SPELL_CARD.description": "风属性[gold]符咒[/gold]。属于[gold]风元素牌[/gold]。",
   "SAKURAMOD-WINDY_STATE.title": "风元素状态",
-  "SAKURAMOD-WINDY_STATE.description": "每打出 2 张风元素牌，抽 1 张牌。",
-  "SAKURAMOD-SLEEPING.title": "睡眠",
-  "SAKURAMOD-SLEEPING.description": "无法打出。其拥有者受到敌方攻击造成的正数未格挡伤害，或眠被击败时唤醒。"
+  "SAKURAMOD-WINDY_STATE.description": "每打出 2 张风元素牌，抽 1 张牌。"
 }

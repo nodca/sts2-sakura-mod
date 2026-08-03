@@ -21,6 +21,7 @@ public static class SakuraKeywords
     public static readonly CardKeyword Purge = Keyword("PURGE");
     public static readonly CardKeyword Loner = Keyword("LONER");
     public static readonly CardKeyword Frostbite = Keyword("FROSTBITE");
+    public static readonly CardKeyword Fade = Keyword("FADE");
 
     private static readonly IReadOnlyDictionary<string, ModKeywordCardDescriptionPlacement> DescriptionPlacements =
         new Dictionary<string, ModKeywordCardDescriptionPlacement>
@@ -61,7 +62,8 @@ public static class SakuraKeywords
         "ENTITY_LIMITED",
         "PURGE",
         "LONER",
-        "FROSTBITE"
+        "FROSTBITE",
+        "FADE"
     ];
 
     private static CardKeyword Keyword(string stem) =>

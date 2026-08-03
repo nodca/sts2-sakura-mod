@@ -1,6 +1,7 @@
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Wind.Models;
@@ -13,12 +14,17 @@ public abstract class WindMonsterTemplate : ModMonsterTemplate
     protected abstract IEnumerable<AbstractIntent> DeclaredIntents { get; }
 
     public sealed override string? CustomVisualsPath => StandeePath;
-    public override bool HasDeathSfx => false;
-    public override string? HurtSfx => null;
+    public override bool HasDeathSfx => true;
+    public override string DeathSfx =>
+        "event:/sfx/enemy/enemy_attacks/thieving_hopper/thieving_hopper_die";
+    public override string? HurtSfx =>
+        "event:/sfx/enemy/enemy_attacks/thieving_hopper/thieving_hopper_hurt_hover";
+    public override float DeathAnimLengthOverride => SakuraStandeeActionController.DeathDuration;
 
     public override IEnumerable<string> AssetPaths =>
         DeclaredIntents
             .SelectMany(static intent => intent.AssetPaths)
+            .Concat(WindEnemyAssets.ActionFramesFor(StandeePath))
             .Concat(AdditionalAssetPaths)
             .Prepend(StandeePath)
             .Distinct();

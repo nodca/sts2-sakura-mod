@@ -1,0 +1,59 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/school_stage/dark_base.png" id="1_dark_stage"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/school_stage/eternal_night_regions.png" id="2_night_regions"]
+[ext_resource type="Shader" path="res://SakuraMod/shaders/fourth_act/eternal_night.gdshader" id="3_night_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_eternal_night"]
+resource_local_to_scene = true
+shader = ExtResource("3_night_shader")
+shader_parameter/night_progress = 0.0
+
+[node name="DarkSchoolStageBase" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Painting" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -1382.4
+offset_top = -648.0
+offset_right = 1382.4
+offset_bottom = 648.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("1_dark_stage")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="EternalNightOverlay" type="TextureRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_eternal_night")
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -1382.4
+offset_top = -648.0
+offset_right = 1382.4
+offset_bottom = 648.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture_filter = 1
+texture = ExtResource("2_night_regions")
+expand_mode = 1
+stretch_mode = 5

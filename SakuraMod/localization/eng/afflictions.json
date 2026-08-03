@@ -1,4 +1,6 @@
 {
   "SAKURA_MOD_AFFLICTION_DARK_CONFINEMENT_AFFLICTION.title": "Confinement",
-  "SAKURA_MOD_AFFLICTION_DARK_CONFINEMENT_AFFLICTION.description": "This card is confined by the Dark. Stabilizing it produces Light."
+  "SAKURA_MOD_AFFLICTION_DARK_CONFINEMENT_AFFLICTION.description": "This card is confined by the Dark. Stabilizing it produces Light.",
+  "SAKURA_MOD_AFFLICTION_SLEEPING_AFFLICTION.title": "Sleeping",
+  "SAKURA_MOD_AFFLICTION_SLEEPING_AFFLICTION.description": "Cannot be manually played. Wakes when its owner takes positive unblocked enemy Attack damage or Sleep is defeated."
 }

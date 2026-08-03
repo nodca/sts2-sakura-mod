@@ -18,6 +18,20 @@ public static class TemporaryDissolveVfx
     private static readonly Color EdgeColor = new(0.86f, 1f, 0.97f, 0.96f);
     private static readonly Color GoldColor = new(1f, 0.92f, 0.48f, 0.92f);
     private static readonly Color ShardColor = new(0.74f, 0.97f, 1f, 0.9f);
+    private static readonly DissolveProfile TemporaryProfile = new(
+        "SakuraTemporaryDissolveVfx",
+        CardDuration,
+        PileDuration,
+        EdgeColor,
+        GoldColor,
+        ShardColor);
+    private static readonly DissolveProfile FadeProfile = new(
+        "SakuraFadeDissolveVfx",
+        0.58f,
+        0.44f,
+        new Color(0.12f, 0.07f, 0.2f, 0.94f),
+        new Color(0.46f, 0.93f, 0.98f, 0.9f),
+        new Color(0.28f, 0.72f, 0.82f, 0.82f));
     private static readonly Vector2 PileVfxSize = new(116f, 162f);
     private static readonly Vector2[] ShardDirections =
     [
@@ -35,7 +49,11 @@ public static class TemporaryDissolveVfx
         new(-0.85f, -0.85f)
     ];
 
-    public static void Play(CardModel card)
+    public static void Play(CardModel card) => Play(card, TemporaryProfile);
+
+    public static void PlayFade(CardModel card) => Play(card, FadeProfile);
+
+    private static void Play(CardModel card, DissolveProfile profile)
     {
         if (TestMode.IsOn || NCombatRoom.Instance is not { } room)
             return;
@@ -50,7 +68,7 @@ public static class TemporaryDissolveVfx
             : PileAnchorPosition(card);
         var root = new Node2D
         {
-            Name = "SakuraTemporaryDissolveVfx",
+            Name = profile.NodeName,
             ZIndex = VfxZIndex,
             ZAsRelative = false
         };
@@ -64,9 +82,9 @@ public static class TemporaryDissolveVfx
             ? ScaledSize(cardNode)
             : PileVfxSize;
 
-        BuildOutline(root, visualSize);
-        BuildShards(root, visualSize);
-        TaskHelper.RunSafely(Animate(root, cardNode));
+        BuildOutline(root, visualSize, profile);
+        BuildShards(root, visualSize, profile);
+        TaskHelper.RunSafely(Animate(root, cardNode, profile));
     }
 
     private static Vector2 CenterOf(NCard card)
@@ -132,13 +150,13 @@ public static class TemporaryDissolveVfx
         return new Vector2(size.X * card.Scale.X, size.Y * card.Scale.Y);
     }
 
-    private static void BuildOutline(Node2D root, Vector2 visualSize)
+    private static void BuildOutline(Node2D root, Vector2 visualSize, DissolveProfile profile)
     {
         var half = visualSize * 0.5f;
         var outline = new Line2D
         {
             Width = 5.5f,
-            DefaultColor = EdgeColor,
+            DefaultColor = profile.EdgeColor,
             Closed = true,
             Antialiased = true,
             Points =
@@ -154,7 +172,7 @@ public static class TemporaryDissolveVfx
         var inner = new Line2D
         {
             Width = 2.4f,
-            DefaultColor = GoldColor,
+            DefaultColor = profile.InnerColor,
             Closed = true,
             Antialiased = true,
             Points =
@@ -168,23 +186,23 @@ public static class TemporaryDissolveVfx
         root.AddChild(inner);
     }
 
-    private static void BuildShards(Node2D root, Vector2 visualSize)
+    private static void BuildShards(Node2D root, Vector2 visualSize, DissolveProfile profile)
     {
         var radius = Math.Min(visualSize.X, visualSize.Y) * 0.34f;
         for (var i = 0; i < ShardDirections.Length; i++)
         {
-            var shard = CreateShard(i);
+            var shard = CreateShard(i, profile);
             shard.Position = ShardDirections[i] * radius * 0.32f;
             shard.Rotation = i * 0.43f;
             root.AddChild(shard);
         }
     }
 
-    private static Polygon2D CreateShard(int index)
+    private static Polygon2D CreateShard(int index, DissolveProfile profile)
     {
         var width = 10f + index % 3 * 3f + (index % 2 == 0 ? 4f : 0f);
         var height = 18f + index % 4 * 3f + (index % 3 == 0 ? 5f : 0f);
-        var color = index % 4 == 0 ? GoldColor : ShardColor;
+        var color = index % 4 == 0 ? profile.InnerColor : profile.ShardColor;
         return new Polygon2D
         {
             Color = color,
@@ -198,12 +216,12 @@ public static class TemporaryDissolveVfx
         };
     }
 
-    private static async Task Animate(Node2D root, NCard? cardNode)
+    private static async Task Animate(Node2D root, NCard? cardNode, DissolveProfile profile)
     {
         if (!root.IsInsideTree())
             return;
 
-        var duration = cardNode is null ? PileDuration : CardDuration;
+        var duration = cardNode is null ? profile.PileDuration : profile.CardDuration;
         var tween = root.CreateTween().SetParallel();
         tween.TweenProperty(root, "scale", Vector2.One * 1.18f, duration * 0.62f)
             .From(Vector2.One * 0.84f)
@@ -256,4 +274,12 @@ public static class TemporaryDissolveVfx
                 .SetDelay(duration * 0.48f);
         }
     }
+
+    private readonly record struct DissolveProfile(
+        string NodeName,
+        float CardDuration,
+        float PileDuration,
+        Color EdgeColor,
+        Color InnerColor,
+        Color ShardColor);
 }

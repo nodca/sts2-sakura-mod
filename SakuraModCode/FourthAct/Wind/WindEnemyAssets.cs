@@ -13,6 +13,10 @@ public static class WindEnemyAssets
     public static string Dash => $"{Root}/dash.png".ImagePath();
     public static string Float => $"{Root}/float.png".ImagePath();
     public static string Sleep => $"{Root}/sleep.png".ImagePath();
+    public static string IllusionCast => $"{Root}/action_frames/illusion_cast.png".ImagePath();
+    public static string WindyAction => $"{Root}/action_frames/windy_action.png".ImagePath();
+    public static string DashAttack => $"{Root}/action_frames/dash_attack.png".ImagePath();
+    public static string SleepCast => $"{Root}/action_frames/sleep_cast.png".ImagePath();
 
     public static IReadOnlyList<string> FlyTransitionFrames { get; } =
         Enumerable.Range(0, 7)
@@ -28,6 +32,22 @@ public static class WindEnemyAssets
         Dash,
         Float,
         Sleep,
+        IllusionCast,
+        WindyAction,
+        DashAttack,
+        SleepCast,
         .. FlyTransitionFrames
     ];
+
+    public static IEnumerable<string> ActionFramesFor(string standeePath)
+    {
+        if (standeePath == Illusion)
+            yield return IllusionCast;
+        else if (standeePath == Windy)
+            yield return WindyAction;
+        else if (standeePath == Dash)
+            yield return DashAttack;
+        else if (standeePath == Sleep)
+            yield return SleepCast;
+    }
 }

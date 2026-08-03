@@ -296,7 +296,7 @@ public sealed class TemporaryModifier : SakuraCardStateCapability
         }
 
         TemporaryDissolveVfx.Play(card);
-        DarkLightCoordinator.ClearSourceMarker(card);
+        DarkMicroLightCoordinator.ClearSourceMarker(card);
         await CardPileCmd.RemoveFromCombat(card, true);
     }
 
@@ -659,7 +659,7 @@ public static class SakuraCardStates
     public static void StabilizeWithoutTrigger(this CardModel card)
     {
         card.RemoveTemporaryForStabilize();
-        DarkLightCoordinator.ClearSourceMarker(card);
+        DarkMicroLightCoordinator.ClearSourceMarker(card);
     }
 
     public static void SynchronizeWith(this CardModel first, CardModel second)
@@ -675,7 +675,7 @@ public static class SakuraCardStates
     {
         foreach (var modifier in SakuraCardStateCapability.Modifiers(card).OfType<TemporaryModifier>().ToArray())
             SakuraCardStateCapability.RemoveModifier(card, modifier);
-        DarkLightCoordinator.ClearSourceMarker(card);
+        DarkMicroLightCoordinator.ClearSourceMarker(card);
     }
 
     private static bool RemoveTemporaryForStabilize(this CardModel card)

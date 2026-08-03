@@ -23,14 +23,24 @@ public static class DarkEnemyRules
     public const int DeadlyNonConfinementDamage = 27;
     public const int BaseUltimateDamage = 50;
     public const int DeadlyUltimateDamage = 55;
-    public const int MicroLightsPerDraw = 5;
-    public const decimal VeilDamageMultiplier = 0.2m;
+    public const int MicroLightsPerDraw = 3;
+    public const int MaxHandSizeReduction = 2;
+    public const int InitialVeilLayers = 3;
+    public const int MicroLightThreshold = 3;
+    public const decimal InitialVeilDamageReduction = 0.75m;
+    public const decimal VeilDamageReductionPerLayer = InitialVeilDamageReduction / InitialVeilLayers;
     public const decimal TransitionHpRatio = 0.6m;
     public const int VeilBreakPlayerSides = 2;
     public const int MaximumNight = 5;
 
-    public static int LightThreshold(int combatStartPlayerCount) =>
-        3 * Math.Max(1, combatStartPlayerCount);
+    public static int VisibleNightRegions(int nightAmount) =>
+        Math.Clamp(nightAmount, 0, MaximumNight);
+
+    public static decimal VeilDamageMultiplier(int veilLayers) =>
+        1m - VeilDamageReductionPerLayer * Math.Clamp(veilLayers, 0, InitialVeilLayers);
+
+    public static int ModifyMaxHandSize(int currentMaxHandSize) =>
+        Math.Max(0, currentMaxHandSize - MaxHandSizeReduction);
 
     public static int AttackDamage(DarkRegularAction action, int night, bool deadly) =>
         (action == DarkRegularAction.Confinement
@@ -47,18 +57,20 @@ public static class DarkEnemyRules
         _ => (0, 0)
     };
 
-    public static int ConsumeAggregateLight(IList<int> lightByPlayer, int amount)
-    {
-        var remaining = Math.Max(0, amount);
-        for (var index = 0; index < lightByPlayer.Count && remaining > 0; index++)
-        {
-            var consumed = Math.Min(Math.Max(0, lightByPlayer[index]), remaining);
-            lightByPlayer[index] -= consumed;
-            remaining -= consumed;
-        }
+    public static int ConsumeMicroLight(int currentMicroLight, int amount) =>
+        Math.Max(0, currentMicroLight - Math.Max(0, amount));
 
-        return amount - remaining;
-    }
+    public static int MicroLightsFromAction(DarkRegularAction action) => action switch
+    {
+        DarkRegularAction.Confinement or DarkRegularAction.NonConfinement => 0,
+        _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
+    };
+
+    public static bool AdvertisesStatusIntent(DarkRegularAction action) => action switch
+    {
+        DarkRegularAction.Confinement or DarkRegularAction.NonConfinement => false,
+        _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
+    };
 
     public static DarkRegularAction Toggle(DarkRegularAction action) =>
         action == DarkRegularAction.Confinement

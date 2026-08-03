@@ -30,10 +30,10 @@
   "SAKURA_MOD_MONSTER_FLOAT_MONSTER.moves.FLOAT.title": "Buoyant Guard",
   "SAKURA_MOD_MONSTER_SLEEP_MONSTER.name": "Sleep",
   "SAKURA_MOD_MONSTER_SLEEP_MONSTER.moves.SLEEP.title": "Slumber",
-  "DARK_MONSTER.name": "The Dark",
-  "DARK_MONSTER.moves.P1_CONFINEMENT.title": "Confining Dark",
-  "DARK_MONSTER.moves.P1_NON_CONFINEMENT.title": "Dark Wave",
-  "DARK_MONSTER.moves.P2_CONFINEMENT.title": "Night's Confinement",
-  "DARK_MONSTER.moves.P2_NON_CONFINEMENT.title": "Night Barrier",
-  "DARK_MONSTER.moves.P2_ULTIMATE.title": "Eternal Darkness"
+  "SAKURA_MOD_MONSTER_DARK_MONSTER.name": "The Dark",
+  "SAKURA_MOD_MONSTER_DARK_MONSTER.moves.P1_CONFINEMENT.title": "Confining Dark",
+  "SAKURA_MOD_MONSTER_DARK_MONSTER.moves.P1_NON_CONFINEMENT.title": "Dark Wave",
+  "SAKURA_MOD_MONSTER_DARK_MONSTER.moves.P2_CONFINEMENT.title": "Night's Confinement",
+  "SAKURA_MOD_MONSTER_DARK_MONSTER.moves.P2_NON_CONFINEMENT.title": "Eternal Night Barrier",
+  "SAKURA_MOD_MONSTER_DARK_MONSTER.moves.P2_ULTIMATE.title": "Eternal Darkness"
 }

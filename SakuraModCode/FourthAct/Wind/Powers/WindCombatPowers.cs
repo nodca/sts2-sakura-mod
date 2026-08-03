@@ -9,7 +9,9 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.FourthAct.Wind.CardState;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Wind.Powers;
@@ -18,19 +20,19 @@ public sealed class IllusionIdentityPower : SakuraPowerModel
 {
     private bool _revealAfterPowerApplication;
 
+    protected override string IconFileName => "fourth_act/illusion_identity.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
     public bool IsRealBodyRevealed { get; private set; }
 
-    public override Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
+    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
         if (Owner.Monster is Models.IllusionMonster illusion && player.Creature.IsAlive)
         {
             IsRealBodyRevealed = false;
-            illusion.ReshufflePresentation();
+            await illusion.ReshufflePresentationAsync();
         }
-        return Task.CompletedTask;
     }
 
     public override Task AfterDamageReceived(
@@ -80,7 +82,8 @@ public sealed class IllusionIdentityPower : SakuraPowerModel
             return;
 
         IsRealBodyRevealed = true;
-        Visuals.IllusionVisualController.SetRealBodyRevealed(Owner, revealed: true);
+        MegaCrit.Sts2.Core.Helpers.TaskHelper.RunSafely(
+            Visuals.IllusionVisualController.RevealRealBodyAsync(Owner));
     }
 
     private static bool IsPlayerEffect(Creature? dealer, CardModel? cardSource) =>
@@ -94,6 +97,11 @@ public sealed class IllusionProjectionPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     protected override bool IsVisibleInternal => false;
+
+    public override decimal ModifyDamageCap(Creature? target, ValueProp props, Creature? dealer, CardModel? cardSource) =>
+        target == Owner && (dealer?.IsPlayer == true || cardSource?.Owner.Creature.IsPlayer == true)
+            ? 0m
+            : base.ModifyDamageCap(target, props, dealer, cardSource);
 
     public override bool TryModifyPowerAmountReceived(PowerModel canonicalPower, Creature target, decimal amount, Creature? applier, out decimal modifiedAmount)
     {
@@ -117,6 +125,9 @@ public sealed class IllusionProjectionPower : SakuraPowerModel
         if (_absorbedStatus && Owner.IsAlive)
         {
             _absorbedStatus = false;
+            await Visuals.IllusionVisualController.DissolveProjectionAsync(
+                Owner,
+                Visuals.IllusionVisualController.StatusColor(power));
             await CreatureCmd.Kill(Owner);
         }
     }
@@ -130,12 +141,18 @@ public sealed class IllusionProjectionPower : SakuraPowerModel
         CardModel? cardSource)
     {
         if (target == Owner && Owner.IsAlive && (dealer?.IsPlayer == true || cardSource?.Owner.Creature.IsPlayer == true))
+        {
+            await Visuals.IllusionVisualController.DissolveProjectionAsync(
+                Owner,
+                new Godot.Color(0.54f, 0.88f, 0.98f, 0.94f));
             await CreatureCmd.Kill(Owner);
+        }
     }
 }
 
 public sealed class WindSovereigntyPower : SakuraPowerModel
 {
+    protected override string IconFileName => "fourth_act/wind_sovereignty.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
@@ -145,6 +162,8 @@ public sealed class WindSovereigntyPower : SakuraPowerModel
         if (target.IsPlayer && canonicalPower is ClassicWindyPower or ClassicWindyPermanentPower && amount > 0)
         {
             modifiedAmount = 0;
+            Flash();
+            SakuraElementStateHud.NotifyPrevented(target.Player, SakuraLockedElementStates.Wind);
             return true;
         }
 
@@ -155,6 +174,7 @@ public sealed class WindSovereigntyPower : SakuraPowerModel
 
 public sealed class WindBindPower : SakuraPowerModel
 {
+    protected override string IconFileName => "fourth_act/wind_bind.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Single;
 
@@ -167,24 +187,29 @@ public sealed class WindBindPower : SakuraPowerModel
 
 public sealed class WindWallPower : SakuraPowerModel
 {
+    protected override string IconFileName => "fourth_act/wind_wall.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
     public override decimal ModifyDamageCap(Creature? target, ValueProp props, Creature? dealer, CardModel? cardSource) =>
         Amount > 0 && target == Owner && dealer?.IsPlayer == true && props.IsPoweredAttack()
-            ? 0
+            ? 0m
             : base.ModifyDamageCap(target, props, dealer, cardSource);
 
     public override async Task AfterModifyingDamageAmount(CardModel? cardSource)
     {
-        // This callback only runs when this power actually capped the current hit.
+        // Unlike ModifyDamageCap, this callback is not used by damage previews.
         if (Amount > 0)
+        {
+            FourthActCombatFeedbackVisuals.BeginWindWallInterception(Owner);
             await PowerCmd.ModifyAmount(new ThrowingPlayerChoiceContext(), this, -1, Owner, cardSource, true);
+        }
     }
 }
 
 public sealed class WindyNextActionDamagePower : SakuraPowerModel
 {
+    protected override string IconFileName => "fourth_act/gathered_wind.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
@@ -205,14 +230,7 @@ public sealed class WindyBattlePower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
-
-    public override Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
-    {
-        if (!player.Creature.IsAlive || combatState != CombatState)
-            return Task.CompletedTask;
-
-        return PowerCmd.Apply<WindBindPower>(choiceContext, player.Creature, WindEnemyRules.BindPerPlayer, Owner, null, true);
-    }
+    protected override bool IsVisibleInternal => false;
 
     public override async Task BeforeSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
@@ -246,6 +264,11 @@ public sealed class WindyBattlePower : SakuraPowerModel
         var wall = Owner.GetPower<WindWallPower>();
         var existingWall = wall?.Amount ?? 0;
         var totalWall = WindEnemyRules.AggregateWall(existingWall, unresolved, CombatState.Players.Count);
+        FourthActCombatFeedbackVisuals.PlayWindBindConversion(
+            Owner,
+            unresolved.Sum(),
+            attackBonus,
+            Math.Max(0, totalWall - existingWall));
         if (totalWall > existingWall)
             await PowerCmd.Apply<WindWallPower>(choiceContext, Owner, totalWall - existingWall, Owner, null, true);
     }
@@ -254,6 +277,7 @@ public sealed class WindyBattlePower : SakuraPowerModel
 public sealed class FloatDrawCounterPower : SakuraPowerModel
 {
     private int _drawCount;
+    protected override string IconFileName => "fourth_act/updraft.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => _drawCount;
@@ -278,6 +302,7 @@ public sealed class FloatDrawCounterPower : SakuraPowerModel
 
 public sealed class WindSleepSelectionPower : SakuraPowerModel
 {
+    protected override string IconFileName => "fourth_act/drowsy.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
@@ -293,8 +318,15 @@ public sealed class WindSleepSelectionPower : SakuraPowerModel
         {
             var selected = player.RunState.Rng.CombatCardSelection.NextItem(eligible)
                 ?? throw new InvalidOperationException("Sleep selection unexpectedly returned no eligible card.");
-            WindSleepingCards.MarkSleeping(selected);
-            await PowerCmd.Apply<WindSleepWakePower>(choiceContext, Owner, 1, Applier, null, true);
+            if (Applier is { } source)
+            {
+                await FourthActCombatFeedbackVisuals.PlayTransferAsync(
+                    source,
+                    Owner,
+                    new Godot.Color(0.49f, 0.4f, 0.72f, 0.92f));
+            }
+            if (await WindSleepingCards.MarkSleeping(selected))
+                await PowerCmd.Apply<WindSleepWakePower>(choiceContext, Owner, 1, Applier, null, true);
         }
 
         await PowerCmd.ModifyAmount(choiceContext, this, -1, Applier, null, true);
@@ -312,6 +344,7 @@ public sealed class WindSleepSelectionPower : SakuraPowerModel
 
 public sealed class WindSleepWakePower : SakuraPowerModel
 {
+    protected override string IconFileName => "fourth_act/sleeping_cards.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;

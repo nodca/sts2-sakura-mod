@@ -1,9 +1,11 @@
 using Godot;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Acts;
+using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Rooms;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Models;
 using SakuraMod.SakuraModCode.FourthAct.Routing;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Dark.Encounters;
@@ -17,6 +19,10 @@ public sealed class DarkEncounter : ModEncounterTemplate
     public override IReadOnlyList<string> Slots => ["BOSS"];
     public override IEnumerable<MonsterModel> AllPossibleMonsters => [ModelDb.Monster<DarkMonster>()];
     protected override bool SuppliesEncounterCombatSceneFromFactory => true;
+    protected override bool UseProgrammaticCombatBackground => true;
+
+    protected override BackgroundAssets? BuildProgrammaticCombatBackground(ActModel parentAct, Rng rng) =>
+        FourthActCombatBackgrounds.CreateDarkStage();
 
     protected override Control TryCreateEncounterCombatScene()
     {

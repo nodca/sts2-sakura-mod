@@ -44,7 +44,9 @@ public class ClassicSealedWandRelic : SakuraRelicModel
     private static readonly SavedAttachedState<ClassicSealedWandRelic, int> Charge =
         new("SakuraMod_ClassicSealedWandCharge", () => 0);
 
-    private readonly HashSet<uint> _chargedDeathsThisCombat = [];
+    // Relic templates may be shallow-cloned by the game. Include the owner in
+    // the dedupe key so shared clone state cannot suppress another player's reward.
+    private readonly HashSet<(ulong PlayerNetId, uint CombatId)> _chargedDeathsThisCombat = [];
     private readonly HashSet<Creature> _sealKillsThisCombat = new(ReferenceEqualityComparer.Instance);
 
     protected override string IconFileName => "sealed_wand.png";
@@ -104,27 +106,22 @@ public class ClassicSealedWandRelic : SakuraRelicModel
         return Task.CompletedTask;
     }
 
-    public override Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, bool wasRemovalPrevented, float deathAnimLength)
-    {
-        TryGainChargeForEnemyDeath(creature, wasRemovalPrevented);
-        return Task.CompletedTask;
-    }
+    internal bool ConsumeSealKill(Creature creature) =>
+        _sealKillsThisCombat.Remove(creature);
 
-    internal bool TryGainChargeForEnemyDeath(Creature creature, bool wasRemovalPrevented)
+    internal int CalculateChargeGainForEnemyDeath(
+        Creature creature,
+        bool wasRemovalPrevented,
+        bool wasKilledBySeal)
     {
-        var wasKilledBySeal = _sealKillsThisCombat.Remove(creature);
         if (wasRemovalPrevented
             || creature.CombatState is null
             || creature.Side != CombatSide.Enemy
             || creature.IsSecondaryEnemy)
-            return false;
-
-        var combatId = creature.CombatId ?? 0;
-        if (!_chargedDeathsThisCombat.Add(combatId))
-            return false;
+            return 0;
 
         var darknessWand = Owner.GetRelic<ClassicDarknessWandRelic>();
-        var gain = ChargeGainForDeath(
+        return ChargeGainForDeath(
             BaseChargeGainAmount,
             EliteBossExtraGainAmount,
             SealExtraGainAmount,
@@ -132,10 +129,16 @@ public class ClassicSealedWandRelic : SakuraRelicModel
             creature.CombatState.Encounter?.RoomType is RoomType.Elite or RoomType.Boss,
             wasKilledBySeal,
             darknessWand is not null);
+    }
 
+    internal bool ApplySynchronizedCharge(uint combatId, int amount)
+    {
+        if (amount <= 0 || !_chargedDeathsThisCombat.Add((Owner.NetId, combatId)))
+            return false;
+
+        AddCharge(amount);
+        var darknessWand = Owner.GetRelic<ClassicDarknessWandRelic>();
         darknessWand?.Flash();
-
-        AddCharge(gain);
         return true;
     }
 

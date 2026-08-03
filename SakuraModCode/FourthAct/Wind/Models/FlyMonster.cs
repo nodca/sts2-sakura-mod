@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Visuals;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Wind.Models;
@@ -61,22 +62,25 @@ public sealed class FlyMonster : WindMonsterTemplate
     }
 
     private Task HighAttack(IReadOnlyList<Creature> targets) =>
-        DamageCmd.Attack(HighAttackDamage)
-            .FromMonster(this)
-            .WithHitCount(HighAttackHits)
-            .WithNoAttackerAnim()
-            .Execute(null);
+        FourthActEnemyActionCmd.AttackAsync(
+            Creature,
+            DamageCmd.Attack(HighAttackDamage)
+                .FromMonster(this)
+                .WithHitCount(HighAttackHits));
 
     private async Task Dive(IReadOnlyList<Creature> targets)
     {
-        await DamageCmd.Attack(DiveDamage).FromMonster(this).WithNoAttackerAnim().Execute(null);
+        await FourthActEnemyActionCmd.AttackAsync(
+            Creature,
+            DamageCmd.Attack(DiveDamage).FromMonster(this),
+            FourthActAttackStyle.HeavyWind);
+        await FlyVisualController.PlayLandingAsync(Creature);
         await PowerCmd.Remove<SoarPower>(Creature);
-        FlyVisualController.PlayLanding(Creature);
     }
 
     private async Task Takeoff(IReadOnlyList<Creature> targets)
     {
-        await PowerCmd.Apply<SoarPower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, true);
-        FlyVisualController.PlayTakeoff(Creature);
+        await FlyVisualController.PlayTakeoffAsync(Creature);
+        await PowerCmd.Apply<SoarPower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, false);
     }
 }
