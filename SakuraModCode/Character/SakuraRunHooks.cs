@@ -112,7 +112,6 @@ internal static class SakuraRunHooks
             return;
         }
 
-        SakuraSealedWandChargeAction.Apply(evt.RunState, payload);
     }
 
     private static void OnRunLoaded(RunLoadedEvent evt)

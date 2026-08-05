@@ -24,7 +24,7 @@ public class Blade() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new CalculationBaseVar(6),
+        new CalculationBaseVar(7),
         new ExtraDamageVar(2),
         new CalculatedDamageVar(ValueProp.Move).WithMultiplier(BladeRules.DamageBonusCount),
         new BladeHitsVar(2)
@@ -37,7 +37,7 @@ public class Blade() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
         await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage, hitCount: hits);
     }
 
-    protected override void OnUpgrade() => DynamicVars.CalculationBase.UpgradeValueBy(2);
+    protected override void OnUpgrade() => DynamicVars.CalculationBase.UpgradeValueBy(3);
 }
 
 internal sealed class BladeHitsVar(decimal hits) : DynamicVar("Hits", hits)

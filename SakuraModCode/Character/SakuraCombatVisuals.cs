@@ -17,7 +17,7 @@ internal static class SakuraCombatVisuals
     internal static NCreatureVisuals CreateSelected(string standardVisualPath)
     {
         if (!SakuraCombatArtFeature.IsEnabled || !SakuraModConfig.IsChibiCombatArtEnabled())
-            return SakuraStandeeVisuals.Create(standardVisualPath, "Sakura Kinomoto");
+            return SakuraStandeeVisuals.CreateWithLayeredIdle(standardVisualPath, "Sakura Kinomoto");
 
         return SakuraStandeeVisuals.CreateStatic(
             ChibiVisualPath,

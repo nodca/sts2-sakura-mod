@@ -91,6 +91,7 @@ internal sealed partial class SakuraStandeeActionController : Node
     private readonly Vector2 _restPosition;
     private readonly Vector2 _restScale;
     private readonly Sprite2D? _sprite;
+    private readonly bool _playIdleMotion;
     private readonly Dictionary<string, Texture2D> _textures = new(StringComparer.Ordinal);
     private readonly HashSet<Sprite2D> _afterimages = [];
     private readonly SakuraStandeePlaybackState _playback = new();
@@ -103,12 +104,14 @@ internal sealed partial class SakuraStandeeActionController : Node
         Node2D body,
         Vector2 restPosition,
         Vector2 restScale,
-        string restTexturePath)
+        string restTexturePath,
+        bool playIdleMotion)
     {
         _body = body;
         _restPosition = restPosition;
         _restScale = restScale;
         _restTexturePath = restTexturePath;
+        _playIdleMotion = playIdleMotion;
         _sprite = FindSprite(body);
         PreloadTextures(restTexturePath);
         Name = NodeName;
@@ -118,12 +121,18 @@ internal sealed partial class SakuraStandeeActionController : Node
         Node2D body,
         Vector2 restPosition,
         Vector2 restScale,
-        string restTexturePath)
+        string restTexturePath,
+        bool playIdleMotion = true)
     {
         if (body.GetNodeOrNull<SakuraStandeeActionController>(NodeName) is not null)
             return;
 
-        body.AddChild(new SakuraStandeeActionController(body, restPosition, restScale, restTexturePath));
+        body.AddChild(new SakuraStandeeActionController(
+            body,
+            restPosition,
+            restScale,
+            restTexturePath,
+            playIdleMotion));
     }
 
     internal static SakuraStandeeActionController? TryGet(Creature creature) =>
@@ -403,7 +412,7 @@ internal sealed partial class SakuraStandeeActionController : Node
 
     private void StartIdle()
     {
-        if (!_playback.CanPlayNonDeath || !IsUsable(_body))
+        if (!_playIdleMotion || !_playback.CanPlayNonDeath || !IsUsable(_body))
             return;
 
         StopIdle();

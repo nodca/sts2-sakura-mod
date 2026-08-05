@@ -1,5 +1,7 @@
 using Godot;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Rooms;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using STS2RitsuLib.Scaffolding.Godot;
 
@@ -11,6 +13,7 @@ public static class SakuraStandeeVisuals
     private static readonly Vector2 CombatVisualSize = new(264f, 468f);
     private static readonly Vector2 CombatVisualTopLeft = new(-132f, -468f);
     private static readonly Vector2 CombatVisualCenter = new(0f, -234f);
+    private static readonly Vector2 SakuraCombatVisualPosition = CombatVisualCenter + Vector2.Down * 16f;
 
     private readonly record struct StandeeLayout(
         float Scale,
@@ -28,6 +31,21 @@ public static class SakuraStandeeVisuals
     {
         var layout = StandardLayout(combatVisualScale);
         return Create(visualPath, label, layout, animate: true);
+    }
+
+    internal static NCreatureVisuals CreateWithLayeredIdle(string visualPath, string label)
+    {
+        var layout = StandardLayout(CombatVisualScale) with
+        {
+            VisualPosition = SakuraCombatVisualPosition
+        };
+        return Create(
+            visualPath,
+            label,
+            layout,
+            animate: true,
+            playIdleMotion: false,
+            attachLayeredIdle: true);
     }
 
     internal static NCreatureVisuals CreateStatic(
@@ -57,19 +75,25 @@ public static class SakuraStandeeVisuals
         string visualPath,
         string label,
         StandeeLayout layout,
-        bool animate)
+        bool animate,
+        bool playIdleMotion = true,
+        bool attachLayeredIdle = false)
     {
         try
         {
             var visuals = RitsuGodotNodeFactories.CreateFromResource<NCreatureVisuals>(visualPath);
             ApplyCombatVisualLayout(visuals, layout);
             var body = visuals.GetNode<Node2D>("%Visuals");
+            var isActiveCombat = NCombatRoom.Instance?.Mode == CombatRoomMode.ActiveCombat;
             if (animate)
                 SakuraStandeeActionController.Attach(
                     body,
                     layout.VisualPosition,
                     Vector2.One * layout.Scale,
-                    visualPath);
+                    visualPath,
+                    playIdleMotion);
+            if (attachLayeredIdle && isActiveCombat)
+                SakuraStandeeIdleController.Attach(body);
             return visuals;
         }
         catch (Exception ex)
