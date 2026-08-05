@@ -1,6 +1,7 @@
 using Godot;
 using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using SakuraMod.SakuraModCode.Character;
@@ -27,6 +28,15 @@ internal static class SakuraDescriptionRegion
     private static readonly Vector2 ClearOrigin = new(6.15f, 188f);
     private static readonly Dictionary<string, SakuraCardTextureResource> TextureResources = [];
     private static readonly ConditionalWeakTable<NCard, SakuraDescriptionRegionNodes> NodeStates = new();
+    private static readonly string[] KnownVisibleStatusLabels =
+        SakuraStateText.KnownStatusLabels
+            .Select(RemoveRichTextTags)
+            .ToArray();
+    private static readonly Dictionary<string, string> StatusTextCache = [];
+
+    private const string HeaderPartSeparator = "  ";
+    private const float HeaderPartSeparatorUnits = 1f;
+    private const float HeaderLineUnits = 14f * 1.05f;
 
     public const int MinimumFontSize = 12;
     public const int MaximumFontSize = 18;
@@ -142,7 +152,7 @@ internal static class SakuraDescriptionRegion
             return;
 
         SakuraCardVisualInfrastructure.ApplyBox(label, box);
-        var renderedText = Centered(NormalizeText(card, text));
+        var renderedText = Centered(ProjectText(card, text));
         if (label.Text != renderedText)
             label.SetTextAutoSize(renderedText);
         if (label.Visible != visible)
@@ -175,11 +185,246 @@ internal static class SakuraDescriptionRegion
     public static string Centered(string text) =>
         text.Length == 0 ? string.Empty : $"[center]{text}[/center]";
 
+    public static string ProjectText(CardModel card, string nativeText)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+        ArgumentNullException.ThrowIfNull(nativeText);
+
+        var body = DescriptionBody(card, nativeText);
+
+        var header = DescriptionHeader(card);
+        var text = header.Length == 0
+            ? body
+            : body.Length == 0
+                ? header
+                : $"{header}\n{body}";
+        return NormalizeText(card, text);
+    }
+
     public static string NormalizeText(CardModel card, string text) =>
         PackKeywordHeader(
             RemoveCenterTags(text).Trim(),
             BracketedIdentityKeywordCount(card),
             NativeKeywordCount(card));
+
+    internal static bool IsExtraEffectDescriptionLineForTests(string text) =>
+        IsExtraEffectDescriptionLine(text, 0, text.Length);
+
+    private static string DescriptionBody(CardModel card, string currentText)
+    {
+        var text = RemoveCenterTags(currentText);
+        var builder = new StringBuilder(text.Length);
+        var lineStart = 0;
+        for (var i = 0; i <= text.Length; i++)
+        {
+            if (i < text.Length && text[i] is not '\r' and not '\n')
+                continue;
+
+            AppendDescriptionBodyLine(builder, card, text, lineStart, i);
+            if (i < text.Length && text[i] == '\r' && i + 1 < text.Length && text[i + 1] == '\n')
+                i++;
+
+            lineStart = i + 1;
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AppendDescriptionBodyLine(
+        StringBuilder builder,
+        CardModel card,
+        string text,
+        int start,
+        int end)
+    {
+        while (start < end && char.IsWhiteSpace(text[start]))
+            start++;
+        while (end > start && char.IsWhiteSpace(text[end - 1]))
+            end--;
+
+        if (start >= end || IsDescriptionHeaderLine(text, start, end))
+            return;
+
+        if (IsExtraEffectDescriptionLine(text, start, end)
+            && !ShouldShowExtraEffectDescription(card))
+            return;
+
+        if (builder.Length > 0)
+            builder.Append('\n');
+
+        builder.Append(text, start, end - start);
+    }
+
+    private static bool ShouldShowExtraEffectDescription(CardModel card) =>
+        card switch
+        {
+            ClowExtraEffectCard clowCard => SakuraSourceCardText.ShouldShowMagicChargeExtraDescription(clowCard),
+            _ => SakuraCardModel.ShouldShowMagicChargeExtraEffectDescription(card)
+        };
+
+    private static string DescriptionHeader(CardModel card) =>
+        string.Join('\n', PackHeaderLines(DescriptionHeaderParts(card)));
+
+    private static IEnumerable<string> DescriptionHeaderParts(CardModel card)
+    {
+        if (card.IsTemporary())
+            yield return TemporaryStatusText();
+    }
+
+    private static string TemporaryStatusText()
+    {
+        var language = CurrentLanguageKey();
+        if (StatusTextCache.TryGetValue(language, out var cachedText))
+            return cachedText;
+
+        var text = $"[color=#a6e0ff]{SakuraStateText.TemporaryLabel()}[/color]";
+        StatusTextCache[language] = text;
+        return text;
+    }
+
+    private static IReadOnlyList<string> PackHeaderLines(IEnumerable<string> parts)
+    {
+        var lines = new List<string>();
+        var currentParts = new List<string>();
+        var currentUnits = 0f;
+        foreach (var part in parts)
+        {
+            var partUnits = VisibleTextUnits(part);
+            var candidateUnits = currentParts.Count > 0
+                ? currentUnits + HeaderPartSeparatorUnits + partUnits
+                : partUnits;
+            if (currentParts.Count > 0 && candidateUnits > HeaderLineUnits)
+            {
+                lines.Add(string.Join(HeaderPartSeparator, currentParts));
+                currentParts.Clear();
+                currentUnits = 0f;
+            }
+
+            currentUnits = currentParts.Count > 0
+                ? currentUnits + HeaderPartSeparatorUnits + partUnits
+                : partUnits;
+            currentParts.Add(part);
+        }
+
+        if (currentParts.Count > 0)
+            lines.Add(string.Join(HeaderPartSeparator, currentParts));
+
+        return lines;
+    }
+
+    private static float VisibleTextUnits(string text)
+    {
+        var units = 0f;
+        var inTag = false;
+        foreach (var character in text)
+        {
+            if (character == '[')
+            {
+                inTag = true;
+                continue;
+            }
+            if (character == ']')
+            {
+                inTag = false;
+                continue;
+            }
+            if (!inTag)
+                units += VisibleCharacterUnits(character);
+        }
+
+        return units;
+    }
+
+    private static float VisibleCharacterUnits(char character) =>
+        char.IsWhiteSpace(character) ? 0.5f : IsWideCharacter(character) ? 2f : 1f;
+
+    private static bool IsWideCharacter(char character) =>
+        character is >= '\u1100' and <= '\u115f'
+            or >= '\u2e80' and <= '\ua4cf'
+            or >= '\uac00' and <= '\ud7a3'
+            or >= '\uf900' and <= '\ufaff'
+            or >= '\ufe10' and <= '\ufe19'
+            or >= '\ufe30' and <= '\ufe6f'
+            or >= '\uff00' and <= '\uff60'
+            or >= '\uffe0' and <= '\uffe6';
+
+    private static bool IsDescriptionHeaderLine(string text, int start, int end)
+    {
+        var visibleText = RemoveRichTextTags(text, start, end);
+        var index = 0;
+        while (index < visibleText.Length)
+        {
+            var character = visibleText[index];
+            if (char.IsWhiteSpace(character) || character is '。' or '.')
+            {
+                index++;
+                continue;
+            }
+
+            if (TryMatchKnownStatusLabel(visibleText, index, out var labelLength))
+            {
+                index += labelLength;
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryMatchKnownStatusLabel(string text, int start, out int length)
+    {
+        foreach (var label in KnownVisibleStatusLabels)
+        {
+            if (start + label.Length > text.Length
+                || string.CompareOrdinal(text, start, label, 0, label.Length) != 0)
+                continue;
+
+            length = label.Length;
+            return true;
+        }
+
+        length = 0;
+        return false;
+    }
+
+    private static bool IsExtraEffectDescriptionLine(string text, int start, int end)
+    {
+        var visibleText = RemoveRichTextTags(text, start, end).TrimStart();
+        return visibleText.StartsWith("额外效果：", StringComparison.Ordinal)
+               || visibleText.StartsWith("Extra:", StringComparison.Ordinal);
+    }
+
+    private static string CurrentLanguageKey() =>
+        LocManager.Instance?.Language ?? string.Empty;
+
+    private static string RemoveRichTextTags(string text) =>
+        RemoveRichTextTags(text, 0, text.Length);
+
+    private static string RemoveRichTextTags(string text, int start, int end)
+    {
+        var builder = new StringBuilder(end - start);
+        var inTag = false;
+        for (var i = start; i < end; i++)
+        {
+            var character = text[i];
+            if (character == '[')
+            {
+                inTag = true;
+                continue;
+            }
+            if (character == ']')
+            {
+                inTag = false;
+                continue;
+            }
+            if (!inTag)
+                builder.Append(character);
+        }
+
+        return builder.ToString();
+    }
 
     private static Vector2 Origin(SakuraCardVisualLayout layout) =>
         layout switch

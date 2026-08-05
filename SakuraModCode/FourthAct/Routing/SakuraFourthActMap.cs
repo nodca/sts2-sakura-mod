@@ -13,11 +13,17 @@ public sealed class SakuraFourthActMap : ActMap
     private readonly MapPoint?[,] _grid;
     private readonly Dictionary<MapCoord, FourthActRouteDefinition> _routesByCoord = [];
 
-    public SakuraFourthActMap(IEnumerable<FourthActRouteDefinition> routes)
+    public SakuraFourthActMap(IEnumerable<FourthActRouteDefinition> routes) :
+        this(FourthActRouteResolver.Resolve(routes))
     {
-        Routes = FourthActRouteCatalog.CompleteRoutesFrom(routes);
+    }
+
+    internal SakuraFourthActMap(FourthActRouteResolution resolution)
+    {
+        ArgumentNullException.ThrowIfNull(resolution);
+        Routes = resolution.CompleteRoutes;
         if (Routes.Count is < 1 or > 4)
-            throw new ArgumentException("A fourth-act map requires one to four complete routes.", nameof(routes));
+            throw new ArgumentException("A fourth-act map requires one to four complete routes.", nameof(resolution));
 
         var columnCount = Routes.Count * 2 - 1;
         var centerColumn = columnCount / 2;

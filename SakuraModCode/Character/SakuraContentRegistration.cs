@@ -41,14 +41,15 @@ internal static class SakuraContentRegistration
 
     private static void RegisterFourthAct(ModContentRegistry registry)
     {
+        var resolution = FourthActRouteCatalog.Resolve();
         if (!FourthActEntryRegistration.RegisterIfComplete<SakuraFourthAct>(
                 registry,
-                FourthActRouteCatalog.DraftRoutes))
+                resolution))
         {
             return;
         }
 
-        foreach (var encounterType in FourthActRouteCatalog.CompleteEncounterTypes)
+        foreach (var encounterType in resolution.CompleteEncounterTypes)
             registry.RegisterActEncounter(typeof(SakuraFourthAct), encounterType);
     }
 

@@ -2,7 +2,6 @@ using Godot;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.UI;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
@@ -14,22 +13,15 @@ using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.addons.mega_text;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Extensions;
 using STS2RitsuLib.Patching;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
 internal static class ClearCardLayout
 {
     private static readonly ClearCardLayoutSpec Spec = new();
-    private static readonly string[] KnownVisibleStatusLabels =
-        SakuraStateText.KnownStatusLabels
-            .Select(RemoveRichTextTags)
-            .ToArray();
-
     private static readonly string[] HiddenCardNodeFieldNames =
     [
         "_ancientBanner",
@@ -73,13 +65,8 @@ internal static class ClearCardLayout
     private static readonly StringName ShadowOffsetXName = new("shadow_offset_x");
     private static readonly StringName ShadowOffsetYName = new("shadow_offset_y");
     private static readonly StringName ShadowOutlineSizeName = new("shadow_outline_size");
-    private const string HeaderPartSeparator = "  ";
-    private const float HeaderPartSeparatorUnits = 1f;
-
     private const string DefaultHighlightTexturePath = "res://images/packed/card_template/card_frame_sdf.exr";
     private static readonly Dictionary<Type, SakuraCardTextureResource> ClearCardArtResources = [];
-    private static readonly Dictionary<(string Language, SakuraElement Element), string> ElementTitleCache = [];
-    private static readonly Dictionary<string, string> ClearCardStatusTextCache = [];
     private static readonly SakuraCardTextureResource DefaultHighlightTextureResource =
         SakuraCardTextureResource.FromPath(DefaultHighlightTexturePath);
     private static readonly ConditionalWeakTable<NCard, ClearCardState> CardStates = new();
@@ -256,9 +243,6 @@ internal static class ClearCardLayout
 
         var showIdentity = card.Visibility == ModelVisibility.Visible;
         var region = state.GetOrCreateDescriptionRegion(card);
-        var text = showIdentity
-            ? state.ClearCardDescriptionText(model, description.Text)
-            : description.Text;
         SakuraDescriptionRegion.ApplyBackground(
             region.Background,
             model,
@@ -268,7 +252,7 @@ internal static class ClearCardLayout
             description,
             SakuraDescriptionRegion.TextBox(SakuraCardVisualLayout.Clear),
             model,
-            text,
+            description.Text,
             visible: true);
     }
 
@@ -381,315 +365,6 @@ internal static class ClearCardLayout
             item.SelfModulate = Colors.White;
     }
 
-    private static string ClearCardDescriptionText(
-        CardModel model,
-        string currentText,
-        string? synchronizedLine = null)
-    {
-        var body = ClearCardDescriptionBody(model, currentText);
-        synchronizedLine ??= SakuraStateText.SynchronizedLine(model);
-        if (!string.IsNullOrEmpty(synchronizedLine))
-            body = AppendDescriptionBodyTextLine(body, synchronizedLine.TrimStart('\r', '\n'));
-
-        var header = ClearCardHeaderText(model);
-        if (header.Length == 0)
-            return body;
-        if (body.Length == 0)
-            return header;
-
-        return $"{header}\n{body}";
-    }
-
-    private static string AppendDescriptionBodyTextLine(string body, string line) =>
-        body.Length == 0
-            ? line
-            : $"{body}\n{line}";
-
-    private static string ClearCardDescriptionBody(CardModel model, string currentText)
-    {
-        var text = RemoveCenterTags(currentText);
-        var builder = new StringBuilder(text.Length);
-        var lineStart = 0;
-        for (var i = 0; i <= text.Length; i++)
-        {
-            if (i < text.Length && text[i] is not '\r' and not '\n')
-                continue;
-
-            AppendDescriptionBodyLine(builder, model, text, lineStart, i);
-            if (i < text.Length && text[i] == '\r' && i + 1 < text.Length && text[i + 1] == '\n')
-                i++;
-
-            lineStart = i + 1;
-        }
-
-        return builder.ToString();
-    }
-
-    private static void AppendDescriptionBodyLine(StringBuilder builder, CardModel model, string text, int start, int end)
-    {
-        while (start < end && char.IsWhiteSpace(text[start]))
-            start++;
-        while (end > start && char.IsWhiteSpace(text[end - 1]))
-            end--;
-
-        if (start >= end
-            || IsClearCardHeaderLine(model, text, start, end)
-            || IsSynchronizedDescriptionLine(text, start, end))
-            return;
-
-        if (IsExtraEffectDescriptionLine(text, start, end)
-            && !SakuraCardModel.ShouldShowMagicChargeExtraEffectDescription(model))
-            return;
-
-        if (builder.Length > 0)
-            builder.Append('\n');
-
-        builder.Append(text, start, end - start);
-    }
-
-    private static string ClearCardHeaderText(CardModel model) =>
-        string.Join('\n', PackHeaderLines(ClearCardHeaderParts(model)));
-
-    private static IEnumerable<string> ClearCardHeaderParts(CardModel model)
-    {
-        foreach (var statusPart in ClearCardStatusParts(model))
-            yield return statusPart;
-    }
-
-    private static IEnumerable<string> ClearCardStatusParts(CardModel model)
-    {
-        if (model.IsTemporary())
-            yield return ClearCardStatusText();
-    }
-
-    private static string ClearCardStatusText()
-    {
-        var language = CurrentLanguageKey();
-        if (ClearCardStatusTextCache.TryGetValue(language, out var cachedText))
-            return cachedText;
-
-        var text = $"[color=#a6e0ff]{SakuraStateText.TemporaryLabel()}[/color]";
-        ClearCardStatusTextCache[language] = text;
-        return text;
-    }
-
-    private static string ElementTitle(SakuraElement element)
-    {
-        var key = (CurrentLanguageKey(), element);
-        if (ElementTitleCache.TryGetValue(key, out var title))
-            return title;
-
-        title = new LocString("card_keywords", ElementLocKey(element)).GetFormattedText();
-        ElementTitleCache[key] = title;
-        return title;
-    }
-
-    private static string ElementLocKey(SakuraElement element) =>
-        element switch
-        {
-            SakuraElement.Wind => "SAKURAMOD-WIND.title",
-            SakuraElement.Water => "SAKURAMOD-WATER.title",
-            SakuraElement.Fire => "SAKURAMOD-FIRE.title",
-            SakuraElement.Earth => "SAKURAMOD-EARTH.title",
-            _ => throw new ArgumentOutOfRangeException(nameof(element), element, null)
-        };
-
-    private static IReadOnlyList<string> PackHeaderLines(IEnumerable<string> parts)
-    {
-        var lines = new List<string>();
-        var currentParts = new List<string>();
-        var currentUnits = 0f;
-        foreach (var part in parts)
-        {
-            var partUnits = VisibleTextUnits(part);
-            var candidateUnits = currentParts.Count > 0
-                ? currentUnits + HeaderPartSeparatorUnits + partUnits
-                : partUnits;
-            if (currentParts.Count > 0 && candidateUnits > Spec.HeaderLineUnits)
-            {
-                lines.Add(JoinHeaderParts(currentParts));
-                currentParts.Clear();
-                currentUnits = 0f;
-            }
-
-            currentUnits = currentParts.Count > 0
-                ? currentUnits + HeaderPartSeparatorUnits + partUnits
-                : partUnits;
-            currentParts.Add(part);
-        }
-
-        if (currentParts.Count > 0)
-            lines.Add(JoinHeaderParts(currentParts));
-
-        return lines;
-    }
-
-    private static string JoinHeaderParts(IEnumerable<string> parts) =>
-        string.Join(HeaderPartSeparator, parts);
-
-    private static float VisibleTextUnits(string text)
-    {
-        var units = 0f;
-        var inTag = false;
-        foreach (var character in text)
-        {
-            if (character == '[')
-            {
-                inTag = true;
-                continue;
-            }
-            if (character == ']')
-            {
-                inTag = false;
-                continue;
-            }
-            if (inTag)
-                continue;
-
-            units += VisibleCharacterUnits(character);
-        }
-
-        return units;
-    }
-
-    private static float VisibleCharacterUnits(char character)
-    {
-        if (char.IsWhiteSpace(character))
-            return 0.5f;
-
-        return IsWideCharacter(character) ? 2f : 1f;
-    }
-
-    private static bool IsWideCharacter(char character) =>
-        character is >= '\u1100' and <= '\u115f'
-            or >= '\u2e80' and <= '\ua4cf'
-            or >= '\uac00' and <= '\ud7a3'
-            or >= '\uf900' and <= '\ufaff'
-            or >= '\ufe10' and <= '\ufe19'
-            or >= '\ufe30' and <= '\ufe6f'
-            or >= '\uff00' and <= '\uff60'
-            or >= '\uffe0' and <= '\uffe6';
-
-    private static bool IsClearCardHeaderLine(CardModel model, string text, int start, int end)
-    {
-        var visibleText = RemoveRichTextTags(text, start, end);
-        var index = 0;
-        while (index < visibleText.Length)
-        {
-            var character = visibleText[index];
-            if (char.IsWhiteSpace(character) || character is '。' or '.')
-            {
-                index++;
-                continue;
-            }
-
-            if (TryMatchKnownVisibleHeaderLabel(model, visibleText, index, out var labelLength))
-            {
-                index += labelLength;
-                continue;
-            }
-
-            return false;
-        }
-
-        return true;
-    }
-
-    private static bool TryMatchKnownVisibleHeaderLabel(CardModel model, string text, int start, out int length)
-    {
-        if (TryMatchKnownVisibleStatusLabel(text, start, out length))
-            return true;
-        if (TryMatchVisibleElementTitle(model, text, start, out length))
-            return true;
-
-        length = 0;
-        return false;
-    }
-
-    private static bool TryMatchKnownVisibleStatusLabel(string text, int start, out int length)
-    {
-        foreach (var label in KnownVisibleStatusLabels)
-        {
-            if (start + label.Length > text.Length)
-                continue;
-            if (string.CompareOrdinal(text, start, label, 0, label.Length) != 0)
-                continue;
-
-            length = label.Length;
-            return true;
-        }
-
-        length = 0;
-        return false;
-    }
-
-    private static bool TryMatchVisibleElementTitle(CardModel model, string text, int start, out int length)
-    {
-        foreach (var element in SakuraActions.ElementSetOf(model).AsElements())
-        {
-            var title = ElementTitle(element);
-            if (start + title.Length > text.Length)
-                continue;
-            if (string.CompareOrdinal(text, start, title, 0, title.Length) != 0)
-                continue;
-
-            length = title.Length;
-            return true;
-        }
-
-        length = 0;
-        return false;
-    }
-
-    private static bool IsSynchronizedDescriptionLine(string text, int start, int end)
-    {
-        var visibleText = RemoveRichTextTags(text, start, end).Trim();
-        return visibleText.StartsWith("同步：", StringComparison.Ordinal)
-               || visibleText.StartsWith("Synced:", StringComparison.Ordinal);
-    }
-
-    private static bool IsExtraEffectDescriptionLine(string text, int start, int end)
-    {
-        var visibleText = RemoveRichTextTags(text, start, end).TrimStart();
-        return visibleText.StartsWith("额外效果：", StringComparison.Ordinal)
-               || visibleText.StartsWith("Extra:", StringComparison.Ordinal);
-    }
-
-    internal static bool IsExtraEffectDescriptionLineForTests(string text) =>
-        IsExtraEffectDescriptionLine(text, 0, text.Length);
-
-    private static string RemoveRichTextTags(string text) =>
-        RemoveRichTextTags(text, 0, text.Length);
-
-    private static string RemoveCenterTags(string text) =>
-        text
-            .Replace("[center]", string.Empty, StringComparison.Ordinal)
-            .Replace("[/center]", string.Empty, StringComparison.Ordinal);
-
-    private static string RemoveRichTextTags(string text, int start, int end)
-    {
-        var builder = new StringBuilder(end - start);
-        var inTag = false;
-        for (var i = start; i < end; i++)
-        {
-            var character = text[i];
-            if (character == '[')
-            {
-                inTag = true;
-                continue;
-            }
-            if (character == ']')
-            {
-                inTag = false;
-                continue;
-            }
-            if (!inTag)
-                builder.Append(character);
-        }
-
-        return builder.ToString();
-    }
-
     private static void ApplyCostLayout(
         TextureRect? icon,
         MegaLabel? label,
@@ -772,9 +447,6 @@ internal static class ClearCardLayout
     {
         SakuraCardVisualInfrastructure.ApplyBox(control, box);
     }
-
-    private static string CurrentLanguageKey() =>
-        LocManager.Instance?.Language ?? string.Empty;
 
     private static Control? HandFlash(NCardHolder holder) =>
         holder is NHandCardHolder handHolder
@@ -859,7 +531,6 @@ internal static class ClearCardLayout
         private Label? _englishNameLabel;
         private SakuraDescriptionRegionNodes? _descriptionRegion;
         private ClearCardNodes? _nodes;
-        private ClearCardDescriptionCache? _descriptionCache;
 
         public TextureRect? Art => _art;
 
@@ -869,12 +540,6 @@ internal static class ClearCardLayout
 
         public bool IsApplied =>
             _ledger?.IsApplied(SakuraCardRendererId.Clear) == true;
-
-        public string ClearCardDescriptionText(CardModel model, string currentText)
-        {
-            _descriptionCache ??= new ClearCardDescriptionCache();
-            return _descriptionCache.Text(model, currentText);
-        }
 
         public void Capture(NCard card)
         {
@@ -1055,52 +720,6 @@ internal static class ClearCardLayout
 
     }
 
-    private sealed class ClearCardDescriptionCache
-    {
-        private Type? _cardType;
-        private string? _sourceText;
-        private string? _language;
-        private bool _temporary;
-        private bool _showExtraEffectDescription;
-        private SakuraElementSet _elements;
-        private string? _synchronizedLine;
-        private string? _renderedText;
-        private string? _text;
-
-        public string Text(CardModel model, string currentText)
-        {
-            var cardType = model.GetType();
-            var sourceText = _renderedText == currentText && _sourceText is not null
-                ? _sourceText
-                : currentText;
-            var language = CurrentLanguageKey();
-            var temporary = model.IsTemporary();
-            var showExtraEffectDescription = SakuraCardModel.ShouldShowMagicChargeExtraEffectDescription(model);
-            var elements = SakuraActions.ElementSetOf(model);
-            var synchronizedLine = SakuraStateText.SynchronizedLine(model);
-
-            if (_cardType == cardType
-                && _sourceText == sourceText
-                && _language == language
-                && _temporary == temporary
-                && _showExtraEffectDescription == showExtraEffectDescription
-                && _elements == elements
-                && _synchronizedLine == synchronizedLine)
-                return _text!;
-
-            _cardType = cardType;
-            _sourceText = sourceText;
-            _language = language;
-            _temporary = temporary;
-            _showExtraEffectDescription = showExtraEffectDescription;
-            _elements = elements;
-            _synchronizedLine = synchronizedLine;
-            _text = ClearCardLayout.ClearCardDescriptionText(model, sourceText, synchronizedLine);
-            _renderedText = SakuraDescriptionRegion.Centered(SakuraDescriptionRegion.NormalizeText(model, _text));
-            return _text;
-        }
-    }
-
     private sealed class ClearCardNodes
     {
         private ClearCardNodes(
@@ -1232,7 +851,6 @@ internal static class ClearCardLayout
         public Color UpgradedNameTextColor => SakuraCardVisualStyle.UpgradedNameTextColor;
         public Color NameTextOutlineColor { get; } = new(0.03f, 0.03f, 0.03f, 0.95f);
         public Color TitleTextShadowColor { get; } = new(0f, 0f, 0f, 0.1882353f);
-        public float HeaderLineUnits { get; } = Scaled(14f);
         public Vector2 DefaultHighlightPosition { get; } = new(-381f, -475f);
         public Vector2 DefaultHighlightSize { get; } = new(759f, 951f);
         public Vector2 DefaultHighlightPivotOffset { get; } = new(150f, 211f);

@@ -30,7 +30,10 @@ internal static class SakuraSealedWandChargeAction
                 Apply(SakuraRunHooks.ActiveRunState ?? context.Player.RunState, context.Message);
                 return Task.CompletedTask;
             },
-            GameActionType.Combat);
+            // The charge is published from a death callback. The final death can
+            // end combat before the managed action reaches the queue head, so it
+            // must survive the combat-end cancellation pass.
+            GameActionType.Any);
 
     internal static byte[] Serialize(SealedWandChargeActionPayload payload)
     {

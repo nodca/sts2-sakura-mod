@@ -19,7 +19,7 @@ internal static class SakuraFourthActMapFactory
 
         if (fourthAct.IsMutable)
             fourthAct.ConfigureRouteBosses();
-        map = new SakuraFourthActMap(FourthActRouteCatalog.CompleteRoutes);
+        map = new SakuraFourthActMap(FourthActRouteCatalog.Resolve());
         return true;
     }
 }
@@ -87,7 +87,7 @@ internal static class SakuraFourthActRunTransition
     internal static void TryAppendSlot(RunState runState)
     {
         if (!ShouldAppendSlot(
-                FourthActEntryRegistration.CanRegister(FourthActRouteCatalog.DraftRoutes),
+                FourthActEntryRegistration.CanRegister(FourthActRouteCatalog.Resolve()),
                 FourthActEntryRegistration.CanEnter(runState),
                 runState.CurrentActIndex,
                 runState.Acts.Count))

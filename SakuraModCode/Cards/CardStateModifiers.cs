@@ -457,8 +457,8 @@ internal static class SakuraStateText
             ? string.Join("、", pairedNames)
             : string.Join(", ", pairedNames);
         return IsSimplifiedChinese()
-            ? $"\n[gold]同步：[/gold]{names}。"
-            : $"\n[gold]Synced:[/gold] {names}.";
+            ? $"[gold]同步：[/gold]{names}。"
+            : $"[gold]Synced:[/gold] {names}.";
     }
 
     public static string? SynchronizedLine(CardModel card)
@@ -503,6 +503,9 @@ internal static class SakuraStateText
 
     private static string LocalizedCardTitle(CardModel card)
     {
+        if (LocManager.Instance is not null)
+            return card.TitleLocString.GetFormattedText();
+
         var type = card.GetType();
         return IsSimplifiedChinese()
             ? ChineseCardTitle(type)

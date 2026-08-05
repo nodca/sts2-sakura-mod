@@ -1,0 +1,142 @@
+[gd_scene format=3 uid="uid://c223ainosfc7w"]
+
+[ext_resource type="PackedScene" path="res://SakuraMod/scenes/charui/sakura_standee_idle_layers.tscn" id="1_layers"]
+[ext_resource type="Texture2D" uid="uid://dy0j2c6xq3703" path="res://SakuraMod/images/charui/sakura_battle_standee.png" id="2_lllaa"]
+
+[sub_resource type="Animation" id="Animation_hurt_reset"]
+resource_name = "RESET"
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Polygon2D:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(600, -78.015)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Polygon2D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [0.0]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Polygon2D:scale")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(0.552, 0.58)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Polygon2D:self_modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_hurt_test"]
+resource_name = "hurt_test"
+length = 1.5
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Polygon2D:position")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.55, 0.62, 0.7, 0.82, 1.5),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(600, -78.015), Vector2(600, -78.015), Vector2(618, -78.015), Vector2(593, -78.015), Vector2(600, -78.015), Vector2(600, -78.015)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Polygon2D:rotation")
+tracks/1/interp = 2
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.55, 0.62, 0.7, 0.82, 1.5),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.0, 0.0, 0.018, -0.009, 0.0, 0.0]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Polygon2D:scale")
+tracks/2/interp = 2
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.55, 0.62, 0.7, 0.82, 1.5),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(0.552, 0.58), Vector2(0.552, 0.58), Vector2(0.536, 0.592), Vector2(0.557, 0.577), Vector2(0.552, 0.58), Vector2(0.552, 0.58)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Polygon2D:self_modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0, 0.55, 0.62, 0.7, 0.82, 1.5),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 1), Color(1, 0.62, 0.68, 1), Color(1, 0.86, 0.88, 1), Color(1, 1, 1, 1), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_hurt_test"]
+_data = {
+&"RESET": SubResource("Animation_hurt_reset"),
+&"hurt_test": SubResource("Animation_hurt_test")
+}
+
+[node name="SakuraStandeeIdlePreview" type="Node2D" unique_id=2028655637]
+
+[node name="PreviewBackground" type="ColorRect" parent="." unique_id=221321819]
+offset_left = -5.0
+offset_top = -5.0
+offset_right = 1915.0
+offset_bottom = 1526.0
+mouse_filter = 2
+color = Color(0.09, 0.12, 0.13, 1)
+
+[node name="CharacterRoot" parent="." unique_id=234305482 instance=ExtResource("1_layers")]
+visible = false
+position = Vector2(960, 456)
+scale = Vector2(0.58, 0.58)
+
+[node name="Polygon2D" type="Polygon2D" parent="." unique_id=1639101662]
+position = Vector2(600, -78.015)
+scale = Vector2(0.552, 0.58)
+texture = ExtResource("2_lllaa")
+polygon = PackedVector2Array(-100, 179, 4, 1538, 1134, 1549, 1080, 194, 575, 71.41834)
+
+[node name="HurtAnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("AnimationLibrary_hurt_test")
+}
+autoplay = "hurt_test"

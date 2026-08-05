@@ -30,7 +30,9 @@ public sealed class SakuraFourthAct : ModActTemplate
     protected override int BaseNumberOfRooms => 4;
 
     public override IEnumerable<EncounterModel> BossDiscoveryOrder =>
-        [Encounter(RequiredElementalBoss(FourthActRouteCatalog.CompleteRoutes[0]).EncounterType)];
+        FourthActRouteCatalog.Resolve().CompleteRoutes is [var route, ..]
+            ? [Encounter(RequiredElementalBoss(route).EncounterType)]
+            : [];
 
     public override IEnumerable<AncientEventModel> AllAncients =>
         ModelDb.Act<Glory>().AllAncients;
@@ -38,7 +40,7 @@ public sealed class SakuraFourthAct : ModActTemplate
     public override IEnumerable<EventModel> AllEvents => [];
 
     public override IEnumerable<EncounterModel> GenerateAllEncounters() =>
-        FourthActRouteCatalog.CompleteEncounterTypes.Select(Encounter);
+        FourthActRouteCatalog.Resolve().CompleteEncounterTypes.Select(Encounter);
 
     public override IEnumerable<AncientEventModel> GetUnlockedAncients(UnlockState unlockState) =>
         AllAncients;
@@ -47,7 +49,8 @@ public sealed class SakuraFourthAct : ModActTemplate
 
     internal void ConfigureRouteBosses()
     {
-        var route = FourthActRouteCatalog.CompleteRoutes[0];
+        var route = FourthActRouteCatalog.Resolve().CompleteRoutes.FirstOrDefault()
+            ?? throw new InvalidOperationException("A complete fourth-act route is required to configure Sakura's fourth act.");
         var endpoint = route.Endpoint.EncounterType
             ?? throw new InvalidOperationException("A complete fourth-act route requires an endpoint encounter.");
         SetBossEncounter(Encounter(RequiredElementalBoss(route).EncounterType));

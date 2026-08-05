@@ -15,29 +15,15 @@ public static class FourthActRouteCatalog
     internal static IReadOnlyList<FourthActRouteDefinition> DraftRoutes { get; } = [Wind];
 
     public static IReadOnlyList<FourthActRouteDefinition> CompleteRoutes =>
-        CompleteRoutesFrom(DraftRoutes);
+        Resolve().CompleteRoutes;
 
     public static IReadOnlyList<Type> CompleteEncounterTypes =>
-        CompleteRoutes
-            .SelectMany(EncounterTypesForCompleteRoute)
-            .Distinct()
-            .ToArray();
+        Resolve().CompleteEncounterTypes;
+
+    internal static FourthActRouteResolution Resolve() =>
+        FourthActRouteResolver.Resolve(DraftRoutes);
 
     public static IReadOnlyList<FourthActRouteDefinition> CompleteRoutesFrom(
         IEnumerable<FourthActRouteDefinition> routes) =>
-        routes
-            .Where(static route => route.IsComplete)
-            .OrderBy(static route => route.StableOrder)
-            .ToArray();
-
-    private static IEnumerable<Type> EncounterTypesForCompleteRoute(FourthActRouteDefinition route)
-    {
-        var boss = route.ElementalBoss
-            ?? throw new InvalidOperationException("A complete fourth-act route requires an elemental boss.");
-        var endpoint = route.Endpoint.EncounterType
-            ?? throw new InvalidOperationException("A complete fourth-act route requires an endpoint encounter.");
-        return route.EliteCandidates.Select(static elite => elite.EncounterType)
-            .Append(boss.EncounterType)
-            .Append(endpoint);
-    }
+        FourthActRouteResolver.Resolve(routes).CompleteRoutes;
 }
