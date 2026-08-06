@@ -65,8 +65,7 @@ internal static class SakuraKeroCombatCompanion
 
         var texture = ResourceLoader.Load<Texture2D>(TexturePath, null, ResourceLoader.CacheMode.Reuse)
             ?? throw new InvalidOperationException($"Could not load Kero combat texture: {TexturePath}");
-        var layout = SelectLayout(
-            SakuraCombatArtFeature.IsEnabled && SakuraModConfig.IsChibiCombatArtEnabled());
+        var layout = SelectLayout(SakuraCombatArtPreference.IsChibi(player));
 
         var root = new Node2D
         {

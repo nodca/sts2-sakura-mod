@@ -16,24 +16,34 @@ internal readonly record struct SealedWandChargeActionPayload(
 internal static class SakuraSealedWandChargeAction
 {
     private const string ActionKey = "sealed_wand_charge";
+    private const string DeferredActionKey = "sealed_wand_charge_player_turn";
     private const int HeaderBytes = sizeof(uint) + sizeof(int);
     private const int RecipientBytes = sizeof(ulong) + sizeof(int);
 
     internal static readonly RitsuLibManagedNetActionDescriptor<SealedWandChargeActionPayload> Descriptor =
+        CreateDescriptor(ActionKey, GameActionType.Any, applyDeferredTurnCharge: false);
+
+    internal static readonly RitsuLibManagedNetActionDescriptor<SealedWandChargeActionPayload> DeferredDescriptor =
+        CreateDescriptor(DeferredActionKey, GameActionType.CombatPlayPhaseOnly, applyDeferredTurnCharge: true);
+
+    private static RitsuLibManagedNetActionDescriptor<SealedWandChargeActionPayload> CreateDescriptor(
+        string actionKey,
+        GameActionType actionType,
+        bool applyDeferredTurnCharge) =>
         new(
             MainFile.ModId,
-            ActionKey,
+            actionKey,
             Serialize,
             Deserialize,
-            static context =>
+            async context =>
             {
-                Apply(SakuraRunHooks.ActiveRunState ?? context.Player.RunState, context.Message);
-                return Task.CompletedTask;
+                var runState = SakuraRunHooks.ActiveRunState ?? context.Player.RunState;
+                if (applyDeferredTurnCharge)
+                    await ApplyDeferred(runState, context.Message);
+                else
+                    Apply(runState, context.Message);
             },
-            // The charge is published from a death callback. The final death can
-            // end combat before the managed action reaches the queue head, so it
-            // must survive the combat-end cancellation pass.
-            GameActionType.Any);
+            actionType);
 
     internal static byte[] Serialize(SealedWandChargeActionPayload payload)
     {
@@ -94,13 +104,27 @@ internal static class SakuraSealedWandChargeAction
     {
         foreach (var recipient in payload.Recipients)
         {
-            var player = runState.GetPlayer(recipient.PlayerNetId)
-                ?? throw new InvalidOperationException(
-                    $"Sealed Wand charge recipient player {recipient.PlayerNetId} is missing.");
-            var wand = player.GetRelic<ClassicSealedWandRelic>()
-                ?? throw new InvalidOperationException(
-                    $"Sealed Wand charge recipient player {recipient.PlayerNetId} has no Sealed Wand.");
+            var wand = ResolveWand(runState, recipient.PlayerNetId);
             wand.ApplySynchronizedCharge(payload.CombatId, recipient.Amount);
         }
+    }
+
+    private static async Task ApplyDeferred(IRunState runState, SealedWandChargeActionPayload payload)
+    {
+        foreach (var recipient in payload.Recipients)
+        {
+            var wand = ResolveWand(runState, recipient.PlayerNetId);
+            await wand.ApplyDeferredSynchronizedCharge(payload.CombatId, recipient.Amount);
+        }
+    }
+
+    private static ClassicSealedWandRelic ResolveWand(IRunState runState, ulong playerNetId)
+    {
+        var player = runState.GetPlayer(playerNetId)
+            ?? throw new InvalidOperationException(
+                $"Sealed Wand charge recipient player {playerNetId} is missing.");
+        return player.GetRelic<ClassicSealedWandRelic>()
+            ?? throw new InvalidOperationException(
+                $"Sealed Wand charge recipient player {playerNetId} has no Sealed Wand.");
     }
 }

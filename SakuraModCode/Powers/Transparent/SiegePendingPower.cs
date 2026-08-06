@@ -23,6 +23,8 @@ namespace SakuraMod.SakuraModCode.Powers;
 public class SiegePendingPower : SakuraPowerModel
 {
     private readonly Queue<bool> _pendingEffects = [];
+    private bool[]? _effectsResolvedThisTurn;
+    private bool _triggeredThisTurn;
 
     protected override string IconFileName => "earth_element.png";
 
@@ -32,7 +34,7 @@ public class SiegePendingPower : SakuraPowerModel
     public void QueueEffect(bool extraEffect) =>
         _pendingEffects.Enqueue(extraEffect);
 
-    public override async Task AfterSideTurnEnd(
+    public override async Task BeforeSideTurnEnd(
         PlayerChoiceContext choiceContext,
         CombatSide side,
         IEnumerable<Creature> participants)
@@ -42,24 +44,11 @@ public class SiegePendingPower : SakuraPowerModel
 
         var pendingEffects = _pendingEffects.ToArray();
         _pendingEffects.Clear();
-        if (SiegeRules.ShouldTrigger(Owner.Block))
+        _effectsResolvedThisTurn = pendingEffects;
+        _triggeredThisTurn = SiegeRules.ShouldTrigger(Owner.Block);
+        if (_triggeredThisTurn)
         {
             Flash();
-            foreach (var _ in pendingEffects)
-            {
-                var enemies = Owner.CombatState?.HittableEnemies.ToList() ?? [];
-                if (enemies.Count > 0)
-                {
-                    await PowerCmd.Apply<WeakPower>(
-                        choiceContext,
-                        enemies,
-                        SiegeRules.WeakAmount,
-                        Owner,
-                        null,
-                        false);
-                }
-            }
-
             foreach (var extraEffect in pendingEffects.Where(static extraEffect => extraEffect))
             {
                 var damage = SiegeRules.ExtraDamage(Owner.Block);
@@ -75,13 +64,46 @@ public class SiegePendingPower : SakuraPowerModel
                 }
             }
         }
+    }
 
+    public override async Task AfterSideTurnEnd(
+        PlayerChoiceContext choiceContext,
+        CombatSide side,
+        IEnumerable<Creature> participants)
+    {
+        if (side != CombatSide.Enemy
+            || Owner.Side != CombatSide.Player
+            || _effectsResolvedThisTurn is not { } pendingEffects)
+            return;
+
+        _effectsResolvedThisTurn = null;
+        var triggeredThisTurn = _triggeredThisTurn;
+        _triggeredThisTurn = false;
+        if (triggeredThisTurn)
+        {
+            foreach (var _ in pendingEffects)
+            {
+                var enemies = Owner.CombatState?.HittableEnemies.ToList() ?? [];
+                if (enemies.Count > 0)
+                {
+                    await PowerCmd.Apply<WeakPower>(
+                        choiceContext,
+                        enemies,
+                        SiegeRules.WeakAmount,
+                        Owner,
+                        null,
+                        false);
+                }
+            }
+        }
         await PowerCmd.Remove(this);
     }
 
     public override Task AfterRemoved(Creature oldOwner)
     {
         _pendingEffects.Clear();
+        _effectsResolvedThisTurn = null;
+        _triggeredThisTurn = false;
         return Task.CompletedTask;
     }
 }

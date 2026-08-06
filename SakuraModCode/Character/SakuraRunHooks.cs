@@ -20,6 +20,7 @@ internal static class SakuraRunHooks
     private static IDisposable? _combatEndedSubscription;
     private static IDisposable? _runLoadedSubscription;
     private static readonly HashSet<uint> PublishedDeathsThisCombat = [];
+    private static readonly Queue<SealedWandChargeActionPayload> DeferredDeathRewards = [];
     private static bool _registered;
     internal static IRunState? ActiveRunState { get; private set; }
 
@@ -29,6 +30,8 @@ internal static class SakuraRunHooks
             return;
 
         RitsuLibManagedNetActions.Register(SakuraSealedWandChargeAction.Descriptor);
+        RitsuLibManagedNetActions.Register(SakuraSealedWandChargeAction.DeferredDescriptor);
+        CombatManager.Instance.TurnStarted += OnTurnStarted;
         _combatStartingSubscription = RitsuLibFramework.SubscribeLifecycle<CombatStartingEvent>(
             OnCombatStarting,
             replayCurrentState: false);
@@ -36,11 +39,7 @@ internal static class SakuraRunHooks
             OnCreatureDied,
             replayCurrentState: false);
         _combatEndedSubscription = RitsuLibFramework.SubscribeLifecycle<CombatEndedEvent>(
-            _ =>
-            {
-                PublishedDeathsThisCombat.Clear();
-                ActiveRunState = null;
-            },
+            OnCombatEnded,
             replayCurrentState: false);
         _runLoadedSubscription = RitsuLibFramework.SubscribeLifecycle<RunLoadedEvent>(
             OnRunLoaded,
@@ -51,6 +50,7 @@ internal static class SakuraRunHooks
     private static void OnCombatStarting(CombatStartingEvent evt)
     {
         PublishedDeathsThisCombat.Clear();
+        DeferredDeathRewards.Clear();
         ActiveRunState = evt.RunState;
         foreach (var player in SakuraPlayers(evt.RunState))
             ClowCreate.ReduceCostAtCombatStart(player);
@@ -104,14 +104,51 @@ internal static class SakuraRunHooks
             return;
         }
 
-        if (!RitsuLibManagedNetActions.Request(RunManager.Instance, SakuraSealedWandChargeAction.Descriptor, payload))
+        if (RunManager.Instance.ActionExecutor.CurrentlyRunningAction is null)
         {
-            PublishedDeathsThisCombat.Remove(combatId);
-            MainFile.Logger.Error(
-                $"Could not synchronize Sealed Wand charge for enemy CombatId={combatId}.");
+            DeferredDeathRewards.Enqueue(payload);
             return;
         }
 
+        PublishDeathReward(payload, SakuraSealedWandChargeAction.Descriptor);
+    }
+
+    private static void OnTurnStarted(CombatState combatState)
+    {
+        if (combatState.CurrentSide == CombatSide.Player)
+        {
+            PublishDeferredDeathRewards(SakuraSealedWandChargeAction.DeferredDescriptor);
+        }
+    }
+
+    private static void OnCombatEnded(CombatEndedEvent _)
+    {
+        PublishDeferredDeathRewards(SakuraSealedWandChargeAction.Descriptor);
+        PublishedDeathsThisCombat.Clear();
+        DeferredDeathRewards.Clear();
+        ActiveRunState = null;
+    }
+
+    private static void PublishDeferredDeathRewards(
+        RitsuLibManagedNetActionDescriptor<SealedWandChargeActionPayload> descriptor)
+    {
+        while (DeferredDeathRewards.TryDequeue(out var payload))
+            PublishDeathReward(payload, descriptor);
+    }
+
+    private static void PublishDeathReward(
+        SealedWandChargeActionPayload payload,
+        RitsuLibManagedNetActionDescriptor<SealedWandChargeActionPayload> descriptor)
+    {
+        if (RitsuLibManagedNetActions.Request(
+                RunManager.Instance,
+                descriptor,
+                payload))
+            return;
+
+        PublishedDeathsThisCombat.Remove(payload.CombatId);
+        MainFile.Logger.Error(
+            $"Could not synchronize Sealed Wand charge for enemy CombatId={payload.CombatId}.");
     }
 
     private static void OnRunLoaded(RunLoadedEvent evt)

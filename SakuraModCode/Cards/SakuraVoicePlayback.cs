@@ -1,5 +1,6 @@
 using Godot;
 using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.TestSupport;
 using SakuraMod.SakuraModCode;
@@ -88,7 +89,8 @@ public static class SakuraVoicePlayback
 
         try
         {
-            if (!SakuraModConfig.IsSakuraVoiceEnabled()
+            if (!LocalContext.IsMe(card.Owner)
+                || !SakuraModConfig.IsSakuraVoiceEnabled()
                 || !CueGate.CanPlay(combatState, cue.Value)
                 || IsChannelBusy())
                 return;

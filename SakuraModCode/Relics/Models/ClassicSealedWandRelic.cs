@@ -48,6 +48,7 @@ public class ClassicSealedWandRelic : SakuraRelicModel
     // the dedupe key so shared clone state cannot suppress another player's reward.
     private readonly HashSet<(ulong PlayerNetId, uint CombatId)> _chargedDeathsThisCombat = [];
     private readonly HashSet<Creature> _sealKillsThisCombat = new(ReferenceEqualityComparer.Instance);
+    private bool _generatedTurnThisPlayerTurn;
 
     protected override string IconFileName => "sealed_wand.png";
     public override RelicRarity Rarity => RelicRarity.Starter;
@@ -84,6 +85,7 @@ public class ClassicSealedWandRelic : SakuraRelicModel
     {
         _chargedDeathsThisCombat.Clear();
         _sealKillsThisCombat.Clear();
+        _generatedTurnThisPlayerTurn = false;
         await DowngradeDuplicateSakuraCards();
     }
 
@@ -142,6 +144,14 @@ public class ClassicSealedWandRelic : SakuraRelicModel
         return true;
     }
 
+    internal async Task ApplyDeferredSynchronizedCharge(uint combatId, int amount)
+    {
+        if (!ApplySynchronizedCharge(combatId, amount))
+            return;
+
+        await TryGenerateTurnCard();
+    }
+
     internal static int ChargeGainForDeath(
         int baseGain,
         int eliteBossExtraGain,
@@ -160,10 +170,20 @@ public class ClassicSealedWandRelic : SakuraRelicModel
         if (player != Owner)
             return;
 
+        _generatedTurnThisPlayerTurn = false;
+        await TryGenerateTurnCard();
+    }
+
+    private async Task TryGenerateTurnCard()
+    {
+        if (_generatedTurnThisPlayerTurn)
+            return;
+
         var threshold = TriggerThreshold();
         if (Charge[this] < threshold)
             return;
 
+        _generatedTurnThisPlayerTurn = true;
         AddCharge(-threshold);
         if (Charge[this] < 0)
             Charge[this] = 0;
@@ -184,6 +204,7 @@ public class ClassicSealedWandRelic : SakuraRelicModel
     {
         _chargedDeathsThisCombat.Clear();
         _sealKillsThisCombat.Clear();
+        _generatedTurnThisPlayerTurn = false;
         return Task.CompletedTask;
     }
 

@@ -14,7 +14,7 @@ public class SakuraErasePower : SakuraPowerModel
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Single;
 
-    public override async Task AfterSideTurnEnd(
+    public override async Task BeforeSideTurnEnd(
         PlayerChoiceContext choiceContext,
         CombatSide side,
         IEnumerable<Creature> participants)

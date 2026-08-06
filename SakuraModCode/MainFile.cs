@@ -23,6 +23,7 @@ public partial class MainFile : Node
     {
         ModTypeDiscoveryHub.RegisterModAssembly(ModId, Assembly.GetExecutingAssembly());
         SakuraModConfig.Register();
+        SakuraCombatArtPreference.Register();
 
         SakuraKeywords.Register();
         SakuraCardStates.Register();
