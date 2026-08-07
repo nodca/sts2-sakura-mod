@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="PackedScene" path="res://SakuraMod/scenes/charui/sakura_standee_idle_layers.tscn" id="1_layers"]
+[ext_resource type="PackedScene" path="res://SakuraMod/scenes/charui/sakura_standee_idle_rigged.tscn" id="1_layers"]
 
 [node name="SakuraStandeeIdlePreview" type="Node2D"]
 

@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://c223ainosfc7w"]
 
-[ext_resource type="PackedScene" path="res://SakuraMod/scenes/charui/sakura_standee_idle_layers.tscn" id="1_layers"]
+[ext_resource type="PackedScene" path="res://SakuraMod/scenes/charui/sakura_standee_idle_rigged.tscn" id="1_layers"]
 [ext_resource type="Texture2D" uid="uid://dy0j2c6xq3703" path="res://SakuraMod/images/charui/sakura_battle_standee.png" id="2_lllaa"]
 
 [sub_resource type="Animation" id="Animation_hurt_reset"]
@@ -117,10 +117,10 @@ _data = {
 [node name="SakuraStandeeIdlePreview" type="Node2D" unique_id=2028655637]
 
 [node name="PreviewBackground" type="ColorRect" parent="." unique_id=221321819]
-offset_left = -5.0
-offset_top = -5.0
-offset_right = 1915.0
-offset_bottom = 1526.0
+offset_left = -131.0
+offset_top = -116.0
+offset_right = 1789.0
+offset_bottom = 1415.0
 mouse_filter = 2
 color = Color(0.09, 0.12, 0.13, 1)
 
@@ -135,8 +135,8 @@ scale = Vector2(0.552, 0.58)
 texture = ExtResource("2_lllaa")
 polygon = PackedVector2Array(-100, 179, 4, 1538, 1134, 1549, 1080, 194, 575, 71.41834)
 
-[node name="HurtAnimationPlayer" type="AnimationPlayer" parent="."]
+[node name="HurtAnimationPlayer" type="AnimationPlayer" parent="." unique_id=28052512]
 libraries = {
 &"": SubResource("AnimationLibrary_hurt_test")
 }
-autoplay = "hurt_test"
+autoplay = &"hurt_test"

@@ -70,6 +70,9 @@ internal static class SakuraSourceCardText
         if (ReferencesThroughTip(card))
             tips.Add(HoverTipFactory.FromPower<ClassicThroughPower>());
 
+        if (ReferencesSleepTip(card))
+            tips.Add(HoverTipFactory.FromPower<ClassicSleepPower>());
+
         foreach (var key in StaticTipKeys(card))
             tips.Add(StaticTip(key));
         var keywordTips = KeywordTips(card).ToArray();
@@ -97,6 +100,9 @@ internal static class SakuraSourceCardText
 
     internal static bool ReferencesThroughTip(SakuraSourceCard card) =>
         card is ClowThrough or SakuraThrough;
+
+    internal static bool ReferencesSleepTip(SakuraSourceCard card) =>
+        card is ClowSleep or SakuraSleep;
 
     internal static IEnumerable<string> StaticTipKeys(SakuraSourceCard card)
     {
@@ -127,10 +133,12 @@ internal static class SakuraSourceCardText
             yield return SakuraKeywords.Echo;
         }
 
+        if (card.Identity is SourceCardIdentity.Return or SourceCardIdentity.Create)
+            yield return SakuraKeywords.Removable;
+
         if (card is not { Identity: SourceCardIdentity.Create })
             yield break;
 
-        yield return SakuraKeywords.Removable;
         if (!card.IsClowCard)
             yield break;
 

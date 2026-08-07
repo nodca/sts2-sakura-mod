@@ -46,6 +46,17 @@ cp Directory.Build.props.example Directory.Build.props
 The template discovers the STS2 install path automatically on Linux, macOS, and
 Windows. If discovery fails, set `Sts2Path` in `Directory.Build.props`.
 
+Open the project with the same pinned Godot 4.5.1 editor used by the publish
+pipeline:
+
+```bash
+scripts/godot-editor
+```
+
+Do not open `project.godot` through the system file association unless that
+association also points to Godot 4.5.1. The project feature version does not
+select the editor executable.
+
 ## Build
 
 Compile C# and copy the DLL/manifest into the local STS2 mods folder:

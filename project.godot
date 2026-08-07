@@ -16,7 +16,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="SakuraMod"
 run/main_scene="res://SakuraMod/scenes/charui/sakura_standee_idle_preview.tscn"
-config/features=PackedStringArray("4.7", "Mobile")
+config/features=PackedStringArray("4.5", "C#", "Mobile")
 config/icon="res://SakuraMod/mod_image.png"
 
 [display]
