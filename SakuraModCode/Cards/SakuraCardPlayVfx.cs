@@ -11,19 +11,10 @@ namespace SakuraMod.SakuraModCode.Cards;
 public static class SakuraCardPlayVfx
 {
     private const int VfxZIndex = 3000;
-    private const float HailDuration = 0.58f;
-    private const float BlazeDuration = 0.72f;
-    private const float AquaDuration = 0.82f;
     private const float TimeDuration = 0.95f;
     private const float GravitationDuration = 0.82f;
     private const float GaleDuration = 0.34f;
 
-    private static readonly Color IceColor = new(0.76f, 0.96f, 1f, 0.88f);
-    private static readonly Color IceCoreColor = new(0.93f, 1f, 1f, 0.95f);
-    private static readonly Color FlameColor = new(1f, 0.35f, 0.16f, 0.72f);
-    private static readonly Color FlameGoldColor = new(1f, 0.78f, 0.28f, 0.78f);
-    private static readonly Color AquaColor = new(0.38f, 0.86f, 1f, 0.62f);
-    private static readonly Color AquaFoamColor = new(0.86f, 1f, 1f, 0.72f);
     private static readonly Color TimeGoldColor = new(1f, 0.88f, 0.54f, 0.76f);
     private static readonly Color TimeBlueColor = new(0.72f, 0.9f, 1f, 0.56f);
     private static readonly Color GravityColor = new(0.48f, 0.38f, 0.86f, 0.54f);
@@ -58,38 +49,6 @@ public static class SakuraCardPlayVfx
         BuildGaleWindBlade(root);
         TaskHelper.RunSafely(AnimateGaleWindBlade(root, start, end));
         return root;
-    }
-
-    public static void PlayHail(Creature target)
-    {
-        if (!TryCreateRoot("SakuraHailVfx", out var root, out var room))
-            return;
-
-        root.GlobalPosition = CreatureCenter(room, target) + Vector2.Up * 34f;
-        BuildHail(root);
-        TaskHelper.RunSafely(AnimateHail(root));
-    }
-
-    public static void PlayBlaze(Creature target)
-    {
-        if (!TryCreateRoot("SakuraBlazeVfx", out var root, out var room))
-            return;
-
-        root.GlobalPosition = CreatureCenter(room, target) + Vector2.Down * 10f;
-        BuildBlaze(root);
-        TaskHelper.RunSafely(AnimateBlaze(root));
-    }
-
-    public static void PlayAqua(IEnumerable<Creature> targets)
-    {
-        var targetList = targets.ToList();
-        if (targetList.Count == 0 || !TryCreateRoot("SakuraAquaVfx", out var root, out var room))
-            return;
-
-        var area = EnemyArea(room, targetList);
-        root.GlobalPosition = area.Center;
-        BuildAqua(root, room, targetList, area);
-        TaskHelper.RunSafely(AnimateAqua(root));
     }
 
     public static void PlayTime(Creature owner)
@@ -173,100 +132,6 @@ public static class SakuraCardPlayVfx
         var height = Math.Clamp(floorY - centerY + 130f, 150f, 310f);
 
         return new VfxArea(new Vector2(centerX, centerY), width, height);
-    }
-
-    private static void BuildHail(Node2D root)
-    {
-        for (var i = 0; i < 5; i++)
-        {
-            var shard = CreateDiamond(7f + i % 2 * 2f, 16f + i % 3 * 2f, i % 2 == 0 ? IceCoreColor : IceColor);
-            shard.Name = "HailShard";
-            shard.Position = new Vector2(-44f + i * 22f, -62f - i % 2 * 12f);
-            shard.Rotation = -0.18f + i * 0.09f;
-            root.AddChild(shard);
-
-            var streak = new Line2D
-            {
-                Name = "HailStreak",
-                Width = 1.8f,
-                DefaultColor = IceColor,
-                Antialiased = true,
-                Points = [shard.Position + Vector2.Up * 16f, shard.Position + Vector2.Down * 16f]
-            };
-            root.AddChild(streak);
-        }
-
-        for (var i = 0; i < 6; i++)
-        {
-            var angle = Mathf.Tau * i / 6f;
-            var direction = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-            var impact = new Line2D
-            {
-                Name = "HailImpact",
-                Width = 1.9f,
-                DefaultColor = IceCoreColor,
-                Antialiased = true,
-                Points = [direction * 4f, direction * 22f],
-                Modulate = new Color(1f, 1f, 1f, 0.76f)
-            };
-            impact.Position = Vector2.Down * 30f;
-            root.AddChild(impact);
-        }
-    }
-
-    private static void BuildBlaze(Node2D root)
-    {
-        AddEllipse(root, 48f, 18f, FlameGoldColor, 2.4f, 0f, "BlazeRing");
-        for (var i = 0; i < 7; i++)
-        {
-            var angle = -Mathf.Pi * 0.85f + i * Mathf.Pi * 0.28f;
-            var flame = new Polygon2D
-            {
-                Name = "BlazeFlame",
-                Color = i % 2 == 0 ? FlameColor : FlameGoldColor,
-                Polygon =
-                [
-                    new(0f, -48f),
-                    new(17f, -7f),
-                    new(5f, 20f),
-                    new(-15f, 10f)
-                ],
-                Position = new Vector2(MathF.Cos(angle) * 28f, 18f + MathF.Sin(angle) * 8f),
-                Rotation = angle * 0.24f
-            };
-            root.AddChild(flame);
-        }
-
-        for (var i = 0; i < 10; i++)
-        {
-            var ember = CreateDiamond(3.2f, 3.2f, i % 2 == 0 ? FlameGoldColor : FlameColor);
-            ember.Name = "BlazeEmber";
-            ember.Position = new Vector2(-38f + i * 8f, 8f - i % 3 * 9f);
-            root.AddChild(ember);
-        }
-    }
-
-    private static void BuildAqua(Node2D root, NCombatRoom room, IReadOnlyList<Creature> targets, VfxArea area)
-    {
-        for (var i = 0; i < 3; i++)
-        {
-            var wave = new Line2D
-            {
-                Name = "AquaWave",
-                Width = 2.2f - i * 0.25f,
-                DefaultColor = i == 0 ? AquaFoamColor : AquaColor,
-                Antialiased = true,
-                Points = WavePoints(area.Width, 16f + i * 5f, i * 0.72f)
-            };
-            wave.Position = new Vector2(0f, 20f + i * 13f);
-            root.AddChild(wave);
-        }
-
-        foreach (var target in targets)
-        {
-            var localFloor = CreatureFloor(room, target) - root.GlobalPosition;
-            AddEllipse(root, 42f, 14f, AquaColor, 2f, 0f, "AquaRipple", localFloor + Vector2.Up * 8f);
-        }
     }
 
     private static void BuildTime(Node2D root)
@@ -396,19 +261,6 @@ public static class SakuraCardPlayVfx
         }
     }
 
-    private static Polygon2D CreateDiamond(float width, float height, Color color) =>
-        new()
-        {
-            Color = color,
-            Polygon =
-            [
-                new(0f, -height * 0.5f),
-                new(width * 0.5f, 0f),
-                new(0f, height * 0.5f),
-                new(-width * 0.5f, 0f)
-            ]
-        };
-
     private static void AddEllipse(
         Node2D root,
         float radiusX,
@@ -462,103 +314,6 @@ public static class SakuraCardPlayVfx
         return points;
     }
 
-    private static Vector2[] WavePoints(float width, float amplitude, float phase)
-    {
-        const int pointCount = 36;
-        var points = new Vector2[pointCount];
-        for (var i = 0; i < pointCount; i++)
-        {
-            var t = i / (float)(pointCount - 1);
-            var x = -width * 0.5f + width * t;
-            var y = MathF.Sin(t * Mathf.Tau * 1.35f + phase) * amplitude;
-            points[i] = new Vector2(x, y);
-        }
-
-        return points;
-    }
-
-    private static async Task AnimateHail(Node2D root)
-    {
-        if (!root.IsInsideTree())
-            return;
-
-        var tween = root.CreateTween().SetParallel();
-        tween.TweenProperty(root, "modulate:a", 0f, HailDuration * 0.28f)
-            .SetDelay(HailDuration * 0.72f);
-
-        var shards = root.GetChildren().OfType<Polygon2D>().Where(node => node.Name == "HailShard").ToList();
-        for (var i = 0; i < shards.Count; i++)
-        {
-            var shard = shards[i];
-            var delay = i * 0.035f;
-            tween.TweenProperty(shard, "position", shard.Position + Vector2.Down * 86f, HailDuration * 0.62f)
-                .SetDelay(delay)
-                .SetEase(Tween.EaseType.In)
-                .SetTrans(Tween.TransitionType.Quad);
-            tween.TweenProperty(shard, "scale", Vector2.Zero, HailDuration * 0.2f)
-                .SetDelay(delay + HailDuration * 0.48f);
-        }
-
-        foreach (var streak in root.GetChildren().OfType<Line2D>().Where(node => node.Name == "HailStreak"))
-        {
-            tween.TweenProperty(streak, "position", streak.Position + Vector2.Down * 64f, HailDuration * 0.55f)
-                .SetEase(Tween.EaseType.In)
-                .SetTrans(Tween.TransitionType.Quad);
-            tween.TweenProperty(streak, "modulate:a", 0f, HailDuration * 0.22f)
-                .SetDelay(HailDuration * 0.38f);
-        }
-
-        foreach (var impact in root.GetChildren().OfType<Line2D>().Where(node => node.Name == "HailImpact"))
-        {
-            tween.TweenProperty(impact, "scale", Vector2.One * 1.28f, HailDuration * 0.34f)
-                .From(Vector2.One * 0.12f)
-                .SetDelay(HailDuration * 0.42f)
-                .SetEase(Tween.EaseType.Out)
-                .SetTrans(Tween.TransitionType.Cubic);
-        }
-
-        await root.ToSignal(tween, Tween.SignalName.Finished);
-        root.QueueFreeSafely();
-    }
-
-    private static async Task AnimateBlaze(Node2D root)
-    {
-        if (!root.IsInsideTree())
-            return;
-
-        var tween = root.CreateTween().SetParallel();
-        tween.TweenProperty(root, "scale", Vector2.One * 1.14f, BlazeDuration * 0.58f)
-            .From(Vector2.One * 0.82f)
-            .SetEase(Tween.EaseType.Out)
-            .SetTrans(Tween.TransitionType.Cubic);
-        tween.TweenProperty(root, "modulate:a", 0f, BlazeDuration * 0.38f)
-            .SetDelay(BlazeDuration * 0.56f);
-
-        foreach (var flame in root.GetChildren().OfType<Polygon2D>().Where(node => node.Name == "BlazeFlame"))
-        {
-            tween.TweenProperty(flame, "position", flame.Position + Vector2.Up * 34f, BlazeDuration)
-                .SetEase(Tween.EaseType.Out)
-                .SetTrans(Tween.TransitionType.Cubic);
-            tween.TweenProperty(flame, "scale", Vector2.Zero, BlazeDuration * 0.42f)
-                .SetDelay(BlazeDuration * 0.5f);
-        }
-
-        var embers = root.GetChildren().OfType<Polygon2D>().Where(node => node.Name == "BlazeEmber").ToList();
-        for (var i = 0; i < embers.Count; i++)
-        {
-            var ember = embers[i];
-            var direction = new Vector2(-0.7f + i * 0.15f, -1f).Normalized();
-            tween.TweenProperty(ember, "position", ember.Position + direction * (46f + i % 3 * 10f), BlazeDuration)
-                .SetEase(Tween.EaseType.Out)
-                .SetTrans(Tween.TransitionType.Cubic);
-            tween.TweenProperty(ember, "scale", Vector2.Zero, BlazeDuration * 0.36f)
-                .SetDelay(BlazeDuration * 0.56f);
-        }
-
-        await root.ToSignal(tween, Tween.SignalName.Finished);
-        root.QueueFreeSafely();
-    }
-
     private static async Task AnimateGaleWindBlade(Node2D root, Vector2 start, Vector2 end)
     {
         if (!root.IsInsideTree())
@@ -589,38 +344,6 @@ public static class SakuraCardPlayVfx
                 .SetTrans(Tween.TransitionType.Cubic);
             tween.TweenProperty(line, "modulate:a", 0f, duration * 0.34f)
                 .SetDelay(duration * 0.4f);
-        }
-
-        await root.ToSignal(tween, Tween.SignalName.Finished);
-        root.QueueFreeSafely();
-    }
-
-    private static async Task AnimateAqua(Node2D root)
-    {
-        if (!root.IsInsideTree())
-            return;
-
-        var tween = root.CreateTween().SetParallel();
-        tween.TweenProperty(root, "modulate:a", 0f, AquaDuration * 0.38f)
-            .SetDelay(AquaDuration * 0.58f);
-
-        var waves = root.GetChildren().OfType<Line2D>().Where(node => node.Name == "AquaWave").ToList();
-        for (var i = 0; i < waves.Count; i++)
-        {
-            var wave = waves[i];
-            tween.TweenProperty(wave, "position", wave.Position + new Vector2(42f - i * 24f, -8f), AquaDuration * 0.78f)
-                .SetEase(Tween.EaseType.Out)
-                .SetTrans(Tween.TransitionType.Sine);
-            tween.TweenProperty(wave, "scale", new Vector2(1.04f, 0.76f), AquaDuration)
-                .From(new Vector2(0.9f, 1f));
-        }
-
-        foreach (var ripple in root.GetChildren().OfType<Line2D>().Where(node => node.Name == "AquaRipple"))
-        {
-            tween.TweenProperty(ripple, "scale", Vector2.One * 1.42f, AquaDuration * 0.62f)
-                .From(Vector2.One * 0.58f)
-                .SetEase(Tween.EaseType.Out)
-                .SetTrans(Tween.TransitionType.Cubic);
         }
 
         await root.ToSignal(tween, Tween.SignalName.Finished);

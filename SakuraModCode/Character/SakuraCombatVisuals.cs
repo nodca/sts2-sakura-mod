@@ -19,7 +19,7 @@ internal static class SakuraCombatVisuals
         if (!SakuraCombatArtFeature.IsEnabled || !useChibi)
             return SakuraStandeeVisuals.CreateWithLayeredIdle(standardVisualPath, "Sakura Kinomoto");
 
-        return SakuraStandeeVisuals.CreateStatic(
+        return SakuraStandeeVisuals.CreateWithChibiLayeredIdle(
             ChibiVisualPath,
             "Sakura Kinomoto chibi",
             ChibiScale,

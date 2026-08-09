@@ -1,0 +1,18 @@
+[gd_scene load_steps=1 format=3]
+
+[node name="HailIceShardVfx" type="Node2D"]
+
+[node name="StableCombatFrame" type="BackBufferCopy" parent="."]
+copy_mode = 2
+
+[node name="Shards" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Debris" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="InputPassThrough" type="Control" parent="."]
+layout_mode = 0
+offset_right = 1.0
+offset_bottom = 1.0
+mouse_filter = 2

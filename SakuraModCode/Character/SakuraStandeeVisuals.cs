@@ -71,13 +71,39 @@ public static class SakuraStandeeVisuals
                 talkPosition),
             animate: false);
 
+    internal static NCreatureVisuals CreateWithChibiLayeredIdle(
+        string visualPath,
+        string label,
+        float scale,
+        Vector2 visualPosition,
+        Rect2 bounds,
+        Vector2 centerPosition,
+        Vector2 intentPosition,
+        Vector2 orbPosition,
+        Vector2 talkPosition) =>
+        Create(
+            visualPath,
+            label,
+            new StandeeLayout(
+                scale,
+                visualPosition,
+                bounds,
+                centerPosition,
+                intentPosition,
+                orbPosition,
+                talkPosition),
+            animate: true,
+            playIdleMotion: false,
+            attachChibiLayeredIdle: true);
+
     private static NCreatureVisuals Create(
         string visualPath,
         string label,
         StandeeLayout layout,
         bool animate,
         bool playIdleMotion = true,
-        bool attachLayeredIdle = false)
+        bool attachLayeredIdle = false,
+        bool attachChibiLayeredIdle = false)
     {
         try
         {
@@ -94,6 +120,8 @@ public static class SakuraStandeeVisuals
                     playIdleMotion);
             if (attachLayeredIdle && isActiveCombat)
                 SakuraStandeeIdleController.Attach(body);
+            if (attachChibiLayeredIdle && isActiveCombat)
+                SakuraChibiStandeeIdleController.Attach(body);
             return visuals;
         }
         catch (Exception ex)

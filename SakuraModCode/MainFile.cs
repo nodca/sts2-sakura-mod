@@ -24,10 +24,12 @@ public partial class MainFile : Node
         ModTypeDiscoveryHub.RegisterModAssembly(ModId, Assembly.GetExecutingAssembly());
         SakuraModConfig.Register();
         SakuraCombatArtPreference.Register();
+        SakuraCreateLegacy.Register();
 
         SakuraKeywords.Register();
         SakuraCardStates.Register();
         SakuraVoicePlayback.Register();
+        AnotherMeBgmPlayback.Register();
         SakuraContentRegistration.Register();
         SakuraEventRegistration.Register();
         SakuraTelemetry.Register();
@@ -39,5 +41,7 @@ public partial class MainFile : Node
         SakuraCombatResourceHudPatchRegistration.Register();
         SakuraRunHooks.Register();
         ClearCardLayout.PreloadVisualResources();
+        AquaWaterSphereVfx.PreloadResources();
+        CelVfxSession.PreloadResources();
     }
 }

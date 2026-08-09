@@ -1,8 +1,8 @@
 {
   "SAKURAMOD-TEMPORARY.title": "Forgotten",
-  "SAKURAMOD-TEMPORARY.description": "Cards with Forgotten enter Memory at end of turn.",
+  "SAKURAMOD-TEMPORARY.description": "Cards with Forgotten enter Memory at end of turn unless they are in Exhaust.",
   "SAKURA_MOD_CARDPILE_MEMORY.title": "Memory",
-  "SAKURA_MOD_CARDPILE_MEMORY.description": "During this combat, cards with Forgotten enter this pile at end of turn.",
+  "SAKURA_MOD_CARDPILE_MEMORY.description": "During this combat, cards with Forgotten enter this pile at end of turn unless they are in Exhaust.",
   "SAKURA_MOD_CARDPILE_MEMORY.empty": "There are no cards in Memory.",
   "SAKURAMOD-REFLECTION.title": "Reflection",
   "SAKURAMOD-REFLECTION.description": "Each Reflection stack causes the attacker to take half of this attack's damage.\nAfter you are attacked, remove 1 Reflection stack.\nAt the end of the enemy turn, remove 1 Reflection stack.",

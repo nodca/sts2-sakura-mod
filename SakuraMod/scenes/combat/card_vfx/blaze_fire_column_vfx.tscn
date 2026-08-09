@@ -1,0 +1,39 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" uid="uid://c625t2toc2ni3" path="res://SakuraMod/shaders/card_vfx/blaze_fire_column.gdshader" id="1_fire"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fire"]
+resource_local_to_scene = true
+shader = ExtResource("1_fire")
+shader_parameter/region_size = Vector2(190, 420)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/ignite = 0.0
+shader_parameter/rise = 0.0
+shader_parameter/burnout = 0.0
+shader_parameter/opacity = 1.0
+
+[node name="BlazeFireColumnVfx" type="Node2D"]
+
+[node name="StableCombatFrame" type="BackBufferCopy" parent="."]
+copy_mode = 2
+
+[node name="ColumnBody" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_fire")
+offset_left = -95.0
+offset_top = -420.0
+offset_right = 95.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Embers" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="InputPassThrough" type="Control" parent="."]
+layout_mode = 0
+offset_right = 1.0
+offset_bottom = 1.0
+mouse_filter = 2

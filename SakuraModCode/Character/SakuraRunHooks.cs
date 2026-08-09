@@ -17,6 +17,7 @@ internal static class SakuraRunHooks
 {
     private static IDisposable? _combatStartingSubscription;
     private static IDisposable? _creatureDiedSubscription;
+    private static IDisposable? _combatVictorySubscription;
     private static IDisposable? _combatEndedSubscription;
     private static IDisposable? _runLoadedSubscription;
     private static readonly HashSet<uint> PublishedDeathsThisCombat = [];
@@ -37,6 +38,9 @@ internal static class SakuraRunHooks
             replayCurrentState: false);
         _creatureDiedSubscription = RitsuLibFramework.SubscribeLifecycle<CreatureDiedEvent>(
             OnCreatureDied,
+            replayCurrentState: false);
+        _combatVictorySubscription = RitsuLibFramework.SubscribeLifecycle<CombatVictoryEvent>(
+            OnCombatVictory,
             replayCurrentState: false);
         _combatEndedSubscription = RitsuLibFramework.SubscribeLifecycle<CombatEndedEvent>(
             OnCombatEnded,
@@ -127,6 +131,15 @@ internal static class SakuraRunHooks
         PublishedDeathsThisCombat.Clear();
         DeferredDeathRewards.Clear();
         ActiveRunState = null;
+    }
+
+    private static void OnCombatVictory(CombatVictoryEvent evt)
+    {
+        foreach (var player in SakuraPlayers(evt.RunState))
+        {
+            if (SakuraCreateLegacy.TryConsumeReward(player, evt.Room.RoomType))
+                SakuraCreateRewards.AddExclusiveOrNormalRelicReward(player);
+        }
     }
 
     private static void PublishDeferredDeathRewards(

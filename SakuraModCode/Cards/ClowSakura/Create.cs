@@ -21,6 +21,8 @@ using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Relics;
 using SakuraMod.SakuraModCode.Extensions;
+using STS2RitsuLib;
+using STS2RitsuLib.RunData;
 using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Cards;
@@ -118,6 +120,7 @@ public class SakuraCreate() : SakuraFormCard(0, CardType.Power, TargetType.None)
         await ApplyPower<ClassicCreatePower>(choiceContext, Owner.Creature, DynamicVars["Relics"].IntValue);
         SakuraCreateRewards.AddNormalRelicReward(Owner);
         SakuraCreateRewards.AddExclusiveOrNormalRelicReward(Owner);
+        SakuraCreateLegacy.AddRewards(Owner);
     }
 
     private async Task<bool> TryRemoveCreateFromDeck()
@@ -131,3 +134,65 @@ public class SakuraCreate() : SakuraFormCard(0, CardType.Power, TargetType.None)
     }
 }
 
+public sealed class SakuraCreateRunState
+{
+    public int RemainingRewards { get; set; }
+}
+
+internal static class SakuraCreateLegacy
+{
+    internal const int RewardsPerUse = 3;
+    internal const string RunSavedDataKey = "sakura_create_victory_rewards_v1";
+
+    private static PlayerRunSavedData<SakuraCreateRunState>? _runData;
+    private static bool _registered;
+
+    public static void Register()
+    {
+        if (_registered)
+            return;
+
+        _registered = true;
+        _runData = RitsuLibFramework.GetRunSavedDataStore(MainFile.ModId).RegisterPerPlayer(
+            RunSavedDataKey,
+            static () => new SakuraCreateRunState(),
+            CreateOptions());
+    }
+
+    internal static RunSavedDataOptions CreateOptions() =>
+        new()
+        {
+            SchemaVersion = 1,
+            WritePolicy = RunSavedDataWritePolicy.WhenSet
+        };
+
+    public static void AddRewards(Player player)
+    {
+        var runData = _runData
+            ?? throw new InvalidOperationException("Sakura Create run data has not been registered.");
+        runData.Modify(player, static state => state.RemainingRewards += RewardsPerUse);
+    }
+
+    public static bool TryConsumeReward(Player player, RoomType roomType)
+    {
+        if (!IsRewardRoom(roomType) || _runData is null)
+            return false;
+
+        var consumed = false;
+        _runData.Modify(player, state =>
+        {
+            if (state.RemainingRewards <= 0)
+                return;
+
+            state.RemainingRewards--;
+            consumed = true;
+        });
+        return consumed;
+    }
+
+    internal static int RemainingAfterVictory(int remaining, RoomType roomType) =>
+        IsRewardRoom(roomType) && remaining > 0 ? remaining - 1 : Math.Max(0, remaining);
+
+    private static bool IsRewardRoom(RoomType roomType) =>
+        roomType is RoomType.Elite or RoomType.Boss;
+}

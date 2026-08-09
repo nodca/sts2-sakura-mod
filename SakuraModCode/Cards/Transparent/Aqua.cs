@@ -31,11 +31,31 @@ public class Aqua() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.
         SakuraExtraEffectActivation activation)
     {
         var targets = CombatState!.HittableEnemies.ToList();
-        SakuraCardPlayVfx.PlayAqua(targets);
-        foreach (var enemy in targets)
-            await SakuraActions.Attack(choiceContext, this, enemy, DynamicVars.Damage.IntValue);
+        var waterVfx = AquaWaterSphereVfx.TryCreate(targets, Owner.Creature);
+        int highestFrostbite;
+        try
+        {
+            if (waterVfx is not null)
+                await waterVfx.PlayPrelude();
+            foreach (var enemy in targets)
+            {
+                waterVfx?.Impact(enemy);
+                await SakuraActions.Attack(choiceContext, this, enemy, DynamicVars.Damage.IntValue);
+            }
 
-        var highestFrostbite = AquaRules.HighestFrostbite(targets);
+            // Read Frostbite after every attack resolves: attacks can kill the
+            // enemy holding the highest amount, and the rules filter on IsAlive.
+            // The visual session is disposed by the finally below, so the freeze
+            // beat has to start here rather than after it.
+            highestFrostbite = AquaRules.HighestFrostbite(targets);
+            if (AquaRules.HighestFrostbiteEnemy(targets) is { } frozen)
+                waterVfx?.PlayFreeze(frozen);
+        }
+        finally
+        {
+            waterVfx?.Release();
+        }
+
         if (highestFrostbite <= 0)
             return;
 
@@ -58,6 +78,20 @@ internal static class AquaRules
             .Select(static enemy => enemy.GetPower<SakuraFrostbitePower>()?.Amount ?? 0)
             .DefaultIfEmpty()
             .Max();
+
+    /// <summary>
+    /// The live enemy carrying the highest Frostbite amount, or null when no
+    /// surviving enemy carries any. Presentation uses this to pick which
+    /// enclosure freezes; it never changes the reward amounts.
+    /// </summary>
+    internal static Creature? HighestFrostbiteEnemy(IEnumerable<Creature> enemies) =>
+        enemies
+            .Where(static enemy => enemy.IsAlive)
+            .Select(static enemy => (Enemy: enemy, Amount: enemy.GetPower<SakuraFrostbitePower>()?.Amount ?? 0))
+            .Where(static candidate => candidate.Amount > 0)
+            .OrderByDescending(static candidate => candidate.Amount)
+            .Select(static candidate => candidate.Enemy)
+            .FirstOrDefault();
 
     internal static int DrawCount(int highestFrostbite) =>
         Math.Max(0, highestFrostbite);

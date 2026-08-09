@@ -1,0 +1,41 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/aqua_water_sphere.gdshader" id="1_water"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_water"]
+resource_local_to_scene = true
+shader = ExtResource("1_water")
+shader_parameter/region_size = Vector2(256, 256)
+shader_parameter/shape_mode = 0.0
+shader_parameter/formation = 0.0
+shader_parameter/impact = 0.0
+shader_parameter/freeze = 0.0
+shader_parameter/breakup = 0.0
+shader_parameter/elapsed = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/opacity = 0.88
+
+[node name="AquaWaterSphereTarget" type="Node2D"]
+
+[node name="WaterBody" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_water")
+offset_left = -128.0
+offset_top = -128.0
+offset_right = 128.0
+offset_bottom = 128.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Droplets" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="FloorRipple" type="Line2D" parent="."]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0)
+position = Vector2(0, 122)
+width = 3.0
+default_color = Color(0.48, 0.9, 0.98, 1)
+closed = true
+points = PackedVector2Array(102, 0, 94, 7, 72, 13, 39, 17, 0, 19, -39, 17, -72, 13, -94, 7, -102, 0, -94, -7, -72, -13, -39, -17, 0, -19, 39, -17, 72, -13, 94, -7)
+antialiased = true

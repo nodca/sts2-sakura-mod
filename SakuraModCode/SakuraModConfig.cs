@@ -35,6 +35,15 @@ public sealed class SakuraModConfig
                 static (config, value) => config.EnableSakuraVoice = value),
             static () => true);
 
+    internal static IModSettingsValueBinding<bool> EnableCardBgmBinding { get; } =
+        ModSettingsBindings.WithDefault(
+            ModSettingsBindings.Global<SakuraModConfig, bool>(
+                MainFile.ModId,
+                DataKey,
+                static config => config.EnableCardBgm,
+                static (config, value) => config.EnableCardBgm = value),
+            static () => true);
+
     internal static IModSettingsValueBinding<bool> EnableFourthActBinding { get; } =
         ModSettingsBindings.WithDefault(
             ModSettingsBindings.Global<SakuraModConfig, bool>(
@@ -45,10 +54,12 @@ public sealed class SakuraModConfig
             static () => false);
 
     public bool EnableSakuraVoice { get; set; } = true;
+    public bool EnableCardBgm { get; set; } = true;
     public bool EnableFourthAct { get; set; }
     public bool UseChibiCombatArt { get; set; }
 
     internal static bool IsSakuraVoiceEnabled() => EnableSakuraVoiceBinding.Read();
+    internal static bool IsCardBgmEnabled() => EnableCardBgmBinding.Read();
     internal static bool IsFourthActEnabled() => EnableFourthActBinding.Read();
     internal static bool IsChibiCombatArtEnabled() => UseChibiCombatArtBinding.Read();
 

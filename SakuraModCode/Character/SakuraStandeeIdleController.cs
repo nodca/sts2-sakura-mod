@@ -235,5 +235,6 @@ internal static class SakuraStaticDeathStandeePatch
             return;
 
         SakuraStandeeIdleController.ShowStaticStandeeForDeath(body);
+        SakuraChibiStandeeIdleController.ShowStaticStandeeForDeath(body);
     }
 }

@@ -197,8 +197,7 @@ public sealed class TemporaryModifier : SakuraCardStateCapability
         PileType.Hand,
         PileType.Play,
         PileType.Discard,
-        PileType.Draw,
-        PileType.Exhaust
+        PileType.Draw
     ];
 
     public int DelayedRemovalTurns { get; private set; }

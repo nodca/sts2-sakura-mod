@@ -1,8 +1,8 @@
 {
   "SAKURAMOD-TEMPORARY.title": "遗忘",
-  "SAKURAMOD-TEMPORARY.description": "拥有遗忘的牌会在回合结束时进入记忆区。",
+  "SAKURAMOD-TEMPORARY.description": "拥有遗忘的牌会在回合结束时进入记忆区，但消耗牌堆中的牌除外。",
   "SAKURA_MOD_CARDPILE_MEMORY.title": "记忆区",
-  "SAKURA_MOD_CARDPILE_MEMORY.description": "本场战斗中，拥有遗忘的牌会在回合结束时进入此牌堆。",
+  "SAKURA_MOD_CARDPILE_MEMORY.description": "本场战斗中，拥有遗忘的牌会在回合结束时进入此牌堆，但消耗牌堆中的牌除外。",
   "SAKURA_MOD_CARDPILE_MEMORY.empty": "记忆区中没有牌。",
   "SAKURAMOD-REFLECTION.title": "反射",
   "SAKURAMOD-REFLECTION.description": "每层反射使攻击者受到本次攻击伤害的一半。\n每次受到攻击后，移除 1 层反射。\n敌方回合结束时，移除 1 层反射。",

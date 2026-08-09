@@ -22,6 +22,7 @@ public class AnotherMe() :
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
+        AnotherMeBgmPlayback.TryPlay(this);
         await SakuraMagicCharge.GainMagic(choiceContext, Owner, ReleasedMagic(), this);
         await ApplyPower<AnotherMePower>(choiceContext, Owner.Creature, ReleasedMagic());
     }

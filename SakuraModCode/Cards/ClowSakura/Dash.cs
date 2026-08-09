@@ -45,9 +45,8 @@ public class ClowDash() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Rare
 public class SakuraDash() : SakuraFormCard(0, CardType.Skill, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain, CardKeyword.Exhaust];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await CardPileCmd.Draw(choiceContext, 99, Owner, false);
 }
-

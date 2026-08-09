@@ -1,4 +1,7 @@
 {
+  "SAKURA_MOD_POWER_SAKURA_FIGHT_POWER.title": "Fight",
+  "SAKURA_MOD_POWER_SAKURA_FIGHT_POWER.description": "At the start of each turn, add {Amount} [red]Forgotten[/red] [gold]Fight+[/gold] to your hand. Your [gold]Fight[/gold] grants {Amount} additional temporary [gold]Strength[/gold].",
+  "SAKURA_MOD_POWER_SAKURA_FIGHT_POWER.smartDescription": "Start of turn: add {Amount} Forgotten [gold]Fight+[/gold]; [gold]Fight[/gold] grants {Amount} additional temporary Strength.",
   "SAKURA_MOD_POWER_REFLECTION_POWER.title": "Reflection",
   "SAKURA_MOD_POWER_REFLECTION_POWER.description": "Each Reflection stack causes the attacker to take half of this attack's damage.\nAfter you are attacked, remove 1 Reflection stack.\nAt the end of the enemy turn, remove 1 Reflection stack.",
   "SAKURA_MOD_POWER_REFLECTION_POWER.smartDescription": "Each Reflection stack causes the attacker to take half of the attack damage.",

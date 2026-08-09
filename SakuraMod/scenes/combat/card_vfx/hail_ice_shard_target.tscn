@@ -1,0 +1,31 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" uid="uid://2firh3tyufeg" path="res://SakuraMod/shaders/card_vfx/hail_ice_shard.gdshader" id="1_ice"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ice"]
+resource_local_to_scene = true
+shader = ExtResource("1_ice")
+shader_parameter/region_size = Vector2(220, 240)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/formation = 0.0
+shader_parameter/crack = 0.0
+shader_parameter/shatter = 0.0
+shader_parameter/opacity = 0.92
+
+[node name="HailIceShardTarget" type="Node2D"]
+
+[node name="ShardBody" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_ice")
+offset_left = -110.0
+offset_top = -120.0
+offset_right = 110.0
+offset_bottom = 120.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Fragments" type="Node2D" parent="."]
+unique_name_in_owner = true

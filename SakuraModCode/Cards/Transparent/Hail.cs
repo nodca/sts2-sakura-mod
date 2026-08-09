@@ -35,19 +35,37 @@ public class Hail() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.
     {
         await using var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, this);
         var frostbite = DynamicVars["SakuraFrostbitePower"].IntValue + (activation.IsActive ? 1 : 0);
-        foreach (var target in CombatState!.HittableEnemies.ToList())
+        // Snapshot the hittable set once. The VFX session needs the same list the
+        // hit loop walks, and ToList() is an immediate copy taken before any damage
+        // resolves, so hoisting it cannot change which enemies are struck.
+        var targets = CombatState!.HittableEnemies.ToList();
+        var iceVfx = HailIceShardVfx.TryCreate(targets, Owner.Creature);
+        try
         {
-            for (var i = 0; i < BaseHits && target.IsAlive; i++)
-                await Hit(choiceContext, attack, target);
+            if (iceVfx is not null)
+                await iceVfx.PlayPrelude(this, Owner.Creature);
+            foreach (var target in targets)
+            {
+                for (var i = 0; i < BaseHits && target.IsAlive; i++)
+                    await Hit(choiceContext, attack, target, iceVfx);
 
-            if (target.IsAlive)
-                await PowerCmd.Apply<SakuraFrostbitePower>(choiceContext, target, frostbite, Owner.Creature, this, false);
+                if (target.IsAlive)
+                    await PowerCmd.Apply<SakuraFrostbitePower>(choiceContext, target, frostbite, Owner.Creature, this, false);
+            }
+        }
+        finally
+        {
+            iceVfx?.FadeAndDispose();
         }
     }
 
-    private async Task Hit(PlayerChoiceContext choiceContext, AttackContext attack, Creature target)
+    private async Task Hit(
+        PlayerChoiceContext choiceContext,
+        AttackContext attack,
+        Creature target,
+        HailIceShardVfx? iceVfx)
     {
-        SakuraCardPlayVfx.PlayHail(target);
+        iceVfx?.Impact(target);
         attack.AddHit(await CreatureCmd.Damage(
             choiceContext,
             target,

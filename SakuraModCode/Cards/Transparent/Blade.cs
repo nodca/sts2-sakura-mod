@@ -37,7 +37,11 @@ public class Blade() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
         await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage, hitCount: hits);
     }
 
-    protected override void OnUpgrade() => DynamicVars.CalculationBase.UpgradeValueBy(3);
+    protected override void OnUpgrade()
+    {
+        DynamicVars.CalculationBase.UpgradeValueBy(1);
+        DynamicVars.ExtraDamage.UpgradeValueBy(2);
+    }
 }
 
 internal sealed class BladeHitsVar(decimal hits) : DynamicVar("Hits", hits)

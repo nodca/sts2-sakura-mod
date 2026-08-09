@@ -31,8 +31,20 @@ public class Blaze() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var target = RequiredTarget(play);
-        SakuraCardPlayVfx.PlayBlaze(target);
-        await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage);
+        var fireVfx = BlazeFireColumnVfx.TryCreate(target);
+        try
+        {
+            if (fireVfx is not null)
+                await fireVfx.PlayPrelude(this, Owner.Creature);
+            // Before the attack: the damage number belongs on the beat the fire
+            // lands, not after it.
+            fireVfx?.Impact();
+            await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage);
+        }
+        finally
+        {
+            fireVfx?.FadeAndDispose();
+        }
     }
 
     protected override void OnUpgrade() => DynamicVars.CalculationBase.UpgradeValueBy(6);

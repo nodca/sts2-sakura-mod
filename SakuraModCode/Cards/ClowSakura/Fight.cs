@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
@@ -37,7 +38,8 @@ public class ClowFight() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ra
     {
         await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage());
         await SakuraMagicCharge.GainMagic(choiceContext, Owner, 1, this);
-        await ApplyPower<ClassicTemporaryStrengthPower>(choiceContext, Owner.Creature, ReleasedMagic());
+        var temporaryStrength = ReleasedMagic() + (Owner.Creature.GetPower<SakuraFightPower>()?.Amount ?? 0);
+        await ApplyPower<ClassicTemporaryStrengthPower>(choiceContext, Owner.Creature, temporaryStrength);
         await AddFightCopy(choiceContext);
     }
 
@@ -55,20 +57,19 @@ public class ClowFight() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ra
 
     private async Task AddFightCopy(PlayerChoiceContext choiceContext)
     {
-        var copy = SakuraActions.CloneWithCurrentUpgrade<ClowFight>(this);
+        var copy = CreateClone();
         await CardPileCmd.AddGeneratedCardToCombat(copy, PileType.Hand, Owner, CardPilePosition.Random);
     }
 }
 
-public class SakuraFight() : SakuraFormCard(1, CardType.Attack, TargetType.AnyEnemy)
+public class SakuraFight() : SakuraFormCard(1, CardType.Power, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(13, ValueProp.Move), new PowerVar<StrengthPower>(2)];
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [HoverTipFactory.FromCard<ClowFight>()];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage());
-        await ApplyPower<StrengthPower>(choiceContext, Owner.Creature, ReleasedValue("StrengthPower"));
+        await SakuraFightPower.AddTemporaryUpgradedFight(choiceContext, Owner);
+        await ApplyPower<SakuraFightPower>(choiceContext, Owner.Creature, 1);
     }
 }
-

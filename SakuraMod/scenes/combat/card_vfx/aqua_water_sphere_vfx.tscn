@@ -1,0 +1,47 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/aqua_water_sphere.gdshader" id="1_water"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_crest"]
+resource_local_to_scene = true
+shader = ExtResource("1_water")
+shader_parameter/region_size = Vector2(640, 260)
+shader_parameter/shape_mode = 1.0
+shader_parameter/formation = 0.0
+shader_parameter/impact = 0.0
+shader_parameter/freeze = 0.0
+shader_parameter/breakup = 0.0
+shader_parameter/elapsed = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/opacity = 0.88
+
+[node name="AquaWaterSphereVfx" type="Node2D"]
+
+[node name="StableCombatFrame" type="BackBufferCopy" parent="."]
+copy_mode = 2
+
+[node name="Crest" type="Node2D" parent="."]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0)
+
+[node name="CrestBody" type="ColorRect" parent="Crest"]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_crest")
+offset_left = -320.0
+offset_top = -130.0
+offset_right = 320.0
+offset_bottom = 130.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Spheres" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Debris" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="InputPassThrough" type="Control" parent="."]
+layout_mode = 0
+offset_right = 1.0
+offset_bottom = 1.0
+mouse_filter = 2
