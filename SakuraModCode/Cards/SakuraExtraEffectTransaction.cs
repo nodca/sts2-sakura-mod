@@ -91,6 +91,24 @@ internal static class SakuraExtraEffectTransaction
         ActiveProjections.TryGetValue(card, out var projections)
         && projections.Current?.Card == card;
 
+    internal static SourceEraClass? MagicCircleEraFor(
+        CardModel? card,
+        SakuraExtraEffectActivation activation)
+    {
+        if (card is null
+            || !SakuraCardCatalog.TryGetMetadata(card, out var metadata)
+            || metadata.Era is not { } era)
+        {
+            return null;
+        }
+
+        return era == SourceEraClass.Sakura
+            || card.Type == CardType.Power
+            || activation.IsActive
+                ? era
+                : null;
+    }
+
     internal static bool DidActivate(CardPlay play) => ActivatedPlays.TryGetValue(play, out _);
 
     internal static bool DidSpendMagicCharge(CardPlay play) =>
@@ -136,9 +154,15 @@ internal static class SakuraExtraEffectTransaction
                 }
             },
             () => SakuraActions.RecordExtraEffectTriggeredThisTurn(choiceContext, play),
-            () => capability is not null
-                ? capability.PlayWithExtraEffect(choiceContext, play, activation)
-                : playWithoutExtraEffect(choiceContext, play),
+            () =>
+            {
+                if (MagicCircleEraFor(card, activation) is { } era)
+                    SakuraMagicCirclePresenter.TryShowOrRefresh(card.Owner?.Creature, era);
+
+                return capability is not null
+                    ? capability.PlayWithExtraEffect(choiceContext, play, activation)
+                    : playWithoutExtraEffect(choiceContext, play);
+            },
             () => ApplyGameplayPostEffects(card, choiceContext, activation, opportunity),
             activationCost);
     }

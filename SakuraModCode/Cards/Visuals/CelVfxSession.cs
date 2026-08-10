@@ -18,36 +18,32 @@ namespace SakuraMod.SakuraModCode.Cards;
 internal abstract class CelVfxSession : IDisposable
 {
     internal const string WandPreludeShaderPath =
-        MainFile.ResPath + "/shaders/card_vfx/cel_wand_prelude.gdshader";
+        SakuraMagicCirclePresenter.WandPreludeShaderPath;
     internal const string MagicCircleInkPath =
-        MainFile.ResPath + "/images/card_vfx/magic_circles/magic_circle_ink.png";
+        SakuraMagicCirclePresenter.MagicCircleInkPath;
     internal const string MagicCircleKnockoutPath =
-        MainFile.ResPath + "/images/card_vfx/magic_circles/magic_circle_knockout.png";
+        SakuraMagicCirclePresenter.MagicCircleKnockoutPath;
+    internal static IReadOnlyList<string> SharedAssetPaths { get; } =
+        SakuraMagicCirclePresenter.AssetPaths;
 
-    private const float StepFrequency = 12f;
+    /// <summary>
+    /// The shared stepped-clock rate, mirroring <c>CEL_STEP_HZ</c> in
+    /// <c>cel_vfx.gdshaderinc</c>. Visible to derived sessions because any beat or
+    /// oscillation a card builds is bounded by it — a subclass restating 12 here
+    /// would be a second owner of the value the shaders already fixed.
+    /// </summary>
+    protected const float StepFrequency = 12f;
     private const float CardRiseDuration = 0.24f;
     private const float WandTapDownDuration = 0.08f;
     private const float WandTapRecoverDuration = 0.11f;
-    private const float MagicCircleFadeInDuration = 0.18f;
-    private const float MagicCircleSustainDuration = 0.14f;
-    private const float MagicCircleFadeOutDuration = 0.24f;
+    private const float StandardPreludeLeadDuration = 0.18f;
     private const float CardFadeDuration = 0.12f;
     private const float WandPreludeHoldDuration = 2f / StepFrequency;
     private const float CardScale = 0.46f;
     private const float CardRiseDistance = 62f;
     private const float WandTapRadians = -0.12f;
     private const float SpeedLineDiameter = 560f;
-    private const float MagicCircleDiameter = 760f;
-    private const float MagicCircleRadius = 340f;
-    private const float MagicCircleEnterScale = 0.78f;
-    private const float MagicCircleExitScale = 0.82f;
-    private const float MagicCircleFloorBias = 0.62f;
     private const int PreludeZIndex = 4000;
-    private const int MagicCircleZIndex = -1;
-
-    private static Shader? _wandPreludeShader;
-    private static Texture2D? _magicCircleInk;
-    private static Texture2D? _magicCircleKnockout;
 
     private readonly Node2D _root;
     private readonly NCombatRoom _room;
@@ -70,10 +66,6 @@ internal abstract class CelVfxSession : IDisposable
     private bool _suppressedNativeCardWasVisible;
     private ColorRect? _preludeLines;
     private ShaderMaterial? _preludeLineMaterial;
-    private Node2D? _magicCircleAnchor;
-    private ColorRect? _magicCircle;
-    private ShaderMaterial? _magicCircleMaterial;
-    private NCreature? _preludeCasterNode;
     private SakuraChibiWandRig? _wandRig;
     private float _wandRestRotation;
     private StringName? _pausedMicroAnimation;
@@ -99,26 +91,23 @@ internal abstract class CelVfxSession : IDisposable
         && SakuraCardCatalog.TryGetMetadata(card, out var metadata)
         && metadata.Era.HasValue;
 
-    internal static void PreloadResources()
-    {
-        if (TestMode.IsOn)
-            return;
+    internal static void PreloadResources() => SakuraMagicCirclePresenter.PreloadResources();
 
-        _wandPreludeShader = ResourceLoader.Load<Shader>(
-            WandPreludeShaderPath,
-            null,
-            ResourceLoader.CacheMode.Reuse)
-            ?? throw new InvalidOperationException($"Could not preload {WandPreludeShaderPath}.");
-        _magicCircleInk = ResourceLoader.Load<Texture2D>(
-            MagicCircleInkPath,
-            null,
-            ResourceLoader.CacheMode.Reuse)
-            ?? throw new InvalidOperationException($"Could not preload {MagicCircleInkPath}.");
-        _magicCircleKnockout = ResourceLoader.Load<Texture2D>(
-            MagicCircleKnockoutPath,
-            null,
-            ResourceLoader.CacheMode.Reuse)
-            ?? throw new InvalidOperationException($"Could not preload {MagicCircleKnockoutPath}.");
+    /// <summary>
+    /// The two magic-circle masks, from the preload if it ran and from disk if it
+    /// did not.
+    /// </summary>
+    /// <remarks>
+    /// Visible to derived sessions because the circle is not the only consumer: a
+    /// card whose own surface carries the seal as a face pattern needs the same two
+    /// textures, and the alternative is each such card restating this fallback. The
+    /// pair is loaded together because the source-order composition is meaningless
+    /// with only one of them.
+    /// </remarks>
+    protected static (Texture2D Ink, Texture2D Knockout) LoadMagicCircleMasks()
+    {
+        var resources = SakuraMagicCirclePresenter.LoadResources();
+        return (resources.Ink, resources.Knockout);
     }
 
     protected static bool TryPrepare<TResources>(
@@ -212,8 +201,6 @@ internal abstract class CelVfxSession : IDisposable
         {
             CreateWandPrelude(card, casterNode, rig);
             TaskHelper.RunSafely(TrackWandPreludePosition());
-            TrackMagicCircleVisibilityTween(0f, 1f, MagicCircleFadeInDuration);
-            TrackMagicCircleScaleTween(MagicCircleEnterScale, 1f, MagicCircleFadeInDuration);
 
             var rise = Track(_root.CreateTween());
             rise.TweenMethod(
@@ -255,9 +242,8 @@ internal abstract class CelVfxSession : IDisposable
                     .SetTrans(Tween.TransitionType.Sine);
             }
 
-            // The wand-card contact releases the card-specific effect. Card and
-            // wand retire immediately, while the independent circle stays alive
-            // long enough to overlap the physical field before fading itself.
+            // The wand-card contact releases the card-specific effect. This session
+            // retires only its card and lines; the room presenter owns the circle.
             TaskHelper.RunSafely(RetireWandPrelude(WandTapRecoverDuration));
             return IsActive();
         }
@@ -278,9 +264,7 @@ internal abstract class CelVfxSession : IDisposable
         {
             CreateStandardPrelude(card, casterNode, nativeCard);
             TaskHelper.RunSafely(TrackWandPreludePosition());
-            TrackMagicCircleVisibilityTween(0f, 1f, MagicCircleFadeInDuration);
-            TrackMagicCircleScaleTween(MagicCircleEnterScale, 1f, MagicCircleFadeInDuration);
-            if (!await WaitActive(MagicCircleFadeInDuration))
+            if (!await WaitActive(StandardPreludeLeadDuration))
                 return false;
 
             BeginWandPreludeHold();
@@ -368,7 +352,6 @@ internal abstract class CelVfxSession : IDisposable
 
         var preludeHeld = _preludeHoldRemaining > 0f ? 1f : 0f;
         ApplyClockUniforms(_preludeLineMaterial, _preludeElapsed, preludeHeld, _preludeHoldAt);
-        ApplyClockUniforms(_magicCircleMaterial, _preludeElapsed, 0f, _preludeElapsed);
     }
 
     private static void ApplyClockUniforms(
@@ -387,7 +370,7 @@ internal abstract class CelVfxSession : IDisposable
 
     private void CreateWandPrelude(CardModel card, NCreature casterNode, SakuraChibiWandRig rig)
     {
-        CreatePreludeLayers(card, casterNode);
+        CreatePreludeLayers();
 
         var cardOrigin = new Control
         {
@@ -416,62 +399,16 @@ internal abstract class CelVfxSession : IDisposable
 
     private void CreateStandardPrelude(CardModel card, NCreature casterNode, NCard nativeCard)
     {
-        CreatePreludeLayers(card, casterNode);
+        CreatePreludeLayers();
         _standardPreludeCard = nativeCard;
         UpdateWandPreludePosition();
     }
 
-    private void CreatePreludeLayers(CardModel card, NCreature casterNode)
+    private void CreatePreludeLayers()
     {
         var container = _room.CombatVfxContainer;
-        var shader = _wandPreludeShader
-            ?? ResourceLoader.Load<Shader>(
-                WandPreludeShaderPath,
-                null,
-                ResourceLoader.CacheMode.Reuse)
-            ?? throw new InvalidOperationException($"Could not load {WandPreludeShaderPath}.");
-        if (!SakuraCardCatalog.TryGetMetadata(card, out var metadata)
-            || metadata.Era is not { } era)
-        {
-            throw new InvalidOperationException($"Card {card.Id} has no magic-circle era.");
-        }
-        var magicCircleInk = _magicCircleInk
-            ?? ResourceLoader.Load<Texture2D>(MagicCircleInkPath)
-            ?? throw new InvalidOperationException($"Could not load {MagicCircleInkPath}.");
-        var magicCircleKnockout = _magicCircleKnockout
-            ?? ResourceLoader.Load<Texture2D>(MagicCircleKnockoutPath)
-            ?? throw new InvalidOperationException($"Could not load {MagicCircleKnockoutPath}.");
-
-        var magicCircleAnchor = new Node2D
-        {
-            Name = "SakuraCelWandPreludeMagicCircleAnchor",
-            ZAsRelative = false,
-            ZIndex = MagicCircleZIndex
-        };
-        container.AddChildSafely(magicCircleAnchor);
-        _magicCircleAnchor = magicCircleAnchor;
-
-        var magicCircle = new ColorRect
-        {
-            Name = "SakuraCelWandPreludeMagicCircle",
-            Size = Vector2.One * MagicCircleDiameter,
-            Position = Vector2.One * MagicCircleDiameter * -0.5f,
-            PivotOffset = Vector2.One * MagicCircleDiameter * 0.5f,
-            Scale = Vector2.One * MagicCircleEnterScale,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            Material = new ShaderMaterial { Shader = shader }
-        };
-        magicCircleAnchor.AddChildSafely(magicCircle);
-        _magicCircle = magicCircle;
-        _magicCircleMaterial = CelVfxGeometry.DuplicateMaterial(magicCircle, "wand prelude magic circle");
-        _magicCircleMaterial.SetShaderParameter("region_size", magicCircle.Size);
-        _magicCircleMaterial.SetShaderParameter("magic_circle_ink", magicCircleInk);
-        _magicCircleMaterial.SetShaderParameter("magic_circle_knockout", magicCircleKnockout);
-        _magicCircleMaterial.SetShaderParameter("magic_circle_colour", MagicCircleColour(era));
-        _magicCircleMaterial.SetShaderParameter("magic_circle_enabled", 1f);
-        _magicCircleMaterial.SetShaderParameter("magic_circle_visibility", 0f);
-        _magicCircleMaterial.SetShaderParameter("magic_circle_radius", MagicCircleRadius);
-        _magicCircleMaterial.SetShaderParameter("speed_lines_enabled", 0f);
+        var (shader, magicCircleInk, magicCircleKnockout) =
+            SakuraMagicCirclePresenter.LoadResources();
 
         var lines = new ColorRect
         {
@@ -492,7 +429,6 @@ internal abstract class CelVfxSession : IDisposable
         _preludeLineMaterial.SetShaderParameter("magic_circle_enabled", 0f);
         _preludeLineMaterial.SetShaderParameter("magic_circle_visibility", 0f);
         _preludeLineMaterial.SetShaderParameter("speed_lines_enabled", 1f);
-        _preludeCasterNode = casterNode;
     }
 
     private void SuppressNativePlayedCard(CardModel card)
@@ -542,30 +478,6 @@ internal abstract class CelVfxSession : IDisposable
         }
     }
 
-    private void TrackMagicCircleVisibilityTween(float from, float to, float duration)
-    {
-        var tween = Track(_root.CreateTween());
-        tween.TweenMethod(
-                Callable.From<float>(SetMagicCircleVisibility),
-                from,
-                to,
-                duration)
-            .SetEase(Tween.EaseType.InOut)
-            .SetTrans(Tween.TransitionType.Sine);
-    }
-
-    private void TrackMagicCircleScaleTween(float from, float to, float duration)
-    {
-        if (_magicCircle is not { } circle || !GodotObject.IsInstanceValid(circle))
-            return;
-
-        circle.Scale = Vector2.One * from;
-        var tween = Track(_root.CreateTween());
-        tween.TweenProperty(circle, "scale", Vector2.One * to, duration)
-            .SetEase(Tween.EaseType.InOut)
-            .SetTrans(Tween.TransitionType.Sine);
-    }
-
     private void BeginWandPreludeHold()
     {
         if (!IsActive())
@@ -586,29 +498,23 @@ internal abstract class CelVfxSession : IDisposable
         var remainingHold = WandPreludeHoldDuration - recoveryDuration;
         if (remainingHold > 0f && !await WaitActive(remainingHold))
             return;
-        if (!await WaitActive(MagicCircleSustainDuration))
-            return;
-
-        TrackMagicCircleVisibilityTween(1f, 0f, MagicCircleFadeOutDuration);
-        TrackMagicCircleScaleTween(1f, MagicCircleExitScale, MagicCircleFadeOutDuration);
-        if (!await WaitActive(MagicCircleFadeOutDuration))
-            return;
         ReleaseWandPrelude();
     }
 
-    private void SetMagicCircleVisibility(float visibility)
-    {
-        if (_magicCircleMaterial is { } material && GodotObject.IsInstanceValid(material))
-            material.SetShaderParameter("magic_circle_visibility", Mathf.Clamp(visibility, 0f, 1f));
-    }
-
-    private static Color MagicCircleColour(SourceEraClass era) => era switch
-    {
-        SourceEraClass.Clow => new Color(1f, 0.94f, 0.62f),
-        SourceEraClass.Sakura => new Color(1f, 0.78f, 0.94f),
-        SourceEraClass.Clear => new Color(0.88f, 1f, 0.8f),
-        _ => throw new ArgumentOutOfRangeException(nameof(era), era, "Unknown magic-circle era.")
-    };
+    /// <summary>
+    /// The era's seal-ink colour for a card, or null when the card has no era.
+    /// </summary>
+    /// <remarks>
+    /// Card-to-colour rather than era-to-colour so a derived session drawing the
+    /// seal's ink on its own surface never has to reach into
+    /// <c>SakuraCardCatalog</c> itself. Era resolution and the palette then keep a
+    /// single owner, which is what stops a card from shipping its own idea of what
+    /// Clow gold is.
+    /// </remarks>
+    protected static Color? MagicCircleInkColour(CardModel card) =>
+        SakuraCardCatalog.TryGetMetadata(card, out var metadata) && metadata.Era is { } era
+            ? SakuraMagicCirclePresenter.ColourFor(era)
+            : null;
 
     private async Task TrackWandPreludePosition()
     {
@@ -627,14 +533,6 @@ internal abstract class CelVfxSession : IDisposable
 
     private void UpdateWandPreludePosition()
     {
-        if (_magicCircleAnchor is { } magicCircleAnchor
-            && _preludeCasterNode is { } casterNode
-            && GodotObject.IsInstanceValid(magicCircleAnchor)
-            && GodotObject.IsInstanceValid(casterNode))
-        {
-            magicCircleAnchor.GlobalPosition = ResolveMagicCircleCenter(_preludeCasterNode);
-        }
-
         if (_preludeLines is not { } lines)
         {
             return;
@@ -666,27 +564,6 @@ internal abstract class CelVfxSession : IDisposable
                 * (nativeCard.GetCurrentSize() * 0.5f);
             lines.GlobalPosition = cardCenter - lines.Size * 0.5f;
         }
-    }
-
-    private static Vector2 ResolveMagicCircleCenter(NCreature? casterNode)
-    {
-        if (casterNode is null || !GodotObject.IsInstanceValid(casterNode))
-            return Vector2.Zero;
-
-        if (casterNode.Hitbox is { } hitbox && GodotObject.IsInstanceValid(hitbox))
-        {
-            var rect = hitbox.GetGlobalRect();
-            if (rect.Size.X > 1f && rect.Size.Y > 1f)
-            {
-                var bodyCenter = rect.GetCenter();
-                var floor = casterNode.GetBottomOfHitbox();
-                return new Vector2(
-                    bodyCenter.X,
-                    Mathf.Lerp(bodyCenter.Y, floor.Y, MagicCircleFloorBias));
-            }
-        }
-
-        return casterNode.VfxSpawnPosition + Vector2.Down * 64f;
     }
 
     private static Vector2 CardDisplaySize(CardModel? card)
@@ -733,8 +610,6 @@ internal abstract class CelVfxSession : IDisposable
     {
         RestoreWandRig();
         _preludeLineMaterial = null;
-        _magicCircleMaterial = null;
-        _preludeCasterNode = null;
 
         if (_preludeCard is { } card && GodotObject.IsInstanceValid(card))
         {
@@ -760,14 +635,6 @@ internal abstract class CelVfxSession : IDisposable
         }
         _preludeLines = null;
 
-        if (_magicCircleAnchor is { } magicCircleAnchor
-            && GodotObject.IsInstanceValid(magicCircleAnchor)
-            && !magicCircleAnchor.IsQueuedForDeletion())
-        {
-            magicCircleAnchor.QueueFreeSafely();
-        }
-        _magicCircleAnchor = null;
-        _magicCircle = null;
     }
 
     private void OnCombatEnded(CombatRoom _) => Dispose();

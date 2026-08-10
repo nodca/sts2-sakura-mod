@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
@@ -25,6 +26,7 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
         MainFile.ResPath + "/scenes/combat/card_vfx/blaze_fire_column_vfx.tscn";
     internal const string ShaderPath =
         MainFile.ResPath + "/shaders/card_vfx/blaze_fire_column.gdshader";
+    internal static IReadOnlyList<string> AssetPaths { get; } = [ScenePath];
 
     // Beats, in seconds. Longer than Hail's single-target 0.87 s, which is the
     // point: this is a rare burst card and reads as one.
@@ -52,7 +54,6 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
 
     private const int VfxZIndex = 3000;
 
-    private static PackedScene? _scene;
     private static bool _loadFailureLogged;
 
     private readonly ShaderMaterial _material;
@@ -263,8 +264,7 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
     }
 
     private static PackedScene LoadScene() =>
-        _scene ??= ResourceLoader.Load<PackedScene>(ScenePath, null, ResourceLoader.CacheMode.Reuse)
-            ?? throw new InvalidOperationException($"Could not load {ScenePath}.");
+        PreloadManager.Cache.GetScene(ScenePath);
 
     private static void LogLoadFailure(Exception exception)
     {

@@ -1,0 +1,54 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Shader" uid="uid://dh6xcg5fxk2yd" path="res://SakuraMod/shaders/card_vfx/sakura_sword_blade.gdshader" id="1_sword"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_blade"]
+resource_local_to_scene = true
+shader = ExtResource("1_sword")
+shader_parameter/region_size = Vector2(168, 460)
+shader_parameter/extend = 0.0
+shader_parameter/opacity = 1.0
+shader_parameter/draw_cut = 0.0
+shader_parameter/cut_open = 0.0
+shader_parameter/blade_count = 1.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cut"]
+resource_local_to_scene = true
+shader = ExtResource("1_sword")
+shader_parameter/region_size = Vector2(240, 200)
+shader_parameter/extend = 1.0
+shader_parameter/opacity = 1.0
+shader_parameter/draw_cut = 1.0
+shader_parameter/cut_open = 0.0
+shader_parameter/blade_count = 1.0
+
+[node name="SakuraSwordTarget" type="Node2D"]
+
+[node name="BladePivot" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="BladeBody" type="ColorRect" parent="BladePivot"]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_blade")
+offset_left = -84.0
+offset_top = -451.5
+offset_right = 84.0
+offset_bottom = 8.5
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="CutAnchor" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="CutBody" type="ColorRect" parent="CutAnchor"]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_cut")
+offset_left = -120.0
+offset_top = -100.0
+offset_right = 120.0
+offset_bottom = 100.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Fragments" type="Node2D" parent="."]
+unique_name_in_owner = true

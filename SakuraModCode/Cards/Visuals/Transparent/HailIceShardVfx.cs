@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
@@ -24,6 +25,7 @@ internal sealed class HailIceShardVfx : CelVfxSession
         MainFile.ResPath + "/scenes/combat/card_vfx/hail_ice_shard_target.tscn";
     internal const string ShaderPath =
         MainFile.ResPath + "/shaders/card_vfx/hail_ice_shard.gdshader";
+    internal static IReadOnlyList<string> AssetPaths { get; } = [ScenePath, TargetScenePath];
 
     // Beats, in seconds. The crystal drives in, then the second hit splits it.
     private const float FallDuration = 0.18f;
@@ -45,8 +47,6 @@ internal sealed class HailIceShardVfx : CelVfxSession
     private const float FragmentGravity = 980f;
     private const int VfxZIndex = 3000;
 
-    private static PackedScene? _rootScene;
-    private static PackedScene? _targetScene;
     private static bool _loadFailureLogged;
 
     private readonly Node2D _debris;
@@ -223,13 +223,7 @@ internal sealed class HailIceShardVfx : CelVfxSession
     }
 
     private static (PackedScene Root, PackedScene Target) LoadScenes()
-    {
-        _rootScene ??= ResourceLoader.Load<PackedScene>(ScenePath, null, ResourceLoader.CacheMode.Reuse)
-            ?? throw new InvalidOperationException($"Could not load {ScenePath}.");
-        _targetScene ??= ResourceLoader.Load<PackedScene>(TargetScenePath, null, ResourceLoader.CacheMode.Reuse)
-            ?? throw new InvalidOperationException($"Could not load {TargetScenePath}.");
-        return (_rootScene, _targetScene);
-    }
+        => (PreloadManager.Cache.GetScene(ScenePath), PreloadManager.Cache.GetScene(TargetScenePath));
 
     private static void LogLoadFailure(Exception exception)
     {

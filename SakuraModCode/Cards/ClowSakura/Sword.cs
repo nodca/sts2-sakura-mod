@@ -34,8 +34,28 @@ public class ClowSword() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ba
 
     private int CurrentDamage() => SakuraSourceCardValues.EffectiveValue(this, DynamicVars.Damage);
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await DealDamage(choiceContext, RequiredTarget(play), CurrentDamage());
+    // The session lives here rather than in PlayActivatedCard because this is the
+    // common prefix of both paths, so the extra effect gets the swing without the
+    // activated path's action order changing. Its unblockable follow-up lands during
+    // the fade and reads as the same cut deepening, not as a second stroke.
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        var target = RequiredTarget(play);
+        var swordVfx = SakuraSwordBladeVfx.TryCreate([target], SwordMode.Single);
+        try
+        {
+            if (swordVfx is not null)
+                await swordVfx.PlayPrelude(this, Owner.Creature);
+            // Before the damage: the number belongs on the beat the cut opens, which
+            // this card lands two stepped frames after the blade has passed.
+            swordVfx?.Impact(target);
+            await DealDamage(choiceContext, target, CurrentDamage());
+        }
+        finally
+        {
+            swordVfx?.FadeAndDispose();
+        }
+    }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -55,10 +75,29 @@ public class SakuraSword() : SakuraFormCard(1, CardType.Attack, TargetType.AnyEn
     {
         await SakuraThroughResolution.WithPropagationSuppressed(async () =>
         {
-            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+            // Enumerated once, and the loop walks that same copy. The visuals need the
+            // list the hits walk, and ToList() is an immediate snapshot taken before any
+            // damage resolves, so hoisting it cannot change who is struck. Enumerating
+            // twice could: the second pass would drop targets killed by the first.
+            var targets = SakuraThroughResolution.TargetsFor(play).ToList();
+            // Shares the Clow version's presentation verbatim: same session, same
+            // parameters. The only difference is how many targets gameplay hands over,
+            // which is a gameplay difference, so "shared" needs no branch here.
+            var swordVfx = SakuraSwordBladeVfx.TryCreate(targets, SwordMode.Single);
+            try
             {
-                await DealDamage(choiceContext, target, ReleasedDamage());
-                await DealDamage(choiceContext, target, target.CurrentHp * ReleasedMagic() / 100, ValueProp.Unblockable);
+                if (swordVfx is not null)
+                    await swordVfx.PlayPrelude(this, Owner.Creature);
+                foreach (var target in targets)
+                {
+                    swordVfx?.Impact(target);
+                    await DealDamage(choiceContext, target, ReleasedDamage());
+                    await DealDamage(choiceContext, target, target.CurrentHp * ReleasedMagic() / 100, ValueProp.Unblockable);
+                }
+            }
+            finally
+            {
+                swordVfx?.FadeAndDispose();
             }
         });
     }

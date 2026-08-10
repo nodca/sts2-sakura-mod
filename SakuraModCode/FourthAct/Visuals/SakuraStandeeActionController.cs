@@ -19,6 +19,32 @@ internal enum SakuraStandeeClip
     Summon
 }
 
+internal enum SakuraStandeeSizeEffect
+{
+    Big,
+    Little
+}
+
+internal static class SakuraStandeeSizeRules
+{
+    internal const float BigMultiplier = 1.25f;
+    internal const float LittleMultiplier = 0.78f;
+
+    internal static float Multiplier(bool bigActive, bool littleActive) =>
+        (bigActive ? BigMultiplier : 1f) * (littleActive ? LittleMultiplier : 1f);
+
+    internal static Vector2 RestScale(Vector2 baseScale, float multiplier) =>
+        baseScale * multiplier;
+
+    internal static Vector2 FootAnchoredPosition(
+        Vector2 basePosition,
+        float floorY,
+        float verticalMultiplier) =>
+        new(
+            basePosition.X,
+            floorY + (basePosition.Y - floorY) * verticalMultiplier);
+}
+
 internal enum SakuraStandeePlaybackPriority
 {
     Idle,
@@ -90,6 +116,7 @@ internal sealed partial class SakuraStandeeActionController : Node
     private readonly Node2D _body;
     private readonly Vector2 _restPosition;
     private readonly Vector2 _restScale;
+    private readonly float _floorY;
     private readonly Sprite2D? _sprite;
     private readonly bool _playIdleMotion;
     private readonly Dictionary<string, Texture2D> _textures = new(StringComparer.Ordinal);
@@ -99,17 +126,21 @@ internal sealed partial class SakuraStandeeActionController : Node
     private Tween? _idleTween;
     private Tween? _clipTween;
     private TaskCompletionSource<bool>? _phaseCompletion;
+    private bool _bigActive;
+    private bool _littleActive;
 
     private SakuraStandeeActionController(
         Node2D body,
         Vector2 restPosition,
         Vector2 restScale,
+        float floorY,
         string restTexturePath,
         bool playIdleMotion)
     {
         _body = body;
         _restPosition = restPosition;
         _restScale = restScale;
+        _floorY = floorY;
         _restTexturePath = restTexturePath;
         _playIdleMotion = playIdleMotion;
         _sprite = FindSprite(body);
@@ -121,6 +152,7 @@ internal sealed partial class SakuraStandeeActionController : Node
         Node2D body,
         Vector2 restPosition,
         Vector2 restScale,
+        float floorY,
         string restTexturePath,
         bool playIdleMotion = true)
     {
@@ -131,6 +163,7 @@ internal sealed partial class SakuraStandeeActionController : Node
             body,
             restPosition,
             restScale,
+            floorY,
             restTexturePath,
             playIdleMotion));
     }
@@ -174,6 +207,72 @@ internal sealed partial class SakuraStandeeActionController : Node
         if (stillCurrent && IsCurrent(generation))
             await PlayRecoveryAsync(generation);
         FinishClip(generation);
+    }
+
+    internal async Task PlaySizeEffectAsync(
+        SakuraStandeeSizeEffect effect,
+        Func<Task> resolveAtContact)
+    {
+        ArgumentNullException.ThrowIfNull(resolveAtContact);
+
+        var previousMultiplier = SizeMultiplier;
+        ActivateSizeEffect(effect);
+        var targetMultiplier = SizeMultiplier;
+        if (!TryBegin(SakuraStandeePlaybackPriority.Action, out var generation))
+        {
+            await resolveAtContact();
+            return;
+        }
+
+        try
+        {
+            var anticipationFactor = effect == SakuraStandeeSizeEffect.Big
+                ? new Vector2(1.04f, 0.90f)
+                : new Vector2(1.04f, 1.04f);
+            var stillCurrent = await PlayPhaseAsync(
+                generation,
+                0.10,
+                SakuraStandeeSizeRules.FootAnchoredPosition(
+                    _restPosition,
+                    _floorY,
+                    previousMultiplier * anticipationFactor.Y),
+                _restScale * previousMultiplier * anticipationFactor,
+                0f,
+                effect == SakuraStandeeSizeEffect.Big
+                    ? new Color(1f, 0.91f, 0.68f, 0.94f)
+                    : new Color(0.78f, 0.90f, 1f, 0.94f),
+                Tween.TransitionType.Quad,
+                Tween.EaseType.In);
+
+            if (stillCurrent)
+            {
+                var contactFactor = effect == SakuraStandeeSizeEffect.Big ? 1.035f : 0.96f;
+                stillCurrent = await PlayPhaseAsync(
+                    generation,
+                    effect == SakuraStandeeSizeEffect.Big ? 0.24 : 0.20,
+                    SakuraStandeeSizeRules.FootAnchoredPosition(
+                        _restPosition,
+                        _floorY,
+                        targetMultiplier * contactFactor),
+                    _restScale * targetMultiplier * contactFactor,
+                    0f,
+                    Colors.White,
+                    effect == SakuraStandeeSizeEffect.Big
+                        ? Tween.TransitionType.Back
+                        : Tween.TransitionType.Cubic,
+                    Tween.EaseType.Out);
+            }
+
+            // Presentation interruption must never skip authoritative gameplay.
+            await resolveAtContact();
+
+            if (stillCurrent && IsCurrent(generation))
+                await PlayRecoveryAsync(generation, 0.26);
+        }
+        finally
+        {
+            FinishClip(generation);
+        }
     }
 
     internal void PlayHurt()
@@ -229,15 +328,15 @@ internal sealed partial class SakuraStandeeActionController : Node
         if (!TryBegin(SakuraStandeePlaybackPriority.Idle, out var generation))
             return;
 
-        _body.Position = _restPosition + Vector2.Down * EntryOffsetY;
+        _body.Position = RestPosition + Vector2.Down * EntryOffsetY;
         _body.Rotation = 0f;
-        _body.Scale = _restScale;
+        _body.Scale = RestScale;
         _body.Modulate = new Color(1f, 1f, 1f, 0.86f);
         await PlayPhaseAsync(
             generation,
             EntryDuration,
-            _restPosition,
-            _restScale,
+            RestPosition,
+            RestScale,
             0f,
             Colors.White,
             Tween.TransitionType.Cubic);
@@ -254,8 +353,8 @@ internal sealed partial class SakuraStandeeActionController : Node
         if (!await PlayPhaseAsync(
                 generation,
                 0.07,
-                _restPosition + Vector2.Right * 12f,
-                _restScale * new Vector2(0.97f, 1.02f),
+                RestPosition + Vector2.Right * 12f,
+                RestScale * new Vector2(0.97f, 1.02f),
                 0.018f,
                 hurtColor,
                 Tween.TransitionType.Quad))
@@ -263,8 +362,8 @@ internal sealed partial class SakuraStandeeActionController : Node
         if (!await PlayPhaseAsync(
                 generation,
                 0.08,
-                _restPosition + Vector2.Left * 5f,
-                _restScale,
+                RestPosition + Vector2.Left * 5f,
+                RestScale,
                 -0.01f,
                 Colors.White,
                 Tween.TransitionType.Quad))
@@ -280,8 +379,8 @@ internal sealed partial class SakuraStandeeActionController : Node
         await PlayPhaseAsync(
             generation,
             DeathDuration,
-            _restPosition + new Vector2(16f, 34f),
-            _restScale * new Vector2(0.92f, 0.96f),
+            RestPosition + new Vector2(16f, 34f),
+            RestScale * new Vector2(0.92f, 0.96f),
             0.11f,
             new Color(0.62f, 0.58f, 0.72f, 0.08f),
             Tween.TransitionType.Cubic,
@@ -292,19 +391,19 @@ internal sealed partial class SakuraStandeeActionController : Node
         clip switch
         {
             SakuraStandeeClip.Attack => PlayPhaseAsync(
-                generation, 0.11, _restPosition + Vector2.Right * 6f,
-                _restScale * new Vector2(0.94f, 1.03f), 0.012f, Colors.White),
+                generation, 0.11, RestPosition + Vector2.Right * 6f,
+                RestScale * new Vector2(0.94f, 1.03f), 0.012f, Colors.White),
             SakuraStandeeClip.Cast => PlayPhaseAsync(
-                generation, 0.16, _restPosition + Vector2.Down * 4f,
-                _restScale * new Vector2(0.95f, 0.96f), 0f,
+                generation, 0.16, RestPosition + Vector2.Down * 4f,
+                RestScale * new Vector2(0.95f, 0.96f), 0f,
                 new Color(0.74f, 0.9f, 1f, 0.88f)),
             SakuraStandeeClip.Buff => PlayPhaseAsync(
-                generation, 0.14, _restPosition + Vector2.Down * 3f,
-                _restScale * new Vector2(0.96f, 0.96f), 0f,
+                generation, 0.14, RestPosition + Vector2.Down * 3f,
+                RestScale * new Vector2(0.96f, 0.96f), 0f,
                 new Color(1f, 0.91f, 0.68f, 0.9f)),
             SakuraStandeeClip.Summon => PlayPhaseAsync(
-                generation, 0.18, _restPosition + Vector2.Down * 5f,
-                _restScale * new Vector2(0.91f, 0.97f), 0f,
+                generation, 0.18, RestPosition + Vector2.Down * 5f,
+                RestScale * new Vector2(0.91f, 0.97f), 0f,
                 new Color(0.83f, 0.78f, 1f, 0.86f)),
             _ => Task.FromResult(false)
         };
@@ -313,20 +412,20 @@ internal sealed partial class SakuraStandeeActionController : Node
         clip switch
         {
             SakuraStandeeClip.Attack => PlayPhaseAsync(
-                generation, 0.08, _restPosition + Vector2.Left * 19f,
-                _restScale * new Vector2(1.04f, 0.98f), -0.02f, Colors.White,
+                generation, 0.08, RestPosition + Vector2.Left * 19f,
+                RestScale * new Vector2(1.04f, 0.98f), -0.02f, Colors.White,
                 Tween.TransitionType.Cubic, Tween.EaseType.Out),
             SakuraStandeeClip.Cast => PlayPhaseAsync(
-                generation, 0.1, _restPosition + Vector2.Up * 7f,
-                _restScale * new Vector2(1.045f, 1.045f), 0f, Colors.White,
+                generation, 0.1, RestPosition + Vector2.Up * 7f,
+                RestScale * new Vector2(1.045f, 1.045f), 0f, Colors.White,
                 Tween.TransitionType.Back, Tween.EaseType.Out),
             SakuraStandeeClip.Buff => PlayPhaseAsync(
-                generation, 0.11, _restPosition + Vector2.Up * 9f,
-                _restScale * new Vector2(1.06f, 1.06f), 0f, Colors.White,
+                generation, 0.11, RestPosition + Vector2.Up * 9f,
+                RestScale * new Vector2(1.06f, 1.06f), 0f, Colors.White,
                 Tween.TransitionType.Back, Tween.EaseType.Out),
             SakuraStandeeClip.Summon => PlayPhaseAsync(
-                generation, 0.12, _restPosition + Vector2.Up * 5f,
-                _restScale * new Vector2(1.075f, 1.04f), 0f, Colors.White,
+                generation, 0.12, RestPosition + Vector2.Up * 5f,
+                RestScale * new Vector2(1.075f, 1.04f), 0f, Colors.White,
                 Tween.TransitionType.Back, Tween.EaseType.Out),
             _ => Task.FromResult(false)
         };
@@ -335,8 +434,8 @@ internal sealed partial class SakuraStandeeActionController : Node
         PlayPhaseAsync(
             generation,
             duration,
-            _restPosition,
-            _restScale,
+            RestPosition,
+            RestScale,
             0f,
             Colors.White,
             Tween.TransitionType.Cubic,
@@ -403,8 +502,8 @@ internal sealed partial class SakuraStandeeActionController : Node
         if (!IsUsable(_body))
             return;
 
-        _body.Position = _restPosition;
-        _body.Scale = _restScale;
+        _body.Position = RestPosition;
+        _body.Scale = RestScale;
         _body.Rotation = 0f;
         _body.Modulate = Colors.White;
         ApplyRestTexture();
@@ -416,8 +515,8 @@ internal sealed partial class SakuraStandeeActionController : Node
             return;
 
         StopIdle();
-        var liftedPosition = _restPosition + Vector2.Up * IdleLift;
-        var settledPosition = _restPosition + Vector2.Down * (IdleLift * 0.35f);
+        var liftedPosition = RestPosition + Vector2.Up * IdleLift;
+        var settledPosition = RestPosition + Vector2.Down * (IdleLift * 0.35f);
         _idleTween = _body.CreateTween().SetLoops();
         _idleTween.TweenProperty(_body, "position", liftedPosition, IdleHalfDuration)
             .SetEase(Tween.EaseType.InOut).SetTrans(Tween.TransitionType.Sine);
@@ -434,6 +533,23 @@ internal sealed partial class SakuraStandeeActionController : Node
         if (_idleTween is { } tween && tween.IsValid())
             tween.Kill();
         _idleTween = null;
+    }
+
+    private float SizeMultiplier =>
+        SakuraStandeeSizeRules.Multiplier(_bigActive, _littleActive);
+
+    private Vector2 RestPosition =>
+        SakuraStandeeSizeRules.FootAnchoredPosition(_restPosition, _floorY, SizeMultiplier);
+
+    private Vector2 RestScale =>
+        SakuraStandeeSizeRules.RestScale(_restScale, SizeMultiplier);
+
+    private void ActivateSizeEffect(SakuraStandeeSizeEffect effect)
+    {
+        if (effect == SakuraStandeeSizeEffect.Big)
+            _bigActive = true;
+        else
+            _littleActive = true;
     }
 
     private void ApplyRestTexture()

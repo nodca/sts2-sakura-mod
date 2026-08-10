@@ -55,7 +55,8 @@ public abstract class SakuraSourceCard(
     public override string CustomPortraitPath => CardModel.MissingPortraitPath;
     public override string PortraitPath => CardModel.MissingPortraitPath;
     public override string BetaPortraitPath => CardModel.MissingPortraitPath;
-    protected override IEnumerable<string> ExtraRunAssetPaths => ClassicCardVisualAssets.RunAssetPaths(this);
+    protected override IEnumerable<string> ExtraRunAssetPaths =>
+        ClassicCardVisualAssets.RunAssetPaths(this).Concat(SakuraCardVfxAssets.RunAssetPaths(this));
 
     protected sealed override Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
         SakuraExtraEffectTransaction.Execute(this, choiceContext, play, PlayCard);

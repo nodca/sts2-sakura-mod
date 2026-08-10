@@ -39,8 +39,27 @@ public class ClowShield() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Ba
 
     private int CurrentBlock() => SakuraSourceCardValues.EffectiveValue(this, DynamicVars.Block);
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await GainBlock(play, CurrentBlock());
+    // The session lives here rather than in PlayActivatedCard because this is the
+    // common prefix of both paths, so the extra effect gets the plate without the
+    // activated path's action order changing. The Metallicize that follows reads as
+    // the same forming plate settling, not as a second shield.
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        var shieldVfx = SakuraShieldPlateVfx.TryCreate(Owner.Creature);
+        try
+        {
+            if (shieldVfx is not null)
+                await shieldVfx.PlayPrelude(this, Owner.Creature);
+            // Before the block: the number belongs on the beat the plate snaps to a
+            // stop, matching the other cards in this family.
+            shieldVfx?.Impact();
+            await GainBlock(play, CurrentBlock());
+        }
+        finally
+        {
+            shieldVfx?.FadeAndDispose();
+        }
+    }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -60,9 +79,23 @@ public class SakuraShield() : SakuraFormCard(1, CardType.Skill, TargetType.None)
     internal static int CurrentHpBlock(int currentHp, int rate) =>
         Math.Max(0, currentHp) * Math.Max(0, rate) / 100;
 
+    // Shares the Clow version's presentation verbatim: same session, same parameters.
+    // Era reaches the visuals only through the shared prelude's circle colour, so
+    // "shared" needs no branch here.
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await GainBlock(play, ReleasedBlock());
-        await GainBlock(play, CurrentHpBlock(Owner.Creature.CurrentHp, ReleasedMagic()));
+        var shieldVfx = SakuraShieldPlateVfx.TryCreate(Owner.Creature);
+        try
+        {
+            if (shieldVfx is not null)
+                await shieldVfx.PlayPrelude(this, Owner.Creature);
+            shieldVfx?.Impact();
+            await GainBlock(play, ReleasedBlock());
+            await GainBlock(play, CurrentHpBlock(Owner.Creature.CurrentHp, ReleasedMagic()));
+        }
+        finally
+        {
+            shieldVfx?.FadeAndDispose();
+        }
     }
 }

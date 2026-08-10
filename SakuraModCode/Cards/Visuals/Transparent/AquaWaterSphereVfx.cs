@@ -15,6 +15,7 @@ internal static class AquaWaterSphereVfx
     internal const string ScenePath = MainFile.ResPath + "/scenes/combat/card_vfx/aqua_water_sphere_vfx.tscn";
     internal const string TargetScenePath = MainFile.ResPath + "/scenes/combat/card_vfx/aqua_water_sphere_target.tscn";
     internal const string ShaderPath = MainFile.ResPath + "/shaders/card_vfx/aqua_water_sphere.gdshader";
+    internal static IReadOnlyList<string> AssetPaths { get; } = [ScenePath, TargetScenePath];
 
     // Timings are tuned for readability over brevity: the first pass was fast
     // enough that the crest, the band structure, and the freeze all blurred past.

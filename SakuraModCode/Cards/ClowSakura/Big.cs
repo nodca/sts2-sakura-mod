@@ -21,6 +21,7 @@ using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Relics;
 using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Cards;
@@ -32,9 +33,19 @@ public class ClowBig() : ClowCard(1, CardType.Power, CardRarity.Uncommon, Target
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await ApplyPower<StrengthPower>(choiceContext, Owner.Creature, ReleasedValue("StrengthPower"));
-        if (!IsUpgraded)
-            await ApplyPower<DexterityPower>(choiceContext, Owner.Creature, -1);
+        await BigLittleStandeeVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            SakuraStandeeSizeEffect.Big,
+            async () =>
+            {
+                await ApplyPower<StrengthPower>(
+                    choiceContext,
+                    Owner.Creature,
+                    ReleasedValue("StrengthPower"));
+                if (!IsUpgraded)
+                    await ApplyPower<DexterityPower>(choiceContext, Owner.Creature, -1);
+            });
     }
 }
 
@@ -43,6 +54,9 @@ public class SakuraBig() : SakuraFormCard(1, CardType.Power, TargetType.None)
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await ApplyPower<ClassicBigPower>(choiceContext, Owner.Creature, 1);
+        await BigLittleStandeeVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            SakuraStandeeSizeEffect.Big,
+            () => ApplyPower<ClassicBigPower>(choiceContext, Owner.Creature, 1));
 }
-

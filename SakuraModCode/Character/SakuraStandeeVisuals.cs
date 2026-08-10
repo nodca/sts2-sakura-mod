@@ -116,6 +116,7 @@ public static class SakuraStandeeVisuals
                     body,
                     layout.VisualPosition,
                     Vector2.One * layout.Scale,
+                    layout.Bounds.Position.Y + layout.Bounds.Size.Y,
                     visualPath,
                     playIdleMotion);
             if (attachLayeredIdle && isActiveCombat)

@@ -83,6 +83,19 @@ internal sealed partial class SakuraChibiStandeeIdleController : Node2D
         node.Visuals.GetNodeOrNull<Node2D>("%Visuals")
             ?.GetNodeOrNull<SakuraChibiStandeeIdleController>(NodeName);
 
+    /// <summary>
+    /// Which way the standee faces, as a sign a caster-side effect can multiply its
+    /// own horizontal offset by.
+    /// </summary>
+    /// <remarks>
+    /// Exposed as a sign rather than as this node's <see cref="Node2D.Scale"/>:
+    /// <see cref="SyncFlip"/> publishes the flip by negating that scale, so an effect
+    /// reading the transform would inherit the mirroring instead of deciding for
+    /// itself which side to sit on.
+    /// </remarks>
+    internal float FacingSign =>
+        GodotObject.IsInstanceValid(_body) && _body.FlipH ? -1f : 1f;
+
     internal bool TryGetWandPreludeRig(out SakuraChibiWandRig rig)
     {
         var tip = _layers.GetNodeOrNull<Marker2D>(

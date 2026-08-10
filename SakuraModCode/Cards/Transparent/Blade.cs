@@ -33,8 +33,24 @@ public class Blade() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var target = RequiredTarget(play);
+        // Read once, before the attack, and handed to the visuals as a resolved number.
+        // The hit count is what makes the twin blades cross two or four times; they are
+        // packed into a fixed envelope, so four crosses faster rather than for longer.
         var hits = BladeRules.HitCount(this);
-        await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage, hitCount: hits);
+        var bladeVfx = SakuraSwordBladeVfx.TryCreate([target], SwordMode.Dual, hits);
+        try
+        {
+            if (bladeVfx is not null)
+                await bladeVfx.PlayPrelude(this, Owner.Creature);
+            // Before the attack: the numbers belong on the beat the cut opens, which
+            // this card lands two stepped frames after the blades have passed.
+            bladeVfx?.Impact(target);
+            await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage, hitCount: hits);
+        }
+        finally
+        {
+            bladeVfx?.FadeAndDispose();
+        }
     }
 
     protected override void OnUpgrade()

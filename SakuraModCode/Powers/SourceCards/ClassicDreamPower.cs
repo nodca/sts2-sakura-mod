@@ -66,8 +66,17 @@ public class ClassicDreamPower : SakuraPowerModel
             var template = Owner.CombatState!.CreateCard(
                 ModelDb.GetById<CardModel>(ModelDb.GetId(sakuraType)),
                 player);
+            var restoredClow = Owner.CombatState.CloneCard(original);
+            restoredClow.DeckVersion = original.DeckVersion;
             if (await ReplaceInPile(hand, original, template))
-                _swaps.Add(new DreamSwap(identity, original, template));
+            {
+                _swaps.Add(new DreamSwap(restoredClow, template));
+            }
+            else
+            {
+                restoredClow.CardScope?.RemoveCard(restoredClow);
+                template.CardScope?.RemoveCard(template);
+            }
         }
     }
 
@@ -77,13 +86,12 @@ public class ClassicDreamPower : SakuraPowerModel
         {
             if (swap.Template.Pile is { Type: PileType.Hand or PileType.Draw or PileType.Discard or PileType.Exhaust } pile)
             {
-                await ReplaceInPile(pile, swap.Template, swap.Original);
-                swap.Template.CardScope?.RemoveCard(swap.Template);
+                await ReplaceInPile(pile, swap.Template, swap.RestoredClow);
                 continue;
             }
 
-            if (swap.Original.Pile is null)
-                swap.Original.CardScope?.RemoveCard(swap.Original);
+            if (swap.RestoredClow.Pile is null)
+                swap.RestoredClow.CardScope?.RemoveCard(swap.RestoredClow);
         }
 
         _swaps.Clear();
@@ -95,10 +103,12 @@ public class ClassicDreamPower : SakuraPowerModel
             return false;
 
         await CardPileCmd.RemoveFromCombat(oldCard, skipVisuals: false);
-        await CardPileCmd.Add(newCard, pile, CardPilePosition.Random, this, skipVisuals: false);
+        var result = await CardPileCmd.Add(newCard, pile, CardPilePosition.Random, this, skipVisuals: false);
+        if (!result.success || !ReferenceEquals(newCard.Pile, pile))
+            throw new InvalidOperationException($"Failed to replace {oldCard.Id.Entry} with {newCard.Id.Entry}.");
+
         return true;
     }
 
-    private sealed record DreamSwap(SourceCardIdentity Identity, CardModel Original, CardModel Template);
+    private sealed record DreamSwap(CardModel RestoredClow, CardModel Template);
 }
-

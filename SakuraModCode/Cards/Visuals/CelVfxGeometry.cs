@@ -1,14 +1,29 @@
 using Godot;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
+using SakuraMod.SakuraModCode.Character;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
 internal static class CelVfxGeometry
 {
     internal readonly record struct TargetGeometry(Vector2 Center, Vector2 Size);
+
+    /// <summary>
+    /// How far below <c>VfxSpawnPosition</c> the fallback anchor sits when a caster
+    /// has no usable hitbox.
+    /// </summary>
+    private const float FallbackFloorDrop = 64f;
+
+    /// <summary>
+    /// Stand-in body extent when a caster has no usable hitbox, roughly Sakura's
+    /// standee footprint. A consumer offsetting from body size needs a number here
+    /// rather than a zero that would collapse its offset onto the body centre.
+    /// </summary>
+    private static readonly Vector2 FallbackBodySize = new(120f, 260f);
 
     internal readonly record struct GeometryBudget(
         float HorizontalPadding,
@@ -96,24 +111,77 @@ internal static class CelVfxGeometry
             new Vector2(budget.FallbackWidth, budget.FallbackHeight));
     }
 
-    internal static float? ResolveCasterX(NCombatRoom room, Creature? caster)
-    {
-        ArgumentNullException.ThrowIfNull(room);
-        if (caster is null
-            || room.GetCreatureNode(caster) is not { } node
-            || !GodotObject.IsInstanceValid(node))
-        {
-            return null;
-        }
+    /// <summary>
+    /// Where a caster-side effect attaches, as raw facts rather than a finished
+    /// position: hitbox centre, floor, and which way the standee faces.
+    /// </summary>
+    /// <remarks>
+    /// The vertical bias between <paramref name="BodyCenter"/> and
+    /// <paramref name="Floor"/> belongs to each consumer, not here. The magic circle
+    /// sits at 0.62 toward the floor so it reads behind Sakura's lower body; a shield
+    /// plate wants a much higher anchor. Baking one bias in would force the second
+    /// consumer to undo it.
+    /// </remarks>
+    internal readonly record struct CasterAnchor(
+        Vector2 BodyCenter,
+        Vector2 Floor,
+        Vector2 BodySize,
+        float FacingSign,
+        bool IsFallback);
 
-        if (node.Hitbox is { } hitbox && GodotObject.IsInstanceValid(hitbox))
+    /// <summary>
+    /// Resolves the caster-side anchor, or null when there is no usable node.
+    /// </summary>
+    /// <remarks>
+    /// The mirror of <see cref="Resolve"/> for the caster instead of a target. This
+    /// lived as a private helper inside <c>CelVfxSession</c> while the magic circle
+    /// was its only user; the first caster-side card effect would otherwise have had
+    /// to copy it, which is the second source of truth the shared layer exists to
+    /// prevent.
+    /// </remarks>
+    internal static CasterAnchor? ResolveCaster(NCreature? casterNode)
+    {
+        if (casterNode is null || !GodotObject.IsInstanceValid(casterNode))
+            return null;
+
+        var facing = ResolveFacingSign(casterNode);
+        if (casterNode.Hitbox is { } hitbox && GodotObject.IsInstanceValid(hitbox))
         {
             var rect = hitbox.GetGlobalRect();
             if (IsUsable(rect.Size))
-                return rect.Position.X + rect.Size.X * 0.5f;
+            {
+                return new CasterAnchor(
+                    rect.GetCenter(),
+                    casterNode.GetBottomOfHitbox(),
+                    rect.Size,
+                    facing,
+                    false);
+            }
         }
 
-        return node.VfxSpawnPosition.X;
+        // Fallback keeps body and floor identical, so a consumer interpolating
+        // between them lands on the same point either way and needs no special case.
+        var fallback = casterNode.VfxSpawnPosition + Vector2.Down * FallbackFloorDrop;
+        return new CasterAnchor(fallback, fallback, FallbackBodySize, facing, true);
+    }
+
+    /// <summary>
+    /// Which way the standee faces, as a sign to multiply a horizontal offset by.
+    /// </summary>
+    /// <remarks>
+    /// Only the sign, deliberately. Both idle controllers publish their flip by
+    /// writing <c>Scale = flip</c> on the controller node itself, so a caster-side
+    /// effect parented into that subtree would have its ink width and region size
+    /// mirrored along with its position. Such an effect belongs in the combat VFX
+    /// container and mirrors only its own offset — which needs this and nothing else.
+    /// </remarks>
+    private static float ResolveFacingSign(NCreature casterNode)
+    {
+        if (SakuraChibiStandeeIdleController.TryGet(casterNode) is { } chibi)
+            return chibi.FacingSign;
+        if (SakuraStandeeIdleController.TryGet(casterNode) is { } standard)
+            return standard.FacingSign;
+        return 1f;
     }
 
     internal static ShaderMaterial DuplicateMaterial(CanvasItem body, string label)

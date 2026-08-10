@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Helpers;
@@ -45,10 +46,19 @@ internal static class SpellTurnTransformationVfx
     internal static readonly string TurnAudioPath = AudioPath("SOTE_SFX_PlayerTurn_v4_1.ogg");
     internal static readonly string OpeningBuffAudioPath = AudioPath("SOTE_SFX_Buff_2_v1.ogg");
     internal static readonly string SwitchAudioPath = AudioPath("STS_SFX_Guardian3Destroy_v2.ogg");
+    internal static IReadOnlyList<string> AssetPaths { get; } =
+    [
+        ScenePath,
+        TurnAudioPath,
+        OpeningBuffAudioPath,
+        SwitchAudioPath,
+        .. SpellTurnTransformationTimeline.CompletionAudioPaths
+    ];
 
     private static readonly Vector2 CardSize = SakuraCardGeometry.ClassicLayoutSize;
     private static readonly Color ParticleColor = new(0.73f, 0.275f, 0.965f, 0.8f);
     private static readonly Color LuminColor = new(0.969f, 0.482f, 0.988f, 1f);
+    private static bool _loadFailureLogged;
 
     internal static string AudioPath(string fileName) => $"{SfxRoot}/{fileName}";
 
@@ -57,22 +67,32 @@ internal static class SpellTurnTransformationVfx
         if (TestMode.IsOn || NCombatRoom.Instance?.Ui is not { } ui)
             return null;
 
-        var scene = ResourceLoader.Load<PackedScene>(ScenePath, null, ResourceLoader.CacheMode.Reuse)
-            ?? throw new InvalidOperationException($"Could not load Spell Turn VFX scene: {ScenePath}");
-        var root = scene.Instantiate<Control>();
-        root.ZAsRelative = false;
-        root.ZIndex = 4000;
-        ui.AddChildSafely(root);
-        root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        Control? root = null;
         try
         {
+            var scene = PreloadManager.Cache.GetScene(ScenePath);
+            root = scene.Instantiate<Control>();
+            root.ZAsRelative = false;
+            root.ZIndex = 4000;
+            ui.AddChildSafely(root);
+            root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
             return new Session(root, startCard);
         }
-        catch
+        catch (Exception exception)
         {
-            root.QueueFreeSafely();
-            throw;
+            LogLoadFailure(exception);
+            root?.QueueFreeSafely();
+            return null;
         }
+    }
+
+    private static void LogLoadFailure(Exception exception)
+    {
+        if (_loadFailureLogged)
+            return;
+
+        _loadFailureLogged = true;
+        MainFile.Logger.Error($"Could not present Spell Turn transformation VFX: {exception}");
     }
 
     internal sealed class Session : IDisposable
@@ -88,6 +108,7 @@ internal static class SpellTurnTransformationVfx
         private readonly Node2D _luminAnchor;
         private readonly AudioStreamPlayer _primaryAudio;
         private readonly AudioStreamPlayer _accentAudio;
+        private readonly Texture2D _luminTexture;
         private readonly List<Tween> _tweens = [];
         private readonly List<Sprite2D> _luminStrips = [];
         private readonly RandomNumberGenerator _random = new();
@@ -108,6 +129,8 @@ internal static class SpellTurnTransformationVfx
             _luminAnchor = root.GetNode<Node2D>("%Lumin");
             _primaryAudio = root.GetNode<AudioStreamPlayer>("%PrimaryAudio");
             _accentAudio = root.GetNode<AudioStreamPlayer>("%AccentAudio");
+            _luminTexture = root.GetNode<Sprite2D>("Center/Lumin/LuminTemplate").Texture
+                ?? throw new InvalidOperationException("Spell Turn scene has no LuminTemplate texture.");
             _oldCard = CreatePreview(_oldClip, startCard);
             _center.Scale = Vector2.One * 0.666f;
             _random.Randomize();
@@ -221,15 +244,13 @@ internal static class SpellTurnTransformationVfx
 
         private void BuildLuminStrips()
         {
-            var texture = ResourceLoader.Load<Texture2D>(LuminPath, null, ResourceLoader.CacheMode.Reuse)
-                ?? throw new InvalidOperationException($"Could not load Spell Turn lumin texture: {LuminPath}");
             var material = new CanvasItemMaterial { BlendMode = CanvasItemMaterial.BlendModeEnum.Add };
             for (var index = 0; index < SpellTurnTransformationTimeline.LuminStripCount; index++)
             {
                 var proportion = index / (float)(SpellTurnTransformationTimeline.LuminStripCount - 1);
                 var strip = new Sprite2D
                 {
-                    Texture = texture,
+                    Texture = _luminTexture,
                     Centered = true,
                     Position = new Vector2(CardSize.X * proportion, 0f),
                     Scale = new Vector2(0.55f, _random.RandfRange(0.45f, 1.35f)),
@@ -264,13 +285,9 @@ internal static class SpellTurnTransformationVfx
             if (!IsActive())
                 return;
 
-            var texture = ResourceLoader.Load<Texture2D>(LuminPath, null, ResourceLoader.CacheMode.Reuse);
-            if (texture is null)
-                return;
-
             var particles = CreateParticleMesh(
                 _gatherAnchor,
-                texture,
+                _luminTexture,
                 SpellTurnTransformationTimeline.GatherParticleCount);
             var starts = new Vector2[SpellTurnTransformationTimeline.GatherParticleCount];
             for (var index = 0; index < starts.Length; index++)
@@ -319,8 +336,7 @@ internal static class SpellTurnTransformationVfx
 
         private async Task AnimateDiffusionTail(Node2D tail)
         {
-            var texture = ResourceLoader.Load<Texture2D>(LuminPath, null, ResourceLoader.CacheMode.Reuse);
-            if (texture is null || !tail.IsInsideTree())
+            if (!tail.IsInsideTree())
             {
                 tail.QueueFreeSafely();
                 return;
@@ -328,7 +344,7 @@ internal static class SpellTurnTransformationVfx
 
             var particles = CreateParticleMesh(
                 tail,
-                texture,
+                _luminTexture,
                 SpellTurnTransformationTimeline.DiffusionParticleCount);
             var directions = new Vector2[SpellTurnTransformationTimeline.DiffusionParticleCount];
             var speeds = new float[directions.Length];
@@ -383,12 +399,18 @@ internal static class SpellTurnTransformationVfx
 
         private static void PlayAudio(AudioStreamPlayer player, string path, float pitchScale)
         {
-            var stream = ResourceLoader.Load<AudioStream>(path, null, ResourceLoader.CacheMode.Reuse)
-                ?? throw new InvalidOperationException($"Could not load Spell Turn audio: {path}");
-            player.Stop();
-            player.Stream = stream;
-            player.PitchScale = pitchScale;
-            player.Play();
+            try
+            {
+                var stream = PreloadManager.Cache.GetAsset<AudioStream>(path);
+                player.Stop();
+                player.Stream = stream;
+                player.PitchScale = pitchScale;
+                player.Play();
+            }
+            catch (Exception exception)
+            {
+                LogLoadFailure(exception);
+            }
         }
 
         private async Task<bool> WaitActive(float seconds)

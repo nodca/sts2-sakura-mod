@@ -30,7 +30,8 @@ public abstract class SakuraCardModel : ModCardTemplate
     public override string PortraitPath => CardModel.MissingPortraitPath;
     public override string BetaPortraitPath => CardModel.MissingPortraitPath;
     public override Material? CustomFrameMaterial => SakuraCardFrameVisuals.CustomFrameMaterial(this);
-    protected override IEnumerable<string> ExtraRunAssetPaths => SakuraCardFrameVisuals.RunAssetPaths(this);
+    protected override IEnumerable<string> ExtraRunAssetPaths =>
+        SakuraCardFrameVisuals.RunAssetPaths(this).Concat(SakuraCardVfxAssets.RunAssetPaths(this));
 
     internal virtual IEnumerable<CardKeyword> ReferencedKeywords => [];
     internal virtual IEnumerable<string> ReferencedStaticHoverTipKeys => [];
