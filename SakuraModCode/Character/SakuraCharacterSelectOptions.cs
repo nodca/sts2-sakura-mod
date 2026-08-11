@@ -17,6 +17,7 @@ internal static class SakuraCharacterSelectOptionsPatch
     internal const string StandardKey = "SAKURAMOD-COMBAT_ART.standard";
     internal const string ChibiKey = "SAKURAMOD-COMBAT_ART.chibi";
     internal const string CardBgmLabelKey = "SAKURAMOD-CARD_BGM.label";
+    internal const string CardVfxLabelKey = "SAKURAMOD-CARD_VFX.label";
     internal const string VoiceOnKey = "SAKURAMOD-ENABLE_SAKURA_VOICE.on";
     internal const string VoiceOffKey = "SAKURAMOD-ENABLE_SAKURA_VOICE.off";
 
@@ -70,6 +71,7 @@ internal static class SakuraCharacterSelectOptionsPatch
         private readonly OptionSegment _chibi;
         private readonly OptionSegment _voiceToggle;
         private readonly OptionSegment _cardBgmToggle;
+        private readonly OptionSegment _cardVfxToggle;
         private readonly Control _confirmButton;
         private readonly StartRunLobby _lobby;
 
@@ -139,11 +141,13 @@ internal static class SakuraCharacterSelectOptionsPatch
             combatArtChoices.AddChild(_standard.Button);
             combatArtChoices.AddChild(_chibi.Button);
 
-            var audioChoices = CreateAudioRow(rows);
-            _voiceToggle = CreateSegment("VoiceToggle", string.Empty, ToggleVoice, width: 170f, fontSize: 17);
-            _cardBgmToggle = CreateSegment("CardBgmToggle", string.Empty, ToggleCardBgm, width: 170f, fontSize: 17);
-            audioChoices.AddChild(_voiceToggle.Button);
-            audioChoices.AddChild(_cardBgmToggle.Button);
+            var presentationChoices = CreatePresentationRow(rows);
+            _voiceToggle = CreateSegment("VoiceToggle", string.Empty, ToggleVoice, fontSize: 16);
+            _cardBgmToggle = CreateSegment("CardBgmToggle", string.Empty, ToggleCardBgm, fontSize: 16);
+            _cardVfxToggle = CreateSegment("CardVfxToggle", string.Empty, ToggleCardVfx, fontSize: 16);
+            presentationChoices.AddChild(_voiceToggle.Button);
+            presentationChoices.AddChild(_cardBgmToggle.Button);
+            presentationChoices.AddChild(_cardVfxToggle.Button);
 
             container.AddChild(_root);
             container.MoveChild(_root, hpGoldSpacer.GetIndex());
@@ -182,6 +186,13 @@ internal static class SakuraCharacterSelectOptionsPatch
             Refresh();
         }
 
+        private void ToggleCardVfx()
+        {
+            SakuraModConfig.EnableCardVfxBinding.Write(
+                !SakuraModConfig.EnableCardVfxBinding.Read());
+            Refresh();
+        }
+
         private void Refresh()
         {
             if (_characterButton is null)
@@ -190,14 +201,17 @@ internal static class SakuraCharacterSelectOptionsPatch
             var useChibi = SakuraCombatArtPreference.GetOrInitializeLocalLobbyPreference(_lobby);
             var voiceEnabled = SakuraModConfig.EnableSakuraVoiceBinding.Read();
             var cardBgmEnabled = SakuraModConfig.EnableCardBgmBinding.Read();
+            var cardVfxEnabled = SakuraModConfig.EnableCardVfxBinding.Read();
             _standard.Selected = !useChibi;
             _chibi.Selected = useChibi;
             UpdateToggle(_voiceToggle, SakuraModConfig.VoiceTitleKey, voiceEnabled);
             UpdateToggle(_cardBgmToggle, CardBgmLabelKey, cardBgmEnabled);
+            UpdateToggle(_cardVfxToggle, CardVfxLabelKey, cardVfxEnabled);
             ApplySegmentStyle(_standard);
             ApplySegmentStyle(_chibi);
             ApplySegmentStyle(_voiceToggle);
             ApplySegmentStyle(_cardBgmToggle);
+            ApplySegmentStyle(_cardVfxToggle);
             RefreshFocusNeighbors(useChibi);
         }
 
@@ -213,14 +227,17 @@ internal static class SakuraCharacterSelectOptionsPatch
             var chibiPath = _chibi.Button.GetPath();
             var voiceTogglePath = _voiceToggle.Button.GetPath();
             var cardBgmTogglePath = _cardBgmToggle.Button.GetPath();
+            var cardVfxTogglePath = _cardVfxToggle.Button.GetPath();
+            var selectedCombatArtPath = selectedCombatArt.GetPath();
 
-            _characterButton.FocusNeighborBottom = selectedCombatArt.GetPath();
-            _confirmButton.FocusNeighborTop = cardBgmTogglePath;
+            _characterButton.FocusNeighborBottom = selectedCombatArtPath;
+            _confirmButton.FocusNeighborTop = cardVfxTogglePath;
 
             SetFocusNeighbors(_standard.Button, chibiPath, chibiPath, characterPath, voiceTogglePath);
-            SetFocusNeighbors(_chibi.Button, standardPath, standardPath, characterPath, cardBgmTogglePath);
-            SetFocusNeighbors(_voiceToggle.Button, cardBgmTogglePath, cardBgmTogglePath, standardPath, confirmPath);
-            SetFocusNeighbors(_cardBgmToggle.Button, voiceTogglePath, voiceTogglePath, chibiPath, confirmPath);
+            SetFocusNeighbors(_chibi.Button, standardPath, standardPath, characterPath, cardVfxTogglePath);
+            SetFocusNeighbors(_voiceToggle.Button, cardVfxTogglePath, cardBgmTogglePath, standardPath, confirmPath);
+            SetFocusNeighbors(_cardBgmToggle.Button, voiceTogglePath, cardVfxTogglePath, selectedCombatArtPath, confirmPath);
+            SetFocusNeighbors(_cardVfxToggle.Button, cardBgmTogglePath, voiceTogglePath, chibiPath, confirmPath);
         }
 
         private void RestoreFocusNeighbors()
@@ -266,15 +283,15 @@ internal static class SakuraCharacterSelectOptionsPatch
             return choices;
         }
 
-        private static HBoxContainer CreateAudioRow(VBoxContainer rows)
+        private static HBoxContainer CreatePresentationRow(VBoxContainer rows)
         {
             var row = new HBoxContainer
             {
-                Name = "AudioChoices",
+                Name = "PresentationChoices",
                 CustomMinimumSize = new Vector2(0f, 38f),
                 MouseFilter = Control.MouseFilterEnum.Pass
             };
-            row.AddThemeConstantOverride("separation", 6);
+            row.AddThemeConstantOverride("separation", 5);
             rows.AddChild(row);
             return row;
         }
@@ -328,7 +345,10 @@ internal static class SakuraCharacterSelectOptionsPatch
         private static void UpdateToggle(OptionSegment segment, string labelKey, bool enabled)
         {
             segment.Selected = enabled;
-            segment.Label.Text = $"{Localized(labelKey)}: {Localized(enabled ? VoiceOnKey : VoiceOffKey)}";
+            var label = Localized(labelKey);
+            var state = Localized(enabled ? VoiceOnKey : VoiceOffKey);
+            segment.Label.Text = label;
+            segment.Button.TooltipText = $"{label}: {state}";
         }
 
         private static void SetFocusNeighbors(

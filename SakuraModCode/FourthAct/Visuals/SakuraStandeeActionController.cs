@@ -275,6 +275,13 @@ internal sealed partial class SakuraStandeeActionController : Node
         }
     }
 
+    internal void ApplySizeEffectState(SakuraStandeeSizeEffect effect)
+    {
+        ActivateSizeEffect(effect);
+        if (TryBegin(SakuraStandeePlaybackPriority.Action, out var generation))
+            FinishClip(generation);
+    }
+
     internal void PlayHurt()
     {
         if (_playback.CanPlayNonDeath)

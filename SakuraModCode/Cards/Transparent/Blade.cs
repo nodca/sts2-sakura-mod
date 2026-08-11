@@ -37,20 +37,24 @@ public class Blade() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
         // The hit count is what makes the twin blades cross two or four times; they are
         // packed into a fixed envelope, so four crosses faster rather than for longer.
         var hits = BladeRules.HitCount(this);
-        var bladeVfx = SakuraSwordBladeVfx.TryCreate([target], SwordMode.Dual, hits);
-        try
-        {
-            if (bladeVfx is not null)
-                await bladeVfx.PlayPrelude(this, Owner.Creature);
-            // Before the attack: the numbers belong on the beat the cut opens, which
-            // this card lands two stepped frames after the blades have passed.
-            bladeVfx?.Impact(target);
-            await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage, hitCount: hits);
-        }
-        finally
-        {
-            bladeVfx?.FadeAndDispose();
-        }
+        await SakuraSwordBladeVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            [target],
+            SwordMode.Dual,
+            async cues =>
+            {
+                // Before the attack: the numbers belong on the beat the cut opens,
+                // which this card lands two stepped frames after the blades pass.
+                cues.Impact(target);
+                await SakuraActions.Attack(
+                    choiceContext,
+                    this,
+                    target,
+                    DynamicVars.CalculatedDamage,
+                    hitCount: hits);
+            },
+            crossings: hits);
     }
 
     protected override void OnUpgrade()

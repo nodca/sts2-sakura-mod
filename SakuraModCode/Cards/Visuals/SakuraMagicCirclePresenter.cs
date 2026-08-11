@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Helpers;
@@ -42,9 +43,6 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
 
     private static readonly Vector4 InitialLayerSpeeds = new(1.20f, -0.80f, 0f, 0.32f);
     private static readonly Vector4 SettleLayerSpeeds = new(0.30f, -0.20f, 0f, 0.08f);
-    private static Shader? _wandPreludeShader;
-    private static Texture2D? _magicCircleInk;
-    private static Texture2D? _magicCircleKnockout;
     private static bool _showFailureLogged;
 
     private readonly NCombatRoom _room;
@@ -69,35 +67,16 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
         Name = NodeName;
     }
 
-    internal static void PreloadResources()
-    {
-        if (!TestMode.IsOn)
-            _ = LoadResources();
-    }
-
-    internal static (Shader Shader, Texture2D Ink, Texture2D Knockout) LoadResources()
-    {
-        _wandPreludeShader ??= ResourceLoader.Load<Shader>(
-            WandPreludeShaderPath,
-            null,
-            ResourceLoader.CacheMode.Reuse)
-            ?? throw new InvalidOperationException($"Could not load {WandPreludeShaderPath}.");
-        _magicCircleInk ??= ResourceLoader.Load<Texture2D>(
-            MagicCircleInkPath,
-            null,
-            ResourceLoader.CacheMode.Reuse)
-            ?? throw new InvalidOperationException($"Could not load {MagicCircleInkPath}.");
-        _magicCircleKnockout ??= ResourceLoader.Load<Texture2D>(
-            MagicCircleKnockoutPath,
-            null,
-            ResourceLoader.CacheMode.Reuse)
-            ?? throw new InvalidOperationException($"Could not load {MagicCircleKnockoutPath}.");
-        return (_wandPreludeShader, _magicCircleInk, _magicCircleKnockout);
-    }
+    internal static (Shader Shader, Texture2D Ink, Texture2D Knockout) LoadResources() =>
+        (
+            PreloadManager.Cache.GetAsset<Shader>(WandPreludeShaderPath),
+            PreloadManager.Cache.GetAsset<Texture2D>(MagicCircleInkPath),
+            PreloadManager.Cache.GetAsset<Texture2D>(MagicCircleKnockoutPath)
+        );
 
     internal static bool TryShowOrRefresh(Creature? caster, SourceEraClass era)
     {
-        if (TestMode.IsOn || caster is null)
+        if (!SakuraModConfig.IsCardVfxEnabled() || TestMode.IsOn || caster is null)
             return false;
 
         try

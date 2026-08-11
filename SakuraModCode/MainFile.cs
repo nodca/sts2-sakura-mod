@@ -42,6 +42,5 @@ public partial class MainFile : Node
         SakuraRunHooks.Register();
         ClearCardLayout.PreloadVisualResources();
         AquaWaterSphereVfx.PreloadResources();
-        CelVfxSession.PreloadResources();
     }
 }

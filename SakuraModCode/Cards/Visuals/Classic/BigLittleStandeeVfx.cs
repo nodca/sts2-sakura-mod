@@ -47,6 +47,13 @@ internal sealed class BigLittleStandeeVfx : CelVfxSession
             await resolveEffect();
         }
 
+        if (!SakuraModConfig.IsCardVfxEnabled())
+        {
+            ApplySizeEffectState(caster, effect);
+            await ResolveOnce();
+            return;
+        }
+
         var session = TryCreate();
         if (session is null)
         {
@@ -81,6 +88,18 @@ internal sealed class BigLittleStandeeVfx : CelVfxSession
                 session.Dispose();
             }
         }
+    }
+
+    private static void ApplySizeEffectState(Creature caster, SakuraStandeeSizeEffect effect)
+    {
+        if (NCombatRoom.Instance is not { } room
+            || room.GetCreatureNode(caster) is not { } casterNode
+            || SakuraStandeeActionController.TryGet(casterNode) is not { } controller)
+        {
+            return;
+        }
+
+        controller.ApplySizeEffectState(effect);
     }
 
     private static BigLittleStandeeVfx? TryCreate()

@@ -46,7 +46,9 @@ public static class SakuraCardPlayVfx
         root = null!;
         room = null!;
 
-        if (TestMode.IsOn || NCombatRoom.Instance is not { } currentRoom)
+        if (!SakuraModConfig.IsCardVfxEnabled()
+            || TestMode.IsOn
+            || NCombatRoom.Instance is not { } currentRoom)
             return false;
 
         var container = currentRoom.CombatVfxContainer;

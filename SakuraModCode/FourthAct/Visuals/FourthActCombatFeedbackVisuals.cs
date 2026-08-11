@@ -248,26 +248,26 @@ internal static class FourthActCombatFeedbackVisuals
                         veilAmount,
                         dark.VeilBreakSidesRemaining))
             {
-            case DarkVeilVisualMode.Membrane:
-                EnsureDarkVeil(veilAmount);
-                if (_veilRemnants is not null)
-                {
-                    PlaySeal();
+                case DarkVeilVisualMode.Membrane:
+                    EnsureDarkVeil(veilAmount);
+                    if (_veilRemnants is not null)
+                    {
+                        PlaySeal();
+                        FreeNode(ref _veilRemnants);
+                    }
+                    break;
+                case DarkVeilVisualMode.Remnants:
+                    FreeNode(ref _darkVeil);
+                    EnsureVeilRemnants(dark.VeilBreakSidesRemaining);
+                    break;
+                case DarkVeilVisualMode.None:
+                    FreeNode(ref _darkVeil);
                     FreeNode(ref _veilRemnants);
-                }
-                break;
-            case DarkVeilVisualMode.Remnants:
-                FreeNode(ref _darkVeil);
-                EnsureVeilRemnants(dark.VeilBreakSidesRemaining);
-                break;
-            case DarkVeilVisualMode.None:
-                FreeNode(ref _darkVeil);
-                FreeNode(ref _veilRemnants);
-                break;
-            case DarkVeilVisualMode.RetainCurrent:
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
+                    break;
+                case DarkVeilVisualMode.RetainCurrent:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
             RefreshEternalNight(animateNight);
         }

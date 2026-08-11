@@ -218,6 +218,36 @@ internal sealed class SakuraSwordBladeVfx : CelVfxSession
     /// </summary>
     protected override float MaximumLifetime => 9.0f;
 
+    internal static Task PlayOrResolveAsync(
+        CardModel card,
+        Creature? caster,
+        IReadOnlyList<Creature> targets,
+        SwordMode mode,
+        Func<Cues, Task> resolveGameplay,
+        int crossings = 1)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+        ArgumentNullException.ThrowIfNull(targets);
+        ArgumentNullException.ThrowIfNull(resolveGameplay);
+
+        return CelVfxSession.PlayOrResolveAsync(
+            "Sword blade",
+            () => TryCreate(targets, mode, crossings),
+            session => session.PlayPrelude(card, caster),
+            scope => resolveGameplay(new Cues(scope)),
+            session => session.FadeAndDispose(),
+            session => session.Dispose());
+    }
+
+    internal sealed class Cues(CueScope<SakuraSwordBladeVfx> scope)
+    {
+        internal void Impact(Creature target)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+            scope.Invoke("impact", session => session.Impact(target));
+        }
+    }
+
     /// <summary>
     /// Prepares the effect, or returns null and leaves the gameplay path untouched.
     /// </summary>
@@ -228,7 +258,7 @@ internal sealed class SakuraSwordBladeVfx : CelVfxSession
     /// count; ignored for <see cref="SwordMode.Single"/>, which is one stroke by
     /// definition.
     /// </param>
-    internal static SakuraSwordBladeVfx? TryCreate(
+    private static SakuraSwordBladeVfx? TryCreate(
         IReadOnlyList<Creature> targets,
         SwordMode mode,
         int crossings = 1)
@@ -279,7 +309,7 @@ internal sealed class SakuraSwordBladeVfx : CelVfxSession
     /// resolves, so the edge must already have passed by the time it runs — otherwise
     /// the damage number would land on the stroke instead of on the wound.
     /// </remarks>
-    internal async Task<bool> PlayPrelude(CardModel card, Creature? caster)
+    private async Task<bool> PlayPrelude(CardModel card, Creature? caster)
     {
         ArgumentNullException.ThrowIfNull(card);
 
@@ -316,7 +346,7 @@ internal sealed class SakuraSwordBladeVfx : CelVfxSession
     /// inside the same cut. That extra damage reads as the cut deepening during the
     /// fade, which is what the beat table budgets for it.
     /// </remarks>
-    internal void Impact(Creature target)
+    private void Impact(Creature target)
     {
         ArgumentNullException.ThrowIfNull(target);
         if (!IsActive() || !_blades.TryGetValue(target, out var blade) || blade.HasCut)
@@ -334,7 +364,7 @@ internal sealed class SakuraSwordBladeVfx : CelVfxSession
     /// base <c>Dispose</c> it ends in is idempotent and also covers combat end, tree
     /// exit, exceptions, and the lifetime cap.
     /// </summary>
-    internal void FadeAndDispose()
+    private void FadeAndDispose()
     {
         if (_faded || !IsActive())
         {

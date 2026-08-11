@@ -122,7 +122,30 @@ internal sealed class SakuraShieldPlateVfx : CelVfxSession
     /// </summary>
     protected override float MaximumLifetime => 6.0f;
 
-    internal static SakuraShieldPlateVfx? TryCreate(Creature caster)
+    internal static Task PlayOrResolveAsync(
+        CardModel card,
+        Creature caster,
+        Func<Cues, Task> resolveGameplay)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+        ArgumentNullException.ThrowIfNull(caster);
+        ArgumentNullException.ThrowIfNull(resolveGameplay);
+
+        return CelVfxSession.PlayOrResolveAsync(
+            "Shield plate",
+            () => TryCreate(caster),
+            session => session.PlayPrelude(card, caster),
+            scope => resolveGameplay(new Cues(scope)),
+            session => session.FadeAndDispose(),
+            session => session.Dispose());
+    }
+
+    internal sealed class Cues(CueScope<SakuraShieldPlateVfx> scope)
+    {
+        internal void Impact() => scope.Invoke("impact", static session => session.Impact());
+    }
+
+    private static SakuraShieldPlateVfx? TryCreate(Creature caster)
     {
         ArgumentNullException.ThrowIfNull(caster);
         if (!TryPrepare("Shield plate", LoadScene, out var room, out _, out var scene))
@@ -165,7 +188,7 @@ internal sealed class SakuraShieldPlateVfx : CelVfxSession
     }
 
     /// <summary>Shared wand tap, magic circle, and speed lines, then the plate forms.</summary>
-    internal async Task<bool> PlayPrelude(CardModel card, Creature? caster)
+    private async Task<bool> PlayPrelude(CardModel card, Creature? caster)
     {
         ArgumentNullException.ThrowIfNull(card);
         ApplyFacePattern(card);
@@ -193,7 +216,7 @@ internal sealed class SakuraShieldPlateVfx : CelVfxSession
     /// The plate snaps to a stop. That stop is the impulse the ring decays from, and
     /// the hold is the shared signature element the beat is built on.
     /// </summary>
-    internal void Impact()
+    private void Impact()
     {
         if (!IsActive())
             return;
@@ -215,7 +238,7 @@ internal sealed class SakuraShieldPlateVfx : CelVfxSession
     /// Fades the plate out, then releases. The base <c>Dispose</c> it ends in is
     /// idempotent and also covers combat end, tree exit, exceptions, and the cap.
     /// </summary>
-    internal void FadeAndDispose()
+    private void FadeAndDispose()
     {
         if (_faded || !IsActive())
         {

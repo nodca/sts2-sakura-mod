@@ -39,33 +39,26 @@ public class Hail() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.
         // hit loop walks, and ToList() is an immediate copy taken before any damage
         // resolves, so hoisting it cannot change which enemies are struck.
         var targets = CombatState!.HittableEnemies.ToList();
-        var iceVfx = HailIceShardVfx.TryCreate(targets, Owner.Creature);
-        try
+        await HailIceShardVfx.PlayOrResolveAsync(this, Owner.Creature, targets, async cues =>
         {
-            if (iceVfx is not null)
-                await iceVfx.PlayPrelude(this, Owner.Creature);
             foreach (var target in targets)
             {
                 for (var i = 0; i < BaseHits && target.IsAlive; i++)
-                    await Hit(choiceContext, attack, target, iceVfx);
+                    await Hit(choiceContext, attack, target, cues);
 
                 if (target.IsAlive)
                     await PowerCmd.Apply<SakuraFrostbitePower>(choiceContext, target, frostbite, Owner.Creature, this, false);
             }
-        }
-        finally
-        {
-            iceVfx?.FadeAndDispose();
-        }
+        });
     }
 
     private async Task Hit(
         PlayerChoiceContext choiceContext,
         AttackContext attack,
         Creature target,
-        HailIceShardVfx? iceVfx)
+        HailIceShardVfx.Cues cues)
     {
-        iceVfx?.Impact(target);
+        cues.Impact(target);
         attack.AddHit(await CreatureCmd.Damage(
             choiceContext,
             target,
@@ -77,4 +70,3 @@ public class Hail() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(1);
 }
-

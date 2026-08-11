@@ -39,26 +39,18 @@ public class ClowShield() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Ba
 
     private int CurrentBlock() => SakuraSourceCardValues.EffectiveValue(this, DynamicVars.Block);
 
-    // The session lives here rather than in PlayActivatedCard because this is the
-    // common prefix of both paths, so the extra effect gets the plate without the
-    // activated path's action order changing. The Metallicize that follows reads as
-    // the same forming plate settling, not as a second shield.
+    // The family orchestration lives here because this is the common prefix of both
+    // paths. The activated effect gets the same plate without changing action order;
+    // the Metallicize that follows reads as that plate settling, not a second shield.
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var shieldVfx = SakuraShieldPlateVfx.TryCreate(Owner.Creature);
-        try
+        await SakuraShieldPlateVfx.PlayOrResolveAsync(this, Owner.Creature, async cues =>
         {
-            if (shieldVfx is not null)
-                await shieldVfx.PlayPrelude(this, Owner.Creature);
             // Before the block: the number belongs on the beat the plate snaps to a
             // stop, matching the other cards in this family.
-            shieldVfx?.Impact();
+            cues.Impact();
             await GainBlock(play, CurrentBlock());
-        }
-        finally
-        {
-            shieldVfx?.FadeAndDispose();
-        }
+        });
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -84,18 +76,11 @@ public class SakuraShield() : SakuraFormCard(1, CardType.Skill, TargetType.None)
     // "shared" needs no branch here.
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var shieldVfx = SakuraShieldPlateVfx.TryCreate(Owner.Creature);
-        try
+        await SakuraShieldPlateVfx.PlayOrResolveAsync(this, Owner.Creature, async cues =>
         {
-            if (shieldVfx is not null)
-                await shieldVfx.PlayPrelude(this, Owner.Creature);
-            shieldVfx?.Impact();
+            cues.Impact();
             await GainBlock(play, ReleasedBlock());
             await GainBlock(play, CurrentHpBlock(Owner.Creature.CurrentHp, ReleasedMagic()));
-        }
-        finally
-        {
-            shieldVfx?.FadeAndDispose();
-        }
+        });
     }
 }

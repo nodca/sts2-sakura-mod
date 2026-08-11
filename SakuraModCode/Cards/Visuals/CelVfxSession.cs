@@ -91,7 +91,195 @@ internal abstract class CelVfxSession : IDisposable
         && SakuraCardCatalog.TryGetMetadata(card, out var metadata)
         && metadata.Era.HasValue;
 
-    internal static void PreloadResources() => SakuraMagicCirclePresenter.PreloadResources();
+    /// <summary>
+    /// Runs one presentation session around authoritative gameplay. Presentation
+    /// failures make the cue scope inert; they never suppress or repeat gameplay.
+    /// </summary>
+    internal static Task PlayOrResolveAsync<TSession>(
+        string label,
+        Func<TSession?> tryCreate,
+        Func<TSession, Task<bool>> playPrelude,
+        Func<CueScope<TSession>, Task> resolveGameplay,
+        Action<TSession> beginOutro,
+        Action<TSession> dispose,
+        Action<string, Exception>? reportFailure = null)
+        where TSession : class
+        => PlayOrResolveAsync(
+            SakuraModConfig.IsCardVfxEnabled(),
+            label,
+            tryCreate,
+            playPrelude,
+            resolveGameplay,
+            beginOutro,
+            dispose,
+            reportFailure);
+
+    internal static async Task PlayOrResolveAsync<TSession>(
+        bool presentationEnabled,
+        string label,
+        Func<TSession?> tryCreate,
+        Func<TSession, Task<bool>> playPrelude,
+        Func<CueScope<TSession>, Task> resolveGameplay,
+        Action<TSession> beginOutro,
+        Action<TSession> dispose,
+        Action<string, Exception>? reportFailure = null)
+        where TSession : class
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(label);
+        ArgumentNullException.ThrowIfNull(tryCreate);
+        ArgumentNullException.ThrowIfNull(playPrelude);
+        ArgumentNullException.ThrowIfNull(resolveGameplay);
+        ArgumentNullException.ThrowIfNull(beginOutro);
+        ArgumentNullException.ThrowIfNull(dispose);
+
+        reportFailure ??= (stage, exception) =>
+            MainFile.Logger.Error($"Cel VFX {label} {stage} failed: {exception}");
+
+        TSession? session = null;
+        try
+        {
+            if (presentationEnabled)
+                session = tryCreate();
+        }
+        catch (Exception exception)
+        {
+            ReportSafely(reportFailure, "create", exception);
+        }
+
+        var cues = new CueScope<TSession>(session, playPrelude, beginOutro, dispose, reportFailure);
+        await cues.PrepareAsync();
+
+        try
+        {
+            await resolveGameplay(cues);
+        }
+        catch
+        {
+            // Cleanup is presentation work. It must not replace an authoritative
+            // gameplay exception, even if cleanup itself fails.
+            cues.Abort();
+            throw;
+        }
+
+        cues.Finish();
+    }
+
+    private static void ReportSafely(
+        Action<string, Exception> reportFailure,
+        string stage,
+        Exception exception)
+    {
+        try
+        {
+            reportFailure(stage, exception);
+        }
+        catch
+        {
+            // Diagnostics are best-effort and may not alter combat resolution.
+        }
+    }
+
+    internal sealed class CueScope<TSession>
+        where TSession : class
+    {
+        private readonly Func<TSession, Task<bool>> _playPrelude;
+        private readonly Action<TSession> _beginOutro;
+        private readonly Action<TSession> _dispose;
+        private readonly Action<string, Exception> _reportFailure;
+        private TSession? _session;
+
+        internal CueScope(
+            TSession? session,
+            Func<TSession, Task<bool>> playPrelude,
+            Action<TSession> beginOutro,
+            Action<TSession> dispose,
+            Action<string, Exception> reportFailure)
+        {
+            _session = session;
+            _playPrelude = playPrelude;
+            _beginOutro = beginOutro;
+            _dispose = dispose;
+            _reportFailure = reportFailure;
+        }
+
+        internal async Task PrepareAsync()
+        {
+            if (_session is not { } session)
+                return;
+
+            try
+            {
+                if (await _playPrelude(session))
+                    return;
+            }
+            catch (Exception exception)
+            {
+                ReportSafely(_reportFailure, "prelude", exception);
+            }
+
+            _session = null;
+            DisposeSafely(session);
+        }
+
+        internal void Invoke(string cueName, Action<TSession> cue)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(cueName);
+            ArgumentNullException.ThrowIfNull(cue);
+            if (_session is not { } session)
+                return;
+
+            try
+            {
+                cue(session);
+            }
+            catch (Exception exception)
+            {
+                // A failed cue invalidates this presentation. Later cues become
+                // no-ops, while the gameplay callback continues normally.
+                _session = null;
+                ReportSafely(_reportFailure, cueName, exception);
+                DisposeSafely(session);
+            }
+        }
+
+        internal void Finish()
+        {
+            if (_session is not { } session)
+                return;
+
+            _session = null;
+            try
+            {
+                _beginOutro(session);
+            }
+            catch (Exception exception)
+            {
+                ReportSafely(_reportFailure, "outro", exception);
+                DisposeSafely(session);
+            }
+        }
+
+        internal void Abort()
+        {
+            if (_session is not { } session)
+                return;
+
+            _session = null;
+            DisposeSafely(session);
+        }
+
+        private void DisposeSafely(TSession session)
+        {
+            try
+            {
+                _dispose(session);
+            }
+            catch (Exception exception)
+            {
+                ReportSafely(_reportFailure, "cleanup", exception);
+            }
+        }
+    }
 
     /// <summary>
     /// The two magic-circle masks, from the preload if it ran and from disk if it

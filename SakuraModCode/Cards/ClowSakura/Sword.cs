@@ -34,27 +34,24 @@ public class ClowSword() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ba
 
     private int CurrentDamage() => SakuraSourceCardValues.EffectiveValue(this, DynamicVars.Damage);
 
-    // The session lives here rather than in PlayActivatedCard because this is the
-    // common prefix of both paths, so the extra effect gets the swing without the
-    // activated path's action order changing. Its unblockable follow-up lands during
-    // the fade and reads as the same cut deepening, not as a second stroke.
+    // The family orchestration lives here because this is the common prefix of both
+    // paths. The activated effect gets the same swing without changing action order;
+    // its unblockable follow-up lands during the fade as the same cut deepening.
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        var swordVfx = SakuraSwordBladeVfx.TryCreate([target], SwordMode.Single);
-        try
-        {
-            if (swordVfx is not null)
-                await swordVfx.PlayPrelude(this, Owner.Creature);
-            // Before the damage: the number belongs on the beat the cut opens, which
-            // this card lands two stepped frames after the blade has passed.
-            swordVfx?.Impact(target);
-            await DealDamage(choiceContext, target, CurrentDamage());
-        }
-        finally
-        {
-            swordVfx?.FadeAndDispose();
-        }
+        await SakuraSwordBladeVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            [target],
+            SwordMode.Single,
+            async cues =>
+            {
+                // Before the damage: the number belongs on the beat the cut opens,
+                // which this card lands two stepped frames after the blade passes.
+                cues.Impact(target);
+                await DealDamage(choiceContext, target, CurrentDamage());
+            });
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -83,22 +80,24 @@ public class SakuraSword() : SakuraFormCard(1, CardType.Attack, TargetType.AnyEn
             // Shares the Clow version's presentation verbatim: same session, same
             // parameters. The only difference is how many targets gameplay hands over,
             // which is a gameplay difference, so "shared" needs no branch here.
-            var swordVfx = SakuraSwordBladeVfx.TryCreate(targets, SwordMode.Single);
-            try
-            {
-                if (swordVfx is not null)
-                    await swordVfx.PlayPrelude(this, Owner.Creature);
-                foreach (var target in targets)
+            await SakuraSwordBladeVfx.PlayOrResolveAsync(
+                this,
+                Owner.Creature,
+                targets,
+                SwordMode.Single,
+                async cues =>
                 {
-                    swordVfx?.Impact(target);
-                    await DealDamage(choiceContext, target, ReleasedDamage());
-                    await DealDamage(choiceContext, target, target.CurrentHp * ReleasedMagic() / 100, ValueProp.Unblockable);
-                }
-            }
-            finally
-            {
-                swordVfx?.FadeAndDispose();
-            }
+                    foreach (var target in targets)
+                    {
+                        cues.Impact(target);
+                        await DealDamage(choiceContext, target, ReleasedDamage());
+                        await DealDamage(
+                            choiceContext,
+                            target,
+                            target.CurrentHp * ReleasedMagic() / 100,
+                            ValueProp.Unblockable);
+                    }
+                });
         });
     }
 }

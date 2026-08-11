@@ -5,33 +5,38 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_gale"]
 resource_local_to_scene = true
 shader = ExtResource("1_gale")
-shader_parameter/region_size = Vector2(300, 160)
+shader_parameter/region_size = Vector2(240, 300)
 shader_parameter/elapsed = 0.0
 shader_parameter/held = 0.0
 shader_parameter/held_at = 0.0
 shader_parameter/seed = 0.0
-shader_parameter/fray = 0.0
-shader_parameter/sever = 0.0
+shader_parameter/formation = 0.38
+shader_parameter/impact = 0.0
+shader_parameter/dissolve = 0.0
 shader_parameter/opacity = 1.0
 
 [node name="GaleWindBladeVfx" type="Node2D"]
 
+[node name="Wake" type="Line2D" parent="."]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0)
+width = 12.0
+default_color = Color(0.82, 0.98, 1, 1)
+antialiased = true
+
 [node name="BladeCarrier" type="Node2D" parent="."]
 unique_name_in_owner = true
 
-[node name="BladeBody" type="ColorRect" parent="BladeCarrier"]
+[node name="CrescentBody" type="ColorRect" parent="BladeCarrier"]
 unique_name_in_owner = true
 material = SubResource("ShaderMaterial_gale")
-offset_left = -150.0
-offset_top = -80.0
-offset_right = 150.0
-offset_bottom = 80.0
-pivot_offset = Vector2(150, 80)
+offset_left = -120.0
+offset_top = -150.0
+offset_right = 120.0
+offset_bottom = 150.0
+pivot_offset = Vector2(120, 150)
 mouse_filter = 2
 color = Color(1, 1, 1, 1)
-
-[node name="Debris" type="Node2D" parent="."]
-unique_name_in_owner = true
 
 [node name="InputPassThrough" type="Control" parent="."]
 layout_mode = 0

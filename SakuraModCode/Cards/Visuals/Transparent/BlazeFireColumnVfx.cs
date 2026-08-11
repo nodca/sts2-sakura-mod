@@ -116,7 +116,31 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
     /// </summary>
     protected override float MaximumLifetime => 6.0f;
 
-    internal static BlazeFireColumnVfx? TryCreate(Creature target)
+    internal static Task PlayOrResolveAsync(
+        CardModel card,
+        Creature? caster,
+        Creature target,
+        Func<Cues, Task> resolveGameplay)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(resolveGameplay);
+
+        return CelVfxSession.PlayOrResolveAsync(
+            "Blaze fire",
+            () => TryCreate(target),
+            session => session.PlayPrelude(card, caster),
+            scope => resolveGameplay(new Cues(scope)),
+            session => session.FadeAndDispose(),
+            session => session.Dispose());
+    }
+
+    internal sealed class Cues(CueScope<BlazeFireColumnVfx> scope)
+    {
+        internal void Impact() => scope.Invoke("impact", static session => session.Impact());
+    }
+
+    private static BlazeFireColumnVfx? TryCreate(Creature target)
     {
         ArgumentNullException.ThrowIfNull(target);
         if (!TryPrepare("Blaze fire", LoadScene, out var room, out _, out var scene))
@@ -156,7 +180,7 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
     /// the scene tree is a new phase, and a Tween that has already started rejects
     /// further tweeners — appending would throw inside the awaited card action.
     /// </remarks>
-    internal async Task<bool> PlayPrelude(CardModel card, Creature? caster)
+    private async Task<bool> PlayPrelude(CardModel card, Creature? caster)
     {
         if (!await PlayCelPrelude(card, caster))
             return false;
@@ -194,7 +218,7 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
     /// only ever equal the target this session was built around, and taking it would
     /// invite a "what if they disagree" branch that has no answer.
     /// </remarks>
-    internal void Impact()
+    private void Impact()
     {
         if (_impacted || !IsActive())
             return;
@@ -245,7 +269,7 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
     /// contract; the base <c>Dispose</c> it ends in is idempotent and also covers
     /// combat end, tree exit, exceptions, and the lifetime cap.
     /// </summary>
-    internal void FadeAndDispose()
+    private void FadeAndDispose()
     {
         if (_faded || !IsActive())
         {

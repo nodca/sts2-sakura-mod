@@ -27,22 +27,15 @@ public class Gale() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var target = RequiredTarget(play);
-        var windVfx = GaleWindBladeVfx.TryCreate(Owner.Creature, target);
-        try
+        await GaleWindBladeVfx.PlayOrResolveAsync(this, Owner.Creature, target, async cues =>
         {
-            if (windVfx is not null)
-                await windVfx.PlayPrelude(this, Owner.Creature);
-            windVfx?.Impact();
+            cues.Impact();
             await SakuraActions.AttackCommand(this, target, DynamicVars.Damage.IntValue, DynamicVars.Damage.Props)
                 .Execute(choiceContext);
 
             if (activation.IsActive)
                 await ApplyExtraEffect(choiceContext);
-        }
-        finally
-        {
-            windVfx?.FadeAndDispose();
-        }
+        });
     }
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)

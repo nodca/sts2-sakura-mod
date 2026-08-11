@@ -100,7 +100,35 @@ internal sealed class HailIceShardVfx : CelVfxSession
     /// </summary>
     protected override float MaximumLifetime => 9.0f;
 
-    internal static HailIceShardVfx? TryCreate(IReadOnlyList<Creature> targets, Creature? caster = null)
+    internal static Task PlayOrResolveAsync(
+        CardModel card,
+        Creature? caster,
+        IReadOnlyList<Creature> targets,
+        Func<Cues, Task> resolveGameplay)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+        ArgumentNullException.ThrowIfNull(targets);
+        ArgumentNullException.ThrowIfNull(resolveGameplay);
+
+        return CelVfxSession.PlayOrResolveAsync(
+            "Hail ice",
+            () => TryCreate(targets, caster),
+            session => session.PlayPrelude(card, caster),
+            scope => resolveGameplay(new Cues(scope)),
+            session => session.FadeAndDispose(),
+            session => session.Dispose());
+    }
+
+    internal sealed class Cues(CueScope<HailIceShardVfx> scope)
+    {
+        internal void Impact(Creature target)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+            scope.Invoke("impact", session => session.Impact(target));
+        }
+    }
+
+    private static HailIceShardVfx? TryCreate(IReadOnlyList<Creature> targets, Creature? caster = null)
     {
         ArgumentNullException.ThrowIfNull(targets);
         if (targets.Count == 0)
@@ -140,7 +168,7 @@ internal sealed class HailIceShardVfx : CelVfxSession
     }
 
     /// <summary>Shared wand tap, magic circle, and speed lines, then the ice.</summary>
-    internal async Task<bool> PlayPrelude(CardModel card, Creature? caster)
+    private async Task<bool> PlayPrelude(CardModel card, Creature? caster)
     {
         if (!await PlayCelPrelude(card, caster))
             return false;
@@ -175,7 +203,7 @@ internal sealed class HailIceShardVfx : CelVfxSession
     /// Hit counting is the session's own state. Reading the card's hit loop would
     /// put gameplay state behind a presentation decision.
     /// </remarks>
-    internal void Impact(Creature target)
+    private void Impact(Creature target)
     {
         ArgumentNullException.ThrowIfNull(target);
         if (!IsActive() || !_shards.TryGetValue(target, out var shard))
@@ -204,7 +232,7 @@ internal sealed class HailIceShardVfx : CelVfxSession
     /// contract; the base <c>Dispose</c> it ends in is idempotent and also covers
     /// combat end, tree exit, exceptions, and the lifetime cap.
     /// </summary>
-    internal void FadeAndDispose()
+    private void FadeAndDispose()
     {
         if (_faded || !IsActive())
         {
