@@ -40,7 +40,7 @@ public class ClowFight() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ra
         await SakuraMagicCharge.GainMagic(choiceContext, Owner, 1, this);
         var temporaryStrength = ReleasedMagic() + (Owner.Creature.GetPower<SakuraFightPower>()?.Amount ?? 0);
         await ApplyPower<ClassicTemporaryStrengthPower>(choiceContext, Owner.Creature, temporaryStrength);
-        await AddFightCopy(choiceContext);
+        await GenerateFight(choiceContext);
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -55,10 +55,19 @@ public class ClowFight() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ra
         DynamicVars["Magic"].UpgradeValueBy(1);
     }
 
-    private async Task AddFightCopy(PlayerChoiceContext choiceContext)
+    private async Task GenerateFight(PlayerChoiceContext choiceContext)
     {
-        var copy = CreateClone();
-        await CardPileCmd.AddGeneratedCardToCombat(copy, PileType.Hand, Owner, CardPilePosition.Random);
+        var combatState = CombatState
+            ?? throw new InvalidOperationException("Fight generation requires an active combat.");
+        var generatedFight = combatState.CreateCard<ClowFight>(Owner);
+        while (generatedFight.CurrentUpgradeLevel < CurrentUpgradeLevel && generatedFight.IsUpgradable)
+            generatedFight.UpgradeInternal();
+
+        await CardPileCmd.AddGeneratedCardToCombat(
+            generatedFight,
+            PileType.Hand,
+            Owner,
+            CardPilePosition.Random);
     }
 }
 
