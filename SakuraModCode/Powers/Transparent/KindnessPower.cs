@@ -22,6 +22,8 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class KindnessPower : SakuraPowerModel
 {
+    protected override string IconFileName => "kindness.png";
+
     private readonly Queue<bool> _pendingEffects = [];
     private readonly HashSet<CardModel> _zeroCostCards = [];
     private CardModel? _targetCard;
@@ -81,4 +83,3 @@ public class KindnessPower : SakuraPowerModel
         await PowerCmd.Decrement(this);
     }
 }
-

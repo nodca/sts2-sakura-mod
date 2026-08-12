@@ -22,6 +22,8 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class GravitationHoldPower : SakuraPowerModel
 {
+    protected override string IconFileName => "gravitation_hold.png";
+
     private readonly HashSet<CardModel> _excludedSources = [];
     private readonly HashSet<CardModel> _pendingReturns = [];
     private readonly Dictionary<CardModel, int> _returnCounts = [];
@@ -100,4 +102,3 @@ public class GravitationHoldPower : SakuraPowerModel
         return Task.CompletedTask;
     }
 }
-

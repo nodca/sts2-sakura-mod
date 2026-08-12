@@ -22,6 +22,8 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class RepairRegenerationPower : SakuraPowerModel
 {
+    protected override string IconFileName => "repair_regeneration.png";
+
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
@@ -37,7 +39,6 @@ public class RepairRegenerationPower : SakuraPowerModel
         return false;
     }
 }
-
 
 
 

@@ -29,6 +29,7 @@ internal sealed partial class SakuraStandeeIdleController : Node2D
         "CharacterRoot/UpperBodyMotionRoot/BreathRoot/TorsoBackRoot/TorsoBack",
         "CharacterRoot/UpperBodyMotionRoot/BreathRoot/TorsoFrontRoot/TorsoFront",
         "CharacterRoot/UpperBodyMotionRoot/BodyUpperRigid",
+        "CharacterRoot/UpperBodyMotionRoot/WandRoot/RightWandWing",
         "CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot/HeadCoreUnderlay",
         "CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot/BehindHairMesh",
         "CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot/Face",

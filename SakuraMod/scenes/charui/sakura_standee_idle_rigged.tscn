@@ -21,6 +21,7 @@
 [ext_resource type="Texture2D" uid="uid://do6137nnaw3e1" path="res://SakuraMod/images/charui/standee_idle/head_accessories.png" id="20_head_accessories"]
 [ext_resource type="Texture2D" uid="uid://b4v5ran7mjwnk" path="res://SakuraMod/images/charui/standee_idle/body_upper_headless.png" id="21_body_headless"]
 [ext_resource type="Texture2D" uid="uid://d2l2cp8npcahn" path="res://SakuraMod/images/charui/standee_idle/head_core_underlay.png" id="22_head_core_underlay"]
+[ext_resource type="Texture2D" uid="uid://b0i8udq5r88vf" path="res://SakuraMod/images/charui/standee_idle/right_wand_wing.png" id="23_right_wand_wing"]
 
 [sub_resource type="Animation" id="Animation_reset"]
 resource_name = "RESET"
@@ -1446,6 +1447,14 @@ centered = false
 z_index = 3
 position = Vector2(-506.331, -706.758)
 texture = ExtResource("21_body_headless")
+centered = false
+
+[node name="WandRoot" type="Node2D" parent="CharacterRoot/UpperBodyMotionRoot"]
+z_index = 3
+
+[node name="RightWandWing" type="Sprite2D" parent="CharacterRoot/UpperBodyMotionRoot/WandRoot"]
+position = Vector2(-506.331, -706.758)
+texture = ExtResource("23_right_wand_wing")
 centered = false
 
 [node name="HeadMotionRoot" type="Node2D" parent="CharacterRoot/UpperBodyMotionRoot" unique_id=1053647019]

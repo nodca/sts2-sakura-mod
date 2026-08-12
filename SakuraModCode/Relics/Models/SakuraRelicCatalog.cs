@@ -91,6 +91,7 @@ public static class SakuraRelicCatalog
         typeof(ClassicUltimateWandRelic),
         typeof(ClassicDarknessWandRelic),
         typeof(ClassicGemBroochRelic),
+        typeof(ClassicFrogRaincoatRelic),
         ..RewardableTypes
     ];
 

@@ -71,6 +71,29 @@ public static class SakuraStandeeVisuals
                 talkPosition),
             animate: false);
 
+    internal static NCreatureVisuals CreateWithWholeSpriteIdle(
+        string visualPath,
+        string label,
+        float scale,
+        Vector2 visualPosition,
+        Rect2 bounds,
+        Vector2 centerPosition,
+        Vector2 intentPosition,
+        Vector2 orbPosition,
+        Vector2 talkPosition) =>
+        Create(
+            visualPath,
+            label,
+            new StandeeLayout(
+                scale,
+                visualPosition,
+                bounds,
+                centerPosition,
+                intentPosition,
+                orbPosition,
+                talkPosition),
+            animate: true);
+
     internal static NCreatureVisuals CreateWithChibiLayeredIdle(
         string visualPath,
         string label,

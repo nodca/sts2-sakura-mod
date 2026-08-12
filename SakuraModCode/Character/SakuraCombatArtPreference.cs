@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.TestSupport;
 using STS2RitsuLib;
 using STS2RitsuLib.RunData;
+using SakuraMod.SakuraModCode.Relics;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -113,7 +114,8 @@ internal static class SakuraPlayerCombatVisualPatch
         var sakura = (ClassicSakura)player!.Character;
         __result = SakuraCombatVisuals.CreateSelected(
             sakura.CustomVisualsPath,
-            SakuraCombatArtPreference.IsChibi(player));
+            SakuraCombatArtPreference.IsChibi(player),
+            player.GetRelic<ClassicFrogRaincoatRelic>() is not null);
         return false;
     }
 

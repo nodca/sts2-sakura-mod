@@ -64,7 +64,10 @@ public class ClassicSakura : ModCharacterTemplate<ClassicSakuraCardPool, Classic
         Path.Join(MainFile.ResPath, "scenes", "rest_site", "sakura_rest_site_character.tscn");
 
     protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
-        SakuraCombatVisuals.CreateSelected(CustomVisualsPath, useChibi: false);
+        SakuraCombatVisuals.CreateSelected(
+            CustomVisualsPath,
+            useChibi: false,
+            hasFrogRaincoat: false);
 
     protected override ModAnimStateMachine SetupCustomRestSiteAnimationStateMachine(
         Node restSiteRoot,
