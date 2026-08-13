@@ -33,7 +33,7 @@ public class Remind() : TransparentCard(1, CardType.Skill, CardRarity.Rare, Targ
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var choices = SakuraMemoryPile.Get(Owner)?.Cards.ToList() ?? [];
+        var choices = RecallChoices(SakuraMemoryPile.Get(Owner)?.Cards ?? []);
         var recallCount = DynamicVars.Cards.IntValue;
         var cards = (choices.Count <= recallCount
             ? choices.ToList()
@@ -63,6 +63,11 @@ public class Remind() : TransparentCard(1, CardType.Skill, CardRarity.Rare, Targ
             SakuraGeneratedCardLifecycle.RemoveDetachedGeneratedChoices(copies);
         }
     }
+
+    internal static IReadOnlyList<CardModel> RecallChoices(IEnumerable<CardModel> memoryCards) =>
+        memoryCards
+            .Where(SakuraSourceCardRules.CanBeTargetedByClearCardEffects)
+            .ToList();
 
     protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
 }

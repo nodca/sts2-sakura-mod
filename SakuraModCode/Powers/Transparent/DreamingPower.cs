@@ -27,7 +27,7 @@ public class DreamingPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task BeforeHandDraw(
+    public override async Task BeforeHandDrawLate(
         Player player,
         PlayerChoiceContext choiceContext,
         ICombatState combatState)
@@ -37,7 +37,7 @@ public class DreamingPower : SakuraPowerModel
 
         for (var i = 0; i < Amount; i++)
         {
-            var card = await SakuraActions.ChooseAndMoveTopDrawPileCard(player, choiceContext, lookCount: 5);
+            var card = await SakuraActions.ChooseAndMoveDrawPileCardToTop(player, choiceContext);
             if (card is null)
                 return;
 
@@ -46,4 +46,3 @@ public class DreamingPower : SakuraPowerModel
         }
     }
 }
-

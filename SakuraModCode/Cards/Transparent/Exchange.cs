@@ -22,16 +22,14 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Exchange() : TransparentCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Exchange() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
-        [SakuraCardHoverTips.TemporaryTipKey];
+        [SakuraCardHoverTips.TemporaryTipKey, SakuraMemoryPile.PileId];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        await CardPileCmd.Draw(choiceContext, 1, Owner, false);
-
         var cards = await SakuraActions.SelectHandCards(
             this,
             choiceContext,
@@ -41,9 +39,29 @@ public class Exchange() : TransparentCard(0, CardType.Skill, CardRarity.Uncommon
         {
             var first = cards[0];
             var second = cards[1];
-            SakuraActions.TryExchangeEnergyCosts(first, second, restOfCombat: IsUpgraded);
+            var firstWasTemporary = first.IsTemporary();
+            var secondWasTemporary = second.IsTemporary();
+            var costsExchanged = SakuraActions.TryExchangeEnergyCosts(first, second, restOfCombat: false);
             first.ExchangeTemporaryState(second);
+            if (costsExchanged)
+                CardStateExchangeVfx.Play(first, second, firstWasTemporary, secondWasTemporary);
         }
-    }
-}
 
+        if (activation.IsActive)
+            await ExchangeMemoryAndExhaust();
+    }
+
+    private async Task ExchangeMemoryAndExhaust()
+    {
+        var memoryCards = SakuraMemoryPile.Get(Owner)?.Cards.ToList() ?? [];
+        var exhaustedCards = CardPile.Get(PileType.Exhaust, Owner)?.Cards.ToList() ?? [];
+        PileExchangeVfx.PlayMemoryAndExhaust(memoryCards.Count, exhaustedCards.Count);
+
+        foreach (var card in memoryCards)
+            await SakuraActions.MoveExistingCardToPileWithoutVisuals(this, card, PileType.Exhaust, CardPilePosition.Bottom);
+        foreach (var card in exhaustedCards)
+            await SakuraActions.MoveExistingCardToPileWithoutVisuals(this, card, SakuraMemoryPile.PileType, CardPilePosition.Bottom);
+    }
+
+    protected override void OnUpgrade() => RemoveKeywordIfPresent(CardKeyword.Exhaust);
+}

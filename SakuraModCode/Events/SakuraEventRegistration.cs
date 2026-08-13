@@ -1,5 +1,6 @@
 using MegaCrit.Sts2.Core.Models.Acts;
 using SakuraMod.SakuraModCode.Events;
+using SakuraMod.SakuraModCode.Events.Models;
 using STS2RitsuLib.Content;
 
 namespace SakuraMod.SakuraModCode.Events;
@@ -12,5 +13,6 @@ internal static class SakuraEventRegistration
 
         registry.RegisterActEvent<Hive, ClassicXiaoLangsFeelingsEvent>();
         registry.RegisterActEvent<Glory, ClassicTheSealedCardEvent>();
+        registry.RegisterActAncient<Hive, ClassicTomoyoAncientCostumes>();
     }
 }

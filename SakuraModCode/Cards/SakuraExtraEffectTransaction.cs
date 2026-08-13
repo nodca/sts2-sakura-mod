@@ -16,7 +16,8 @@ public readonly record struct SakuraExtraEffectActivation(bool IsActive);
 internal enum SakuraExtraEffectActivationCost
 {
     MagicCharge,
-    LockSakura
+    LockSakura,
+    RedCape
 }
 
 internal readonly record struct SakuraExtraEffectPostPlayPlan(
@@ -30,7 +31,7 @@ internal readonly record struct SakuraExtraEffectPostPlayPlan(
         SakuraExtraEffectActivation activation) =>
         new(
             ApplyExtraElementStates: activation.IsActive,
-            AddSakuraVoid: !activation.IsActive && card is SakuraSourceCard { AddsVoidOnNormalSakuraPlay: true },
+            AddSakuraVoid: SakuraExtraEffectTransaction.ShouldAddSakuraVoid(card, activation.IsActive),
             GainTransparentMagic: false,
             MayGainClassicMagic: false);
 
@@ -60,6 +61,21 @@ internal static class SakuraExtraEffectTransaction
 
     internal static bool Supports(CardModel? card) => card is ISakuraExtraEffectCard;
 
+    internal static bool ShouldAddSakuraVoid(CardModel card, bool extraEffectActive) =>
+        ShouldAddSakuraVoid(
+            extraEffectActive,
+            card is SakuraSourceCard { AddsVoidOnNormalSakuraPlay: true },
+            card.IsMutable
+            && card.Owner.GetRelic<ClassicPinkTransformationCostumeRelic>() is not null);
+
+    internal static bool ShouldAddSakuraVoid(
+        bool extraEffectActive,
+        bool addsVoidOnNormalSakuraPlay,
+        bool hasPinkTransformationCostume) =>
+        !extraEffectActive
+        && addsVoidOnNormalSakuraPlay
+        && !hasPinkTransformationCostume;
+
     internal static bool CanActivate(Player? owner) =>
         CanActivate(
             owner?.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0,
@@ -85,7 +101,9 @@ internal static class SakuraExtraEffectTransaction
         card is { IsMutable: true }
         && Supports(card)
         && (IsActivelyProjected(card)
-            || card.Owner is { } owner && CanActivate(owner));
+            || card.Owner is { } owner
+            && (CanActivate(owner)
+                || owner.GetRelic<ClassicRedCapeRelic>()?.CanActivateFreeExtraEffect(card) == true));
 
     internal static bool IsActivelyProjected(CardModel card) =>
         ActiveProjections.TryGetValue(card, out var projections)
@@ -125,12 +143,17 @@ internal static class SakuraExtraEffectTransaction
             throw new InvalidOperationException("Extra Effect transaction must execute for its own CardPlay.");
 
         var capability = card as ISakuraExtraEffectCard;
-        var activation = new SakuraExtraEffectActivation(capability is not null && CanActivate(card.Owner));
+        var redCapeActivation = capability is not null
+            && card.Owner.GetRelic<ClassicRedCapeRelic>()?.TryActivateFreeExtraEffect(card) == true;
+        var activation = new SakuraExtraEffectActivation(
+            capability is not null && (redCapeActivation || CanActivate(card.Owner)));
         var opportunity = SakuraMagicCharge.CaptureOpportunity(card.Owner);
         var lockSakura = activation.IsActive
             ? card.Owner.Creature.GetPower<ClassicLockSakuraPower>()
             : null;
-        var activationCost = ActivationCost(lockSakura is not null);
+        var activationCost = redCapeActivation
+            ? SakuraExtraEffectActivationCost.RedCape
+            : ActivationCost(lockSakura is not null);
 
         await ExecuteCore(
             card,
@@ -148,6 +171,8 @@ internal static class SakuraExtraEffectTransaction
                         break;
                     case SakuraExtraEffectActivationCost.LockSakura:
                         await PowerCmd.Decrement(lockSakura!);
+                        break;
+                    case SakuraExtraEffectActivationCost.RedCape:
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();

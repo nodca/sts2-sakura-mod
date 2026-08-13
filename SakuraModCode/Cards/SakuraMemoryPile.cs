@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.Relics;
 using STS2RitsuLib.CardPiles;
 using STS2RitsuLib.Content;
 
@@ -71,6 +72,7 @@ internal static class SakuraMemoryPile
             throw new InvalidOperationException($"Failed to move {card.Id.Entry} into its owner's Memory pile.");
 
         card.RemoveTemporaryForExchange();
+        card.Owner.GetRelic<ClassicFrogRaincoatRelic>()?.RecordMemoryEntries(1);
     }
 
     internal static async Task<IReadOnlyList<CardModel>> Consume(

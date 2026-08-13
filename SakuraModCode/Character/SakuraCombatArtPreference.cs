@@ -115,7 +115,9 @@ internal static class SakuraPlayerCombatVisualPatch
         __result = SakuraCombatVisuals.CreateSelected(
             sakura.CustomVisualsPath,
             SakuraCombatArtPreference.IsChibi(player),
-            player.GetRelic<ClassicFrogRaincoatRelic>() is not null);
+            player.GetRelic<ClassicRedCapeRelic>() is not null,
+            player.GetRelic<ClassicFrogRaincoatRelic>() is not null,
+            player.GetRelic<ClassicPinkTransformationCostumeRelic>() is not null);
         return false;
     }
 

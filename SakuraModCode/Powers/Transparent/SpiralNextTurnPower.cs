@@ -39,9 +39,14 @@ public class SpiralNextTurnPower : SakuraPowerModel
         {
             var card = combatState.CreateCard<Spiral>(player);
             card.UpgradeInternal();
-            await SakuraGeneratedCardLifecycle.AddTemporaryGeneratedCardToHand(
+            await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
                 card,
-                freeThisTurn: false,
+                new GeneratedCardOptions
+                {
+                    Pile = PileType.Draw,
+                    Position = CardPilePosition.Top,
+                    AddTemporary = true
+                },
                 choiceContext);
         }
 

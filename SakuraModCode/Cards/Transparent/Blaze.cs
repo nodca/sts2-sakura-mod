@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Commands;
@@ -18,18 +19,22 @@ using STS2RitsuLib.Cards.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Blaze() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy)
+public class Blaze() : TransparentExtraEffectCard(3, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy)
 {
+    internal const int MaxCardsToExhaust = 3;
+
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new CalculationBaseVar(18),
+        new CalculationBaseVar(27),
         new ExtraDamageVar(2),
         new CalculatedDamageVar(ValueProp.Move).WithMultiplier(BlazeRules.ExhaustedCardMultiplier)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
+        await ExhaustSelectedHandCards(choiceContext);
+
         var target = RequiredTarget(play);
         await BlazeFireColumnVfx.PlayOrResolveAsync(this, Owner.Creature, target, async cues =>
         {
@@ -38,9 +43,38 @@ public class Blaze() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
             cues.Impact();
             await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage);
         });
+
+        var exhaustedCards = CardPile.Get(PileType.Exhaust, Owner)?.Cards.ToList() ?? [];
+        await CardPileCmd.RemoveFromCombat(exhaustedCards, skipVisuals: false);
     }
 
-    protected override void OnUpgrade() => DynamicVars.CalculationBase.UpgradeValueBy(6);
+    private async Task ExhaustSelectedHandCards(PlayerChoiceContext choiceContext)
+    {
+        var hand = CardPile.GetCards(Owner, PileType.Hand)
+            .Where(card => card != this)
+            .ToList();
+        var maxSelect = Math.Min(MaxCardsToExhaust, hand.Count);
+        if (maxSelect == 0)
+            return;
+
+        var selected = await CardSelectCmd.FromHand(
+            choiceContext,
+            Owner,
+            new CardSelectorPrefs(CardSelectorPrefs.ExhaustSelectionPrompt, 0, maxSelect)
+            {
+                Cancelable = true
+            },
+            card => hand.Contains(card),
+            this);
+        foreach (var card in selected)
+            await CardCmd.Exhaust(choiceContext, card);
+    }
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars.CalculationBase.UpgradeValueBy(5);
+        DynamicVars.ExtraDamage.UpgradeValueBy(1);
+    }
 }
 
 internal static class BlazeRules

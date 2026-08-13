@@ -67,6 +67,7 @@ public class ClassicSakura : ModCharacterTemplate<ClassicSakuraCardPool, Classic
         SakuraCombatVisuals.CreateSelected(
             CustomVisualsPath,
             useChibi: false,
+            hasRedCape: false,
             hasFrogRaincoat: false);
 
     protected override ModAnimStateMachine SetupCustomRestSiteAnimationStateMachine(

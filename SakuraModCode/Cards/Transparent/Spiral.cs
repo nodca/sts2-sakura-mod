@@ -77,11 +77,7 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
         }
     }
 
-    protected override void OnUpgrade()
-    {
-        DynamicVars.Damage.UpgradeValueBy(1);
-        DynamicVars.Block.UpgradeValueBy(1);
-    }
+    protected override void OnUpgrade() { }
 }
 
 internal static class SpiralRules

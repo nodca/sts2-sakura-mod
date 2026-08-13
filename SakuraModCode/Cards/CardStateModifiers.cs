@@ -21,6 +21,8 @@ public interface ISakuraForgottenImmune;
 public sealed class SynchronizedCardPairModifier : SakuraCardStateCapability
 {
     private static readonly HashSet<SynchronizedPairKey> ResolvingPairs = [];
+    internal static IReadOnlyList<PileType> AutoPlayPileTypes { get; } =
+        [PileType.Hand, PileType.Draw, PileType.Discard];
     private readonly List<CardModel> _pairedCards = [];
 
     public void AddPairedCard(CardModel pairedCard)
@@ -124,8 +126,8 @@ public sealed class SynchronizedCardPairModifier : SakuraCardStateCapability
     }
 
     private static bool IsInSynchronizedAutoPlayPile(CardModel card, Player owner) =>
-        CardPile.Get(PileType.Hand, owner)?.Cards.Contains(card) == true
-        || CardPile.Get(PileType.Discard, owner)?.Cards.Contains(card) == true;
+        AutoPlayPileTypes.Any(pileType =>
+            CardPile.Get(pileType, owner)?.Cards.Contains(card) == true);
 
     private Creature? AutoPlayTarget(CardPlay play, CardModel card)
     {

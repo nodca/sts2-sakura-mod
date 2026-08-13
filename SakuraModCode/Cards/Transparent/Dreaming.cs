@@ -27,5 +27,5 @@ public class Dreaming() : TransparentCard(2, CardType.Power, CardRarity.Rare, Ta
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
         => await PowerCmd.Apply<DreamingPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
 
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+    protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Innate);
 }

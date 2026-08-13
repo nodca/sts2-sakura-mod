@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.TestSupport;
+using STS2RitsuLib.CardPiles.Nodes;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -15,46 +16,91 @@ public static class PileExchangeVfx
     private static readonly Color DiscardToDrawColor = new(1f, 0.78f, 0.56f, 0.78f);
     private static readonly Color PileGlowColor = new(1f, 0.95f, 0.72f, 0.72f);
     private static readonly Color CenterSparkColor = new(1f, 1f, 0.9f, 0.9f);
+    private static readonly Color MemoryColor = new(0.58f, 0.93f, 1f, 0.82f);
+    private static readonly Color ExhaustColor = new(1f, 0.58f, 0.32f, 0.82f);
+    private static readonly Color MemoryExchangeGlowColor = new(1f, 0.78f, 0.9f, 0.78f);
     private static readonly Vector2 GhostCardSize = new(30f, 42f);
 
     public static void Play(int drawCount, int discardCount)
     {
-        if (TestMode.IsOn || drawCount + discardCount == 0 || NCombatRoom.Instance is not { } room || room.Ui is not { } ui)
+        if (TestMode.IsOn || NCombatRoom.Instance is not { } room || room.Ui is not { } ui)
+            return;
+
+        Play(
+            room,
+            CenterOf(ui.DrawPile),
+            CenterOf(ui.DiscardPile),
+            drawCount,
+            discardCount,
+            DrawToDiscardColor,
+            DiscardToDrawColor,
+            PileGlowColor,
+            "SakuraPileExchangeVfx");
+    }
+
+    internal static void PlayMemoryAndExhaust(int memoryCount, int exhaustCount)
+    {
+        if (TestMode.IsOn || NCombatRoom.Instance is not { } room || room.Ui is not { } ui)
+            return;
+
+        var exhaustCenter = CenterOf(ui.ExhaustPile);
+        var memoryCenter = FindMemoryPileButton(room) is { } memoryButton
+            ? CenterOf(memoryButton)
+            : exhaustCenter + SakuraMemoryPile.UiOffsetAboveExhaust;
+        Play(
+            room,
+            memoryCenter,
+            exhaustCenter,
+            memoryCount,
+            exhaustCount,
+            MemoryColor,
+            ExhaustColor,
+            MemoryExchangeGlowColor,
+            "SakuraMemoryExhaustExchangeVfx");
+    }
+
+    private static void Play(
+        NCombatRoom room,
+        Vector2 firstCenter,
+        Vector2 secondCenter,
+        int firstCount,
+        int secondCount,
+        Color firstColor,
+        Color secondColor,
+        Color glowColor,
+        string nodeName)
+    {
+        if (firstCount + secondCount == 0 || firstCenter.DistanceSquaredTo(secondCenter) <= 1f)
             return;
 
         var container = (Control?)room.Ui ?? room.CombatVfxContainer;
         if (container is null)
             return;
 
-        var drawCenter = CenterOf(ui.DrawPile);
-        var discardCenter = CenterOf(ui.DiscardPile);
-        if (drawCenter.DistanceSquaredTo(discardCenter) <= 1f)
-            return;
-
-        var midpoint = (drawCenter + discardCenter) * 0.5f;
+        var midpoint = (firstCenter + secondCenter) * 0.5f;
         var root = new Node2D
         {
-            Name = "SakuraPileExchangeVfx",
+            Name = nodeName,
             ZIndex = VfxZIndex,
             ZAsRelative = false
         };
         container.AddChildSafely(root);
         root.GlobalPosition = midpoint;
 
-        var draw = drawCenter - midpoint;
-        var discard = discardCenter - midpoint;
-        BuildPileGlow(root, draw);
-        BuildPileGlow(root, discard);
-        if (drawCount > 0)
+        var first = firstCenter - midpoint;
+        var second = secondCenter - midpoint;
+        BuildPileGlow(root, first, glowColor);
+        BuildPileGlow(root, second, glowColor);
+        if (firstCount > 0)
         {
-            BuildArc(root, draw, discard, DrawToDiscardColor, -1f);
-            BuildGhostCards(root, draw, discard, DrawToDiscardColor, -1f, Math.Clamp(drawCount, 1, GhostCount));
+            BuildArc(root, first, second, firstColor, -1f);
+            BuildGhostCards(root, first, second, firstColor, -1f, Math.Clamp(firstCount, 1, GhostCount));
         }
 
-        if (discardCount > 0)
+        if (secondCount > 0)
         {
-            BuildArc(root, discard, draw, DiscardToDrawColor, 1f);
-            BuildGhostCards(root, discard, draw, DiscardToDrawColor, 1f, Math.Clamp(discardCount, 1, GhostCount));
+            BuildArc(root, second, first, secondColor, 1f);
+            BuildGhostCards(root, second, first, secondColor, 1f, Math.Clamp(secondCount, 1, GhostCount));
         }
 
         BuildCenterSpark(root);
@@ -64,13 +110,18 @@ public static class PileExchangeVfx
     private static Vector2 CenterOf(Control control) =>
         control.GlobalPosition + new Vector2(control.Size.X * control.Scale.X, control.Size.Y * control.Scale.Y) * 0.5f;
 
-    private static void BuildPileGlow(Node2D root, Vector2 position)
+    private static NModCardPileButton? FindMemoryPileButton(NCombatRoom room) =>
+        room.Ui?.FindChildren("*", recursive: true, owned: false)
+            .OfType<NModCardPileButton>()
+            .FirstOrDefault(button => button.Definition?.PileType == SakuraMemoryPile.PileType);
+
+    private static void BuildPileGlow(Node2D root, Vector2 position, Color color)
     {
         var glow = new Line2D
         {
             Name = "PileGlow",
             Width = 4.5f,
-            DefaultColor = PileGlowColor,
+            DefaultColor = color,
             Closed = true,
             Antialiased = true,
             Points = EllipsePoints(42f, 30f)

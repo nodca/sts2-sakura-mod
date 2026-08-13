@@ -380,20 +380,15 @@ public static class SakuraActions
         return index >= 0 ? cards[index] : null;
     }
 
-    public static async Task<CardModel?> ChooseAndMoveTopDrawPileCard(
+    public static async Task<CardModel?> ChooseAndMoveDrawPileCardToTop(
         Player owner,
-        PlayerChoiceContext context,
-        int lookCount)
+        PlayerChoiceContext context)
     {
-        if (lookCount <= 0)
-            return null;
-
         var drawPile = CardPile.Get(PileType.Draw, owner);
         if (drawPile is null || drawPile.IsEmpty)
             return null;
 
-        var candidates = drawPile.Cards.Take(lookCount).ToList();
-        var selected = await SelectFromCardPreviews(owner, context, candidates, cancelable: false);
+        var selected = await SelectFromCardPreviews(owner, context, drawPile.Cards, cancelable: false);
         if (selected is null)
             return null;
 
