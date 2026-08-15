@@ -8,8 +8,6 @@ internal static class SakuraCardVfxAssets
         [.. HailIceShardVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> BlazePaths =
         [.. BlazeFireColumnVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
-    private static readonly IReadOnlyList<string> ShieldPaths =
-        [.. SakuraShieldPlateVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> SwordPaths =
         [.. SakuraSwordBladeVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> GalePaths =
@@ -20,7 +18,6 @@ internal static class SakuraCardVfxAssets
         Aqua => AquaWaterSphereVfx.AssetPaths,
         Hail => HailPaths,
         Blaze => BlazePaths,
-        ClowShield or SakuraShield => ShieldPaths,
         ClowSword or SakuraSword or Blade => SwordPaths,
         Gale => GalePaths,
         SpellTurn => SpellTurnTransformationVfx.AssetPaths,

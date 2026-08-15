@@ -35,9 +35,25 @@ public class ClowSword() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ba
     private int CurrentDamage() => SakuraSourceCardValues.EffectiveValue(this, DynamicVars.Damage);
 
     // The family orchestration lives here because this is the common prefix of both
-    // paths. The activated effect gets the same swing without changing action order;
-    // its unblockable follow-up lands during the fade as the same cut deepening.
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    // paths. The activated effect gets the same stroke without changing action order;
+    // its unblockable follow-up lands during the fade.
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        // The lightest tier: a Basic attack is the most frequently played card sharing
+        // this effect, and what wears out under repetition is spectacle.
+        PlayStroke(choiceContext, play, SlashWeight.Light);
+
+    protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        // One tier up rather than a second orchestration: the extra unblockable damage is
+        // the play being bigger, so the same stroke carries more weight.
+        await PlayStroke(choiceContext, play, SlashWeight.Medium);
+        await DealDamage(choiceContext, RequiredTarget(play), SakuraMagicCharge.SwordExtraHpLoss, ValueProp.Unblockable);
+    }
+
+    private async Task PlayStroke(
+        PlayerChoiceContext choiceContext,
+        CardPlay play,
+        SlashWeight weight)
     {
         var target = RequiredTarget(play);
         await SakuraSwordBladeVfx.PlayOrResolveAsync(
@@ -45,19 +61,14 @@ public class ClowSword() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ba
             Owner.Creature,
             [target],
             SwordMode.Single,
+            weight,
             async cues =>
             {
-                // Before the damage: the number belongs on the beat the cut opens,
-                // which this card lands two stepped frames after the blade passes.
+                // Before the damage: the freeze and the contact flash belong on the frame
+                // the game's own damage number lands.
                 cues.Impact(target);
                 await DealDamage(choiceContext, target, CurrentDamage());
             });
-    }
-
-    protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await PlayCard(choiceContext, play);
-        await DealDamage(choiceContext, RequiredTarget(play), SakuraMagicCharge.SwordExtraHpLoss, ValueProp.Unblockable);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
@@ -85,6 +96,9 @@ public class SakuraSword() : SakuraFormCard(1, CardType.Attack, TargetType.AnyEn
                 Owner.Creature,
                 targets,
                 SwordMode.Single,
+                // The heaviest tier: a release token is the rarest of the three plays, so
+                // it can afford the widest, brightest stroke and a visible lay-down.
+                SlashWeight.Heavy,
                 async cues =>
                 {
                     foreach (var target in targets)

@@ -1,4 +1,12 @@
 {
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.title": "怪兽",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.INITIAL.description": "接连的战斗在身后留下大片焦痕。火光将你的影子投向石壁，越拉越长，几乎顶到了看不见的穹顶。一个熟悉而欠揍的声音忽然从记忆深处响起：‘你以前不是说过，要长得像电线杆那么高吗？’哥哥总说你是怪兽。尖塔似乎也这么认为。",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.INITIAL.options.ACCEPT.title": "欣然接受",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.INITIAL.options.ACCEPT.description": "获得遗物：怪兽。",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.INITIAL.options.REJECT.title": "绝不承认",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.INITIAL.options.REJECT.description": "获得 100 金币。回复 15 点生命。",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.ACCEPT.description": "你挺起胸膛，接受了这个称呼。影子变得更加高大，脚步也更加沉重。",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.REJECT.description": "你气冲冲地否认了这个称呼。发泄过后，连身上的伤也没那么疼了。",
   "SAKURA_MOD_EVENT_CLASSIC_XIAO_LANGS_FEELINGS_EVENT.title": "小狼的心意",
   "SAKURA_MOD_EVENT_CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.description": "小狼站在路边，带着尴尬而坚定的神情。他递来一枚小小的护符，其中藏着安静的温度。",
   "SAKURA_MOD_EVENT_CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.options.ACCEPT.title": "接受护符。",

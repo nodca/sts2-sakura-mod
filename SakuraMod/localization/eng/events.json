@@ -1,4 +1,12 @@
 {
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.title": "The Monster",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.INITIAL.description": "Several battles have left scorch marks behind you. Firelight stretches your shadow across the stone wall until it nearly reaches the unseen ceiling. Then a familiar, irritating voice rises from memory: \"Didn't you once say you wanted to grow as tall as a telephone pole?\" Your brother always called you a monster. The Spire seems to agree.",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.INITIAL.options.ACCEPT.title": "Accept it.",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.INITIAL.options.ACCEPT.description": "Obtain the Monster relic.",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.INITIAL.options.REJECT.title": "Absolutely not.",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.INITIAL.options.REJECT.description": "Gain 100 Gold. Heal 15 HP.",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.ACCEPT.description": "You stand a little taller and accept the name. Your shadow grows, and so does the weight of your steps.",
+  "SAKURA_MOD_EVENT_CLASSIC_MONSTER_EVENT.pages.REJECT.description": "You deny the name with enough force to echo through the room. After letting it out, your wounds hurt a little less.",
   "SAKURA_MOD_EVENT_CLASSIC_XIAO_LANGS_FEELINGS_EVENT.title": "Xiao Lang's Feelings",
   "SAKURA_MOD_EVENT_CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.description": "Xiao Lang stands beside the road, stiff with embarrassment and resolve. He offers a small charm that carries a quiet warmth.",
   "SAKURA_MOD_EVENT_CLASSIC_XIAO_LANGS_FEELINGS_EVENT.pages.INITIAL.options.ACCEPT.title": "Accept the charm.",

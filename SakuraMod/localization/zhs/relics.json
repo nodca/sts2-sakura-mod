@@ -1,4 +1,7 @@
 {
+  "SAKURA_MOD_RELIC_CLASSIC_MONSTER_RELIC.title": "怪兽",
+  "SAKURA_MOD_RELIC_CLASSIC_MONSTER_RELIC.description": "获得时，增加 {MaxHpGain} 点最大生命。战斗开始时，获得 {StrengthPower} 点力量并失去 {DexterityPower} 点敏捷。",
+  "SAKURA_MOD_RELIC_CLASSIC_MONSTER_RELIC.flavor": "你以前不是说过，要长得像电线杆那么高吗？",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.title": "封印之书",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.description": "每当你打出库洛牌或小樱牌，获得 {ChargeGain} 点魔力充能；若为能力牌，则获得 {PowerChargeGain} 点。\n当你至少拥有 {ExtraEffectCost} 点魔力充能时，下一张符合条件的牌消耗 {ExtraEffectCost} 点魔力充能，触发额外效果并进入对应的元素状态。",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.flavor": "库洛牌在封印的书页中等待。",

@@ -40,17 +40,11 @@ public class ClowShield() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Ba
     private int CurrentBlock() => SakuraSourceCardValues.EffectiveValue(this, DynamicVars.Block);
 
     // The family orchestration lives here because this is the common prefix of both
-    // paths. The activated effect gets the same plate without changing action order;
-    // the Metallicize that follows reads as that plate settling, not a second shield.
+    // paths. The card's gameplay feedback is the block itself; no card-specific VFX
+    // is needed for this high-frequency baseline defense.
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await SakuraShieldPlateVfx.PlayOrResolveAsync(this, Owner.Creature, async cues =>
-        {
-            // Before the block: the number belongs on the beat the plate snaps to a
-            // stop, matching the other cards in this family.
-            cues.Impact();
-            await GainBlock(play, CurrentBlock());
-        });
+        await GainBlock(play, CurrentBlock());
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -71,16 +65,9 @@ public class SakuraShield() : SakuraFormCard(1, CardType.Skill, TargetType.None)
     internal static int CurrentHpBlock(int currentHp, int rate) =>
         Math.Max(0, currentHp) * Math.Max(0, rate) / 100;
 
-    // Shares the Clow version's presentation verbatim: same session, same parameters.
-    // Era reaches the visuals only through the shared prelude's circle colour, so
-    // "shared" needs no branch here.
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await SakuraShieldPlateVfx.PlayOrResolveAsync(this, Owner.Creature, async cues =>
-        {
-            cues.Impact();
-            await GainBlock(play, ReleasedBlock());
-            await GainBlock(play, CurrentHpBlock(Owner.Creature.CurrentHp, ReleasedMagic()));
-        });
+        await GainBlock(play, ReleasedBlock());
+        await GainBlock(play, CurrentHpBlock(Owner.Creature.CurrentHp, ReleasedMagic()));
     }
 }

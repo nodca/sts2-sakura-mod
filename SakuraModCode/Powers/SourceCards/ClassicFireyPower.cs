@@ -39,8 +39,9 @@ public class ClassicFireyPower : SakuraElementStatePower
     {
         var combatState = Owner.CombatState
             ?? throw new InvalidOperationException("Sakura Firey requires an active combat.");
-        foreach (var enemy in combatState.HittableEnemies.ToList())
+        var targets = combatState.HittableEnemies.ToList();
+        SakuraElementStateVisuals.NotifyFireTriggered(Owner, targets);
+        foreach (var enemy in targets)
             await CreatureCmd.Damage(choiceContext, enemy, Damage, SakuraPowerValueProps.Damage, Owner, null);
     }
 }
-

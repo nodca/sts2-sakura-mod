@@ -43,6 +43,7 @@ public class ClassicWateryPower : SakuraElementStatePower
             return;
 
         _counter -= EnergyTrigger;
+        SakuraElementStateVisuals.NotifyWaterTriggered(Owner);
         await PlayerCmd.GainEnergy(1, Owner.Player!);
     }
 }

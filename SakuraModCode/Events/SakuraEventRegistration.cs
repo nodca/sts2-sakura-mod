@@ -11,6 +11,8 @@ internal static class SakuraEventRegistration
     {
         var registry = ModContentRegistry.For(MainFile.ModId);
 
+        registry.RegisterActEvent<Overgrowth, ClassicMonsterEvent>();
+        registry.RegisterActEvent<Underdocks, ClassicMonsterEvent>();
         registry.RegisterActEvent<Hive, ClassicXiaoLangsFeelingsEvent>();
         registry.RegisterActEvent<Glory, ClassicTheSealedCardEvent>();
         registry.RegisterActAncient<Hive, ClassicTomoyoAncientCostumes>();

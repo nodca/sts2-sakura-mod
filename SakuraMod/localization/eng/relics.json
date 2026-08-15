@@ -1,4 +1,7 @@
 {
+  "SAKURA_MOD_RELIC_CLASSIC_MONSTER_RELIC.title": "Monster",
+  "SAKURA_MOD_RELIC_CLASSIC_MONSTER_RELIC.description": "Upon pickup, increase your Max HP by {MaxHpGain}. At the start of combat, gain {StrengthPower} Strength and lose {DexterityPower} Dexterity.",
+  "SAKURA_MOD_RELIC_CLASSIC_MONSTER_RELIC.flavor": "Didn't you once say you wanted to grow as tall as a telephone pole?",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.title": "Sealed Book",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.description": "Whenever you play a Clow or Sakura Card, gain {ChargeGain} Magic Charge, or {PowerChargeGain} if it is a Power.\nWhen you have at least {ExtraEffectCost} Magic Charge, your next eligible card spends {ExtraEffectCost} Magic Charge to activate its Extra Effect and enter its element state.",
   "SAKURA_MOD_RELIC_CLASSIC_SEALED_BOOK_RELIC.flavor": "The Clow Cards wait in the sealed pages.",

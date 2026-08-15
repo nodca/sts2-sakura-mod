@@ -94,6 +94,7 @@ public static class SakuraRelicCatalog
         typeof(ClassicRedCapeRelic),
         typeof(ClassicPinkTransformationCostumeRelic),
         typeof(ClassicFrogRaincoatRelic),
+        typeof(ClassicMonsterRelic),
         ..RewardableTypes
     ];
 

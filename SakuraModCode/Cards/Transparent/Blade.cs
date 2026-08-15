@@ -42,10 +42,14 @@ public class Blade() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
             Owner.Creature,
             [target],
             SwordMode.Dual,
+            // Middle tier: an Uncommon costing 2 sits between the Basic attack and the
+            // release token in how often it is played. Its hit count buys crossing
+            // strokes, not extra weight per stroke.
+            SlashWeight.Medium,
             async cues =>
             {
-                // Before the attack: the numbers belong on the beat the cut opens,
-                // which this card lands two stepped frames after the blades pass.
+                // Before the attack: the freeze and the contact flash belong on the frame
+                // the game's own damage numbers land.
                 cues.Impact(target);
                 await SakuraActions.Attack(
                     choiceContext,

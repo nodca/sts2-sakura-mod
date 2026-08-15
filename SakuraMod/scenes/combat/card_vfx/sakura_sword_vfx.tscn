@@ -2,10 +2,7 @@
 
 [node name="SakuraSwordBladeVfx" type="Node2D"]
 
-[node name="Blades" type="Node2D" parent="."]
-unique_name_in_owner = true
-
-[node name="Debris" type="Node2D" parent="."]
+[node name="Slashes" type="Node2D" parent="."]
 unique_name_in_owner = true
 
 [node name="InputPassThrough" type="Control" parent="."]

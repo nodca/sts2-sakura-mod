@@ -33,6 +33,7 @@ public class ClowWindy() : ClowCard(1, CardType.Skill, CardRarity.Uncommon, Targ
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await ApplyPower<ClassicWindyPower>(choiceContext, Owner.Creature, 1);
+        SakuraElementStateVisuals.NotifyIconicWindyPlayed(Owner.Creature);
         await AddGeneratedSpells<SpellFengHua>(choiceContext, ReleasedMagic());
     }
 
@@ -47,6 +48,7 @@ public class SakuraWindy() : SakuraFormCard(1, CardType.Power, TargetType.None)
     {
         await ApplyPower<ClassicWindyPermanentPower>(choiceContext, Owner.Creature, 1);
         await ApplyPower<ClassicWindyPower>(choiceContext, Owner.Creature, 1);
+        SakuraElementStateVisuals.NotifyIconicWindyPlayed(Owner.Creature);
     }
 }
 

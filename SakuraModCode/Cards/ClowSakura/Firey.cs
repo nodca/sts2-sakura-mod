@@ -33,6 +33,7 @@ public class ClowFirey() : ClowCard(1, CardType.Skill, CardRarity.Uncommon, Targ
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await ApplyPower<ClassicFireyPower>(choiceContext, Owner.Creature, 1);
+        SakuraElementStateVisuals.NotifyIconicFireyPlayed(Owner.Creature);
         await AddGeneratedSpells<SpellHuoShen>(choiceContext, ReleasedMagic());
     }
 
@@ -47,6 +48,6 @@ public class SakuraFirey() : SakuraFormCard(1, CardType.Power, TargetType.None)
     {
         await ApplyPower<ClassicFireyPermanentPower>(choiceContext, Owner.Creature, 1);
         await ApplyPower<ClassicFireyPower>(choiceContext, Owner.Creature, 1);
+        SakuraElementStateVisuals.NotifyIconicFireyPlayed(Owner.Creature);
     }
 }
-

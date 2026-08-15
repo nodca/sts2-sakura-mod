@@ -81,7 +81,8 @@ public class ClassicSakura : ModCharacterTemplate<ClassicSakuraCardPool, Classic
     protected override IEnumerable<string> ExtraAssetPaths =>
     [
         ClassicCardEnergyIcon.ClowTextPath,
-        ClassicCardEnergyIcon.SakuraTextPath
+        ClassicCardEnergyIcon.SakuraTextPath,
+        .. SakuraElementStateVisuals.AssetPaths
     ];
 
     public override List<string> GetArchitectAttackVfx() =>

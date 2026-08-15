@@ -43,6 +43,7 @@ public class ClassicWindyPower : SakuraElementStatePower
             return;
 
         _counter -= DrawTrigger;
+        SakuraElementStateVisuals.NotifyWindTriggered(Owner);
         await CardPileCmd.Draw(choiceContext, 1, Owner.Player!, false);
     }
 }

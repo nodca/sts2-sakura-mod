@@ -35,7 +35,10 @@ public class ClassicEarthyPower : SakuraElementStatePower
     protected override SakuraElement Element => SakuraElement.Earth;
     protected override Type PermanentPowerType => typeof(ClassicEarthyPermanentPower);
 
-    protected override async Task TriggerElement(PlayerChoiceContext choiceContext, CardPlay play) =>
+    protected override async Task TriggerElement(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        SakuraElementStateVisuals.NotifyEarthTriggered(Owner);
         await CreatureCmd.GainBlock(Owner, Block, SakuraPowerValueProps.Block, null, false);
+    }
 }
 

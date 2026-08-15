@@ -33,6 +33,7 @@ public class ClowWatery() : ClowCard(1, CardType.Skill, CardRarity.Uncommon, Tar
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await ApplyPower<ClassicWateryPower>(choiceContext, Owner.Creature, 1);
+        SakuraElementStateVisuals.NotifyIconicWateryPlayed(Owner.Creature);
         await AddGeneratedSpells<SpellShuiLong>(choiceContext, ReleasedMagic());
     }
 
@@ -47,6 +48,7 @@ public class SakuraWatery() : SakuraFormCard(1, CardType.Power, TargetType.None)
     {
         await ApplyPower<ClassicWateryPermanentPower>(choiceContext, Owner.Creature, 1);
         await ApplyPower<ClassicWateryPower>(choiceContext, Owner.Creature, 1);
+        SakuraElementStateVisuals.NotifyIconicWateryPlayed(Owner.Creature);
     }
 }
 
