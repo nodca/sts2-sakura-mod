@@ -1,0 +1,238 @@
+#!/usr/bin/env python3
+"""Remove test-run evidence older than the retention window."""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import shutil
+import sys
+from dataclasses import dataclass, fields
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import TextIO
+
+
+RUN_ID_PATTERN = re.compile(r"^(?P<timestamp>\d{8}T\d{6}Z)-[A-Za-z0-9][A-Za-z0-9-]*$")
+SCRIPT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_ROOTS = {
+    "main": SCRIPT_ROOT,
+    "beta": SCRIPT_ROOT.parent / "sts2_mod_beta",
+}
+
+
+class CleanupError(RuntimeError):
+    pass
+
+
+@dataclass
+class Counts:
+    examined: int = 0
+    recent: int = 0
+    unsafe: int = 0
+    eligible: int = 0
+    deleted: int = 0
+    failed: int = 0
+    reclaimed_bytes: int = 0
+
+    def add(self, other: "Counts") -> None:
+        for field in fields(self):
+            setattr(self, field.name, getattr(self, field.name) + getattr(other, field.name))
+
+    def summary(self) -> str:
+        return " ".join(f"{field.name}={getattr(self, field.name)}" for field in fields(self))
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", choices=("main", "beta", "all"), default="all")
+    parser.add_argument("--retention-hours", type=float, default=48)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--dry-run", action="store_true", help="report eligible runs without deleting them (default)")
+    mode.add_argument("--delete", action="store_true", help="remove eligible completed runs")
+    parser.add_argument("--now", help="UTC ISO-8601 clock override for deterministic tests")
+    args = parser.parse_args(argv)
+    if args.retention_hours <= 0:
+        parser.error("--retention-hours must be greater than zero")
+    if args.now:
+        try:
+            args.now = parse_utc(args.now)
+        except argparse.ArgumentTypeError as error:
+            parser.error(str(error))
+    else:
+        args.now = datetime.now(UTC)
+    return args
+
+
+def parse_utc(value: str) -> datetime:
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(f"invalid UTC ISO-8601 timestamp: {value}") from error
+    if parsed.tzinfo is None:
+        raise argparse.ArgumentTypeError("UTC ISO-8601 timestamp must include an offset or Z")
+    return parsed.astimezone(UTC)
+
+
+def is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def parse_run_timestamp(run_id: str) -> datetime | None:
+    match = RUN_ID_PATTERN.fullmatch(run_id)
+    if not match:
+        return None
+    try:
+        return datetime.strptime(match.group("timestamp"), "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+    except ValueError:
+        return None
+
+
+def directory_bytes(root: Path) -> int:
+    total = 0
+    for current, directory_names, file_names in os.walk(root, followlinks=False):
+        current_path = Path(current)
+        directory_names[:] = [
+            name for name in directory_names if not (current_path / name).is_symlink()
+        ]
+        for name in file_names:
+            try:
+                total += (current_path / name).lstat().st_size
+            except OSError:
+                pass
+    return total
+
+
+def candidate_is_safe(candidate: Path, artifacts_root: Path) -> bool:
+    try:
+        if candidate.is_symlink() or not candidate.is_dir():
+            return False
+        resolved = candidate.resolve(strict=True)
+    except OSError:
+        return False
+    return resolved.parent == artifacts_root
+
+
+def clean_target(
+    name: str,
+    repository_root: Path,
+    *,
+    retention: timedelta,
+    now: datetime,
+    delete: bool,
+    stdout: TextIO,
+    stderr: TextIO,
+) -> Counts:
+    counts = Counts()
+    try:
+        resolved_repo = repository_root.resolve(strict=True)
+    except OSError as error:
+        raise CleanupError(f"{name}: repository root is unavailable: {repository_root}: {error}") from error
+    if not resolved_repo.is_dir():
+        raise CleanupError(f"{name}: repository root is not a directory: {resolved_repo}")
+    artifacts_root = resolved_repo / "artifacts" / "tests"
+    if not artifacts_root.exists():
+        print(f"[{name}] skipped: artifacts root is absent: {artifacts_root}", file=stdout)
+        return counts
+    if artifacts_root.is_symlink() or not artifacts_root.is_dir():
+        raise CleanupError(f"{name}: unsafe artifacts root: {artifacts_root}")
+    artifacts_root = artifacts_root.resolve(strict=True)
+    cutoff = now - retention
+
+    try:
+        entries = list(os.scandir(artifacts_root))
+    except OSError as error:
+        raise CleanupError(f"{name}: cannot enumerate {artifacts_root}: {error}") from error
+    for entry in entries:
+        if entry.is_symlink():
+            counts.examined += 1
+            counts.unsafe += 1
+            print(f"[{name}] retained unsafe symlink: {entry.name}", file=stderr)
+            continue
+        if not entry.is_dir(follow_symlinks=False):
+            continue
+        counts.examined += 1
+        candidate = Path(entry.path)
+        if not candidate_is_safe(candidate, artifacts_root):
+            counts.unsafe += 1
+            print(f"[{name}] retained unsafe: {candidate.name}", file=stderr)
+            continue
+        run_timestamp = parse_run_timestamp(candidate.name)
+        if run_timestamp is None:
+            counts.unsafe += 1
+            print(f"[{name}] retained invalid run ID: {candidate.name}", file=stderr)
+            continue
+        if run_timestamp >= cutoff:
+            counts.recent += 1
+            continue
+
+        counts.eligible += 1
+        bytes_to_reclaim = directory_bytes(candidate)
+        action = "delete" if delete else "would delete"
+        print(f"[{name}] {action}: {candidate.name} bytes={bytes_to_reclaim}", file=stdout)
+        if not delete:
+            continue
+        if not shutil.rmtree.avoids_symlink_attacks:
+            raise CleanupError("refusing deletion: this Python rmtree lacks symlink-attack protection")
+        if not candidate_is_safe(candidate, artifacts_root):
+            counts.failed += 1
+            print(f"[{name}] failed containment recheck: {candidate.name}", file=stderr)
+            continue
+        try:
+            shutil.rmtree(candidate)
+        except OSError as error:
+            counts.failed += 1
+            print(f"[{name}] failed delete: {candidate.name}: {error}", file=stderr)
+            continue
+        counts.deleted += 1
+        counts.reclaimed_bytes += bytes_to_reclaim
+
+    print(f"[{name}] summary {counts.summary()}", file=stdout)
+    return counts
+
+
+def run_cleanup(
+    args: argparse.Namespace,
+    *,
+    roots: dict[str, Path] = DEFAULT_ROOTS,
+    stdout: TextIO = sys.stdout,
+    stderr: TextIO = sys.stderr,
+) -> int:
+    target_names = ("main", "beta") if args.target == "all" else (args.target,)
+    total = Counts()
+    errors = 0
+    for name in target_names:
+        root = roots[name]
+        if name == "beta" and args.target == "all" and not root.exists():
+            print(f"[beta] skipped: repository root is absent: {root}", file=stdout)
+            continue
+        try:
+            total.add(clean_target(
+                name,
+                root,
+                retention=timedelta(hours=args.retention_hours),
+                now=args.now,
+                delete=args.delete,
+                stdout=stdout,
+                stderr=stderr,
+            ))
+        except CleanupError as error:
+            errors += 1
+            print(f"[{name}] error: {error}", file=stderr)
+    mode = "delete" if args.delete else "dry-run"
+    print(f"[all] summary mode={mode} {total.summary()} errors={errors}", file=stdout)
+    return 1 if errors or total.failed else 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    return run_cleanup(parse_args(argv if argv is not None else sys.argv[1:]))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

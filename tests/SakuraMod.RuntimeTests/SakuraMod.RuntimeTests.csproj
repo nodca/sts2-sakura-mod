@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../Sts2PathDiscovery.props" />
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>SakuraMod.RuntimeTests</AssemblyName>
+    <RootNamespace>SakuraMod.RuntimeTests</RootNamespace>
+    <GodotProjectDir>$(MSBuildProjectDirectory)/../../</GodotProjectDir>
+  </PropertyGroup>
+  <ItemGroup Condition="Exists('$(Sts2DataDir)')">
+    <Reference Include="0Harmony">
+      <HintPath>$(Sts2DataDir)/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="GodotSharp">
+      <HintPath>$(Sts2DataDir)/GodotSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="sts2">
+      <HintPath>$(Sts2DataDir)/sts2.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <CompilerVisibleProperty Include="GodotProjectDir" />
+    <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.5.12" PrivateAssets="All" />
+    <ProjectReference Include="../../SakuraMod.csproj" AdditionalProperties="SkipSakuraPackageCopy=true" />
+    <Compile Include="../TestProtocol/SakuraTestProtocol.cs" Link="TestProtocol/SakuraTestProtocol.cs" />
+  </ItemGroup>
+</Project>

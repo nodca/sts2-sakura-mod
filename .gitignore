@@ -9,6 +9,8 @@ obj/
 /dist/
 /Properties/
 /packages/
+/artifacts/tests/
+/SakuraMod.Tests/TestResults/
 *.user
 *.pdb
 Directory.Build.props
