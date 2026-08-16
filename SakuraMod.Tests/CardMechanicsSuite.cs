@@ -1428,6 +1428,9 @@ public sealed class CardMechanicsSuite
         var clowTwin = new ClowTwin();
         var clowTwinLocalCost = clowTwin.EnergyCost.GetWithModifiers(CostModifiers.Local);
         RegressionTestHarness.Require(
+            RegressionTestHarness.DeclaresMethod<ClassicTwinPower>("AfterModifyingCardPlayCount"),
+            "Expected Clow Twin to consume its per-turn duplication only after the native play-count query is committed.");
+        RegressionTestHarness.Require(
             ClassicTwinSakuraPower.TryIncreaseClowCardCost(clowTwin, amount: 1, clowTwinLocalCost, out var increasedTwinCost),
             "Expected Sakura Twin power to increase Clow card costs.");
         RegressionTestHarness.Require(increasedTwinCost == clowTwinLocalCost + 1, "Expected Sakura Twin power to add only 1 cost per stack.");

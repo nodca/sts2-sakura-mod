@@ -29,35 +29,42 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class ClassicTwinPower : SakuraPowerModel
 {
-    private int _cardsDoubledThisTurn;
+    private static readonly SavedAttachedState<ClassicTwinPower, int> CardsDoubledThisTurn =
+        new("SakuraMod_ClassicTwinCardsDoubledThisTurn", () => 0);
 
     protected override string IconFileName => "twin_power.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
+    internal int CardsDoubledThisTurnCount => CardsDoubledThisTurn[this];
 
     public override int ModifyCardPlayCount(CardModel card, Creature? target, int playCount)
     {
         if (!CanDouble(card))
             return playCount;
 
-        _cardsDoubledThisTurn++;
         return playCount + 1;
+    }
+
+    public override Task AfterModifyingCardPlayCount(CardModel card)
+    {
+        CardsDoubledThisTurn[this]++;
+        Flash();
+        return Task.CompletedTask;
     }
 
     public override Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
         if (Owner.Player == player)
-            _cardsDoubledThisTurn = 0;
+            CardsDoubledThisTurn[this] = 0;
 
         return Task.CompletedTask;
     }
 
     private bool CanDouble(CardModel card) =>
         Amount > 0
-        && _cardsDoubledThisTurn < Amount
+        && CardsDoubledThisTurn[this] < Amount
         && card.Owner?.Creature == Owner
         && card is SakuraSourceCard { IsClowCard: true }
         && !card.IsClone
         && !card.IsDupe;
 }
-

@@ -238,6 +238,7 @@ public static class SakuraMultiplayerScenarios
     public const string ClowShieldHost = "clow-shield-host";
     public const string ClowShieldClient = "clow-shield-client";
     public const string ClowShieldWard = "clow-shield-ward";
+    public const string ClowTwinPlayCount = "clow-twin-play-count";
     public const string SealedWandCharge = "sealed-wand-charge";
     public const string TurnEndDamageSync = "turn-end-damage-sync";
     public const string ThreePlayerDefensivePowers = "three-player-defensive-powers";
@@ -253,6 +254,7 @@ public static class SakuraMultiplayerScenarios
         ClowShieldHost,
         ClowShieldClient,
         ClowShieldWard,
+        ClowTwinPlayCount,
         SealedWandCharge,
         TurnEndDamageSync,
         ThreePlayerDefensivePowers,
