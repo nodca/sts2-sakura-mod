@@ -31,7 +31,7 @@ public class Reversal() : TransparentExtraEffectCard(0, CardType.Attack, CardRar
     [
         new ReversalDamageVar(0, ValueProp.Move),
         new DynamicVar("PileCardsPerDamage", 3),
-        new DamageVar("PileDamage", 1, ValueProp.Move)
+        new DynamicVar("PileDamage", 1)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
