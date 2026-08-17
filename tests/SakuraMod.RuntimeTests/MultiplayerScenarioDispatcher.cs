@@ -20,6 +20,8 @@ internal static class MultiplayerScenarioDispatcher
         {
             SakuraMultiplayerScenarios.ClowDefensivePowers => await ClowDefensivePowersMultiplayerScenario.ExecuteAsync(
                 request, environment, assertions),
+            SakuraMultiplayerScenarios.ClowSweetPartyEffect => await ClowSweetPartyEffectMultiplayerScenario.ExecuteAsync(
+                request, environment, assertions),
             SakuraMultiplayerScenarios.ClowTwinPlayCount => await ClowTwinPlayCountMultiplayerScenario.ExecuteAsync(
                 request, environment, assertions),
             SakuraMultiplayerScenarios.ClowSilentHost

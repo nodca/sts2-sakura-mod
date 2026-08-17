@@ -286,23 +286,21 @@ internal static class SakuraSourceCardRules
     public static IReadOnlyList<Type> AllCardTypes() =>
         SakuraCardCatalog.ClassicLayoutCardTypes;
 
-    public static IReadOnlyList<CardModel> RewardableClowTemplates() =>
-        SakuraCardCatalog.SourceCardTypes(SourceEraClass.Clow)
-            .Where(static type => type != typeof(ClowSword)
-                && type != typeof(ClowShield)
-                && type != typeof(ClowNothing))
-            .Select(TypeToCard)
+    public static IReadOnlyList<CardModel> RewardableClowTemplates(Player owner) =>
+        AvailableClowTemplates(owner)
+            .Where(static card => card is not ClowSword
+                and not ClowShield
+                and not ClowNothing)
             .ToList();
 
-    public static IReadOnlyList<CardModel> AllClowTemplates() =>
-        SakuraCardCatalog.SourceCardTypes(SourceEraClass.Clow)
-            .Where(static type => type != typeof(ClowNothing))
-            .Select(TypeToCard)
+    public static IReadOnlyList<CardModel> AllClowTemplates(Player owner) =>
+        AvailableClowTemplates(owner)
+            .Where(static card => card is not ClowNothing)
             .ToList();
 
     public static CardModel CreateRandomDreamClowCard(Player owner)
     {
-        var templates = AllClowTemplates()
+        var templates = AllClowTemplates(owner)
             .Where(static card => card is not ClowCreate)
             .ToList();
         return CreateRandomClowCard(owner, templates, "Dream Clow pool");
@@ -310,7 +308,7 @@ internal static class SakuraSourceCardRules
 
     public static CardModel CreateRandomDarkClowCard(Player owner)
     {
-        var templates = AllClowTemplates();
+        var templates = AllClowTemplates(owner);
         var rolledRarity = RollDarkClowRarity(owner);
         var options = templates.Where(card => card.Rarity == rolledRarity).ToList();
         if (options.Count == 0)
@@ -382,6 +380,17 @@ internal static class SakuraSourceCardRules
     // Turn can repeatedly convert Clow Cards into Sakura Cards.
     internal static bool CanBeTargetedByClearCardEffects(CardModel card) =>
         card is not SpellTurn;
+
+    private static IEnumerable<CardModel> AvailableClowTemplates(Player owner)
+    {
+        var availableTypes = ModelDb.CardPool<ClassicSakuraCardPool>()
+            .GetUnlockedCards(owner.UnlockState, owner.RunState.CardMultiplayerConstraint)
+            .Select(static card => card.GetType())
+            .ToHashSet();
+        return SakuraCardCatalog.SourceCardTypes(SourceEraClass.Clow)
+            .Where(availableTypes.Contains)
+            .Select(TypeToCard);
+    }
 
     private static CardModel TypeToCard(Type type) =>
         ModelDb.GetById<CardModel>(ModelDb.GetId(type));

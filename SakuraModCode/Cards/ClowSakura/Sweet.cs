@@ -27,25 +27,51 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowSweet() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
+    public override CardMultiplayerConstraint MultiplayerConstraint => CardMultiplayerConstraint.MultiplayerOnly;
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new HealVar(5)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await CreatureCmd.Heal(Owner.Creature, ReleasedValue("Heal"));
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        var targets = CombatState!.Players
+            .Where(static player => player.Creature.IsAlive)
+            .Select(static player => player.Creature)
+            .ToList();
+        foreach (var target in targets)
+            await CreatureCmd.Heal(target, ReleasedValue("Heal"));
+    }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await ApplyPower<RegenPower>(choiceContext, Owner.Creature, ReleasedValue("Heal"));
+        await PowerCmd.Apply<RegenPower>(
+            choiceContext,
+            CombatState!.Players
+                .Where(static player => player.Creature.IsAlive)
+                .Select(static player => player.Creature)
+                .ToList(),
+            ReleasedValue("Heal"),
+            Owner.Creature,
+            this,
+            silent: false);
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
 public class SakuraSweet() : SakuraFormCard(2, CardType.Power, TargetType.None)
 {
+    public override CardMultiplayerConstraint MultiplayerConstraint => CardMultiplayerConstraint.MultiplayerOnly;
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 10)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await ApplyPower<ClassicSweetPower>(choiceContext, Owner.Creature, ReleasedMagic());
+        await PowerCmd.Apply<ClassicSweetPower>(
+            choiceContext,
+            CombatState!.Players
+                .Where(static player => player.Creature.IsAlive)
+                .Select(static player => player.Creature)
+                .ToList(),
+            ReleasedMagic(),
+            Owner.Creature,
+            this,
+            silent: false);
 }
-

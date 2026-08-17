@@ -109,6 +109,19 @@ internal static class SakuraSourceCardText
         if (card.IsSpellCard)
             yield return SourceSpellTipKey;
 
+        switch (card)
+        {
+            case ClowJump:
+                yield return SakuraCardHoverTips.DebuffTipKey;
+                break;
+            case ClowBubbles:
+                yield return SakuraCardHoverTips.BubblesBuffTipKey;
+                break;
+            case ClowMist:
+                yield return SakuraCardHoverTips.MistDefenseTipKey;
+                break;
+        }
+
         foreach (var element in card.Elements.AsElements())
             yield return SourceElementTipKey(card, element);
 

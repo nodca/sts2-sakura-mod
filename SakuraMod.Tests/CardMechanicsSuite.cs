@@ -472,6 +472,62 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void SweetCardsTargetEveryLivingPlayer()
+    {
+        var clowSweet = new ClowSweet();
+        var sweetSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Sweet.cs"));
+        var sourceCardRules = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraSourceCard.cs"));
+        var englishCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/eng/cards.json"));
+        var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/zhs/cards.json"));
+
+        RegressionTestHarness.Require(
+            clowSweet.EnergyCost.Canonical == 1,
+            $"Expected Clow Sweet to cost 1, found {clowSweet.EnergyCost.Canonical}.");
+        RegressionTestHarness.Require(
+            clowSweet.DynamicVars.Heal.IntValue == 5,
+            $"Expected Clow Sweet Heal to be 5, found {clowSweet.DynamicVars.Heal.IntValue}.");
+        RegressionTestHarness.Require(
+            new SakuraSweet().EnergyCost.Canonical == 2,
+            $"Expected Sakura Sweet to cost 2, found {new SakuraSweet().EnergyCost.Canonical}.");
+        RegressionTestHarness.Require(
+            clowSweet.MultiplayerConstraint == CardMultiplayerConstraint.MultiplayerOnly
+            && new SakuraSweet().MultiplayerConstraint == CardMultiplayerConstraint.MultiplayerOnly,
+            "Expected both Sweet forms to use STS2's native multiplayer-only card constraint.");
+        RegressionTestHarness.Require(
+            sourceCardRules.Contains(
+                "GetUnlockedCards(owner.UnlockState, owner.RunState.CardMultiplayerConstraint)",
+                StringComparison.Ordinal),
+            "Expected custom Clow generation to honor STS2's native player-count filter.");
+        RegressionTestHarness.Require(
+            sweetSource.Contains(".Where(static player => player.Creature.IsAlive)", StringComparison.Ordinal),
+            "Expected Sweet cards to filter living players.");
+        RegressionTestHarness.Require(
+            sweetSource.Contains("protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);", StringComparison.Ordinal),
+            "Expected Clow Sweet to preserve its existing cost-upgrade declaration.");
+        RegressionTestHarness.Require(
+            sweetSource.Contains("await CreatureCmd.Heal(target, ReleasedValue(\"Heal\"));", StringComparison.Ordinal),
+            "Expected Clow Sweet to heal each target.");
+        RegressionTestHarness.Require(
+            sweetSource.Contains("PowerCmd.Apply<RegenPower>", StringComparison.Ordinal)
+            && sweetSource.Contains("PowerCmd.Apply<ClassicSweetPower>", StringComparison.Ordinal),
+            "Expected both Sweet forms to apply their powers to a target collection.");
+        RegressionTestHarness.Require(
+            englishCards.Contains("All players heal {Heal:diff()} HP.", StringComparison.Ordinal)
+            && englishCards.Contains("all players gain {Heal:diff()} [gold]Regeneration[/gold]", StringComparison.Ordinal)
+            && englishCards.Contains("At the start of each player's turn", StringComparison.Ordinal),
+            "Expected English Sweet descriptions to expose their party scope.");
+        RegressionTestHarness.Require(
+            chineseCards.Contains("所有玩家各回复 {Heal:diff()} 点生命", StringComparison.Ordinal)
+            && chineseCards.Contains("所有玩家各获得 {Heal:diff()} 层[gold]再生[/gold]", StringComparison.Ordinal)
+            && chineseCards.Contains("所有玩家的回合开始时，各自回复", StringComparison.Ordinal),
+            "Expected Chinese Sweet descriptions to expose their party scope.");
+    }
+
+    [Fact]
     public void ClassicCloudValuesAndStateReferenceRemainStable()
     {
         var clowCloud = new ClowCloud();

@@ -93,7 +93,7 @@ public class SakuraMirror() : SakuraFormCard(0, CardType.Skill, TargetType.None)
     {
         var combatState = Owner.Creature.CombatState
             ?? throw new InvalidOperationException("Sakura Mirror card choices require an active combat.");
-        var choices = SakuraSourceCardRules.AllClowTemplates()
+        var choices = SakuraSourceCardRules.AllClowTemplates(Owner)
             .Select(template => combatState.CreateCard(template, Owner))
             .ToList();
         if (choices.Count == 0)
@@ -130,4 +130,3 @@ public class SakuraMirror() : SakuraFormCard(0, CardType.Skill, TargetType.None)
         }
     }
 }
-

@@ -37,5 +37,11 @@
   "SAKURAMOD-WINDY_SPELL_CARD.title": "Windy",
   "SAKURAMOD-WINDY_SPELL_CARD.description": "A Windy spell. Counts as a Windy card.",
   "SAKURAMOD-WINDY_STATE.title": "Windy state",
-  "SAKURAMOD-WINDY_STATE.description": "Whenever you play 2 Windy cards, draw 1 card."
+  "SAKURAMOD-WINDY_STATE.description": "Whenever you play 2 Windy cards, draw 1 card.",
+  "SAKURAMOD-DEBUFF.title": "Debuff",
+  "SAKURAMOD-DEBUFF.description": "Includes [gold]Weak[/gold], [gold]Vulnerable[/gold], [gold]Frail[/gold], [gold]Poison[/gold], and all other Powers marked as [gold]Debuff[/gold].",
+  "SAKURAMOD-BUBBLES_BUFF.title": "Buffs",
+  "SAKURAMOD-BUBBLES_BUFF.description": "Includes enemy [gold]Strength[/gold], [gold]Artifact[/gold], [gold]Ritual[/gold], [gold]Thorns[/gold], and [gold]Plating[/gold].",
+  "SAKURAMOD-MIST_DEFENSE.title": "Defensive effects",
+  "SAKURAMOD-MIST_DEFENSE.description": "Includes enemy [gold]Block[/gold], [gold]Artifact[/gold], [gold]Thorns[/gold], [gold]Buffer[/gold], [gold]Intangible[/gold], [gold]Barricade[/gold], and [gold]Slippery[/gold]."
 }

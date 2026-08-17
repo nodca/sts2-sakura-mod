@@ -233,6 +233,7 @@ public static class SakuraMultiplayerRoles
 public static class SakuraMultiplayerScenarios
 {
     public const string ClowDefensivePowers = "clow-defensive-powers";
+    public const string ClowSweetPartyEffect = "clow-sweet-party-effect";
     public const string ClowSilentHost = "clow-silent-host";
     public const string ClowSilentClient = "clow-silent-client";
     public const string ClowShieldHost = "clow-shield-host";
@@ -249,6 +250,7 @@ public static class SakuraMultiplayerScenarios
     public static IReadOnlyList<string> All { get; } =
     [
         ClowDefensivePowers,
+        ClowSweetPartyEffect,
         ClowSilentHost,
         ClowSilentClient,
         ClowShieldHost,

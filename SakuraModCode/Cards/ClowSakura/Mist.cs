@@ -38,7 +38,7 @@ public class ClowMist() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Comm
         foreach (var enemy in CombatState!.HittableEnemies)
         {
             await CreatureCmd.LoseBlock(enemy, enemy.Block);
-            foreach (var power in enemy.Powers.Where(static power => power is ArtifactPower or ThornsPower or BufferPower or IntangiblePower or BarricadePower).ToList())
+            foreach (var power in enemy.Powers.Where(static power => power is ArtifactPower or ThornsPower or BufferPower or IntangiblePower or BarricadePower or SlipperyPower).ToList())
                 await PowerCmd.Remove(power);
         }
 
@@ -61,4 +61,3 @@ public class SakuraMist() : SakuraFormCard(1, CardType.Power, TargetType.None)
         await ApplyPower<NoxiousFumesPower>(choiceContext, Owner.Creature, ReleasedValue("NoxiousFumesPower"));
     }
 }
-

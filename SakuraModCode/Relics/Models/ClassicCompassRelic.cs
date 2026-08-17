@@ -58,7 +58,7 @@ public class ClassicCompassRelic : SakuraRelicModel
         _usedThisCombat = true;
         var combatState = Owner.Creature.CombatState
             ?? throw new InvalidOperationException("Compass card choice requires an active combat.");
-        var templates = SakuraSourceCardRules.RewardableClowTemplates().ToList();
+        var templates = SakuraSourceCardRules.RewardableClowTemplates(Owner).ToList();
         Owner.RunState.Rng.CombatCardSelection.Shuffle(templates);
         var choices = templates
             .Take(DynamicVars.Cards.IntValue)
@@ -105,4 +105,3 @@ public class ClassicCompassRelic : SakuraRelicModel
         }
     }
 }
-
