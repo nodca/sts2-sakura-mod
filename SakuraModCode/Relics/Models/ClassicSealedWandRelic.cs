@@ -133,9 +133,10 @@ public class ClassicSealedWandRelic : SakuraRelicModel
             darknessWand is not null);
     }
 
-    internal bool ApplySynchronizedCharge(uint combatId, int amount)
+    internal bool ApplyDeathCharge(uint combatId, int amount)
     {
-        if (amount <= 0 || !_chargedDeathsThisCombat.Add((Owner.NetId, combatId)))
+        if (amount <= 0
+            || !TryRecordDeathForOwner(_chargedDeathsThisCombat, Owner.NetId, combatId))
             return false;
 
         AddCharge(amount);
@@ -144,13 +145,11 @@ public class ClassicSealedWandRelic : SakuraRelicModel
         return true;
     }
 
-    internal async Task ApplyDeferredSynchronizedCharge(uint combatId, int amount)
-    {
-        if (!ApplySynchronizedCharge(combatId, amount))
-            return;
-
-        await TryGenerateTurnCard();
-    }
+    internal static bool TryRecordDeathForOwner(
+        ISet<(ulong PlayerNetId, uint CombatId)> chargedDeaths,
+        ulong playerNetId,
+        uint combatId) =>
+        chargedDeaths.Add((playerNetId, combatId));
 
     internal static int ChargeGainForDeath(
         int baseGain,

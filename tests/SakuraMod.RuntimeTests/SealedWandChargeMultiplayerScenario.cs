@@ -7,10 +7,8 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
-using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Relics;
 using SakuraMod.TestProtocol;
-using STS2RitsuLib.Networking.ManagedActions;
 
 namespace SakuraMod.RuntimeTests;
 
@@ -23,7 +21,7 @@ internal static class SealedWandChargeMultiplayerScenario
     {
         await using var context = await MultiplayerScenarioContext.StartAsync(request);
         var combat = await context.EnterWeakSlimesCombatAsync();
-        var runState = SakuraRunHooks.ActiveRunState ?? context.Run;
+        var runState = context.Run;
         var players = runState.Players.OrderBy(static player => player.NetId).ToArray();
         var wands = players.ToDictionary(
             static player => player.NetId,
@@ -50,6 +48,13 @@ internal static class SealedWandChargeMultiplayerScenario
         var ordinaryEnemy = enemies[0];
         var sealEnemy = enemies[1];
         var finalEnemy = enemies[2];
+        var downedOwner = players[0];
+        downedOwner.Creature.SetCurrentHpInternal(0);
+        downedOwner.DeactivateHooks();
+        assertions.True("fixture_host_sakura_is_downed", downedOwner.Creature.IsDead);
+        assertions.True("fixture_host_sakura_hooks_are_inactive", !downedOwner.IsActiveForHooks);
+        assertions.True("fixture_client_sakura_is_alive", context.ClientPlayer.Creature.IsAlive);
+        await context.SignalAndWaitAsync("sealed-wand-downed-owner-ready");
         var finisher = combat.CreateCard<ClowSword>(context.ClientPlayer);
         var seal = combat.CreateCard<SpellSeal>(context.ClientPlayer);
         var finalizer = combat.CreateCard<ClowSand>(context.ClientPlayer);
@@ -73,21 +78,21 @@ internal static class SealedWandChargeMultiplayerScenario
             ordinaryEnemy,
             Math.Max(0, ordinaryEnemy.CurrentHp - 1),
             ValueProp.Unblockable | ValueProp.Unpowered,
-            context.LocalPlayer.Creature,
+            context.ClientPlayer.Creature,
             null);
         await CreatureCmd.Damage(
             new ThrowingPlayerChoiceContext(),
             sealEnemy,
             Math.Max(0, sealEnemy.CurrentHp - 14),
             ValueProp.Unblockable | ValueProp.Unpowered,
-            context.LocalPlayer.Creature,
+            context.ClientPlayer.Creature,
             null);
         await CreatureCmd.Damage(
             new ThrowingPlayerChoiceContext(),
             finalEnemy,
             Math.Max(0, finalEnemy.CurrentHp - 1),
             ValueProp.Unblockable | ValueProp.Unpowered,
-            context.LocalPlayer.Creature,
+            context.ClientPlayer.Creature,
             null);
         await context.SignalAndWaitAsync("sealed-wand-enemy-prepared");
         var ordinaryChecksumBaseline = context.ChecksumCount;
@@ -101,10 +106,9 @@ internal static class SealedWandChargeMultiplayerScenario
         await context.WaitForActionChecksumsAsync(
             ordinaryChecksumBaseline,
             "ordinary Sealed Wand charge",
-            nameof(PlayCardAction),
-            nameof(RitsuLibManagedGameAction));
+            nameof(PlayCardAction));
 
-        var afterOrdinary = (SakuraRunHooks.ActiveRunState ?? context.Run).Players
+        var afterOrdinary = context.Run.Players
             .ToDictionary(
                 static player => player.NetId,
                 static player => player.Relics.OfType<ClassicSealedWandRelic>().Single().ChargeAmount);
@@ -128,10 +132,9 @@ internal static class SealedWandChargeMultiplayerScenario
         await context.WaitForActionChecksumsAsync(
             sealChecksumBaseline,
             "Seal Sealed Wand charge",
-            nameof(PlayCardAction),
-            nameof(RitsuLibManagedGameAction));
+            nameof(PlayCardAction));
 
-        var after = (SakuraRunHooks.ActiveRunState ?? context.Run).Players
+        var after = context.Run.Players
             .ToDictionary(
                 static player => player.NetId,
                 static player => player.Relics.OfType<ClassicSealedWandRelic>().Single().ChargeAmount);
@@ -160,11 +163,11 @@ internal static class SealedWandChargeMultiplayerScenario
             "final Sealed Wand charge",
             nameof(PlayCardAction));
         await MultiplayerScenarioContext.WaitForStateAsync(
-            () => (SakuraRunHooks.ActiveRunState ?? context.Run).Players.All(player =>
+            () => context.Run.Players.All(player =>
                 player.Relics.OfType<ClassicSealedWandRelic>().Single().ChargeAmount >= expectedFinal[player.NetId]),
             "final Sealed Wand charge application");
 
-        var afterFinal = (SakuraRunHooks.ActiveRunState ?? context.Run).Players
+        var afterFinal = context.Run.Players
             .ToDictionary(
                 static player => player.NetId,
                 static player => player.Relics.OfType<ClassicSealedWandRelic>().Single().ChargeAmount);
@@ -175,6 +178,10 @@ internal static class SealedWandChargeMultiplayerScenario
                 3,
                 afterFinal[player.NetId] - after[player.NetId]);
         }
+        assertions.True(
+            "sealed_wand_used_no_managed_action",
+            context.ChecksumObservations.Skip(ordinaryChecksumBaseline).All(static observation =>
+                !observation.Context.Contains("RitsuLibManagedGameAction", StringComparison.Ordinal)));
 
         var digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(string.Join(
@@ -191,7 +198,7 @@ internal static class SealedWandChargeMultiplayerScenario
         {
             ["fixture"] = new
             {
-                setup_mutations = new[] { "Two Sakura players", "Mirrored HP setup", "Client-owned ClowSword, SpellSeal, and ClowSand lethal actions" }
+                setup_mutations = new[] { "Two Sakura players with the Host downed", "Mirrored HP setup", "Client-owned ClowSword, SpellSeal, and ClowSand lethal actions" }
             },
             ["peer"] = new
             {

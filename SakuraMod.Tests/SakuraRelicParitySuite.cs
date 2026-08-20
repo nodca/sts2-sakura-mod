@@ -1,7 +1,5 @@
 using MegaCrit.Sts2.Core.Entities.Relics;
-using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using SakuraMod.SakuraModCode.Cards;
-using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Relics;
 
 public sealed class SakuraRelicParitySuite
@@ -117,48 +115,30 @@ public sealed class SakuraRelicParitySuite
     }
 
     [Fact]
-    public void SealedWandChargeActionRoundTripsAllRecipients()
+    public void SealedWandDeathDedupeKeepsEachOwnerWhenCloneStateIsShared()
     {
-        var payload = new SealedWandChargeActionPayload(
-            17,
-            [
-                new SealedWandChargeRecipient(1, 3),
-                new SealedWandChargeRecipient(2, 5)
-            ]);
-
-        var roundTrip = SakuraSealedWandChargeAction.Deserialize(
-            SakuraSealedWandChargeAction.Serialize(payload));
+        HashSet<(ulong PlayerNetId, uint CombatId)> sharedDeaths = [];
 
         RegressionTestHarness.Require(
-            roundTrip.CombatId == payload.CombatId
-            && roundTrip.Recipients.SequenceEqual(payload.Recipients),
-            "Expected Sealed Wand charge actions to preserve combat identity and every per-player amount.");
+            ClassicSealedWandRelic.TryRecordDeathForOwner(sharedDeaths, 1, 17)
+            && ClassicSealedWandRelic.TryRecordDeathForOwner(sharedDeaths, 2, 17)
+            && !ClassicSealedWandRelic.TryRecordDeathForOwner(sharedDeaths, 1, 17)
+            && !ClassicSealedWandRelic.TryRecordDeathForOwner(sharedDeaths, 2, 17),
+            "Expected shallow-cloned Sealed Wands to reward each owner once for the same enemy death.");
     }
 
     [Fact]
-    public void SealedWandChargeActionRejectsMalformedPayloads()
+    public void SealedWandDeathRewardsUseOneDeterministicLifecyclePath()
     {
-        RegressionTestHarness.RequireThrows<InvalidDataException>(
-            () => SakuraSealedWandChargeAction.Deserialize(new byte[sizeof(uint)]),
-            "Expected truncated Sealed Wand charge payloads to fail closed.");
-        RegressionTestHarness.RequireThrows<InvalidDataException>(
-            () => SakuraSealedWandChargeAction.Deserialize(
-                [0, 0, 0, 0, 255, 255, 255, 127]),
-            "Expected impossible recipient counts to fail closed.");
-    }
-
-    [Fact]
-    public void DeferredSealedWandChargeWaitsForPlayerPlayPhase()
-    {
-        var immediate = SakuraSealedWandChargeAction.Descriptor;
-        var deferred = SakuraSealedWandChargeAction.DeferredDescriptor;
+        var runHooks = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraRunHooks.cs"));
 
         RegressionTestHarness.Require(
-            immediate.ActionKey == "sealed_wand_charge"
-            && immediate.ActionType == GameActionType.Any
-            && deferred.ActionKey == "sealed_wand_charge_player_turn"
-            && deferred.ActionType == GameActionType.CombatPlayPhaseOnly,
-            "Expected off-action Sealed Wand charges to wait for the synchronized player play phase while final combat charges retain Any semantics.");
+            runHooks.Contains("SubscribeLifecycle<CreatureDiedEvent>", StringComparison.Ordinal)
+            && runHooks.Contains("ApplyDeathCharge", StringComparison.Ordinal)
+            && !runHooks.Contains("RitsuLibManagedNetActions", StringComparison.Ordinal)
+            && !runHooks.Contains("DeferredDeathRewards", StringComparison.Ordinal),
+            "Expected Sealed Wand death charge to derive locally from one lifecycle event without a second network action.");
     }
 
     [Fact]
