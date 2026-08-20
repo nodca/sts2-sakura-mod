@@ -77,6 +77,12 @@ internal sealed record CombatScenarioContext(
             "The fixed Knights elite encounter reached player Play phase.",
             RoomType.Elite);
 
+    public Task<CombatState> EnterVantomBossCombatAsync() =>
+        EnterCombatAsync(
+            ModelDb.Encounter<VantomBoss>().ToMutable(),
+            "The fixed first-act Vantom boss encounter reached player Play phase.",
+            RoomType.Boss);
+
     public Task<CombatState> EnterDarkCombatAsync() =>
         EnterCombatAsync(
             ModelDb.Encounter<DarkEncounter>().ToMutable(),

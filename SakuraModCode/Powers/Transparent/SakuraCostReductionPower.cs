@@ -28,10 +28,3 @@ public class SakuraCostReductionPower : SakuraTrackedCostReductionPower
             await PowerCmd.Remove(this);
     }
 }
-
-public enum RecordResult
-{
-    Recorded,
-    Restored
-}
-

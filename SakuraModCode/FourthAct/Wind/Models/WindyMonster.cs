@@ -127,6 +127,7 @@ public sealed class WindyMonster : WindMonsterTemplate
 
     private async Task SummonAttendant(IReadOnlyList<Creature> targets, WindyAction action)
     {
+        FourthActEnemyAudio.Play(FourthActAudioCue.WindySummon);
         await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Summon, async () =>
         {
             if (!HasAttendant)

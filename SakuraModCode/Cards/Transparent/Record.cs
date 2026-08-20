@@ -24,11 +24,9 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class Record() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    private bool _restoredDuringCurrentPlay;
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
 
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
-
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new EnergyVar(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [];
 
     public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
         CardModel card,
@@ -37,53 +35,27 @@ public class Record() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity
         PileType pileType,
         CardPilePosition position)
     {
-        if (card == this)
-            _restoredDuringCurrentPlay = false;
-
-        if (card == this && Owner.Creature.GetPower<RecordPower>() is not null)
-            return (PileType.Exhaust, CardPilePosition.Bottom);
+        if (card == this
+            && SakuraExtraEffectTransaction.ShouldShowAsActive(this)
+            && pileType == PileType.Exhaust)
+            return (PileType.Discard, CardPilePosition.Random);
 
         return (pileType, position);
     }
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        if (_restoredDuringCurrentPlay)
-            return;
-
-        var result = await RecordPower.RecordOrRestore(choiceContext, Owner.Creature, this);
-        if (result == RecordResult.Restored)
-            _restoredDuringCurrentPlay = true;
-
-        if (!activation.IsActive)
-            return;
-
-        if (result == RecordResult.Recorded)
-        {
-            await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
-            return;
-        }
-
-        await PlayerCmd.GainEnergy(DynamicVars.Energy.IntValue, Owner);
+        await PowerCmd.Apply<RecordPower>(
+            choiceContext,
+            Owner.Creature,
+            1,
+            Owner.Creature,
+            this,
+            false);
     }
 
-    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await base.AfterCardPlayed(choiceContext, play);
-
-        if (play.Card != this || play.PlayIndex < play.PlayCount - 1)
-            return;
-
-        var shouldExhaust = _restoredDuringCurrentPlay && play.ResultPile != PileType.Exhaust;
-        _restoredDuringCurrentPlay = false;
-        if (shouldExhaust && Pile?.Type == PileType.Play)
-            await CardCmd.Exhaust(choiceContext, this);
-    }
-
-    protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Retain);
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
-
-
 
 
 

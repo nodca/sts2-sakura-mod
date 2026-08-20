@@ -56,6 +56,39 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void RecordUsesBoundedNextTurnCardCopies()
+    {
+        var record = new SakuraMod.SakuraModCode.Cards.Record();
+        var upgraded = RegressionTestHarness.MutableForCostTest(new SakuraMod.SakuraModCode.Cards.Record());
+        upgraded.UpgradeInternal();
+        var powerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/Transparent/RecordPower.cs"));
+        var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/zhs/cards.json"));
+        var englishCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/eng/cards.json"));
+
+        var checks = new[]
+        {
+            record.EnergyCost.Canonical == 2,
+            upgraded.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1,
+            record.Type == CardType.Skill,
+            record.Rarity == CardRarity.Rare,
+            record.CanonicalKeywords.SequenceEqual([SakuraKeywords.Water, CardKeyword.Exhaust]),
+            new RecordPower().InstanceType == PowerInstanceType.Instanced,
+            RegressionTestHarness.DeclaresMethod<RecordPower>("BeforeHandDraw"),
+            RegressionTestHarness.DeclaresMethod<RecordPower>("AfterCardPlayed"),
+            powerSource.Contains("MaxRecordedCards", StringComparison.Ordinal),
+            powerSource.Contains("play.IsLastInSeries", StringComparison.Ordinal),
+            powerSource.Contains("AddTemporaryRememberedCardToHand", StringComparison.Ordinal),
+            powerSource.Contains("freeThisTurn: true", StringComparison.Ordinal),
+            chineseCards.Contains("记录你本回合此后打出的至多 3 张牌", StringComparison.Ordinal),
+            englishCards.Contains("Record up to 3 cards you play later this turn", StringComparison.Ordinal)
+        };
+        RegressionTestHarness.Require(checks.All(static check => check), "Expected Record to be a 2-cost Exhaust Skill that upgrades to 1 and materializes up to three Forgotten copies before the next hand draw.");
+    }
+
+    [Fact]
     public void SakuraEraseUsesTargetBasedPersistentHpLossContract()
     {
         var card = new SakuraErase();
@@ -1089,6 +1122,18 @@ public sealed class CardMechanicsSuite
             && upgradedShade.DynamicVars.Block.IntValue == 14
             && upgradedShade.DynamicVars.Weak.IntValue == 2,
             "Expected Shade to cost 2, gain 12 Block, apply 1 Weak to all enemies, retain Block with Extra, and upgrade to 14 Block and 2 Weak.");
+
+        var flight = new Flight();
+        var upgradedFlight = RegressionTestHarness.MutableForCostTest(new Flight());
+        upgradedFlight.UpgradeInternal();
+        RegressionTestHarness.Require(
+            flight.DynamicVars.Block.IntValue == 6
+            && flight.DynamicVars["SakuraTemporaryDexterityPower"].IntValue == 2
+            && flight.DynamicVars.Energy.IntValue == 2
+            && upgradedFlight.DynamicVars.Block.IntValue == 9
+            && upgradedFlight.DynamicVars["SakuraTemporaryDexterityPower"].IntValue == 3
+            && upgradedFlight.DynamicVars.Energy.IntValue == 2,
+            "Expected Flight to gain 6 Block and 2 Temporary Dexterity, upgrade to 9 Block and 3 Temporary Dexterity, and retain its 2-Energy Extra Effect.");
 
         var snooze = new Snooze();
         var upgradedSnooze = RegressionTestHarness.MutableForCostTest(new Snooze());

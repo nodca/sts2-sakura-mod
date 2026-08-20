@@ -73,12 +73,14 @@ internal static class FourthActCombatFeedbackVisuals
 
     public static void BeginWindWallInterception(Creature owner)
     {
+        FourthActEnemyAudio.Play(FourthActAudioCue.WindWallBlock);
         if (Sessions.TryGetValue(owner, out var session))
             session.PlayWindWallImpact();
     }
 
     public static async Task PlayDarkVeilBreakAsync(Creature owner)
     {
+        FourthActEnemyAudio.Play(FourthActAudioCue.DarkVeilBreak);
         if (!Sessions.TryGetValue(owner, out var session))
             return;
         await session.PlayVeilBreakAsync();

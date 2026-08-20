@@ -1,4 +1,5 @@
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Audio;
 using MegaCrit.Sts2.Core.Entities.Ascension;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -36,6 +37,7 @@ public sealed class DarkMonster : ModMonsterTemplate
     public override bool HasDeathSfx => true;
     public override string DeathSfx => "event:/sfx/enemy/enemy_attacks/obscura/obscura_die";
     public override string? HurtSfx => "event:/sfx/enemy/enemy_attacks/magi_knight/magi_knight_hurt";
+    public override DamageSfxType TakeDamageSfxType => DamageSfxType.Magic;
     public override float DeathAnimLengthOverride => SakuraStandeeActionController.DeathDuration;
     public bool IsDeadly => AscensionHelper.GetValueIfAscension(AscensionLevel.DeadlyEnemies, 1, 0) == 1;
     public int Night => Creature.GetPower<DarkNightPower>()?.Amount ?? 1;
@@ -228,6 +230,7 @@ public sealed class DarkMonster : ModMonsterTemplate
         if (Creature.IsDead)
             return;
 
+        FourthActEnemyAudio.Play(FourthActAudioCue.DarkTransition);
         await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Cast, async () =>
         {
             await PowerCmd.Remove(Creature.GetPower<DarkVeilPower>());

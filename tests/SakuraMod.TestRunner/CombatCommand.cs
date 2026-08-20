@@ -10,6 +10,7 @@ public static class CombatCommand
     [
         "starter-run",
         "clow-shield-singleplayer",
+        "clow-mist-slippery",
         "extra-effect-choice",
         "manifest-temporary",
         "generated-pile-memory",

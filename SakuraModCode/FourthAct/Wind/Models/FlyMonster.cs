@@ -74,12 +74,14 @@ public sealed class FlyMonster : WindMonsterTemplate
             Creature,
             DamageCmd.Attack(DiveDamage).FromMonster(this),
             FourthActAttackStyle.HeavyWind);
+        FourthActEnemyAudio.Play(FourthActAudioCue.FlyLanding);
         await FlyVisualController.PlayLandingAsync(Creature);
         await PowerCmd.Remove<SoarPower>(Creature);
     }
 
     private async Task Takeoff(IReadOnlyList<Creature> targets)
     {
+        FourthActEnemyAudio.Play(FourthActAudioCue.WindTakeoff);
         await FlyVisualController.PlayTakeoffAsync(Creature);
         await PowerCmd.Apply<SoarPower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, false);
     }

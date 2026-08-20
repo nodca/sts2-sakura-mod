@@ -119,6 +119,7 @@ public sealed class SleepMonster : WindAttendantMonster
 
     private async Task ArmSleep(IReadOnlyList<Creature> targets)
     {
+        FourthActEnemyAudio.Play(FourthActAudioCue.SleepCast);
         await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Cast, async () =>
         {
             foreach (var target in targets.Where(static target => target.IsAlive))

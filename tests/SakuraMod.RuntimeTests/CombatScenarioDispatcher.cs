@@ -21,6 +21,7 @@ internal static class CombatScenarioDispatcher
         {
             "starter-run" => await StarterRunScenario.ExecuteAsync(request, assertions),
             "clow-shield-singleplayer" => await ClowShieldSingleplayerScenario.ExecuteAsync(request, assertions),
+            "clow-mist-slippery" => await ClowMistSlipperyScenario.ExecuteAsync(request, assertions),
             "extra-effect-choice" => await ExtraEffectChoiceScenario.ExecuteAsync(request, assertions),
             "manifest-temporary" => await ManifestTemporaryScenario.ExecuteAsync(request, assertions),
             "generated-pile-memory" => await GeneratedPileMemoryScenario.ExecuteAsync(request, assertions),

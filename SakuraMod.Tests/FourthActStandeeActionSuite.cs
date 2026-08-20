@@ -56,6 +56,92 @@ public sealed class FourthActStandeeActionSuite
     }
 
     [Fact]
+    public void FourthActAudioUsesExplicitVanillaCues()
+    {
+        var expected = new Dictionary<FourthActAudioCue, string>
+        {
+            [FourthActAudioCue.WindAttack] =
+                "event:/sfx/enemy/enemy_attacks/living_fog/living_fog_attack_blow",
+            [FourthActAudioCue.HeavyWindAttack] =
+                "event:/sfx/enemy/enemy_attacks/soul_fysh/soul_fysh_wave",
+            [FourthActAudioCue.IllusionAttack] =
+                "event:/sfx/enemy/enemy_attacks/obscura/obscura_attack",
+            [FourthActAudioCue.DarkAttack] =
+                "event:/sfx/enemy/enemy_attacks/spectral_knight/spectral_knight_soul_slash",
+            [FourthActAudioCue.WindTakeoff] =
+                "event:/sfx/enemy/enemy_attacks/thieving_hopper/thieving_hopper_take_off",
+            [FourthActAudioCue.WindySummon] =
+                "event:/sfx/enemy/enemy_attacks/obscura/obscura_summon",
+            [FourthActAudioCue.IllusionReweave] =
+                "event:/sfx/enemy/enemy_attacks/obscura/obscura_summon",
+            [FourthActAudioCue.DarkTransition] =
+                "event:/sfx/enemy/enemy_attacks/spectral_knight/spectral_knight_hex",
+            [FourthActAudioCue.FlyLanding] =
+                "res://SakuraMod/sfx/fourth_act/fly_landing.ogg",
+            [FourthActAudioCue.SleepCast] =
+                "res://SakuraMod/sfx/fourth_act/sleep_cast.ogg",
+            [FourthActAudioCue.WindWallBlock] =
+                "res://SakuraMod/sfx/fourth_act/wind_wall_block.ogg",
+            [FourthActAudioCue.DarkVeilBreak] =
+                "res://SakuraMod/sfx/fourth_act/dark_veil_break.ogg"
+        };
+
+        Assert.Equal(expected.Count, Enum.GetValues<FourthActAudioCue>().Length);
+        foreach (var (cue, path) in expected)
+            Assert.Equal(path, FourthActEnemyAudio.PathFor(cue));
+
+        var audio = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Visuals/FourthActEnemyAudio.cs"));
+        Assert.Contains("if (TestMode.IsOn)", audio, StringComparison.Ordinal);
+        Assert.Contains("ResourceSoundFileSource", audio, StringComparison.Ordinal);
+        Assert.Contains("GameAudioService.Shared.PlayOneShot", audio, StringComparison.Ordinal);
+        Assert.Contains("SfxCmd.Play(path)", audio, StringComparison.Ordinal);
+        Assert.Contains("MainFile.Logger.Warn", audio, StringComparison.Ordinal);
+
+        foreach (var cue in new[]
+                 {
+                     FourthActAudioCue.FlyLanding,
+                     FourthActAudioCue.SleepCast,
+                     FourthActAudioCue.WindWallBlock,
+                     FourthActAudioCue.DarkVeilBreak
+                 })
+        {
+            var file = RegressionTestHarness.FindRepoFile(
+                FourthActEnemyAudio.PathFor(cue).Replace("res://", string.Empty, StringComparison.Ordinal));
+            Assert.True(File.Exists(file), $"Missing local audio resource for {cue}: {file}");
+        }
+
+        var fly = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Wind/Models/FlyMonster.cs"));
+        var sleep = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Wind/Models/WindAttendants.cs"));
+        var feedback = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Visuals/FourthActCombatFeedbackVisuals.cs"));
+        Assert.Contains("FourthActAudioCue.FlyLanding", fly, StringComparison.Ordinal);
+        Assert.Contains("FourthActAudioCue.SleepCast", sleep, StringComparison.Ordinal);
+        Assert.Contains("FourthActAudioCue.WindWallBlock", feedback, StringComparison.Ordinal);
+        Assert.Contains("FourthActAudioCue.DarkVeilBreak", feedback, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FourthActAudioGapListDocumentsUnmatchedActions()
+    {
+        var gaps = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            ".trellis/tasks/08-19-fourth-act-enemy-audio/research/original-audio-gap-list.md"));
+
+        foreach (var action in new[]
+                 {
+                     "飞行落地", "催眠施法", "浮空转移", "风墙拦截", "风缚转化", "暗幕破裂"
+                 })
+        {
+            Assert.Contains(action, gaps, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("v0.107.1", gaps, StringComparison.Ordinal);
+        Assert.Contains("本轮接入了可靠的 STS2 原版事件", gaps, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SharedControllerOwnsStandeeLifecycleAndGameplayCannotBeSkipped()
     {
         var factory = File.ReadAllText(RegressionTestHarness.FindRepoFile(

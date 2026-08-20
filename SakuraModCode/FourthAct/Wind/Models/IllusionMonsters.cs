@@ -96,6 +96,7 @@ public sealed class IllusionMonster : WindMonsterTemplate
 
     private async Task Reweave(IReadOnlyList<Creature> targets)
     {
+        FourthActEnemyAudio.Play(FourthActAudioCue.IllusionReweave);
         await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Summon, async () =>
         {
             await Visuals.IllusionVisualController.WithGroupOcclusionAsync(Creature, async () =>

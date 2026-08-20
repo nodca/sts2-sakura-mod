@@ -13,13 +13,6 @@ internal enum FourthActAttackStyle
 
 internal static class FourthActEnemyActionCmd
 {
-    private const string WindAttackSfx =
-        "event:/sfx/enemy/enemy_attacks/thieving_hopper/thieving_hopper_attack_hover";
-    private const string IllusionAttackSfx =
-        "event:/sfx/enemy/enemy_attacks/obscura/obscura_attack";
-    private const string DarkAttackSfx =
-        "event:/sfx/enemy/enemy_attacks/spectral_knight/spectral_knight_soul_slash";
-
     internal static Task AttackAsync(
         Creature attacker,
         AttackCommand command,
@@ -27,10 +20,14 @@ internal static class FourthActEnemyActionCmd
     {
         var (attackerSfx, hitVfx) = style switch
         {
-            FourthActAttackStyle.HeavyWind => (WindAttackSfx, "vfx/vfx_flying_slash"),
-            FourthActAttackStyle.Illusion => (IllusionAttackSfx, "vfx/vfx_starry_impact"),
-            FourthActAttackStyle.Dark => (DarkAttackSfx, "vfx/vfx_attack_slash"),
-            _ => (WindAttackSfx, "vfx/vfx_attack_slash")
+            FourthActAttackStyle.HeavyWind =>
+                (FourthActEnemyAudio.PathFor(FourthActAudioCue.HeavyWindAttack), "vfx/vfx_flying_slash"),
+            FourthActAttackStyle.Illusion =>
+                (FourthActEnemyAudio.PathFor(FourthActAudioCue.IllusionAttack), "vfx/vfx_starry_impact"),
+            FourthActAttackStyle.Dark =>
+                (FourthActEnemyAudio.PathFor(FourthActAudioCue.DarkAttack), "vfx/vfx_attack_slash"),
+            _ =>
+                (FourthActEnemyAudio.PathFor(FourthActAudioCue.WindAttack), "vfx/vfx_attack_slash")
         };
         command
             .WithNoAttackerAnim()
