@@ -35,6 +35,18 @@ public sealed class CardVisualContractSuite
                 new Blade(),
                 [SakuraSwordBladeVfx.ScenePath, SakuraSwordBladeVfx.TargetScenePath, .. sharedCelPaths]),
             new VfxCase(
+                new ClowCloud(),
+                [CloudRainWeatherVfx.ScenePath, .. sharedCelPaths]),
+            new VfxCase(
+                new SakuraCloud(),
+                [CloudRainWeatherVfx.ScenePath, .. sharedCelPaths]),
+            new VfxCase(
+                new ClowRain(),
+                [CloudRainWeatherVfx.ScenePath, .. sharedCelPaths]),
+            new VfxCase(
+                new SakuraRain(),
+                [CloudRainWeatherVfx.ScenePath, .. sharedCelPaths]),
+            new VfxCase(
                 new SpellTurn(),
                 [
                     SpellTurnTransformationVfx.ScenePath,
@@ -78,6 +90,7 @@ public sealed class CardVisualContractSuite
                      "SakuraModCode/Cards/Visuals/Transparent/HailIceShardVfx.cs",
                      "SakuraModCode/Cards/Visuals/Transparent/BlazeFireColumnVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/SakuraSwordBladeVfx.cs",
+                     "SakuraModCode/Cards/Visuals/Classic/CloudRainWeatherVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/SpellTurnTransformationVfx.cs"
                  })
         {

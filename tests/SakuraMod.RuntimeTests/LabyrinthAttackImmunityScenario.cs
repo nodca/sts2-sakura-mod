@@ -65,6 +65,7 @@ internal static class LabyrinthAttackImmunityScenario
         var hpAfterSwing = target.CurrentHp;
         assertions.Equal("labyrinth_blocks_swing_damage", hpBeforeSwing, hpAfterSwing);
         assertions.Equal("labyrinth_blocks_swing_weak", null, target.GetPower<WeakPower>());
+        assertions.Equal("swing_damage_window", 2, player.Creature.GetPower<SwingDamageWindowPower>()?.Amount ?? 0);
         RuntimeTestHost.WriteCheckpoint(
             request,
             "labyrinth_attack_immunity_verified",
@@ -92,7 +93,8 @@ internal static class LabyrinthAttackImmunityScenario
             ["after_swing"] = new
             {
                 target_hp = hpAfterSwing,
-                weak = target.GetPower<WeakPower>()?.Amount
+                weak = target.GetPower<WeakPower>()?.Amount,
+                swing_window = player.Creature.GetPower<SwingDamageWindowPower>()?.Amount
             }
         };
     }

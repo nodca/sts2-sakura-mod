@@ -37,17 +37,29 @@ public class ClowRain() : ClowExtraEffectCard(2, CardType.Skill, CardRarity.Unco
             : base.GetResultPileTypeForCardPlay();
     }
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        ReduceHandCosts(Owner, 1);
-        await Task.CompletedTask;
-    }
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        CloudRainWeatherVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            WeatherMode.Rain,
+            async cues =>
+            {
+                cues.Impact();
+                ReduceHandCosts(Owner, 1);
+                await Task.CompletedTask;
+            });
 
-    protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        ReduceHandCosts(Owner, 1);
-        return Task.CompletedTask;
-    }
+    protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        CloudRainWeatherVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            WeatherMode.Rain,
+            async cues =>
+            {
+                cues.Impact();
+                ReduceHandCosts(Owner, 1);
+                await Task.CompletedTask;
+            });
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 
@@ -64,29 +76,35 @@ public class SakuraRain() : SakuraFormCard(0, CardType.Skill, TargetType.None)
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 3)];
 
-    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        var choices = CardPile.GetCards(Owner, PileType.Hand)
-            .Where(static card => card.EnergyCost.GetWithModifiers(CostModifiers.Local) > 0)
-            .ToList();
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        CloudRainWeatherVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            WeatherMode.Rain,
+            async cues =>
+            {
+                cues.Impact();
+                var choices = CardPile.GetCards(Owner, PileType.Hand)
+                    .Where(static card => card.EnergyCost.GetWithModifiers(CostModifiers.Local) > 0)
+                    .ToList();
 
-        var amount = Math.Min(ReleasedMagic(), choices.Count);
-        List<CardModel> targets = [];
-        for (var i = 0; i < amount; i++)
-        {
-            var card = choices.Count == amount
-                ? choices[0]
-                : Owner.RunState.Rng.CombatCardSelection.NextItem(choices);
-            if (card is null)
-                break;
+                var amount = Math.Min(ReleasedMagic(), choices.Count);
+                List<CardModel> targets = [];
+                for (var i = 0; i < amount; i++)
+                {
+                    var card = choices.Count == amount
+                        ? choices[0]
+                        : Owner.RunState.Rng.CombatCardSelection.NextItem(choices);
+                    if (card is null)
+                        break;
 
-            targets.Add(card);
-            choices.Remove(card);
-        }
+                    targets.Add(card);
+                    choices.Remove(card);
+                }
 
-        foreach (var card in targets)
-            card.EnergyCost.SetThisCombat(0, true);
-        return Task.CompletedTask;
-    }
+                foreach (var card in targets)
+                    card.EnergyCost.SetThisCombat(0, true);
+                await Task.CompletedTask;
+            });
 }
 

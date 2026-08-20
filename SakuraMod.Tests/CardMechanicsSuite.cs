@@ -80,7 +80,8 @@ public sealed class CardMechanicsSuite
             RegressionTestHarness.DeclaresMethod<RecordPower>("AfterCardPlayed"),
             powerSource.Contains("MaxRecordedCards", StringComparison.Ordinal),
             powerSource.Contains("play.IsLastInSeries", StringComparison.Ordinal),
-            powerSource.Contains("AddTemporaryRememberedCardToHand", StringComparison.Ordinal),
+            powerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal),
+            !powerSource.Contains("AddTemporaryRememberedCardToHand", StringComparison.Ordinal),
             powerSource.Contains("freeThisTurn: true", StringComparison.Ordinal),
             chineseCards.Contains("记录你本回合此后打出的至多 3 张牌", StringComparison.Ordinal),
             englishCards.Contains("Record up to 3 cards you play later this turn", StringComparison.Ordinal)
@@ -1173,17 +1174,30 @@ public sealed class CardMechanicsSuite
         var swing = new Swing();
         var upgradedSwing = RegressionTestHarness.MutableForCostTest(new Swing());
         upgradedSwing.UpgradeInternal();
+        var swingPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/Transparent/SwingDamageWindowPower.cs"));
+        var swingChinese = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/zhs/cards.json"));
+        var swingEnglish = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/eng/cards.json"));
         RegressionTestHarness.Require(
-            swing.DynamicVars.CalculationBase.IntValue == 12
-            && swing.DynamicVars.Weak.IntValue == 1
-            && swing.DynamicVars.ExtraDamage.IntValue == 3
-            && swing.DynamicVars.CalculatedDamage is CalculatedDamageVar
-            && upgradedSwing.DynamicVars.CalculationBase.IntValue == 16
-            && upgradedSwing.DynamicVars.ExtraDamage.IntValue == 4
-            && SwingRules.WeakMultiplier(0, doubleWeakBonus: false) == 0
-            && SwingRules.WeakMultiplier(2, doubleWeakBonus: false) == 2
-            && SwingRules.WeakMultiplier(2, doubleWeakBonus: true) == 4,
-            "Expected Swing to deal 12 damage before applying Weak, gain 3 damage per existing Weak, double that bonus with Extra, and upgrade to 16/4.");
+            swing.DynamicVars.Damage.IntValue == 12
+            && upgradedSwing.DynamicVars.Damage.IntValue == 16
+            && SwingDamageWindowPower.RequestedMultiplier(extraEffect: false) == 2
+            && SwingDamageWindowPower.RequestedMultiplier(extraEffect: true) == 3
+            && SwingDamageWindowPower.HighestMultiplier(0, 2) == 2
+            && SwingDamageWindowPower.HighestMultiplier(2, 2) == 2
+            && SwingDamageWindowPower.HighestMultiplier(2, 3) == 3
+            && SwingDamageWindowPower.HighestMultiplier(3, 2) == 3
+            && RegressionTestHarness.DeclaresMethod<SwingDamageWindowPower>("ModifyDamageMultiplicative")
+            && RegressionTestHarness.DeclaresMethod<SwingDamageWindowPower>("AfterSideTurnEnd")
+            && swingPowerSource.Contains("props.IsPoweredAttack()", StringComparison.Ordinal)
+            && swingPowerSource.Contains("cardSource is { Type: CardType.Attack }", StringComparison.Ordinal)
+            && swingPowerSource.Contains("cardSource.Owner?.Creature == owner", StringComparison.Ordinal)
+            && swingPowerSource.Contains("GetScaledAmountForMultiplayer", StringComparison.Ordinal)
+            && swingChinese.Contains("你的本次伤害和本回合内的后续攻击", StringComparison.Ordinal)
+            && swingEnglish.Contains("Your damage this time and later Attacks this turn", StringComparison.Ordinal),
+            "Expected Swing to deal 12/16 damage and open a 2x/3x owner-scoped Weak damage window for Powered Attacks.");
 
         var struggle = new Struggle();
         var upgradedStruggle = RegressionTestHarness.MutableForCostTest(new Struggle());
@@ -1741,5 +1755,41 @@ public sealed class CardMechanicsSuite
             && SakuraLibra.EnergyFromCharge(8) == 2
             && SakuraLibra.EnergyFromCharge(9) == 3,
             "Expected Sakura Libra to cost 0, gain 3 Block per Magic Charge, and gain 1 Energy for every 3 Magic Charge spent.");
+    }
+
+    [Fact]
+    public void ChoiceAndAppearKeepManifestedCombatCostContracts()
+    {
+        var choice = new Choice();
+        var upgradedChoice = RegressionTestHarness.MutableForCostTest(new Choice());
+        upgradedChoice.UpgradeInternal();
+        var choiceSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Choice.cs"));
+        var appearSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Appear.cs"));
+        var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/zhs/cards.json"));
+        var englishCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/eng/cards.json"));
+
+        RegressionTestHarness.Require(
+            choice.EnergyCost.Canonical == 0
+            && choice.DynamicVars["ManifestCards"].IntValue == 1
+            && choice.DynamicVars["DrawCards"].IntValue == 2
+            && upgradedChoice.DynamicVars["ManifestCards"].IntValue == 2
+            && upgradedChoice.DynamicVars["DrawCards"].IntValue == 3
+            && choiceSource.Contains("if (activation.IsActive)", StringComparison.Ordinal)
+            && choiceSource.Contains("drawChoice.DynamicVars[\"DrawCards\"].BaseValue = DynamicVars[\"DrawCards\"].IntValue", StringComparison.Ordinal)
+            && choiceSource.Contains("await Manifest(choiceContext, DynamicVars[\"ManifestCards\"].IntValue)", StringComparison.Ordinal)
+            && choiceSource.Contains("await Draw(choiceContext, DynamicVars[\"DrawCards\"].IntValue)", StringComparison.Ordinal)
+            && choiceSource.Contains("SetThisCombat", StringComparison.Ordinal)
+            && appearSource.Contains("SetThisCombat(0, reduceOnly: true)", StringComparison.Ordinal)
+            && chineseCards.Contains("所显现的牌本场战斗内能耗减少 1", StringComparison.Ordinal)
+            && chineseCards.Contains("执行上述两项", StringComparison.Ordinal)
+            && chineseCards.Contains("本场战斗内能耗变为 0", StringComparison.Ordinal)
+            && englishCards.Contains("cost 1 less for the rest of combat", StringComparison.Ordinal)
+            && englishCards.Contains("Do both options", StringComparison.Ordinal)
+            && englishCards.Contains("cost 0 for the rest of combat", StringComparison.Ordinal),
+            "Expected Choice to upgrade both branches, execute both during Extra, and keep manifested cards at their combat cost reductions; Appear should use the same combat-wide Extra cost state.");
     }
 }

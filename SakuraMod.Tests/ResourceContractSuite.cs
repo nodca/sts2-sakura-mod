@@ -884,6 +884,147 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
+    public void CloudRainWeatherSharesOneCelFieldWithoutScreenSampling()
+    {
+        var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/card_vfx/cloud_rain_weather_vfx.tscn"));
+        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/cloud_rain_weather.gdshader"));
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/CloudRainWeatherVfx.cs"));
+        var cloud = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Cloud.cs"));
+        var rain = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Rain.cs"));
+        var include = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/cel_vfx.gdshaderinc"));
+
+        RegressionTestHarness.Require(
+            scene.Contains("[node name=\"WeatherBody\" type=\"ColorRect\"", StringComparison.Ordinal)
+            && scene.Contains("unique_name_in_owner = true", StringComparison.Ordinal)
+            && scene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
+            && scene.Contains("shader_parameter/formation = 0.0", StringComparison.Ordinal)
+            && scene.Contains("shader_parameter/rain = 0.0", StringComparison.Ordinal)
+            && scene.Split("mouse_filter = 2", StringSplitOptions.None).Length - 1 == 2
+            && !scene.Contains("BackBufferCopy", StringComparison.Ordinal),
+            "Expected one local ColorRect weather region that ships in its start state, ignores input, and never copies the screen.");
+
+        foreach (var uniform in new[]
+                 {
+                     "elapsed", "held", "held_at", "seed", "formation", "rain", "rain_origin",
+                     "splash", "opacity"
+                 })
+        {
+            Assert.Contains($"uniform float {uniform}", shader, StringComparison.Ordinal);
+        }
+        Assert.Contains("uniform vec2 region_size", shader, StringComparison.Ordinal);
+
+        var shaderCode = shader
+            .Split('\n')
+            .Select(static line => line.Trim())
+            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
+            .ToList();
+        var includeMass = ExtractGlslFunction(include, "float cel_scalloped_mass(");
+        var canopyField = ExtractGlslFunction(shader, "float canopy_field(");
+        var canopyShade = ExtractGlslFunction(shader, "vec4 shade_canopy(");
+        var rainField = ExtractGlslFunction(shader, "float rain_field(");
+        var rainShade = ExtractGlslFunction(shader, "vec4 shade_rain_streaks(");
+        var splashShade = ExtractGlslFunction(shader, "vec4 shade_splash_crowns(");
+
+        RegressionTestHarness.Require(
+            includeMass.Contains("d = min(d, length(p - lobe_c) - radius);", StringComparison.Ordinal)
+            && includeMass.Contains("return max(d, p.y - base_y);", StringComparison.Ordinal)
+            && !includeMass.Contains("cel_smin(", StringComparison.Ordinal)
+            && !includeMass.Contains("cel_fbm(", StringComparison.Ordinal),
+            "Expected the shared scalloped mass to union circles with min and cut the larger-y base, never a smooth-union neck.");
+        RegressionTestHarness.Require(
+            shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_vfx.gdshaderinc\"", StringComparison.Ordinal)
+            && canopyField.Contains("cel_scalloped_mass(", StringComparison.Ordinal)
+            && canopyShade.Contains("cel_ink(", StringComparison.Ordinal)
+            && canopyShade.Contains("cel_bands3(", StringComparison.Ordinal)
+            && (canopyShade.Contains("cel_step_clock", StringComparison.Ordinal)
+                || shader.Contains("cel_step_clock_held(elapsed, held, held_at)", StringComparison.Ordinal)),
+            "Expected the canopy path to consume the shared scalloped mass, ink, bands, and stepped clock.");
+        RegressionTestHarness.Require(
+            !rainShade.Contains("cel_ink", StringComparison.Ordinal)
+            && !rainShade.Contains("cel_bands3", StringComparison.Ordinal)
+            && !rainShade.Contains("cel_step_clock", StringComparison.Ordinal)
+            && !splashShade.Contains("cel_ink", StringComparison.Ordinal)
+            && !splashShade.Contains("cel_bands3", StringComparison.Ordinal)
+            && !splashShade.Contains("cel_step_clock", StringComparison.Ordinal)
+            && shader.Contains("float rain_time = max(elapsed - rain_origin, 0.0);", StringComparison.Ordinal)
+            && shader.Contains("rain_field(p, rain_time)", StringComparison.Ordinal)
+            && rainField.Contains("p0 + vel * local", StringComparison.Ordinal),
+            "Expected rain streaks and splash crowns to shade with a bright core and foam rim, falling from the moment rain starts.");
+        RegressionTestHarness.Require(
+            !shaderCode.Any(static line =>
+                line.Contains("cel_smin(", StringComparison.Ordinal)
+                || line.Contains("cel_fbm(", StringComparison.Ordinal)
+                || line.Contains("TIME", StringComparison.Ordinal)
+                || line.Contains("hint_screen_texture", StringComparison.Ordinal)
+                || line.Contains("const float CEL_", StringComparison.Ordinal)
+                || line.Contains("FACE_BUDGET", StringComparison.Ordinal)),
+            "Expected no Aqua neck, fire turbulence, Hail crystal loop, shader clock, screen sample, or restated art-language constants.");
+
+        RegressionTestHarness.Require(
+            session.Contains(": CelVfxSession", StringComparison.Ordinal)
+            && session.Contains("session.StartClock();", StringComparison.Ordinal)
+            && session.Contains("PlayCelPrelude(card, caster)", StringComparison.Ordinal)
+            && session.Contains("CelVfxGeometry.ResolveCaster(", StringComparison.Ordinal)
+            && session.Contains("room.CombatVfxContainer.AddChildSafely(root)", StringComparison.Ordinal)
+            && session.Contains("root.Scale = Vector2.One;", StringComparison.Ordinal)
+            && session.Contains("private const int VfxZIndex = 1;", StringComparison.Ordinal)
+            && session.Contains("caster.FacingSign * FacingOffsetPx", StringComparison.Ordinal)
+            && session.Contains("BeginHold();", StringComparison.Ordinal)
+            && session.Contains("SetShaderParameter(\"rain_origin\"", StringComparison.Ordinal)
+            && !session.Contains("CountWateryCards", StringComparison.Ordinal)
+            && !session.Contains("ReleasedBlock", StringComparison.Ordinal),
+            "Expected a single caster-side session that starts its clock after construction and never reads watery-card counts.");
+        RegressionTestHarness.Require(
+            session.Contains("BeginHold();", StringComparison.Ordinal)
+            && session.Contains("SetDelay(HoldDuration)", StringComparison.Ordinal)
+            && CloudRainWeatherVfx.CloudFieldIsShorterThanRain(),
+            "Expected the cloud field to stay shorter than rain, with splash delayed past the hold.");
+
+        Assert.Contains(
+            "CloudRainWeatherVfx.PlayOrResolveAsync(",
+            cloud,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "CloudRainWeatherVfx.PlayOrResolveAsync(",
+            rain,
+            StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            cloud.Split("PlayOrResolveAsync(", StringSplitOptions.None).Length - 1 == 3
+            && rain.Split("PlayOrResolveAsync(", StringSplitOptions.None).Length - 1 == 3,
+            "Expected Clow Cloud, Sakura Cloud, Clow Rain's two paths, and Sakura Rain to each wrap one session.");
+
+        var activatedIndex = cloud.IndexOf("Task PlayActivatedCard(", StringComparison.Ordinal);
+        var helperIndex = cloud.IndexOf("private async Task ResolveCloudMechanics(", StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            activatedIndex >= 0
+            && helperIndex > activatedIndex
+            && cloud[activatedIndex..helperIndex].Split("PlayOrResolveAsync(", StringSplitOptions.None).Length - 1 == 1
+            && !cloud[activatedIndex..helperIndex].Contains("PlayCard(", StringComparison.Ordinal)
+            && cloud[activatedIndex..helperIndex].Contains("SakuraMagicCharge.CloudExtraBlock", StringComparison.Ordinal)
+            && !cloud.Contains("await PlayCard(", StringComparison.Ordinal),
+            "Expected Clow Cloud's activated path to wrap one session around the mechanical helper plus extra block.");
+
+        foreach (var (source, cueAfter) in new[]
+                 {
+                     (cloud, "ResolveCloudMechanics("),
+                     (rain, "ReduceHandCosts(")
+                 })
+        {
+            var impactIndex = source.IndexOf("cues.Impact()", StringComparison.Ordinal);
+            var actionIndex = source.IndexOf(cueAfter, StringComparison.Ordinal);
+            RegressionTestHarness.Require(
+                impactIndex >= 0 && actionIndex > impactIndex,
+                $"Expected {cueAfter} to resolve after the weather impact cue.");
+        }
+    }
+
+    [Fact]
     public void ShieldCardsHaveNoDedicatedCombatVfx()
     {
         var shield = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -1233,7 +1374,8 @@ public sealed class ResourceContractSuite
                      "float cel_facet(", "vec3 cel_bands3(", "float cel_ink(",
                      "float cel_body(", "vec3 cel_quantize(", "float cel_step_clock(",
                      "float cel_noise2(", "float cel_fbm(",
-                     "float cel_tapered_segment("
+                     "float cel_tapered_segment(",
+                     "float cel_scalloped_mass("
                  })
             Assert.Contains(export, include, StringComparison.Ordinal);
 
@@ -1289,6 +1431,28 @@ public sealed class ResourceContractSuite
         // a later card copying the older form from one that still had it.
         foreach (var path in Directory.EnumerateFiles(shaderRoot, "*.gdshader", SearchOption.AllDirectories))
             RequireScreenOffsetsUsePixelSize(path);
+    }
+
+    private static string ExtractGlslFunction(string source, string signature)
+    {
+        var start = source.IndexOf(signature, StringComparison.Ordinal);
+        RegressionTestHarness.Require(start >= 0, $"Expected GLSL function {signature}.");
+        var brace = source.IndexOf('{', start);
+        RegressionTestHarness.Require(brace > start, $"Expected a body for {signature}.");
+        var depth = 0;
+        for (var i = brace; i < source.Length; i++)
+        {
+            if (source[i] == '{')
+                depth++;
+            else if (source[i] == '}')
+            {
+                depth--;
+                if (depth == 0)
+                    return source[start..(i + 1)];
+            }
+        }
+
+        throw new InvalidOperationException($"Unbalanced braces in {signature}.");
     }
 
     /// <summary>

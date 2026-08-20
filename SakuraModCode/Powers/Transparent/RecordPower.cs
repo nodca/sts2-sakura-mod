@@ -39,7 +39,7 @@ public sealed class RecordPower : SakuraPowerModel
 
         foreach (var card in GetInternalData<Data>().Cards)
         {
-            await SakuraGeneratedCardLifecycle.AddTemporaryRememberedCardToHand(
+            await SakuraGeneratedCardLifecycle.AddTemporaryGeneratedCardToHand(
                 card,
                 freeThisTurn: true,
                 choiceContext);

@@ -27,13 +27,15 @@ public class Appear() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
     {
         for (var i = 0; i < DynamicVars["Copies"].IntValue; i++)
         {
-            await SakuraManifestLoop.AddTemporaryTransparentCopyToHand(
+            var copy = await SakuraManifestLoop.AddTemporaryTransparentCopyToHand(
                 this,
                 choiceContext,
-                freeThisTurn: activation.IsActive);
+                freeThisTurn: false);
+
+            if (activation.IsActive && copy is not null && !copy.EnergyCost.CostsX)
+                copy.EnergyCost.SetThisCombat(0, reduceOnly: true);
         }
     }
 
     protected override void OnUpgrade() => DynamicVars["Copies"].UpgradeValueBy(1);
 }
-

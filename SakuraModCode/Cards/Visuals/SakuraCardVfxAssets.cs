@@ -12,6 +12,8 @@ internal static class SakuraCardVfxAssets
         [.. SakuraSwordBladeVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> GalePaths =
         [.. GaleWindBladeVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+    private static readonly IReadOnlyList<string> CloudRainPaths =
+        [.. CloudRainWeatherVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
 
     public static IEnumerable<string> RunAssetPaths(CardModel card) => card switch
     {
@@ -20,6 +22,7 @@ internal static class SakuraCardVfxAssets
         Blaze => BlazePaths,
         ClowSword or SakuraSword or Blade => SwordPaths,
         Gale => GalePaths,
+        ClowCloud or SakuraCloud or ClowRain or SakuraRain => CloudRainPaths,
         SpellTurn => SpellTurnTransformationVfx.AssetPaths,
         _ => []
     };

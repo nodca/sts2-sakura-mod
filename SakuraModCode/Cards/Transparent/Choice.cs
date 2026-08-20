@@ -25,27 +25,40 @@ public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
+        if (activation.IsActive)
+        {
+            await Manifest(choiceContext, DynamicVars["ManifestCards"].IntValue);
+            await Draw(choiceContext, DynamicVars["DrawCards"].IntValue);
+            return;
+        }
+
         var manifestChoice = SakuraActions.CloneWithCurrentUpgrade<ChoiceManifestChoice>(this);
         var drawChoice = SakuraActions.CloneWithCurrentUpgrade<ChoiceDrawChoice>(this);
+        manifestChoice.DynamicVars["ManifestCards"].BaseValue = DynamicVars["ManifestCards"].IntValue;
+        drawChoice.DynamicVars["DrawCards"].BaseValue = DynamicVars["DrawCards"].IntValue;
         var choice = await SakuraActions.SelectFromCards(this, choiceContext, [manifestChoice, drawChoice], cancelable: false);
         if (choice is ChoiceDrawChoice)
-            await Draw(choiceContext, ChoiceRepeatCount(activation));
+            await Draw(choiceContext, DynamicVars["DrawCards"].IntValue);
         else
-            await Manifest(choiceContext, ChoiceRepeatCount(activation));
+            await Manifest(choiceContext, DynamicVars["ManifestCards"].IntValue);
     }
 
-    private static int ChoiceRepeatCount(SakuraExtraEffectActivation activation) =>
-        activation.IsActive ? 2 : 1;
-
-    private async Task Manifest(PlayerChoiceContext choiceContext, int repeats)
+    private async Task Manifest(PlayerChoiceContext choiceContext, int amount)
     {
-        for (var i = 0; i < repeats; i++)
-            await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars["ManifestCards"].IntValue);
+        var manifested = await SakuraManifestLoop.Manifest(this, choiceContext, amount);
+        foreach (var card in manifested)
+        {
+            if (!card.EnergyCost.CostsX)
+                card.EnergyCost.SetThisCombat(Math.Max(0, card.EnergyCost.GetResolved() - 1), reduceOnly: true);
+        }
     }
 
-    private async Task Draw(PlayerChoiceContext choiceContext, int repeats) =>
-        await CardPileCmd.Draw(choiceContext, DynamicVars["DrawCards"].IntValue * repeats, Owner, false);
+    private async Task Draw(PlayerChoiceContext choiceContext, int amount) =>
+        await CardPileCmd.Draw(choiceContext, amount, Owner, false);
 
-    protected override void OnUpgrade() => DynamicVars["ManifestCards"].UpgradeValueBy(1);
+    protected override void OnUpgrade()
+    {
+        DynamicVars["ManifestCards"].UpgradeValueBy(1);
+        DynamicVars["DrawCards"].UpgradeValueBy(1);
+    }
 }
-

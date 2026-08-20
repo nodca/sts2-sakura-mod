@@ -1,0 +1,39 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" uid="uid://crwthrcld0vfx" path="res://SakuraMod/shaders/card_vfx/cloud_rain_weather.gdshader" id="1_weather"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_weather"]
+resource_local_to_scene = true
+shader = ExtResource("1_weather")
+shader_parameter/region_size = Vector2(280, 400)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/formation = 0.0
+shader_parameter/rain = 0.0
+shader_parameter/rain_origin = 0.0
+shader_parameter/splash = 0.0
+shader_parameter/opacity = 1.0
+shader_parameter/canopy_center = Vector2(0, -110)
+shader_parameter/canopy_half = Vector2(108, 48)
+shader_parameter/canopy_base_y = -76.0
+shader_parameter/ground_y = 180.0
+
+[node name="CloudRainWeatherVfx" type="Node2D"]
+
+[node name="WeatherBody" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_weather")
+offset_left = -140.0
+offset_top = -200.0
+offset_right = 140.0
+offset_bottom = 200.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="InputPassThrough" type="Control" parent="."]
+layout_mode = 0
+offset_right = 1.0
+offset_bottom = 1.0
+mouse_filter = 2

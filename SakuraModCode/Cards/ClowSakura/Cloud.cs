@@ -31,7 +31,30 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
     public override SakuraElementSet Elements => SakuraElementSet.Water;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceBlockVar(5, ValueProp.Move)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        CloudRainWeatherVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            WeatherMode.Cloud,
+            async cues =>
+            {
+                cues.Impact();
+                await ResolveCloudMechanics(choiceContext, play);
+            });
+
+    protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        CloudRainWeatherVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            WeatherMode.Cloud,
+            async cues =>
+            {
+                cues.Impact();
+                await ResolveCloudMechanics(choiceContext, play);
+                await GainBlock(play, SakuraMagicCharge.CloudExtraBlock);
+            });
+
+    private async Task ResolveCloudMechanics(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await GainBlock(play, ReleasedBlock());
 
@@ -41,12 +64,6 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
 
         if (Owner.Creature.GetPower<ClassicWateryPower>()?.Amount > 0)
             await SakuraCloudEffects.AddRainToHand(Owner, choiceContext, freeForCombat: false);
-    }
-
-    protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await PlayCard(choiceContext, play);
-        await GainBlock(play, SakuraMagicCharge.CloudExtraBlock);
     }
 
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(2);
@@ -62,7 +79,18 @@ public class SakuraCloud() : SakuraFormCard(1, CardType.Skill, TargetType.None)
         new BlockVar("ExtraBlock", 3, ValueProp.Move)
     ];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        CloudRainWeatherVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            WeatherMode.Cloud,
+            async cues =>
+            {
+                cues.Impact();
+                await ResolveCloudMechanics(choiceContext, play);
+            });
+
+    private async Task ResolveCloudMechanics(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await GainBlock(play, ReleasedBlock());
 
