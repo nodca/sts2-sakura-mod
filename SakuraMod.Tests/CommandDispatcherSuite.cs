@@ -45,6 +45,7 @@ public sealed class CommandDispatcherSuite
         Assert.Contains("scripts/test-mod combat [--scenario <id>]", help, StringComparison.Ordinal);
         Assert.Contains("affliction-visual-layout", help, StringComparison.Ordinal);
         Assert.Contains("dark-selection-combat-reentry", help, StringComparison.Ordinal);
+        Assert.Contains("exchange-four-pile-selection", help, StringComparison.Ordinal);
         Assert.Contains("generated-pile-memory", help, StringComparison.Ordinal);
         Assert.Contains("windy-bind-draw", help, StringComparison.Ordinal);
     }

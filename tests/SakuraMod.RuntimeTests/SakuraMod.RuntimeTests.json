@@ -10,7 +10,7 @@
   "dependencies": [
     {
       "id": "STS2-RitsuLib",
-      "min_version": "0.5.13"
+      "min_version": "0.5.14"
     },
     {
       "id": "SakuraMod",

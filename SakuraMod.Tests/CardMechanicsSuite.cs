@@ -346,14 +346,48 @@ public sealed class CardMechanicsSuite
 
         RegressionTestHarness.Require(
             exchangeSource.Contains("CardStateExchangeVfx.Play(first, second", StringComparison.Ordinal)
-            && exchangeSource.Contains("PileExchangeVfx.PlayMemoryAndExhaust", StringComparison.Ordinal),
-            "Expected Exchange to trigger distinct card-state and Memory/Exhaust pile exchange visuals.");
+            && exchangeSource.Contains("SakuraActions.SelectUpToFromCards(", StringComparison.Ordinal)
+            && exchangeSource.Contains("PileExchangeVfx.Play(", StringComparison.Ordinal),
+            "Expected Exchange to use native four-region selection and distinct card-state/pile exchange visuals.");
         RegressionTestHarness.Require(
             cardExchangeVfx.Contains("TestMode.IsOn", StringComparison.Ordinal)
             && pileExchangeVfx.Contains("TestMode.IsOn", StringComparison.Ordinal)
             && !cardExchangeVfx.Contains("IsCardVfxEnabled", StringComparison.Ordinal)
             && !pileExchangeVfx.Contains("IsCardVfxEnabled", StringComparison.Ordinal),
             "Expected both lightweight Exchange visuals to skip tests without depending on the optional card-VFX setting.");
+    }
+
+    [Fact]
+    public void ExchangeSnapshotsBothSelectedPilesBeforeOrderedMovement()
+    {
+        var exchangeSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Exchange.cs"));
+        var firstSnapshot = exchangeSource.IndexOf("var firstCards = firstPile.Cards.ToList();", StringComparison.Ordinal);
+        var secondSnapshot = exchangeSource.IndexOf("var secondCards = secondPile.Cards.ToList();", StringComparison.Ordinal);
+        var firstMove = exchangeSource.IndexOf("foreach (var card in firstCards)", StringComparison.Ordinal);
+        var secondMove = exchangeSource.IndexOf("foreach (var card in secondCards)", StringComparison.Ordinal);
+
+        RegressionTestHarness.Require(
+            firstSnapshot >= 0
+            && secondSnapshot > firstSnapshot
+            && firstMove > secondSnapshot
+            && secondMove > firstMove
+            && exchangeSource.Split("CardPilePosition.Bottom", StringSplitOptions.None).Length - 1 == 2
+            && !exchangeSource.Contains("CardPileCmd.Shuffle", StringComparison.Ordinal),
+            "Expected Exchange to snapshot both piles before moving either one, preserve order at the bottom, and never shuffle.");
+    }
+
+    [Fact]
+    public void ExistingPileMovementRefreshesBothPileEnds()
+    {
+        var actionsSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraActions.cs"));
+
+        RegressionTestHarness.Require(
+            actionsSource.Contains("var sourcePile = card.Pile;", StringComparison.Ordinal)
+            && actionsSource.Contains("sourcePile.InvokeCardRemoveFinished();", StringComparison.Ordinal)
+            && actionsSource.Contains("destinationPile.InvokeCardAddFinished();", StringComparison.Ordinal),
+            "Expected silent existing-card movement to retain the source pile and signal both source removal and destination addition for cached pile counts.");
     }
 
     [Fact]
@@ -1217,6 +1251,8 @@ public sealed class CardMechanicsSuite
         var struggle = new Struggle();
         var upgradedStruggle = RegressionTestHarness.MutableForCostTest(new Struggle());
         upgradedStruggle.UpgradeInternal();
+        var struggleSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Struggle.cs"));
         RegressionTestHarness.Require(
             struggle.EnergyCost.Canonical == 2
             && !struggle.EnergyCost.CostsX
@@ -1232,9 +1268,15 @@ public sealed class CardMechanicsSuite
             && StruggleRules.IsOtherAttack(struggle, new Struggle())
             && StruggleRules.IsOtherAttack(struggle, new Hail())
             && !StruggleRules.IsOtherAttack(struggle, new Flight())
+            && RegressionTestHarness.DeclaresMethod<Struggle>("ModifyDamageAdditive")
+            && struggleSource.Contains("cardSource == this", StringComparison.Ordinal)
+            && struggleSource.Contains("props.IsPoweredAttack()", StringComparison.Ordinal)
+            && struggleSource.Contains("GetPower<StrengthPower>()?.Amount", StringComparison.Ordinal)
             && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardEnteredCombat")
-            && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardPlayed"),
-            "Expected Struggle to cost 2, deal 16 damage plus 8 with Extra, discount for other Attacks this turn, and upgrade to 20 damage.");
+            && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardPlayed")
+            && swingChinese.Contains("[gold]力量[/gold]对本牌造成伤害的影响翻倍。", StringComparison.Ordinal)
+            && swingEnglish.Contains("[gold]Strength[/gold]'s effect on this card's damage is doubled.", StringComparison.Ordinal),
+            "Expected Struggle to cost 2, deal 16 damage plus 8 with Extra, receive Strength twice, discount for other Attacks this turn, and upgrade to 20 damage.");
 
         var blade = new Blade();
         var upgradedBlade = RegressionTestHarness.MutableForCostTest(new Blade());

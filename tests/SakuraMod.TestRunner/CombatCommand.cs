@@ -12,6 +12,7 @@ public static class CombatCommand
         "clow-shield-singleplayer",
         "clow-mist-slippery",
         "extra-effect-choice",
+        "exchange-four-pile-selection",
         "manifest-temporary",
         "generated-pile-memory",
         "element-turn-cleanup",

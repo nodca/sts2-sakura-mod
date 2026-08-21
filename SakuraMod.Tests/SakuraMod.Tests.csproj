@@ -12,7 +12,7 @@
   <ItemGroup>
     <CompilerVisibleProperty Include="GodotProjectDir" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
-    <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.5.13" PrivateAssets="All" />
+    <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.5.14" PrivateAssets="All" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" PrivateAssets="All" />
     <Reference Include="sts2">

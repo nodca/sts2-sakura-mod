@@ -35,7 +35,7 @@ internal static class SakuraTelemetry
     private const string DisplayName = "SakuraMod";
     private const string ConsentDescriptionKey = "SAKURAMOD-TELEMETRY_CONSENT.description";
     private const string ConsentDescriptionFallback = "Sends completed Standard-mode Kinomoto Sakura run history, correlated card reward choices, aggregate card draw counts, an opaque run key, exact ascension/player count, SakuraMod version, and loaded gameplay Mod ids/versions for balance diagnostics. SakuraMod adds no card-play data, card text, local path, or personal identifier.";
-    private const string BalanceContextEventName = "balance_run.context";
+    internal const string BalanceContextEventName = "balance_run.context";
     internal const string CardRewardOfferedEventName = "card_reward.offered";
     internal const string CardRewardTakenEventName = "card_reward.taken";
     internal const string RunHistoryEventName = "run_history.completed";
@@ -85,10 +85,10 @@ internal static class SakuraTelemetry
             Adapter = adapter,
             Requests =
             [
-                TelemetryRequest.RunHistory(
+                TelemetryRequest.RunHistoryFiltered(
                     ModSettingsText.LocString("settings_ui", ConsentDescriptionKey, ConsentDescriptionFallback),
-                    sharedContributionSubscriptions: [BalanceRunContributionId],
-                    captureFilter: ShouldCaptureRunHistory)
+                    captureFilter: ShouldCaptureBalanceTelemetry,
+                    sharedContributionSubscriptions: [BalanceRunContributionId])
             ]
         };
 
@@ -100,8 +100,13 @@ internal static class SakuraTelemetry
                 [AuthorizationHeaderName] = $"Bearer {PublicWriteCredential}"
             });
 
-    internal static bool ShouldCaptureRunHistory(RunEndedEvent runEndedEvent) =>
-        IsSakuraSerializableRun(runEndedEvent.Run);
+    internal static bool ShouldCaptureBalanceTelemetry(TelemetryCaptureContext context) =>
+        context.SourceData is RunEndedEvent runEndedEvent
+            ? IsSakuraSerializableRun(runEndedEvent.Run)
+            : context.SourceData is null
+              && context.EventName is BalanceContextEventName
+                  or CardRewardOfferedEventName
+                  or CardRewardTakenEventName;
 
     internal static bool IsSakuraSerializableRun(SerializableRun? run) =>
         run is { GameMode: GameMode.Standard, Players.Count: > 0 }

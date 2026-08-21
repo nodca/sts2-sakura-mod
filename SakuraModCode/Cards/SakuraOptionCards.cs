@@ -35,7 +35,11 @@ internal static class SakuraOptionCardCatalog
         typeof(ChoiceDrawChoice),
         typeof(ChoiceManifestChoice),
         typeof(TrueOrFalseDrawChoice),
-        typeof(TrueOrFalseEnergyChoice)
+        typeof(TrueOrFalseEnergyChoice),
+        typeof(ExchangeMemoryChoice),
+        typeof(ExchangeExhaustChoice),
+        typeof(ExchangeDrawChoice),
+        typeof(ExchangeDiscardChoice)
     ];
 }
 
@@ -67,4 +71,47 @@ public class TrueOrFalseEnergyChoice() : SakuraOptionCard(CardType.Skill)
     public override string EnglishName => "TRUE";
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Stabilize];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(2)];
+}
+
+internal enum ExchangePileKind
+{
+    Memory,
+    Exhaust,
+    Draw,
+    Discard
+}
+
+public abstract class ExchangePileOptionCard() : SakuraOptionCard(CardType.Skill)
+{
+    internal abstract ExchangePileKind Kind { get; }
+    public override int MaxUpgradeLevel => 0;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(0)];
+
+    internal void SetDisplayedCount(int count) =>
+        DynamicVars.Cards.BaseValue = Math.Max(0, count);
+}
+
+public class ExchangeMemoryChoice() : ExchangePileOptionCard
+{
+    public override string EnglishName => "MEMORY";
+    internal override ExchangePileKind Kind => ExchangePileKind.Memory;
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys => [SakuraMemoryPile.PileId];
+}
+
+public class ExchangeExhaustChoice() : ExchangePileOptionCard
+{
+    public override string EnglishName => "EXHAUST";
+    internal override ExchangePileKind Kind => ExchangePileKind.Exhaust;
+}
+
+public class ExchangeDrawChoice() : ExchangePileOptionCard
+{
+    public override string EnglishName => "DRAW";
+    internal override ExchangePileKind Kind => ExchangePileKind.Draw;
+}
+
+public class ExchangeDiscardChoice() : ExchangePileOptionCard
+{
+    public override string EnglishName => "DISCARD";
+    internal override ExchangePileKind Kind => ExchangePileKind.Discard;
 }

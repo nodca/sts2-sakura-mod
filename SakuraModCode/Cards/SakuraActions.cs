@@ -453,9 +453,20 @@ public static class SakuraActions
         PileType pileType,
         CardPilePosition position)
     {
+        var sourcePile = card.Pile;
         var result = await CardPileCmd.Add(card, pileType, position, source, skipVisuals: true);
-        if (result.success && result.cardAdded.Pile is { IsCombatPile: true } pile)
-            pile.InvokeCardAddFinished();
+        if (!result.success)
+            return;
+
+        var destinationPile = result.cardAdded.Pile;
+        if (sourcePile is { IsCombatPile: true }
+            && !ReferenceEquals(sourcePile, destinationPile))
+        {
+            sourcePile.InvokeCardRemoveFinished();
+        }
+
+        if (destinationPile is { IsCombatPile: true })
+            destinationPile.InvokeCardAddFinished();
     }
 
     public static bool TryExchangeEnergyCosts(CardModel first, CardModel second, bool restOfCombat)

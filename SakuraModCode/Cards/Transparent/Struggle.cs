@@ -36,6 +36,16 @@ public class Struggle() : TransparentExtraEffectCard(2, CardType.Attack, CardRar
         await SakuraActions.Attack(choiceContext, this, RequiredTarget(play), damage);
     }
 
+    public override decimal ModifyDamageAdditive(
+        Creature? target,
+        decimal amount,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource) =>
+        cardSource == this && dealer == Owner.Creature && props.IsPoweredAttack()
+            ? Owner.Creature.GetPower<StrengthPower>()?.Amount ?? 0
+            : 0;
+
     public override Task AfterCardEnteredCombat(CardModel card)
     {
         if (card != this || IsClone)
@@ -67,5 +77,4 @@ internal static class StruggleRules
     public static bool IsOtherAttack(Struggle source, CardModel playedCard) =>
         playedCard != source && playedCard.Type == CardType.Attack;
 }
-
 

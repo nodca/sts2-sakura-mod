@@ -1,4 +1,7 @@
 using Godot;
+using MegaCrit.Sts2.Core.Context;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
@@ -12,51 +15,82 @@ public static class PileExchangeVfx
     private const float Duration = 0.9f;
     private const int VfxZIndex = 3000;
     private const int GhostCount = 5;
-    private static readonly Color DrawToDiscardColor = new(0.66f, 0.9f, 1f, 0.78f);
-    private static readonly Color DiscardToDrawColor = new(1f, 0.78f, 0.56f, 0.78f);
+    private static readonly Color DrawColor = new(0.66f, 0.9f, 1f, 0.78f);
+    private static readonly Color DiscardColor = new(1f, 0.78f, 0.56f, 0.78f);
     private static readonly Color PileGlowColor = new(1f, 0.95f, 0.72f, 0.72f);
     private static readonly Color CenterSparkColor = new(1f, 1f, 0.9f, 0.9f);
     private static readonly Color MemoryColor = new(0.58f, 0.93f, 1f, 0.82f);
     private static readonly Color ExhaustColor = new(1f, 0.58f, 0.32f, 0.82f);
-    private static readonly Color MemoryExchangeGlowColor = new(1f, 0.78f, 0.9f, 0.78f);
     private static readonly Vector2 GhostCardSize = new(30f, 42f);
 
-    public static void Play(int drawCount, int discardCount)
+    public static void Play(
+        Player owner,
+        PileType firstPileType,
+        PileType secondPileType,
+        int firstCount,
+        int secondCount)
     {
-        if (TestMode.IsOn || NCombatRoom.Instance is not { } room || room.Ui is not { } ui)
+        if (TestMode.IsOn
+            || !LocalContext.IsMe(owner)
+            || NCombatRoom.Instance is not { } room
+            || room.Ui is null
+            || !TryResolveEndpoint(room, firstPileType, out var firstCenter, out var firstColor)
+            || !TryResolveEndpoint(room, secondPileType, out var secondCenter, out var secondColor))
+        {
             return;
+        }
 
         Play(
             room,
-            CenterOf(ui.DrawPile),
-            CenterOf(ui.DiscardPile),
-            drawCount,
-            discardCount,
-            DrawToDiscardColor,
-            DiscardToDrawColor,
+            firstCenter,
+            secondCenter,
+            firstCount,
+            secondCount,
+            firstColor,
+            secondColor,
             PileGlowColor,
             "SakuraPileExchangeVfx");
     }
 
-    internal static void PlayMemoryAndExhaust(int memoryCount, int exhaustCount)
+    private static bool TryResolveEndpoint(
+        NCombatRoom room,
+        PileType pileType,
+        out Vector2 center,
+        out Color color)
     {
-        if (TestMode.IsOn || NCombatRoom.Instance is not { } room || room.Ui is not { } ui)
-            return;
+        var ui = room.Ui!;
+        if (pileType == SakuraMemoryPile.PileType)
+        {
+            center = FindMemoryPileButton(room) is { } memoryButton
+                ? CenterOf(memoryButton)
+                : CenterOf(ui.ExhaustPile) + SakuraMemoryPile.UiOffsetAboveExhaust;
+            color = MemoryColor;
+            return true;
+        }
 
-        var exhaustCenter = CenterOf(ui.ExhaustPile);
-        var memoryCenter = FindMemoryPileButton(room) is { } memoryButton
-            ? CenterOf(memoryButton)
-            : exhaustCenter + SakuraMemoryPile.UiOffsetAboveExhaust;
-        Play(
-            room,
-            memoryCenter,
-            exhaustCenter,
-            memoryCount,
-            exhaustCount,
-            MemoryColor,
-            ExhaustColor,
-            MemoryExchangeGlowColor,
-            "SakuraMemoryExhaustExchangeVfx");
+        Control? control;
+        switch (pileType)
+        {
+            case PileType.Draw:
+                control = ui.DrawPile;
+                color = DrawColor;
+                break;
+            case PileType.Discard:
+                control = ui.DiscardPile;
+                color = DiscardColor;
+                break;
+            case PileType.Exhaust:
+                control = ui.ExhaustPile;
+                color = ExhaustColor;
+                break;
+            default:
+                center = default;
+                color = default;
+                return false;
+        }
+
+        center = CenterOf(control);
+        return true;
     }
 
     private static void Play(
@@ -149,7 +183,7 @@ public static class PileExchangeVfx
         {
             var ghost = new Polygon2D
             {
-                Name = direction < 0f ? "DrawToDiscardGhost" : "DiscardToDrawGhost",
+                Name = direction < 0f ? "FirstToSecondGhost" : "SecondToFirstGhost",
                 Color = color,
                 Polygon =
                 [
@@ -197,8 +231,8 @@ public static class PileExchangeVfx
 
         AnimatePileGlows(root, tween);
         AnimateArcs(root, tween);
-        AnimateGhosts(root, tween, "DrawToDiscardGhost", -1f);
-        AnimateGhosts(root, tween, "DiscardToDrawGhost", 1f);
+        AnimateGhosts(root, tween, "FirstToSecondGhost", -1f);
+        AnimateGhosts(root, tween, "SecondToFirstGhost", 1f);
         AnimateCenterSpark(root, tween);
 
         await root.ToSignal(tween, Tween.SignalName.Finished);

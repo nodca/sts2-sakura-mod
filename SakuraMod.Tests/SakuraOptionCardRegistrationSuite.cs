@@ -10,7 +10,11 @@ public sealed class SakuraOptionCardRegistrationSuite
         typeof(ChoiceDrawChoice),
         typeof(ChoiceManifestChoice),
         typeof(TrueOrFalseDrawChoice),
-        typeof(TrueOrFalseEnergyChoice)
+        typeof(TrueOrFalseEnergyChoice),
+        typeof(ExchangeMemoryChoice),
+        typeof(ExchangeExhaustChoice),
+        typeof(ExchangeDrawChoice),
+        typeof(ExchangeDiscardChoice)
     ];
 
     private static readonly IReadOnlyDictionary<Type, string> ExpectedEnglishNames =
@@ -19,7 +23,11 @@ public sealed class SakuraOptionCardRegistrationSuite
             [typeof(ChoiceManifestChoice)] = "MANIFEST",
             [typeof(ChoiceDrawChoice)] = "DRAW",
             [typeof(TrueOrFalseDrawChoice)] = "FALSE",
-            [typeof(TrueOrFalseEnergyChoice)] = "TRUE"
+            [typeof(TrueOrFalseEnergyChoice)] = "TRUE",
+            [typeof(ExchangeMemoryChoice)] = "MEMORY",
+            [typeof(ExchangeExhaustChoice)] = "EXHAUST",
+            [typeof(ExchangeDrawChoice)] = "DRAW",
+            [typeof(ExchangeDiscardChoice)] = "DISCARD"
         };
 
     [Fact]
@@ -73,6 +81,28 @@ public sealed class SakuraOptionCardRegistrationSuite
                 SakuraDescriptionRegion.ShapeFor(optionCard) == SakuraDescriptionShape.Skill
                 && ClearCardVisualAssets.EnglishName(optionCard) == ExpectedEnglishNames[optionCardType],
                 $"Expected option card {optionCardType.Name} to use the skill description mask and its short English ribbon name.");
+        }
+    }
+
+    [Fact]
+    public void ExchangePileChoicesExposeStableKindsAndLiveCountProjection()
+    {
+        var choices = new ExchangePileOptionCard[]
+        {
+            new ExchangeMemoryChoice(),
+            new ExchangeExhaustChoice(),
+            new ExchangeDrawChoice(),
+            new ExchangeDiscardChoice()
+        };
+
+        Assert.Equal(
+            [ExchangePileKind.Memory, ExchangePileKind.Exhaust, ExchangePileKind.Draw, ExchangePileKind.Discard],
+            choices.Select(static choice => choice.Kind));
+        for (var i = 0; i < choices.Length; i++)
+        {
+            choices[i].SetDisplayedCount(i - 1);
+            Assert.Equal(Math.Max(0, i - 1), choices[i].DynamicVars.Cards.IntValue);
+            Assert.Equal(0, choices[i].MaxUpgradeLevel);
         }
     }
 }

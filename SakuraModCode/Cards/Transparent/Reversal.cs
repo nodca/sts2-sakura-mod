@@ -39,7 +39,12 @@ public class Reversal() : TransparentExtraEffectCard(0, CardType.Attack, CardRar
         var drawCards = CardPile.Get(PileType.Draw, Owner)!.Cards.ToList();
         var discardCards = CardPile.Get(PileType.Discard, Owner)!.Cards.ToList();
         var exchangedCards = drawCards.Count + discardCards.Count;
-        PileExchangeVfx.Play(drawCards.Count, discardCards.Count);
+        PileExchangeVfx.Play(
+            Owner,
+            PileType.Draw,
+            PileType.Discard,
+            drawCards.Count,
+            discardCards.Count);
 
         foreach (var card in drawCards)
             await SakuraActions.MoveExistingCardToPileWithoutVisuals(this, card, PileType.Discard, CardPilePosition.Bottom);

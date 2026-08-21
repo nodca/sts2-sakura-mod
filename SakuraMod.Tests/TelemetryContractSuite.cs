@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using MegaCrit.Sts2.Core.Saves;
+using STS2RitsuLib;
 using STS2RitsuLib.Compat;
 using STS2RitsuLib.Telemetry;
 using SakuraMod.SakuraModCode.Cards;
@@ -98,6 +99,28 @@ public sealed class TelemetryContractSuite
     {
         var telemetryApplicant = SakuraTelemetry.CreateApplicant(new DisabledTelemetryAdapter("test"));
         var runHistoryRequest = telemetryApplicant.Requests.Single(request => request.RequestId == SakuraTelemetry.RunHistoryRequestId);
+        var sakuraRun = new SerializableRun
+        {
+            GameMode = GameMode.Standard,
+            Players =
+            [
+                new SerializablePlayer
+                {
+                    CharacterId = new ModelId("CHARACTER", SakuraTelemetry.SakuraCharacterEntry)
+                }
+            ]
+        };
+        var nonSakuraRun = new SerializableRun
+        {
+            GameMode = GameMode.Standard,
+            Players =
+            [
+                new SerializablePlayer
+                {
+                    CharacterId = new ModelId("CHARACTER", "IRONCLAD")
+                }
+            ]
+        };
         RegressionTestHarness.Require(
             typeof(SakuraTelemetryRunHook).GetConstructor(Type.EmptyTypes) is not null
             && Activator.CreateInstance(typeof(SakuraTelemetryRunHook)) is SakuraTelemetryRunHook
@@ -112,11 +135,45 @@ public sealed class TelemetryContractSuite
         RegressionTestHarness.Require(telemetryApplicant.Requests.Count == 1, "Expected the correlated balance dataset to require one atomic authorization.");
         RegressionTestHarness.Require(
             runHistoryRequest.Category == TelemetryDataCategory.RunHistory
-            && runHistoryRequest.RunHistoryCaptureFilter is not null
+            && runHistoryRequest.CaptureFilter is not null
             && runHistoryRequest.ContributionSubscriptions.Contains(SakuraTelemetry.BalanceRunContributionId)
             && runHistoryRequest.DescriptionText is not null
             && runHistoryRequest.Description.Contains("Standard-mode Kinomoto Sakura", StringComparison.Ordinal),
             "Expected the single authorization to include the Standard Sakura filter, private contribution, and localized disclosure.");
+        RegressionTestHarness.Require(
+            runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
+                SakuraTelemetry.RunHistoryEventName,
+                SakuraTelemetry.RunHistoryRequestId,
+                TelemetryDataCategory.RunHistory,
+                "run_history",
+                new RunEndedEvent(sakuraRun, IsVictory: true, IsAbandoned: false, DateTimeOffset.UnixEpoch)))
+            && !runHistoryRequest.CaptureFilter(new TelemetryCaptureContext(
+                SakuraTelemetry.RunHistoryEventName,
+                SakuraTelemetry.RunHistoryRequestId,
+                TelemetryDataCategory.RunHistory,
+                "run_history",
+                new RunEndedEvent(nonSakuraRun, IsVictory: true, IsAbandoned: false, DateTimeOffset.UnixEpoch)))
+            && runHistoryRequest.CaptureFilter(new TelemetryCaptureContext(
+                SakuraTelemetry.BalanceContextEventName,
+                SakuraTelemetry.RunHistoryRequestId,
+                TelemetryDataCategory.RunHistory,
+                "applicant"))
+            && runHistoryRequest.CaptureFilter(new TelemetryCaptureContext(
+                SakuraTelemetry.CardRewardOfferedEventName,
+                SakuraTelemetry.RunHistoryRequestId,
+                TelemetryDataCategory.RunHistory,
+                "applicant"))
+            && runHistoryRequest.CaptureFilter(new TelemetryCaptureContext(
+                SakuraTelemetry.CardRewardTakenEventName,
+                SakuraTelemetry.RunHistoryRequestId,
+                TelemetryDataCategory.RunHistory,
+                "applicant"))
+            && !runHistoryRequest.CaptureFilter(new TelemetryCaptureContext(
+                "unrelated",
+                SakuraTelemetry.RunHistoryRequestId,
+                TelemetryDataCategory.RunHistory,
+                "applicant")),
+            "Expected the common capture filter to preserve Sakura run-history filtering and existing authorized balance events.");
         using (var englishSettings = JsonDocument.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
                    "SakuraMod/localization/eng/settings_ui.json"))))
         using (var chineseSettings = JsonDocument.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
