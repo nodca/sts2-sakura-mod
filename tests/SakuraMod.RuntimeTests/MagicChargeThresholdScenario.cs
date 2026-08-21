@@ -1,4 +1,5 @@
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
@@ -96,6 +97,7 @@ internal static class MagicChargeThresholdScenario
         assertions.Equal("full_threshold_charge", 10, charge.Amount);
         var nonExtraFlower = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraFlower>(combat, player);
         await CombatScenarioContext.PlayCardAsync(nonExtraFlower);
+        assertions.Equal("flower_without_earthy_exhausts", PileType.Exhaust, nonExtraFlower.Pile?.Type);
         assertions.Equal("full_non_extra_only_gains_charge", 11, charge.Amount);
         assertions.Equal(
             "full_non_extra_does_not_apply_element",
@@ -105,6 +107,10 @@ internal static class MagicChargeThresholdScenario
 
         var flower = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowFlower>(combat, player);
         await CombatScenarioContext.PlayCardAsync(flower);
+        assertions.Equal(
+            "flower_does_not_self_enable_non_exhaust",
+            PileType.Exhaust,
+            flower.Pile?.Type);
         var postFlowerCharge = player.Creature.GetPower<ClassicMagicChargePower>()
             ?? throw new InvalidOperationException("Clow Flower did not restore Magic Charge after Extra spend.");
         assertions.True("full_threshold_applies_earth_state", player.Creature.HasPower<ClassicEarthyPower>());
@@ -163,6 +169,7 @@ internal static class MagicChargeThresholdScenario
 
         var freeFlower = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowFlower>(combat, player);
         await CombatScenarioContext.PlayCardAsync(freeFlower);
+        assertions.Equal("earthy_clow_flower_enters_discard", PileType.Discard, freeFlower.Pile?.Type);
         assertions.Equal("lock_sakura_preserves_charge_then_card_gains", 11, postFlowerCharge.Amount);
         assertions.Equal(
             "lock_sakura_consumed_by_next_trigger",
@@ -171,7 +178,12 @@ internal static class MagicChargeThresholdScenario
 
         var paidFlower = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowFlower>(combat, player);
         await CombatScenarioContext.PlayCardAsync(paidFlower);
+        assertions.Equal("earthy_second_clow_flower_enters_discard", PileType.Discard, paidFlower.Pile?.Type);
         assertions.Equal("lock_sakura_only_protects_one_trigger", 2, postFlowerCharge.Amount);
+
+        var earthySakuraFlower = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraFlower>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(earthySakuraFlower);
+        assertions.Equal("earthy_sakura_flower_enters_discard", PileType.Discard, earthySakuraFlower.Pile?.Type);
 
         RuntimeTestHost.WriteCheckpoint(
             request,

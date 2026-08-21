@@ -183,6 +183,7 @@ internal static class SakuraSourceCardText
             return [];
 
         return card.Identity is SourceCardIdentity.Cloud
+            or SourceCardIdentity.Flower
             or SourceCardIdentity.Earthy
             or SourceCardIdentity.Firey
             or SourceCardIdentity.Watery

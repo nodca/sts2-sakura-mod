@@ -1057,6 +1057,7 @@ public sealed class CardMechanicsSuite
         var upgradedClowFlower = RegressionTestHarness.MutableForCostTest(new ClowFlower());
         upgradedClowFlower.UpgradeInternal();
         var sakuraFlower = new SakuraFlower();
+        var exhaustKeywords = new HashSet<CardKeyword> { CardKeyword.Exhaust };
         RegressionTestHarness.Require(
             clowFlower.EnergyCost.Canonical == 0
             && clowFlower.Rarity == CardRarity.Uncommon
@@ -1077,6 +1078,20 @@ public sealed class CardMechanicsSuite
             && sakuraFlower.CanonicalKeywords.SequenceEqual([CardKeyword.Retain, CardKeyword.Exhaust])
             && sakuraFlower.DynamicVars.Energy.IntValue == 5,
             "Expected Clow Flower to cost 0, gain 2 Energy, Exhaust, gain 2 additional Energy with Extra, and upgrade to 3 Energy with Retain; Sakura Flower should Retain, Exhaust, and gain 5 Energy.");
+        RegressionTestHarness.Require(
+            FlowerRules.TryRemoveExhaust(clowFlower, clowFlower, true, exhaustKeywords)
+            && !exhaustKeywords.Contains(CardKeyword.Exhaust)
+            && !FlowerRules.TryRemoveExhaust(
+                clowFlower,
+                sakuraFlower,
+                true,
+                new HashSet<CardKeyword> { CardKeyword.Exhaust })
+            && FlowerRules.ResultPileForPlay(true, PileType.Exhaust) == PileType.Discard
+            && FlowerRules.ResultPileForPlay(false, PileType.Exhaust) == PileType.Exhaust
+            && FlowerRules.ResultPileForPlay(true, PileType.None) == PileType.None
+            && SakuraSourceCardText.ElementStatesReferencedBy(clowFlower).SequenceEqual([SakuraElement.Earth])
+            && SakuraSourceCardText.ElementStatesReferencedBy(sakuraFlower).SequenceEqual([SakuraElement.Earth]),
+            "Expected each Flower to avoid Exhaust only for its own play that began in Earthy state and to expose the Earthy-state hover tip.");
 
         var siege = new Siege();
         var upgradedSiege = RegressionTestHarness.MutableForCostTest(new Siege());

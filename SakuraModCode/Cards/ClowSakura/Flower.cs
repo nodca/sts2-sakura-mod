@@ -31,6 +31,16 @@ public class ClowFlower() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Un
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(2)];
 
+    protected override PileType GetResultPileTypeForCardPlay()
+    {
+        return FlowerRules.ResultPileForPlay(
+            FlowerRules.IsInEarthyState(this),
+            base.GetResultPileTypeForCardPlay());
+    }
+
+    public override bool TryModifyKeywordsInCombat(CardModel card, ISet<CardKeyword> keywords) =>
+        FlowerRules.TryRemoveExhaust(this, card, FlowerRules.IsInEarthyState(this), keywords);
+
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PlayerCmd.GainEnergy(ReleasedValue("Energy"), Owner);
 
@@ -53,7 +63,38 @@ public class SakuraFlower() : SakuraFormCard(0, CardType.Skill, TargetType.None)
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(5)];
 
+    protected override PileType GetResultPileTypeForCardPlay()
+    {
+        return FlowerRules.ResultPileForPlay(
+            FlowerRules.IsInEarthyState(this),
+            base.GetResultPileTypeForCardPlay());
+    }
+
+    public override bool TryModifyKeywordsInCombat(CardModel card, ISet<CardKeyword> keywords) =>
+        FlowerRules.TryRemoveExhaust(this, card, FlowerRules.IsInEarthyState(this), keywords);
+
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PlayerCmd.GainEnergy(ReleasedValue("Energy"), Owner);
 }
 
+internal static class FlowerRules
+{
+    internal static bool IsInEarthyState(CardModel card) =>
+        card.Owner?.Creature.GetPower<ClassicEarthyPower>()?.Amount > 0;
+
+    internal static bool TryRemoveExhaust(
+        CardModel source,
+        CardModel card,
+        bool isInEarthyState,
+        ISet<CardKeyword> keywords) =>
+        ReferenceEquals(source, card)
+        && isInEarthyState
+        && keywords.Remove(CardKeyword.Exhaust);
+
+    internal static PileType ResultPileForPlay(
+        bool wasInEarthyStateWhenPlayed,
+        PileType ordinaryResultPile) =>
+        wasInEarthyStateWhenPlayed && ordinaryResultPile == PileType.Exhaust
+            ? PileType.Discard
+            : ordinaryResultPile;
+}
