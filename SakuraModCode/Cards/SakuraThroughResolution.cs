@@ -91,9 +91,7 @@ internal static class SakuraThroughResolution
         if (target is null)
             return [];
 
-        var scope = play.Card.Owner?.Creature.GetPower<ClassicThroughPower>()?.ActiveScope;
-        return scope is { IsActive: true }
-               && scope.Card == play.Card
+        return TryGetActiveScope(play.Card, out var scope)
                && scope.PrimaryTarget == target
             ? scope.Targets.Where(IsStillValid).ToList()
             : [target];
@@ -103,7 +101,7 @@ internal static class SakuraThroughResolution
         IEnumerable<Creature> originalTargets,
         CardModel? cardSource)
     {
-        if (IsPropagationSuppressed || cardSource?.Owner?.Creature.GetPower<ClassicThroughPower>()?.ActiveScope is not { IsActive: true } scope)
+        if (!TryGetActiveScope(cardSource, out var scope))
             return null;
 
         var targets = originalTargets as IReadOnlyList<Creature> ?? originalTargets.ToList();
@@ -185,11 +183,33 @@ internal static class SakuraThroughResolution
         PowerModel power,
         out ThroughPlayScope scope)
     {
+        if (!TryGetActiveScope(cardSource, out var active)
+            || active.PrimaryTarget != target)
+        {
+            scope = null!;
+            return false;
+        }
+
+        scope = active;
+        return true;
+    }
+
+    private static bool TryGetActiveScope(
+        CardModel? cardSource,
+        out ThroughPlayScope scope)
+    {
         scope = null!;
         if (IsPropagationSuppressed
-            || cardSource?.Owner?.Creature.GetPower<ClassicThroughPower>()?.ActiveScope is not { IsActive: true } active
-            || active.Card != cardSource
-            || active.PrimaryTarget != target)
+            || cardSource is null
+            || !cardSource.IsMutable)
+            return false;
+
+        var owner = cardSource.Owner;
+        if (owner is null)
+            return false;
+
+        var active = owner.Creature.GetPower<ClassicThroughPower>()?.ActiveScope;
+        if (active is not { IsActive: true } || active.Card != cardSource)
             return false;
 
         scope = active;

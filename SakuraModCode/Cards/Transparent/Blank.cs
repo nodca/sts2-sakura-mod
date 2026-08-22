@@ -49,7 +49,7 @@ public class Blank() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.
         var forgottenCards = 0;
         foreach (var card in cards)
         {
-            if (await SakuraGeneratedCardLifecycle.GrantTemporary(choiceContext, card))
+            if (await SakuraForgotten.GrantTemporary(choiceContext, card))
                 forgottenCards++;
         }
 

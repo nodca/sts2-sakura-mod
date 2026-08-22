@@ -79,7 +79,7 @@ public class TrueOrFalse() : TransparentExtraEffectCard(0, CardType.Skill, CardR
     private async Task<bool> Virtual(PlayerChoiceContext choiceContext)
     {
         var card = await SakuraActions.SelectHandCard(this, choiceContext, CanBecomeTemporary, cancelable: false);
-        if (card is null || !await SakuraGeneratedCardLifecycle.GrantTemporary(choiceContext, card))
+        if (card is null || !await SakuraForgotten.GrantTemporary(choiceContext, card))
             return false;
 
         await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);

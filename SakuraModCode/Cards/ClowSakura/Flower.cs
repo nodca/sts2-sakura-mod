@@ -27,6 +27,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowFlower() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
+    internal const int ExtraEnergy = 2;
+
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(2)];
@@ -47,7 +49,7 @@ public class ClowFlower() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Un
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await PlayCard(choiceContext, play);
-        await PlayerCmd.GainEnergy(SakuraMagicCharge.FlowerExtraEnergy, Owner);
+        await PlayerCmd.GainEnergy(ExtraEnergy, Owner);
     }
 
     protected override void OnUpgrade()

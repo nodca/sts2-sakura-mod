@@ -1006,7 +1006,7 @@ public sealed class ResourceContractSuite
             && helperIndex > activatedIndex
             && cloud[activatedIndex..helperIndex].Split("PlayOrResolveAsync(", StringSplitOptions.None).Length - 1 == 1
             && !cloud[activatedIndex..helperIndex].Contains("PlayCard(", StringComparison.Ordinal)
-            && cloud[activatedIndex..helperIndex].Contains("SakuraMagicCharge.CloudExtraBlock", StringComparison.Ordinal)
+            && cloud[activatedIndex..helperIndex].Contains("ExtraBlock", StringComparison.Ordinal)
             && !cloud.Contains("await PlayCard(", StringComparison.Ordinal),
             "Expected Clow Cloud's activated path to wrap one session around the mechanical helper plus extra block.");
 
@@ -1309,7 +1309,7 @@ public sealed class ResourceContractSuite
         RegressionTestHarness.Require(
             sword.Contains("PlayStroke(choiceContext, play, SlashWeight.Light)", StringComparison.Ordinal)
             && sword.Contains("PlayStroke(choiceContext, play, SlashWeight.Medium)", StringComparison.Ordinal)
-            && sword.Contains("SakuraMagicCharge.SwordExtraHpLoss", StringComparison.Ordinal)
+            && sword.Contains("ExtraHpLoss", StringComparison.Ordinal)
             && !sword[activatedIndex..strokeHelperIndex].Contains("PlayOrResolveAsync(", StringComparison.Ordinal),
             "Expected both ClowSword paths to share one orchestration and differ only by weight tier.");
         RegressionTestHarness.Require(
@@ -1963,17 +1963,18 @@ public sealed class ResourceContractSuite
             "() => SakuraActions.RecordExtraEffectTriggeredThisTurn(choiceContext, play)",
             StringComparison.Ordinal);
         var showCircleIndex = transaction.IndexOf(
-            "SakuraMagicCirclePresenter.TryShowOrRefresh(card.Owner?.Creature, era);",
+            "TryShowMagicCircle(card, activation);",
             Math.Max(0, recordExtraIndex),
             StringComparison.Ordinal);
         var playExtraIndex = transaction.IndexOf(
-            "capability.PlayWithExtraEffect(choiceContext, play, activation)",
+            "extra.PlayWithExtraEffect(choiceContext, play, activation)",
             Math.Max(0, showCircleIndex),
             StringComparison.Ordinal);
         RegressionTestHarness.Require(
             recordExtraIndex >= 0
             && showCircleIndex > recordExtraIndex
             && playExtraIndex > showCircleIndex
+            && transaction.Contains("SakuraMagicCirclePresenter.TryShowOrRefresh(card.Owner?.Creature, era);", StringComparison.Ordinal)
             && transaction.Contains("MagicCircleEraFor(card, activation)", StringComparison.Ordinal)
             && presenter.Contains("internal static bool TryShowOrRefresh(Creature? caster, SourceEraClass era)", StringComparison.Ordinal)
             && presenter.Contains("if (!_showFailureLogged)", StringComparison.Ordinal)

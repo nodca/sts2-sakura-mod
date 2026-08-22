@@ -27,6 +27,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowSword() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Basic, TargetType.AnyEnemy)
 {
+    internal const int ExtraHpLoss = 15;
+
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Loner];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(6, ValueProp.Move, SourceCardIdentity.Sword)];
@@ -47,7 +49,7 @@ public class ClowSword() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ba
         // One tier up rather than a second orchestration: the extra unblockable damage is
         // the play being bigger, so the same stroke carries more weight.
         await PlayStroke(choiceContext, play, SlashWeight.Medium);
-        await DealDamage(choiceContext, RequiredTarget(play), SakuraMagicCharge.SwordExtraHpLoss, ValueProp.Unblockable);
+        await DealDamage(choiceContext, RequiredTarget(play), ExtraHpLoss, ValueProp.Unblockable);
     }
 
     private async Task PlayStroke(

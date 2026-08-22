@@ -6,6 +6,7 @@ using SakuraMod.SakuraModCode.Relics;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Afflictions;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Dark;
+using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
 using SakuraMod.SakuraModCode.FourthAct.Wind;
 using SakuraMod.SakuraModCode.FourthAct.Wind.CardState;
 using SakuraMod.SakuraModCode.FourthAct.Routing;
@@ -21,6 +22,8 @@ internal static class SakuraContentRegistration
         var registry = ModContentRegistry.For(MainFile.ModId);
 
         SakuraMemoryPile.Register();
+        SakuraForgotten.AddStabilizeObserver(DarkMicroLightCoordinator.OnTemporaryStabilized);
+        SakuraForgotten.AddClearedObserver(DarkMicroLightCoordinator.ClearSourceMarker);
         SakuraCardTextCapabilities.Register();
         SakuraSourceCardTextCapabilities.Register();
         ConfigureDefaultCardTextCapabilities(registry);

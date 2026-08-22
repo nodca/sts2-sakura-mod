@@ -321,7 +321,7 @@ internal static class SakuraElementStateVisuals
         /// has no formed shape to lose — that is worth tidying separately, not copying.
         /// </summary>
         private Tween? _earthTriggerTween;
-        private SakuraActiveElementStates _activeStates;
+        private SakuraElementSet _activeStates;
         private bool _disposed;
 
         internal State(Node2D root, NCreature creatureNode, Player player, ICombatState combatState)
@@ -421,7 +421,7 @@ internal static class SakuraElementStateVisuals
                 return;
             }
 
-            var next = SakuraElementStateProjection.Read(_player);
+            var next = SakuraElementState.ReadActive(_player);
             var previous = _activeStates;
             _activeStates = next;
 
@@ -441,12 +441,12 @@ internal static class SakuraElementStateVisuals
             CelVfxGeometry.ResolveCaster(_creatureNode) is { } anchor ? anchor.FacingSign : 1f;
 
         private void RefreshFire(
-            SakuraActiveElementStates previous,
-            SakuraActiveElementStates next,
+            SakuraElementSet previous,
+            SakuraElementSet next,
             bool animateEntry)
         {
-            var wasActive = previous.HasFlag(SakuraActiveElementStates.Firey);
-            var isActive = next.HasFlag(SakuraActiveElementStates.Firey);
+            var wasActive = previous.HasElement(SakuraElement.Fire);
+            var isActive = next.HasElement(SakuraElement.Fire);
 
             if (isActive && !wasActive)
             {
@@ -466,12 +466,12 @@ internal static class SakuraElementStateVisuals
         }
 
         private void RefreshWind(
-            SakuraActiveElementStates previous,
-            SakuraActiveElementStates next,
+            SakuraElementSet previous,
+            SakuraElementSet next,
             bool animateEntry)
         {
-            var wasActive = previous.HasFlag(SakuraActiveElementStates.Windy);
-            var isActive = next.HasFlag(SakuraActiveElementStates.Windy);
+            var wasActive = previous.HasElement(SakuraElement.Wind);
+            var isActive = next.HasElement(SakuraElement.Wind);
 
             if (isActive && !wasActive)
             {
@@ -491,12 +491,12 @@ internal static class SakuraElementStateVisuals
         }
 
         private void RefreshWater(
-            SakuraActiveElementStates previous,
-            SakuraActiveElementStates next,
+            SakuraElementSet previous,
+            SakuraElementSet next,
             bool animateEntry)
         {
-            var wasActive = previous.HasFlag(SakuraActiveElementStates.Watery);
-            var isActive = next.HasFlag(SakuraActiveElementStates.Watery);
+            var wasActive = previous.HasElement(SakuraElement.Water);
+            var isActive = next.HasElement(SakuraElement.Water);
 
             if (isActive && !wasActive)
             {
@@ -516,12 +516,12 @@ internal static class SakuraElementStateVisuals
         }
 
         private void RefreshEarth(
-            SakuraActiveElementStates previous,
-            SakuraActiveElementStates next,
+            SakuraElementSet previous,
+            SakuraElementSet next,
             bool animateEntry)
         {
-            var wasActive = previous.HasFlag(SakuraActiveElementStates.Earthy);
-            var isActive = next.HasFlag(SakuraActiveElementStates.Earthy);
+            var wasActive = previous.HasElement(SakuraElement.Earth);
+            var isActive = next.HasElement(SakuraElement.Earth);
 
             if (isActive && !wasActive)
             {
@@ -544,7 +544,7 @@ internal static class SakuraElementStateVisuals
         {
             if (_disposed || !SakuraModConfig.IsCardVfxEnabled())
                 return;
-            if (!SakuraElementStateProjection.Read(_player).HasFlag(SakuraActiveElementStates.Firey))
+            if (!SakuraElementState.ReadActive(_player).HasElement(SakuraElement.Fire))
                 return;
 
             KillTween(ref _entryTween);
@@ -574,7 +574,7 @@ internal static class SakuraElementStateVisuals
         {
             if (_disposed || !SakuraModConfig.IsCardVfxEnabled())
                 return;
-            if (!SakuraElementStateProjection.Read(_player).HasFlag(SakuraActiveElementStates.Windy))
+            if (!SakuraElementState.ReadActive(_player).HasElement(SakuraElement.Wind))
                 return;
 
             KillTween(ref _windEntryTween);
@@ -678,7 +678,7 @@ internal static class SakuraElementStateVisuals
         {
             if (_disposed || !SakuraModConfig.IsCardVfxEnabled())
                 return;
-            if (!SakuraElementStateProjection.Read(_player).HasFlag(SakuraActiveElementStates.Watery))
+            if (!SakuraElementState.ReadActive(_player).HasElement(SakuraElement.Water))
                 return;
 
             KillTween(ref _waterEntryTween);
@@ -710,7 +710,7 @@ internal static class SakuraElementStateVisuals
         {
             if (_disposed || !SakuraModConfig.IsCardVfxEnabled())
                 return;
-            if (!SakuraElementStateProjection.Read(_player).HasFlag(SakuraActiveElementStates.Earthy))
+            if (!SakuraElementState.ReadActive(_player).HasElement(SakuraElement.Earth))
                 return;
 
             KillTween(ref _earthEntryTween);

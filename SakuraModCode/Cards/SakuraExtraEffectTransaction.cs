@@ -21,29 +21,11 @@ internal enum SakuraExtraEffectActivationCost
 }
 
 internal readonly record struct SakuraExtraEffectPostPlayPlan(
-    bool ApplyExtraElementStates,
-    bool AddSakuraVoid,
-    bool GainTransparentMagic,
-    bool MayGainClassicMagic)
+    bool ApplyExtraElementStates)
 {
     internal static SakuraExtraEffectPostPlayPlan ForGameplay(
-        CardModel card,
         SakuraExtraEffectActivation activation) =>
-        new(
-            ApplyExtraElementStates: activation.IsActive,
-            AddSakuraVoid: SakuraExtraEffectTransaction.ShouldAddSakuraVoid(card, activation.IsActive),
-            GainTransparentMagic: false,
-            MayGainClassicMagic: false);
-
-    internal static SakuraExtraEffectPostPlayPlan ForAfterCardPlayed(CardModel card)
-    {
-        var isTransparent = card is SakuraCardModel && SakuraTransparentCardCatalog.IsTransparentCard(card);
-        return new(
-            ApplyExtraElementStates: false,
-            AddSakuraVoid: false,
-            GainTransparentMagic: isTransparent,
-            MayGainClassicMagic: card is SakuraSourceCard { GrantsMagicCharge: true });
-    }
+        new(ApplyExtraElementStates: activation.IsActive);
 }
 
 internal interface ISakuraExtraEffectCard
@@ -60,21 +42,6 @@ internal static class SakuraExtraEffectTransaction
     private static readonly ConditionalWeakTable<CardModel, ActiveProjectionStack> ActiveProjections = new();
 
     internal static bool Supports(CardModel? card) => card is ISakuraExtraEffectCard;
-
-    internal static bool ShouldAddSakuraVoid(CardModel card, bool extraEffectActive) =>
-        ShouldAddSakuraVoid(
-            extraEffectActive,
-            card is SakuraSourceCard { AddsVoidOnNormalSakuraPlay: true },
-            card.IsMutable
-            && card.Owner.GetRelic<ClassicPinkTransformationCostumeRelic>() is not null);
-
-    internal static bool ShouldAddSakuraVoid(
-        bool extraEffectActive,
-        bool addsVoidOnNormalSakuraPlay,
-        bool hasPinkTransformationCostume) =>
-        !extraEffectActive
-        && addsVoidOnNormalSakuraPlay
-        && !hasPinkTransformationCostume;
 
     internal static bool CanActivate(Player? owner) =>
         CanActivate(
@@ -133,20 +100,24 @@ internal static class SakuraExtraEffectTransaction
         ActivatedPlays.TryGetValue(play, out var activation)
         && activation.Cost == SakuraExtraEffectActivationCost.MagicCharge;
 
+    internal static void TryShowMagicCircle(CardModel card, SakuraExtraEffectActivation activation)
+    {
+        if (MagicCircleEraFor(card, activation) is { } era)
+            SakuraMagicCirclePresenter.TryShowOrRefresh(card.Owner?.Creature, era);
+    }
+
     internal static async Task Execute(
         CardModel card,
         PlayerChoiceContext choiceContext,
-        CardPlay play,
-        Func<PlayerChoiceContext, CardPlay, Task> playWithoutExtraEffect)
+        CardPlay play)
     {
         if (play.Card != card)
             throw new InvalidOperationException("Extra Effect transaction must execute for its own CardPlay.");
+        if (card is not ISakuraExtraEffectCard extra)
+            throw new InvalidOperationException("Extra Effect transaction only executes for Extra Effect cards.");
 
-        var capability = card as ISakuraExtraEffectCard;
-        var redCapeActivation = capability is not null
-            && card.Owner.GetRelic<ClassicRedCapeRelic>()?.TryActivateFreeExtraEffect(card) == true;
-        var activation = new SakuraExtraEffectActivation(
-            capability is not null && (redCapeActivation || CanActivate(card.Owner)));
+        var redCapeActivation = card.Owner.GetRelic<ClassicRedCapeRelic>()?.TryActivateFreeExtraEffect(card) == true;
+        var activation = new SakuraExtraEffectActivation(redCapeActivation || CanActivate(card.Owner));
         var opportunity = SakuraMagicCharge.CaptureOpportunity(card.Owner);
         var lockSakura = activation.IsActive
             ? card.Owner.Creature.GetPower<ClassicLockSakuraPower>()
@@ -181,49 +152,11 @@ internal static class SakuraExtraEffectTransaction
             () => SakuraActions.RecordExtraEffectTriggeredThisTurn(choiceContext, play),
             () =>
             {
-                if (MagicCircleEraFor(card, activation) is { } era)
-                    SakuraMagicCirclePresenter.TryShowOrRefresh(card.Owner?.Creature, era);
-
-                return capability is not null
-                    ? capability.PlayWithExtraEffect(choiceContext, play, activation)
-                    : playWithoutExtraEffect(choiceContext, play);
+                TryShowMagicCircle(card, activation);
+                return extra.PlayWithExtraEffect(choiceContext, play, activation);
             },
             () => ApplyGameplayPostEffects(card, choiceContext, activation, opportunity),
             activationCost);
-    }
-
-    internal static Task ExecuteCoreForTests(
-        CardModel card,
-        CardPlay play,
-        SakuraExtraEffectActivation activation,
-        Func<Task> spend,
-        Func<Task> record,
-        Func<Task> gameplay,
-        Func<Task> postPlay,
-        SakuraExtraEffectActivationCost activationCost = SakuraExtraEffectActivationCost.MagicCharge) =>
-        ExecuteCore(card, play, activation, spend, record, gameplay, postPlay, activationCost);
-
-    internal static async Task AfterCardPlayed(
-        CardModel card,
-        PlayerChoiceContext choiceContext,
-        CardPlay play)
-    {
-        if (play.Card != card)
-            return;
-
-        var plan = SakuraExtraEffectPostPlayPlan.ForAfterCardPlayed(card);
-
-        if (plan.GainTransparentMagic)
-        {
-            await SakuraMagicCharge.GainMagic(choiceContext, card);
-            return;
-        }
-
-        if (plan.MayGainClassicMagic
-            && card.Owner.GetRelic<ClassicSealedBookRelic>() is not null)
-        {
-            await SakuraMagicCharge.GainMagic(choiceContext, card);
-        }
     }
 
     private static async Task ApplyGameplayPostEffects(
@@ -232,19 +165,13 @@ internal static class SakuraExtraEffectTransaction
         SakuraExtraEffectActivation activation,
         SakuraMagicChargeOpportunity? opportunity)
     {
-        var plan = SakuraExtraEffectPostPlayPlan.ForGameplay(card, activation);
-        if (plan.ApplyExtraElementStates)
+        if (activation.IsActive)
         {
-            await SakuraActions.ApplyMissingElementStates(choiceContext, card);
-        }
-        else if (opportunity is { } captured
-                 && await SakuraActions.ApplyMissingElementStates(choiceContext, card))
-        {
-            SakuraMagicCharge.TryConsumeOpportunity(card.Owner, captured);
+            await SakuraElementState.ApplyMissing(choiceContext, card);
+            return;
         }
 
-        if (plan.AddSakuraVoid)
-            await SakuraMagicCharge.AddVoidToDrawPile(choiceContext, card.Owner);
+        await SakuraMagicCharge.TryApplyCapturedOpportunity(choiceContext, card, opportunity);
     }
 
     private sealed record ActivatedPlay(SakuraExtraEffectActivationCost Cost);
@@ -257,7 +184,7 @@ internal static class SakuraExtraEffectTransaction
         Func<Task> record,
         Func<Task> gameplay,
         Func<Task> postPlay,
-        SakuraExtraEffectActivationCost activationCost)
+        SakuraExtraEffectActivationCost activationCost = SakuraExtraEffectActivationCost.MagicCharge)
     {
         ActiveProjectionStack? projections = null;
         if (activation.IsActive)

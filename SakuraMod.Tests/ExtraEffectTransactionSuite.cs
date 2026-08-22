@@ -1,4 +1,3 @@
-using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
@@ -62,29 +61,10 @@ public sealed class ExtraEffectTransactionSuite
                 == SakuraExtraEffectActivationCost.LockSakura,
             "Expected Lock Sakura to be consumed instead of Magic Charge for the next activation.");
 
-        var classicExtra = SakuraExtraEffectPostPlayPlan.ForGameplay(
-            new ClowSword(),
-            new SakuraExtraEffectActivation(true));
-        var sakuraNormal = SakuraExtraEffectPostPlayPlan.ForGameplay(
-            new SakuraSword(),
-            new SakuraExtraEffectActivation(false));
-        var transparentExtra = SakuraExtraEffectPostPlayPlan.ForGameplay(
-            new Gale(),
-            new SakuraExtraEffectActivation(true));
-        var transparentAfterPlay = SakuraExtraEffectPostPlayPlan.ForAfterCardPlayed(new Gale());
-
         RegressionTestHarness.Require(
-            classicExtra.ApplyExtraElementStates && !classicExtra.AddSakuraVoid,
-            "Expected an activated Clow card to apply its Classic element state without adding Void.");
-        RegressionTestHarness.Require(
-            !sakuraNormal.ApplyExtraElementStates && sakuraNormal.AddSakuraVoid,
-            "Expected a normal Sakura-form play to add Void without applying an Extra element state.");
-        RegressionTestHarness.Require(
-            transparentExtra.ApplyExtraElementStates && !transparentExtra.AddSakuraVoid,
-            "Expected an activated Transparent card to share the Extra element post-play path.");
-        RegressionTestHarness.Require(
-            transparentAfterPlay.GainTransparentMagic && !transparentAfterPlay.MayGainClassicMagic,
-            "Expected a Transparent card to retain its after-play Magic Charge path.");
+            SakuraExtraEffectPostPlayPlan.ForGameplay(new SakuraExtraEffectActivation(true)).ApplyExtraElementStates
+            && !SakuraExtraEffectPostPlayPlan.ForGameplay(new SakuraExtraEffectActivation(false)).ApplyExtraElementStates,
+            "Expected Extra Effect to apply missing Element States only when the play is activated.");
     }
 
     [Fact]
@@ -142,66 +122,17 @@ public sealed class ExtraEffectTransactionSuite
                 SakuraExtraEffectTransaction.Supports(card) == typeof(ClowExtraEffectCard).IsAssignableFrom(type),
                 $"Expected {type.Name} to have exactly one capability declaration matching its Classic Extra family.");
         }
+
+        RegressionTestHarness.Require(
+            !SakuraExtraEffectTransaction.Supports(new SakuraSword())
+            && !SakuraExtraEffectTransaction.Supports(new ClowReturn())
+            && !SakuraExtraEffectTransaction.Supports(new SpellSeal())
+            && !SakuraExtraEffectTransaction.Supports(new Remind()),
+            "Expected Sakura-form, non-Extra Clow, Spell, and non-Extra Transparent cards to stay outside Extra Effect.");
     }
 
     [Fact]
-    public void ActiveTransactionPreservesOrderingAndMarker()
-    {
-        var card = new Gale();
-        var play = CardPlayFor(card);
-        var order = new List<string>();
-
-        RunCore(
-            card,
-            play,
-            active: true,
-            () => order.Add("spend"),
-            () => order.Add("record"),
-            () =>
-            {
-                order.Add("gameplay");
-                RegressionTestHarness.Require(
-                    SakuraExtraEffectTransaction.IsActivelyProjected(card),
-                    "Expected the visual projection to be active during gameplay.");
-            },
-            () => order.Add("post"));
-
-        RegressionTestHarness.Require(
-            order.SequenceEqual(["spend", "record", "gameplay", "post"]),
-            "Expected paid Extra Effect transaction ordering to remain stable.");
-        RegressionTestHarness.Require(
-            SakuraExtraEffectTransaction.DidActivate(play)
-            && SakuraExtraEffectTransaction.DidSpendMagicCharge(play)
-            && !SakuraExtraEffectTransaction.IsActivelyProjected(card),
-            "Expected the completed play marker to survive while the active projection is cleared.");
-    }
-
-    [Fact]
-    public void InactiveTransactionSkipsSpendAndProjection()
-    {
-        var card = new Gale();
-        var play = CardPlayFor(card);
-        var order = new List<string>();
-
-        RunCore(
-            card,
-            play,
-            active: false,
-            () => order.Add("spend"),
-            () => order.Add("record"),
-            () => order.Add("gameplay"),
-            () => order.Add("post"));
-
-        RegressionTestHarness.Require(
-            order.SequenceEqual(["gameplay", "post"])
-            && !SakuraExtraEffectTransaction.DidActivate(play)
-            && !SakuraExtraEffectTransaction.DidSpendMagicCharge(play)
-            && !SakuraExtraEffectTransaction.IsActivelyProjected(card),
-            "Expected inactive plays to skip Extra spend and bookkeeping without installing a projection.");
-    }
-
-    [Fact]
-    public void DescriptionPolicyShowsReferenceAndActiveCombatExtraCards()
+    public void DescriptionPolicyShowsReferenceAndHidesInactiveCombatExtraCards()
     {
         RegressionTestHarness.Require(
             SakuraSourceCardText.ShouldShowMagicChargeExtraDescription(new ClowSword())
@@ -218,36 +149,6 @@ public sealed class ExtraEffectTransactionSuite
             !SakuraExtraEffectTransaction.ShouldShowDescription(classic, isInCombat: true)
             && !SakuraExtraEffectTransaction.ShouldShowDescription(transparent, isInCombat: true),
             "Expected inactive mutable combat cards to hide their Extra Effect descriptions.");
-
-        RunCore(
-            classic,
-            CardPlayFor(classic),
-            active: true,
-            static () => { },
-            static () => { },
-            () => RegressionTestHarness.Require(
-                SakuraExtraEffectTransaction.ShouldShowDescription(classic, isInCombat: true),
-                "Expected an active mutable Classic card to show its Extra Effect description."),
-            static () => { });
-        RunCore(
-            transparent,
-            CardPlayFor(transparent),
-            active: true,
-            static () => { },
-            static () => { },
-            () => RegressionTestHarness.Require(
-                SakuraExtraEffectTransaction.ShouldShowDescription(transparent, isInCombat: true),
-                "Expected an active mutable Transparent Card to show its Extra Effect description."),
-            static () => { });
-
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.ShouldShowMagicChargeExtraDescription(classic)
-            && SakuraCardModel.ShouldShowMagicChargeExtraEffectDescription(transparent),
-            "Expected mutable non-combat cards to keep complete Extra Effect descriptions after projection cleanup.");
-        RegressionTestHarness.Require(
-            !SakuraExtraEffectTransaction.ShouldShowDescription(classic, isInCombat: true)
-            && !SakuraExtraEffectTransaction.ShouldShowDescription(transparent, isInCombat: true),
-            "Expected mutable combat cards to hide Extra Effect descriptions after projection cleanup.");
     }
 
     [Fact]
@@ -267,158 +168,25 @@ public sealed class ExtraEffectTransactionSuite
     }
 
     [Fact]
-    public void ActivationMarkerPreservesTheActualPaymentKind()
+    public void ExtraEffectExecuteIsReservedForExtraEffectCards()
     {
-        var card = new Gale();
-        var play = CardPlayFor(card);
-
-        SakuraExtraEffectTransaction.ExecuteCoreForTests(
-                card,
-                play,
-                new SakuraExtraEffectActivation(true),
-                static () => Task.CompletedTask,
-                static () => Task.CompletedTask,
-                static () => Task.CompletedTask,
-                static () => Task.CompletedTask,
-                SakuraExtraEffectActivationCost.LockSakura)
-            .GetAwaiter()
-            .GetResult();
+        var sourceCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraSourceCard.cs"));
+        var cardModel = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraCardModel.cs"));
+        var transaction = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraExtraEffectTransaction.cs"));
 
         RegressionTestHarness.Require(
-            SakuraExtraEffectTransaction.DidActivate(play)
-            && !SakuraExtraEffectTransaction.DidSpendMagicCharge(play),
-            "Expected a Sakura Lock-funded Extra Effect to remain activated without being marked as a Magic Charge spend.");
-    }
-
-    [Fact]
-    public void GameplayFailureClearsProjectionWithoutReplacingFailure()
-    {
-        var card = new Gale();
-        var play = CardPlayFor(card);
-        var spent = false;
-        var postPlayed = false;
-
-        try
-        {
-            SakuraExtraEffectTransaction.ExecuteCoreForTests(
-                    card,
-                    play,
-                    new SakuraExtraEffectActivation(true),
-                    () =>
-                    {
-                        spent = true;
-                        return Task.CompletedTask;
-                    },
-                    () => Task.CompletedTask,
-                    () => throw new TestGameplayException("original gameplay failure"),
-                    () =>
-                    {
-                        postPlayed = true;
-                        return Task.CompletedTask;
-                    })
-                .GetAwaiter()
-                .GetResult();
-            throw new InvalidOperationException("Expected the fake gameplay to throw.");
-        }
-        catch (TestGameplayException exception)
-        {
-            RegressionTestHarness.Require(
-                exception.Message == "original gameplay failure",
-                "Expected cleanup not to replace the gameplay exception.");
-        }
-
-        RegressionTestHarness.Require(
-            spent
-            && !postPlayed
-            && SakuraExtraEffectTransaction.DidActivate(play)
-            && !SakuraExtraEffectTransaction.IsActivelyProjected(card),
-            "Expected a failed play to keep its completed spend, skip post-effects, and clear its projection.");
-    }
-
-    [Fact]
-    public void NestedTransactionsRestoreOuterProjectionInLifoOrder()
-    {
-        var card = new Gale();
-        var outerPlay = CardPlayFor(card);
-        var innerPlay = CardPlayFor(card);
-
-        RunCore(
-            card,
-            outerPlay,
-            active: true,
-            static () => { },
-            static () => { },
-            () =>
-            {
-                RunCore(
-                    card,
-                    innerPlay,
-                    active: true,
-                    static () => { },
-                    static () => { },
-                    () => RegressionTestHarness.Require(
-                        SakuraExtraEffectTransaction.IsActivelyProjected(card),
-                        "Expected the nested play projection to be active."),
-                    static () => { });
-                RegressionTestHarness.Require(
-                    SakuraExtraEffectTransaction.IsActivelyProjected(card),
-                    "Expected the outer projection to resume after nested cleanup.");
-            },
-            static () => { });
-
-        RegressionTestHarness.Require(
-            SakuraExtraEffectTransaction.DidActivate(outerPlay)
-            && SakuraExtraEffectTransaction.DidActivate(innerPlay)
-            && !SakuraExtraEffectTransaction.IsActivelyProjected(card),
-            "Expected nested plays to retain distinct markers and clear projections in LIFO order.");
-    }
-
-    [Fact]
-    public void SpendAndRecordFailuresPreserveTransactionBoundaries()
-    {
-        var spendCard = new Gale();
-        var spendPlay = CardPlayFor(spendCard);
-        RegressionTestHarness.RequireThrows<TestSpendException>(
-            () => SakuraExtraEffectTransaction.ExecuteCoreForTests(
-                    spendCard,
-                    spendPlay,
-                    new SakuraExtraEffectActivation(true),
-                    () => throw new TestSpendException(),
-                    static () => Task.CompletedTask,
-                    static () => Task.CompletedTask,
-                    static () => Task.CompletedTask)
-                .GetAwaiter()
-                .GetResult(),
-            "Expected a failed standard spend to propagate.");
-        RegressionTestHarness.Require(
-            !SakuraExtraEffectTransaction.DidActivate(spendPlay)
-            && !SakuraExtraEffectTransaction.IsActivelyProjected(spendCard),
-            "Expected spend failure to avoid an activation marker and clear the projection.");
-
-        var recordCard = new Gale();
-        var recordPlay = CardPlayFor(recordCard);
-        var gameplayRan = false;
-        RegressionTestHarness.RequireThrows<TestRecordException>(
-            () => SakuraExtraEffectTransaction.ExecuteCoreForTests(
-                    recordCard,
-                    recordPlay,
-                    new SakuraExtraEffectActivation(true),
-                    static () => Task.CompletedTask,
-                    () => throw new TestRecordException(),
-                    () =>
-                    {
-                        gameplayRan = true;
-                        return Task.CompletedTask;
-                    },
-                    static () => Task.CompletedTask)
-                .GetAwaiter()
-                .GetResult(),
-            "Expected a failed trigger record to propagate.");
-        RegressionTestHarness.Require(
-            SakuraExtraEffectTransaction.DidActivate(recordPlay)
-            && !gameplayRan
-            && !SakuraExtraEffectTransaction.IsActivelyProjected(recordCard),
-            "Expected record failure after spend to keep the marker, skip gameplay, and clear the projection.");
+            sourceCard.Contains("if (this is ISakuraExtraEffectCard)", StringComparison.Ordinal)
+            && cardModel.Contains("if (this is ISakuraExtraEffectCard)", StringComparison.Ordinal)
+            && sourceCard.Contains("SakuraFormVoid.AfterCardPlayed", StringComparison.Ordinal)
+            && !transaction.Contains("AddVoidToDrawPile", StringComparison.Ordinal)
+            && !transaction.Contains("ShouldAddSakuraVoid", StringComparison.Ordinal)
+            && !transaction.Contains("ExecuteCoreForTests", StringComparison.Ordinal)
+            && !transaction.Contains("internal static async Task ExecuteCore", StringComparison.Ordinal)
+            && transaction.Contains("private static async Task ExecuteCore", StringComparison.Ordinal),
+            "Expected Extra Effect to execute only Extra Effect cards, leave Sakura-Form Void outside the transaction, and keep ExecuteCore private.");
     }
 
     [Fact]
@@ -450,50 +218,4 @@ public sealed class ExtraEffectTransactionSuite
             }
         }
     }
-
-    private static void RunCore(
-        CardModel card,
-        CardPlay play,
-        bool active,
-        System.Action spend,
-        System.Action record,
-        System.Action gameplay,
-        System.Action postPlay) =>
-        SakuraExtraEffectTransaction.ExecuteCoreForTests(
-                card,
-                play,
-                new SakuraExtraEffectActivation(active),
-                AsTask(spend),
-                AsTask(record),
-                AsTask(gameplay),
-                AsTask(postPlay))
-            .GetAwaiter()
-            .GetResult();
-
-    private static Func<Task> AsTask(System.Action action) => () =>
-    {
-        action();
-        return Task.CompletedTask;
-    };
-
-    private static CardPlay CardPlayFor(CardModel card) => new()
-    {
-        Card = card,
-        Target = null,
-        ResultPile = PileType.Discard,
-        Resources = new ResourceInfo
-        {
-            EnergySpent = 0,
-            EnergyValue = 0,
-            StarsSpent = 0,
-            StarValue = 0
-        },
-        IsAutoPlay = false,
-        PlayIndex = 0,
-        PlayCount = 1
-    };
-
-    private sealed class TestGameplayException(string message) : Exception(message);
-    private sealed class TestRecordException : Exception;
-    private sealed class TestSpendException : Exception;
 }

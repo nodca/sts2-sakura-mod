@@ -21,26 +21,14 @@ public readonly record struct GeneratedCardOptions
     public PileType? Pile { get; init; }
     public CardPilePosition? Position { get; init; }
     public bool RemoveTemporary { get; init; }
-    public bool RemoveManifestAtlasOrigin { get; init; }
     public bool AddTemporary { get; init; }
     public bool PreventTemporaryMemoryReturn { get; init; }
-    public bool AddManifestAtlasOrigin { get; init; }
     public bool FreeThisTurn { get; init; }
 }
 
 internal static class SakuraGeneratedCardLifecycle
 {
     private static readonly ConditionalWeakTable<CardModel, GeneratedTransparentHandVisualMarker> GeneratedTransparentHandVisualCards = new();
-
-    public static async Task<bool> GrantTemporary(PlayerChoiceContext context, CardModel card)
-    {
-        if (card.IsTemporary() || card is ISakuraForgottenImmune)
-            return false;
-
-        card.MakeTemporary();
-        await TriggerTemporaryGranted(context, card);
-        return true;
-    }
 
     public static async Task<CardModel?> AddTemporaryCopyToHand(
         CardModel card,
@@ -155,7 +143,6 @@ internal static class SakuraGeneratedCardLifecycle
         PlayerChoiceContext? context = null)
     {
         var copy = card.CreateClone();
-        copy.RemoveManifestAtlasOrigin();
         // Copy-generated Clear Cards keep the native generated-card hand animation intact.
         await AddGeneratedCardToCombat(
             copy,
@@ -183,8 +170,6 @@ internal static class SakuraGeneratedCardLifecycle
     {
         if (options.RemoveTemporary)
             card.RemoveTemporaryForExchange();
-        if (options.RemoveManifestAtlasOrigin)
-            card.RemoveManifestAtlasOrigin();
 
         var temporaryGranted = false;
         if (options.AddTemporary)
@@ -196,8 +181,6 @@ internal static class SakuraGeneratedCardLifecycle
 
         if (options.FreeThisTurn)
             card.EnergyCost.SetThisTurnOrUntilPlayed(0, reduceOnly: true);
-        if (options.AddManifestAtlasOrigin)
-            card.MarkManifestAtlasOrigin();
 
         var destinationPile = options.Pile ?? PileType.Hand;
         TrackGeneratedTransparentHandVisualCard(card, destinationPile, refreshGeneratedTransparentHandVisual);
@@ -320,11 +303,10 @@ internal static class SakuraGeneratedCardLifecycle
     public static Task<CardModel> AddManifestChoiceToCombat(
         CardModel card,
         PlayerChoiceContext context,
-        bool addTemporary,
-        bool captureEligible) =>
+        bool addTemporary) =>
         AddGeneratedCardToCombat(
             card,
-            ManifestChoiceOptions(addTemporary, captureEligible),
+            ManifestChoiceOptions(addTemporary),
             context,
             refreshGeneratedTransparentHandVisual: false);
 
@@ -397,17 +379,15 @@ internal static class SakuraGeneratedCardLifecycle
         new()
         {
             RemoveTemporary = true,
-            RemoveManifestAtlasOrigin = true,
             AddTemporary = addTemporary,
             PreventTemporaryMemoryReturn = addTemporary,
             FreeThisTurn = freeThisTurn
         };
 
-    private static GeneratedCardOptions ManifestChoiceOptions(bool addTemporary, bool captureEligible) =>
+    private static GeneratedCardOptions ManifestChoiceOptions(bool addTemporary) =>
         new()
         {
-            AddTemporary = addTemporary,
-            AddManifestAtlasOrigin = captureEligible
+            AddTemporary = addTemporary
         };
 
     private static GeneratedCardOptions GeneratedCardToHandOptions(CardPilePosition position) =>
@@ -420,8 +400,7 @@ internal static class SakuraGeneratedCardLifecycle
     private static GeneratedCardOptions ManifestAtlasTemporaryCardOptions() =>
         new()
         {
-            AddTemporary = true,
-            AddManifestAtlasOrigin = true
+            AddTemporary = true
         };
 
     private static GeneratedCardOptions DiscoveredChoiceOptions(bool freeThisTurn) =>

@@ -34,8 +34,7 @@ internal static class CombatTransitionCleanupScenario
             new GeneratedCardOptions
             {
                 Pile = PileType.Hand,
-                AddTemporary = true,
-                AddManifestAtlasOrigin = true
+                AddTemporary = true
             });
         var memorySource = firstCombat.CreateCard<Siege>(player);
         await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
@@ -67,10 +66,7 @@ internal static class CombatTransitionCleanupScenario
                     silent: true);
             });
         await CombatScenarioContext.EnqueueAndWaitAsync(fixtureAction);
-        assertions.Equal(
-            "first_capture_candidate_count",
-            1,
-            SakuraManifestLoop.CaptureCandidateTypes(firstCombat, player).Count);
+        assertions.Equal("first_gale_stabilized", false, captureCandidate.IsTemporary());
         assertions.Equal(
             "first_temporary_memory_count",
             1,
@@ -102,7 +98,6 @@ internal static class CombatTransitionCleanupScenario
                 && !ReferenceEquals(card, memorySource)));
         assertions.Equal("second_magic_charge_clear", 0, player.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0);
         assertions.Equal("second_firey_clear", 0, player.Creature.GetPower<ClassicFireyPower>()?.Amount ?? 0);
-        assertions.Equal("second_capture_candidates_clear", 0, SakuraManifestLoop.CaptureCandidateTypes(player).Count);
         assertions.Equal(
             "second_temporary_memory_clear",
             0,
@@ -152,7 +147,7 @@ internal static class CombatTransitionCleanupScenario
                 setup_mutations = new[]
                 {
                     "Generated Temporary Spiral -> first hand",
-                    "Generated Manifest-origin Temporary Gale -> first hand, then Stabilize",
+                    "Generated Temporary Gale -> first hand, then Stabilize",
                     "Generated Temporary Siege -> first discard, then move into the real Memory pile",
                     $"RuntimeFixtureAction -> {nameof(ClassicMagicChargePower)}(7)",
                     $"RuntimeFixtureAction -> {nameof(ClassicFireyPower)}(1)"
@@ -163,7 +158,6 @@ internal static class CombatTransitionCleanupScenario
                 first_combat_hash = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(firstCombat),
                 second_combat_hash = System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(secondCombat),
                 second_turn = secondPlayerCombat.TurnNumber,
-                second_capture_candidates = SakuraManifestLoop.CaptureCandidateTypes(player).Count,
                 second_memory_count = secondMemory.Cards.Count,
                 memory_instance_replaced = !ReferenceEquals(firstMemoryPile, secondMemory)
             }

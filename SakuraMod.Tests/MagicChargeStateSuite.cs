@@ -83,8 +83,8 @@ public sealed class MagicChargeStateSuite
         var ownerPath = Path.GetFullPath(Path.Combine(
             sourceRoot,
             "SakuraModCode",
-            "Cards",
-            "SakuraSourceCard.cs"));
+            "Character",
+            "SakuraMagicCharge.cs"));
         foreach (var file in Directory.EnumerateFiles(
                      Path.Combine(sourceRoot, "SakuraModCode"),
                      "*.cs",
@@ -99,6 +99,44 @@ public sealed class MagicChargeStateSuite
                     StringComparison.Ordinal),
                 $"Expected {Path.GetRelativePath(sourceRoot, file)} to route Magic Charge writes through SakuraMagicCharge.");
         }
+    }
+
+    [Fact]
+    public void NonExtraPlayPathsApplyCapturedMidpointOpportunity()
+    {
+        var sourceCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraSourceCard.cs"));
+        var cardModel = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraCardModel.cs"));
+        var extra = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraExtraEffectTransaction.cs"));
+        var charge = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraMagicCharge.cs"));
+
+        RegressionTestHarness.Require(
+            charge.Contains("TryApplyCapturedOpportunity", StringComparison.Ordinal)
+            && sourceCard.Contains("SakuraMagicCharge.CaptureOpportunity", StringComparison.Ordinal)
+            && sourceCard.Contains("SakuraMagicCharge.TryApplyCapturedOpportunity", StringComparison.Ordinal)
+            && cardModel.Contains("SakuraMagicCharge.CaptureOpportunity", StringComparison.Ordinal)
+            && cardModel.Contains("SakuraMagicCharge.TryApplyCapturedOpportunity", StringComparison.Ordinal)
+            && extra.Contains("SakuraMagicCharge.TryApplyCapturedOpportunity", StringComparison.Ordinal)
+            && extra.Contains("SakuraMagicCharge.CaptureOpportunity", StringComparison.Ordinal),
+            "Expected Magic Charge to own midpoint opportunity apply for Extra Effect and both non-extra OnPlay paths.");
+    }
+
+    [Fact]
+    public void AfterPlayGainCoversTransparentAndSealedBookClassicCards()
+    {
+        RegressionTestHarness.Require(
+            SakuraMagicCharge.GainsMagicAfterPlay(new Gale(), hasSealedBook: false)
+            && SakuraMagicCharge.GainsMagicAfterPlay(new Gale(), hasSealedBook: true)
+            && !SakuraMagicCharge.GainsMagicAfterPlay(new ClowSword(), hasSealedBook: false)
+            && SakuraMagicCharge.GainsMagicAfterPlay(new ClowSword(), hasSealedBook: true)
+            && !SakuraMagicCharge.GainsMagicAfterPlay(new SakuraSword(), hasSealedBook: false)
+            && SakuraMagicCharge.GainsMagicAfterPlay(new SakuraSword(), hasSealedBook: true)
+            && !SakuraMagicCharge.GainsMagicAfterPlay(new SpellSeal(), hasSealedBook: true)
+            && !SakuraMagicCharge.GainsMagicAfterPlay(new AnotherMe(), hasSealedBook: true),
+            "Expected Transparent cards to gain Magic Charge after play, classic source cards to need Sealed Book, and Spell/Ancient cards not to grant.");
     }
 
     [Fact]

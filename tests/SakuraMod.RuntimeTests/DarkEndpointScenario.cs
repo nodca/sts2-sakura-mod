@@ -222,7 +222,7 @@ internal static class DarkEndpointScenario
         MicroLight microLight,
         RuntimeAssertionCollector assertions)
     {
-        var granted = await SakuraGeneratedCardLifecycle.GrantTemporary(choiceContext, microLight);
+        var granted = await SakuraForgotten.GrantTemporary(choiceContext, microLight);
         assertions.Equal("dark_micro_light_rejects_forgotten_grant", false, granted);
         assertions.Equal("dark_micro_light_has_no_forgotten_state", false, microLight.IsTemporary());
     }

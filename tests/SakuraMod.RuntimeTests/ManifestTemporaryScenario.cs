@@ -30,7 +30,7 @@ internal static class ManifestTemporaryScenario
         }
 
         var manifestedCards = playerCombat.Hand.Cards
-            .Where(card => card.IsTemporary() && card.IsManifestAtlasOrigin())
+            .Where(card => card.IsTemporary() && SakuraTransparentCardCatalog.IsTransparentCard(card) && card != choice)
             .ToArray();
         assertions.Equal("manifest_generated_count", 1, manifestedCards.Length);
         if (manifestedCards.Length != 1)
@@ -47,7 +47,6 @@ internal static class ManifestTemporaryScenario
         assertions.True("manifest_owner_identity", ReferenceEquals(manifested.Owner, player));
         assertions.True("manifest_combat_identity", combat.ContainsCard(manifested));
         assertions.True("manifest_temporary_before_stabilize", manifested.IsTemporary());
-        assertions.True("manifest_origin_before_stabilize", manifested.IsManifestAtlasOrigin());
         assertions.True("manifest_hand_entry", playerCombat.Hand.Cards.Contains(manifested));
         RuntimeTestHost.WriteCheckpoint(
             request,
@@ -65,16 +64,11 @@ internal static class ManifestTemporaryScenario
             await CombatScenarioContext.PlayCardAsync(trueOrFalse);
         }
 
-        var captureCandidates = SakuraManifestLoop.CaptureCandidateTypes(player);
         assertions.True("stabilized_same_card_owner", ReferenceEquals(manifested.Owner, player));
         assertions.True("stabilized_same_combat_identity", combat.ContainsCard(manifested));
         assertions.Equal("stabilized_temporary_removed", false, manifested.IsTemporary());
-        assertions.True("stabilized_manifest_origin_retained", manifested.IsManifestAtlasOrigin());
         assertions.True("stabilized_card_stays_in_hand", playerCombat.Hand.Cards.Contains(manifested));
         assertions.Equal("stabilize_energy_gain", energyBefore + 2, playerCombat.Energy);
-        assertions.True(
-            "capture_candidate_handoff",
-            captureCandidates.Contains(manifestedType));
         assertions.True(
             "true_or_false_result_pile",
             playerCombat.DiscardPile.Cards.Contains(trueOrFalse));
@@ -112,7 +106,7 @@ internal static class ManifestTemporaryScenario
                         PileType.Exhaust,
                         CardPilePosition.Bottom);
                 }
-                await SakuraGeneratedCardLifecycle.GrantTemporary(choiceContext, classicTemporary);
+                await SakuraForgotten.GrantTemporary(choiceContext, classicTemporary);
             });
         await CombatScenarioContext.EnqueueAndWaitAsync(isolateClassicTemporaryAction);
 
@@ -189,9 +183,7 @@ internal static class ManifestTemporaryScenario
                 id = manifested.Id,
                 owner = manifested.Owner?.NetId,
                 pile = manifested.Pile?.Type,
-                temporary = manifested.IsTemporary(),
-                manifest_origin = manifested.IsManifestAtlasOrigin(),
-                capture_candidates = captureCandidates.Select(type => type.FullName).ToArray()
+                temporary = manifested.IsTemporary()
             },
             ["stabilizer"] = new
             {

@@ -156,41 +156,6 @@ public static class SakuraActions
     public static bool HasElement(CardModel? card, SakuraElement element) =>
         ElementSetOf(card).HasElement(element);
 
-    public static async Task<bool> ApplyMissingElementStates(PlayerChoiceContext choiceContext, CardModel card)
-    {
-        if (!card.IsMutable)
-            return false;
-
-        var applied = false;
-        foreach (var element in ElementSetOf(card).AsElements())
-            applied |= await ApplyElementStateIfMissing(choiceContext, card.Owner, element);
-        return applied;
-    }
-
-    private static async Task<bool> ApplyElementStateIfMissing(
-        PlayerChoiceContext choiceContext,
-        Player owner,
-        SakuraElement element)
-    {
-        switch (element)
-        {
-            case SakuraElement.Earth when owner.Creature.GetPower<ClassicEarthyPower>() is null:
-                await PowerCmd.Apply<ClassicEarthyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
-                return true;
-            case SakuraElement.Fire when owner.Creature.GetPower<ClassicFireyPower>() is null:
-                await PowerCmd.Apply<ClassicFireyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
-                return true;
-            case SakuraElement.Water when owner.Creature.GetPower<ClassicWateryPower>() is null:
-                await PowerCmd.Apply<ClassicWateryPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
-                return true;
-            case SakuraElement.Wind when owner.Creature.GetPower<ClassicWindyPower>() is null:
-                await PowerCmd.Apply<ClassicWindyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
-                return true;
-            default:
-                return false;
-        }
-    }
-
     public static CardKeyword KeywordFor(SakuraElement element) =>
         element switch
         {

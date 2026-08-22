@@ -50,6 +50,7 @@ public class ClassicThroughPower : SakuraPowerModel
 
         if (_usedThisTurn
             || play.PlayIndex != 0
+            || !play.Card.IsMutable
             || play.Card.Owner?.Creature != Owner
             || !SakuraThroughResolution.IsEligibleCard(play.Card)
             || play.Target is null)

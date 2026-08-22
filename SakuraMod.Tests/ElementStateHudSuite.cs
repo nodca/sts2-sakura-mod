@@ -1,3 +1,4 @@
+using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using System.Text.Json;
@@ -26,15 +27,15 @@ public sealed class ElementStateHudSuite
     public void CursorOffsetsMapToNonOverlappingFacets()
     {
         RegressionTestHarness.Require(
-            SakuraElementFacetProjection.FromOffset(0f, -40f, 50f) == SakuraElementFacet.Fire
-            && SakuraElementFacetProjection.FromOffset(40f, 0f, 50f) == SakuraElementFacet.Wind
-            && SakuraElementFacetProjection.FromOffset(0f, 40f, 50f) == SakuraElementFacet.Earth
-            && SakuraElementFacetProjection.FromOffset(-40f, 0f, 50f) == SakuraElementFacet.Water,
+            SakuraElementFacetProjection.FromOffset(0f, -40f, 50f) == SakuraElement.Fire
+            && SakuraElementFacetProjection.FromOffset(40f, 0f, 50f) == SakuraElement.Wind
+            && SakuraElementFacetProjection.FromOffset(0f, 40f, 50f) == SakuraElement.Earth
+            && SakuraElementFacetProjection.FromOffset(-40f, 0f, 50f) == SakuraElement.Water,
             "Expected cursor geometry to map Fire-top, Wind-right, Earth-bottom, and Water-left sectors.");
 
         RegressionTestHarness.Require(
-            SakuraElementFacetProjection.FromOffset(30f, -10f, 50f) == SakuraElementFacet.Wind
-            && SakuraElementFacetProjection.FromOffset(-10f, 30f, 50f) == SakuraElementFacet.Earth
+            SakuraElementFacetProjection.FromOffset(30f, -10f, 50f) == SakuraElement.Wind
+            && SakuraElementFacetProjection.FromOffset(-10f, 30f, 50f) == SakuraElement.Earth
             && SakuraElementFacetProjection.FromOffset(49f, 49f, 50f) is null,
             "Expected dominant-axis geometry to keep triangular hover regions non-overlapping.");
     }
@@ -42,41 +43,41 @@ public sealed class ElementStateHudSuite
     [Fact]
     public void ActiveElementProjectionTracksStateAndNewTransitions()
     {
-        var none = SakuraElementStateProjection.FromActivity(false, false, false, false);
-        var earthy = SakuraElementStateProjection.FromActivity(true, false, false, false);
-        var fireyWatery = SakuraElementStateProjection.FromActivity(false, true, true, false);
-        var all = SakuraElementStateProjection.FromActivity(true, true, true, true);
+        var none = SakuraElementSet.None;
+        var earth = SakuraElementSet.Earth;
+        var fireAndWater = SakuraElementSet.Fire | SakuraElementSet.Water;
+        var all = SakuraElementSet.All;
 
         RegressionTestHarness.Require(
-            none == SakuraActiveElementStates.None
-            && earthy == SakuraActiveElementStates.Earthy
-            && fireyWatery == (SakuraActiveElementStates.Firey | SakuraActiveElementStates.Watery)
-            && all == (SakuraActiveElementStates.Earthy
-                | SakuraActiveElementStates.Firey
-                | SakuraActiveElementStates.Watery
-                | SakuraActiveElementStates.Windy),
-            "Expected the element HUD projection to represent none, one, multiple, and all active states independently.");
+            none == SakuraElementSet.None
+            && earth == SakuraElementSet.Earth
+            && fireAndWater == (SakuraElementSet.Fire | SakuraElementSet.Water)
+            && all == (SakuraElementSet.Wind
+                | SakuraElementSet.Water
+                | SakuraElementSet.Fire
+                | SakuraElementSet.Earth),
+            "Expected the element projection to represent none, one, multiple, and all markers independently.");
 
         RegressionTestHarness.Require(
-            SakuraElementStateProjection.NewlyActive(earthy, all)
-                == (SakuraActiveElementStates.Firey
-                    | SakuraActiveElementStates.Watery
-                    | SakuraActiveElementStates.Windy)
-            && SakuraElementStateProjection.NewlyActive(all, earthy) == SakuraActiveElementStates.None,
+            SakuraElementState.NewlyActive(earth, all)
+                == (SakuraElementSet.Fire
+                    | SakuraElementSet.Water
+                    | SakuraElementSet.Wind)
+            && SakuraElementState.NewlyActive(all, earth) == SakuraElementSet.None,
             "Expected only inactive-to-active element transitions to request HUD pulses.");
     }
 
     [Fact]
     public void SovereigntyLockProjectionIsDerivedFromEnemySources()
     {
-        Assert.Equal(SakuraLockedElementStates.None, SakuraElementLockProjection.FromSovereignty(false, false));
-        Assert.Equal(SakuraLockedElementStates.Wind, SakuraElementLockProjection.FromSovereignty(true, false));
+        Assert.Equal(SakuraElementSet.None, SakuraElementState.LocksFromSovereignty(false, false));
+        Assert.Equal(SakuraElementSet.Wind, SakuraElementState.LocksFromSovereignty(true, false));
         Assert.Equal(
-            SakuraLockedElementStates.Wind | SakuraLockedElementStates.Water,
-            SakuraElementLockProjection.FromSovereignty(false, true));
+            SakuraElementSet.Wind | SakuraElementSet.Water,
+            SakuraElementState.LocksFromSovereignty(false, true));
         Assert.Equal(
-            SakuraLockedElementStates.Wind | SakuraLockedElementStates.Water,
-            SakuraElementLockProjection.FromSovereignty(true, true));
+            SakuraElementSet.Wind | SakuraElementSet.Water,
+            SakuraElementState.LocksFromSovereignty(true, true));
     }
 
     [Fact]
@@ -154,7 +155,7 @@ public sealed class ElementStateHudSuite
             "SakuraModCode/Character/SakuraElementStateHud.cs"));
         RegressionTestHarness.Require(
             source.Contains("SakuraStarterCompatibility.IsKinomotoSakura(player)", StringComparison.Ordinal)
-            && source.Contains("SakuraElementStateProjection.Read(_player)", StringComparison.Ordinal)
+            && source.Contains("SakuraElementState.ReadActive(_player)", StringComparison.Ordinal)
             && source.Contains("private const float MountHorizontalOffset = 8f", StringComparison.Ordinal)
             && source.Contains("private const float MountGap = 12f", StringComparison.Ordinal)
             && source.Contains("+ MountHorizontalOffset", StringComparison.Ordinal)
@@ -172,7 +173,7 @@ public sealed class ElementStateHudSuite
             && source.Contains("_combatState.CreaturesChanged -= OnCreaturesChanged", StringComparison.Ordinal)
             && source.Contains("enemy.PowerApplied += OnEnemyPowerApplied", StringComparison.Ordinal)
             && source.Contains("enemy.PowerApplied -= OnEnemyPowerApplied", StringComparison.Ordinal)
-            && source.Contains("SakuraElementLockProjection.Read(_combatState)", StringComparison.Ordinal)
+            && source.Contains("SakuraElementState.ReadLocks(_combatState)", StringComparison.Ordinal)
             && !source.Contains("_Process", StringComparison.Ordinal),
             "Expected Sovereignty locks to follow enemy and combat lifecycle events without polling or duplicate state.");
     }

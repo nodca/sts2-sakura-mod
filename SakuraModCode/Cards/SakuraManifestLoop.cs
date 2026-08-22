@@ -8,9 +8,7 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
 using SakuraMod.SakuraModCode.Extensions;
-using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -22,7 +20,6 @@ public static class SakuraManifestLoop
     private const int BaseManifestChoiceCount = 3;
 
     private static readonly LocString ManifestPrompt = new("cards", "SAKURAMOD-GENERIC.manifestPrompt");
-    private static readonly ConditionalWeakTable<ICombatState, Dictionary<Player, Type>> CaptureCandidatesByCombat = new();
 
     public static Task<IReadOnlyList<CardModel>> Manifest(
         SakuraCardModel source,
@@ -48,8 +45,8 @@ public static class SakuraManifestLoop
             var source = i < rareAtlasChoices
                 ? ManifestSource.RareAtlas
                 : ManifestSource.Default;
-            var choiceSet = ManifestChoices(owner, excludedType, source);
-            var choices = choiceSet.Cards
+            var choiceCards = ManifestChoices(owner, excludedType, source);
+            var choices = choiceCards
                 .Select(choice => SakuraGeneratedCardLifecycle.CreateManifestChoice(owner, choice))
                 .ToList();
             if (choices.Count == 0)
@@ -73,8 +70,7 @@ public static class SakuraManifestLoop
                 await SakuraGeneratedCardLifecycle.AddManifestChoiceToCombat(
                     copy,
                     context,
-                    addTemporary: !stabilize,
-                    captureEligible: choiceSet.CaptureEligible);
+                    addTemporary: !stabilize);
                 manifested.Add(copy);
             }
             finally
@@ -120,32 +116,7 @@ public static class SakuraManifestLoop
         }
     }
 
-    public static IReadOnlyList<Type> CaptureCandidateTypes(Player owner) =>
-        owner.Creature.CombatState is { } combatState
-            ? CaptureCandidateTypes(combatState, owner)
-            : [];
-
-    public static IReadOnlyList<CardModel> CaptureCandidateTemplates(Player owner) =>
-        CaptureCandidateTypes(owner)
-            .Select(SakuraTransparentCardCatalog.CardTemplate)
-            .ToList();
-
-    public static async Task OnTemporaryStabilized(PlayerChoiceContext context, CardModel card)
-    {
-        RememberCaptureCandidate(card);
-        await DarkMicroLightCoordinator.OnTemporaryStabilized(context, card);
-    }
-
-    internal static IReadOnlyList<Type> CaptureCandidateTypes(ICombatState combatState, Player owner)
-    {
-        if (!CaptureCandidatesByCombat.TryGetValue(combatState, out var cardsByOwner)
-            || !cardsByOwner.TryGetValue(owner, out var type))
-            return [];
-
-        return [type];
-    }
-
-    private static ManifestChoiceSet ManifestChoices(Player owner, Type? excludedType, ManifestSource source)
+    private static List<CardModel> ManifestChoices(Player owner, Type? excludedType, ManifestSource source)
     {
         var weightedSources = source switch
         {
@@ -169,7 +140,7 @@ public static class SakuraManifestLoop
             weightedSources.RemoveAll(card => card.GetType() == pickedType);
         }
 
-        return new ManifestChoiceSet(choices, CaptureEligible: true);
+        return choices;
     }
 
     private static List<CardModel> TransparentCardChoices(Player owner, Type excludedType)
@@ -210,23 +181,9 @@ public static class SakuraManifestLoop
             _ => RareManifestWeight
         };
 
-    private static void RememberCaptureCandidate(CardModel card)
-    {
-        if (card.Owner is not { } owner
-            || card.CombatState is null
-            || !SakuraTransparentCardCatalog.IsTransparentCard(card)
-            || !card.IsManifestAtlasOrigin())
-            return;
-
-        var cardsByOwner = CaptureCandidatesByCombat.GetValue(card.CombatState, _ => []);
-        cardsByOwner.TryAdd(owner, card.GetType());
-    }
-
     private enum ManifestSource
     {
         Default,
         RareAtlas
     }
-
-    private sealed record ManifestChoiceSet(IReadOnlyList<CardModel> Cards, bool CaptureEligible);
 }

@@ -27,6 +27,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.None)
 {
+    internal const int ExtraBlock = 12;
+
     public override bool GainsBlock => true;
     public override SakuraElementSet Elements => SakuraElementSet.Water;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceBlockVar(5, ValueProp.Move)];
@@ -51,7 +53,7 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
             {
                 cues.Impact();
                 await ResolveCloudMechanics(choiceContext, play);
-                await GainBlock(play, SakuraMagicCharge.CloudExtraBlock);
+                await GainBlock(play, ExtraBlock);
             });
 
     private async Task ResolveCloudMechanics(PlayerChoiceContext choiceContext, CardPlay play)

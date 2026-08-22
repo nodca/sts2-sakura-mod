@@ -41,7 +41,7 @@ public class DreamingPower : SakuraPowerModel
             if (card is null)
                 return;
 
-            await SakuraGeneratedCardLifecycle.GrantTemporary(choiceContext, card);
+            await SakuraForgotten.GrantTemporary(choiceContext, card);
             card.SetToFreeThisTurn();
         }
     }

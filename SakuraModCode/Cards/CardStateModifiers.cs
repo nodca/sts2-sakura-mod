@@ -8,7 +8,6 @@ using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
 using STS2RitsuLib.Content;
@@ -297,7 +296,7 @@ public sealed class TemporaryModifier : SakuraCardStateCapability
         }
 
         TemporaryDissolveVfx.Play(card);
-        DarkMicroLightCoordinator.ClearSourceMarker(card);
+        SakuraForgotten.NotifyCleared(card);
         await CardPileCmd.RemoveFromCombat(card, true);
     }
 
@@ -391,10 +390,6 @@ public sealed class ReplayThisTurnModifier : SakuraCardStateCapability
         Owner.BaseReplayCount += Amount;
         _applied = true;
     }
-}
-
-public sealed class ManifestAtlasOriginModifier : SakuraCardStateCapability
-{
 }
 
 public abstract class SakuraCardStateCapability : CardCapability, ICardDescriptionContributor, ICardHoverTipContributor
@@ -574,7 +569,6 @@ public static class SakuraCardStates
         registry.RegisterModelCapability<SynchronizedCardPairModifier>();
         registry.RegisterModelCapability<TemporaryModifier>();
         registry.RegisterModelCapability<ReplayThisTurnModifier>();
-        registry.RegisterModelCapability<ManifestAtlasOriginModifier>();
     }
 
     public static bool IsTemporary(this CardModel card) =>
@@ -600,9 +594,6 @@ public static class SakuraCardStates
         TemporaryModifier.ResetCleanupForTurn(player);
     }
 
-    public static bool IsManifestAtlasOrigin(this CardModel card) =>
-        SakuraCardStateCapability.Modifiers(card).Any(modifier => modifier is ManifestAtlasOriginModifier);
-
     public static void MakeTemporary(this CardModel card, bool returnsToMemory = true)
     {
         if (card is ISakuraForgottenImmune)
@@ -619,18 +610,6 @@ public static class SakuraCardStates
 
         if (!returnsToMemory)
             modifier.PreventMemoryReturn();
-    }
-
-    public static void MarkManifestAtlasOrigin(this CardModel card)
-    {
-        if (!card.IsManifestAtlasOrigin())
-            SakuraCardStateCapability.AddModifier(card, NewModifier<ManifestAtlasOriginModifier>());
-    }
-
-    public static void RemoveManifestAtlasOrigin(this CardModel card)
-    {
-        foreach (var modifier in SakuraCardStateCapability.Modifiers(card).OfType<ManifestAtlasOriginModifier>().ToArray())
-            SakuraCardStateCapability.RemoveModifier(card, modifier);
     }
 
     public static IReadOnlyList<CardModel> SynchronizedAutoPlayPairedCards(this CardModel card)
@@ -657,13 +636,13 @@ public static class SakuraCardStates
         if (!card.RemoveTemporaryForStabilize())
             return;
 
-        await SakuraManifestLoop.OnTemporaryStabilized(choiceContext, card);
+        await SakuraForgotten.NotifyStabilized(choiceContext, card);
     }
 
     public static void StabilizeWithoutTrigger(this CardModel card)
     {
         card.RemoveTemporaryForStabilize();
-        DarkMicroLightCoordinator.ClearSourceMarker(card);
+        SakuraForgotten.NotifyCleared(card);
     }
 
     public static void SynchronizeWith(this CardModel first, CardModel second)
@@ -679,7 +658,7 @@ public static class SakuraCardStates
     {
         foreach (var modifier in SakuraCardStateCapability.Modifiers(card).OfType<TemporaryModifier>().ToArray())
             SakuraCardStateCapability.RemoveModifier(card, modifier);
-        DarkMicroLightCoordinator.ClearSourceMarker(card);
+        SakuraForgotten.NotifyCleared(card);
     }
 
     private static bool RemoveTemporaryForStabilize(this CardModel card)
@@ -697,7 +676,6 @@ public static class SakuraCardStates
     public static void RemovePlaybackState(this CardModel card)
     {
         card.RemoveTemporaryForExchange();
-        card.RemoveManifestAtlasOrigin();
 
         foreach (var modifier in SakuraCardStateCapability.Modifiers(card)
                      .Where(modifier => modifier is SynchronizedCardPairModifier)

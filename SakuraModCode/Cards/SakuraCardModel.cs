@@ -61,7 +61,8 @@ public abstract class SakuraCardModel : ModCardTemplate
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await SakuraExtraEffectTransaction.AfterCardPlayed(this, choiceContext, play);
+        if (play.Card == this)
+            await SakuraMagicCharge.AfterCardPlayed(choiceContext, this);
 
         if (play.Card == this && play.IsLastInSeries)
             SakuraReleaseState.Reset(this);
@@ -78,12 +79,19 @@ public abstract class SakuraCardModel : ModCardTemplate
     protected static Creature RequiredTarget(CardPlay play) =>
         play.Target ?? throw new InvalidOperationException("Card target is required by this card's TargetType.");
 
-    protected sealed override Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
-        SakuraExtraEffectTransaction.Execute(
-            this,
-            choiceContext,
-            play,
-            (context, currentPlay) => PlayCard(context, currentPlay, default));
+    protected sealed override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        if (this is ISakuraExtraEffectCard)
+        {
+            await SakuraExtraEffectTransaction.Execute(this, choiceContext, play);
+            return;
+        }
+
+        var opportunity = SakuraMagicCharge.CaptureOpportunity(Owner);
+        SakuraExtraEffectTransaction.TryShowMagicCircle(this, default);
+        await PlayCard(choiceContext, play, default);
+        await SakuraMagicCharge.TryApplyCapturedOpportunity(choiceContext, this, opportunity);
+    }
 
     protected virtual Task PlayCard(
         PlayerChoiceContext choiceContext,

@@ -23,105 +23,19 @@ using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Character;
 
-[Flags]
-internal enum SakuraActiveElementStates
-{
-    None = 0,
-    Earthy = 1,
-    Firey = 2,
-    Watery = 4,
-    Windy = 8,
-}
-
-internal static class SakuraElementStateProjection
-{
-    public static SakuraActiveElementStates FromActivity(
-        bool earthy,
-        bool firey,
-        bool watery,
-        bool windy)
-    {
-        var states = SakuraActiveElementStates.None;
-        if (earthy)
-            states |= SakuraActiveElementStates.Earthy;
-        if (firey)
-            states |= SakuraActiveElementStates.Firey;
-        if (watery)
-            states |= SakuraActiveElementStates.Watery;
-        if (windy)
-            states |= SakuraActiveElementStates.Windy;
-        return states;
-    }
-
-    public static SakuraActiveElementStates Read(Player player) =>
-        FromActivity(
-            player.Creature.GetPower<ClassicEarthyPower>()?.Amount > 0,
-            player.Creature.GetPower<ClassicFireyPower>()?.Amount > 0,
-            player.Creature.GetPower<ClassicWateryPower>()?.Amount > 0,
-            player.Creature.GetPower<ClassicWindyPower>()?.Amount > 0);
-
-    public static SakuraActiveElementStates NewlyActive(
-        SakuraActiveElementStates previous,
-        SakuraActiveElementStates current) =>
-        current & ~previous;
-}
-
-internal enum SakuraElementFacet
-{
-    Wind,
-    Fire,
-    Earth,
-    Water,
-}
-
-[Flags]
-internal enum SakuraLockedElementStates
-{
-    None = 0,
-    Wind = 1,
-    Fire = 2,
-    Earth = 4,
-    Water = 8,
-}
-
-internal static class SakuraElementLockProjection
-{
-    public static SakuraLockedElementStates FromSovereignty(bool wind, bool dark)
-    {
-        var locks = SakuraLockedElementStates.None;
-        if (wind || dark)
-            locks |= SakuraLockedElementStates.Wind;
-        if (dark)
-            locks |= SakuraLockedElementStates.Water;
-        return locks;
-    }
-
-    public static SakuraLockedElementStates Read(ICombatState combatState) =>
-        FromSovereignty(
-            combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<WindSovereigntyPower>()),
-            combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<DarkSovereigntyPower>()));
-
-    public static SakuraLockedElementStates ForPower(PowerModel power) => power switch
-    {
-        ClassicWindyPower or ClassicWindyPermanentPower => SakuraLockedElementStates.Wind,
-        ClassicWateryPower or ClassicWateryPermanentPower => SakuraLockedElementStates.Water,
-        _ => SakuraLockedElementStates.None
-    };
-}
-
 internal static class SakuraElementFacetProjection
 {
     internal const float DiscRadiusRatio = 232f / 512f;
 
-    public static SakuraElementFacet? FromOffset(float horizontal, float vertical, float radius)
+    public static SakuraElement? FromOffset(float horizontal, float vertical, float radius)
     {
         if ((horizontal * horizontal) + (vertical * vertical) > radius * radius)
             return null;
 
         if (MathF.Abs(horizontal) > MathF.Abs(vertical))
-            return horizontal >= 0f ? SakuraElementFacet.Wind : SakuraElementFacet.Water;
+            return horizontal >= 0f ? SakuraElement.Wind : SakuraElement.Water;
 
-        return vertical >= 0f ? SakuraElementFacet.Earth : SakuraElementFacet.Fire;
+        return vertical >= 0f ? SakuraElement.Earth : SakuraElement.Fire;
     }
 }
 
@@ -185,10 +99,10 @@ internal static class SakuraElementStateHud
         state.Dispose();
     }
 
-    internal static void NotifyPrevented(Player? player, SakuraLockedElementStates prevented)
+    internal static void NotifyPrevented(Player? player, SakuraElementSet prevented)
     {
         if (player is not null
-            && prevented != SakuraLockedElementStates.None
+            && prevented != SakuraElementSet.None
             && MountedPlayerStates.TryGetValue(player, out var state))
         {
             state.PulseLocks(prevented);
@@ -202,9 +116,9 @@ internal static class SakuraElementStateHud
         private readonly CombatState _combatState;
         private readonly IReadOnlyList<ElementSlot> _slots;
         private readonly HashSet<Creature> _observedEnemies = [];
-        private SakuraActiveElementStates _activeStates;
-        private SakuraLockedElementStates _lockedStates;
-        private SakuraElementFacet? _hoveredFacet;
+        private SakuraElementSet _activeStates;
+        private SakuraElementSet _lockedStates;
+        private SakuraElement? _hoveredFacet;
         private bool _disposed;
 
         public HudState(Player player, CombatState combatState, Control root)
@@ -215,10 +129,10 @@ internal static class SakuraElementStateHud
             Root = root;
             _slots =
             [
-                new(root.GetNode<TextureRect>("%WindFacet"), root.GetNode<Control>("%WindLock"), SakuraElementFacet.Wind, SakuraActiveElementStates.Windy, SakuraLockedElementStates.Wind, SakuraElement.Wind),
-                new(root.GetNode<TextureRect>("%FireFacet"), root.GetNode<Control>("%FireLock"), SakuraElementFacet.Fire, SakuraActiveElementStates.Firey, SakuraLockedElementStates.Fire, SakuraElement.Fire),
-                new(root.GetNode<TextureRect>("%EarthFacet"), root.GetNode<Control>("%EarthLock"), SakuraElementFacet.Earth, SakuraActiveElementStates.Earthy, SakuraLockedElementStates.Earth, SakuraElement.Earth),
-                new(root.GetNode<TextureRect>("%WaterFacet"), root.GetNode<Control>("%WaterLock"), SakuraElementFacet.Water, SakuraActiveElementStates.Watery, SakuraLockedElementStates.Water, SakuraElement.Water),
+                new(root.GetNode<TextureRect>("%WindFacet"), root.GetNode<Control>("%WindLock"), SakuraElement.Wind),
+                new(root.GetNode<TextureRect>("%FireFacet"), root.GetNode<Control>("%FireLock"), SakuraElement.Fire),
+                new(root.GetNode<TextureRect>("%EarthFacet"), root.GetNode<Control>("%EarthLock"), SakuraElement.Earth),
+                new(root.GetNode<TextureRect>("%WaterFacet"), root.GetNode<Control>("%WaterLock"), SakuraElement.Water),
             ];
             Root.GuiInput += OnGuiInput;
             Root.MouseExited += OnMouseExited;
@@ -238,27 +152,27 @@ internal static class SakuraElementStateHud
             if (_disposed)
                 return;
 
-            var next = SakuraElementStateProjection.Read(_player);
-            var nextLocks = SakuraElementLockProjection.Read(_combatState);
+            var next = SakuraElementState.ReadActive(_player);
+            var nextLocks = SakuraElementState.ReadLocks(_combatState);
             var newlyActive = animateNewlyActive
-                ? SakuraElementStateProjection.NewlyActive(_activeStates, next)
-                : SakuraActiveElementStates.None;
+                ? SakuraElementState.NewlyActive(_activeStates, next)
+                : SakuraElementSet.None;
             foreach (var slot in _slots)
             {
                 slot.Apply(
-                    next.HasFlag(slot.State),
-                    nextLocks.HasFlag(slot.LockState),
-                    newlyActive.HasFlag(slot.State));
+                    next.HasElement(slot.Element),
+                    nextLocks.HasElement(slot.Element),
+                    newlyActive.HasElement(slot.Element));
             }
             _activeStates = next;
             _lockedStates = nextLocks;
         }
 
-        public void PulseLocks(SakuraLockedElementStates locks)
+        public void PulseLocks(SakuraElementSet locks)
         {
             if (_disposed)
                 return;
-            foreach (var slot in _slots.Where(slot => locks.HasFlag(slot.LockState)))
+            foreach (var slot in _slots.Where(slot => locks.HasElement(slot.Element)))
                 slot.PulseLock();
         }
 
@@ -273,18 +187,12 @@ internal static class SakuraElementStateHud
                 || !GodotObject.IsInstanceValid(Root)
                 || !Root.IsInsideTree()
                 || !ReferenceEquals(_creature.CombatState, _combatState)
-                || !IsElementStatePower(power))
+                || !SakuraElementState.IsTriggerPower(power))
             {
                 return;
             }
             Refresh(animateNewlyActive: true);
         }
-
-        private static bool IsElementStatePower(PowerModel power) =>
-            power is ClassicEarthyPower
-                or ClassicFireyPower
-                or ClassicWateryPower
-                or ClassicWindyPower;
 
         private void OnCreaturesChanged(ICombatState _) => RebindEnemies();
 
@@ -375,10 +283,10 @@ internal static class SakuraElementStateHud
             HideHoverTip();
         }
 
-        private void ShowHoverTip(SakuraElementFacet facet)
+        private void ShowHoverTip(SakuraElement facet)
         {
             HideHoverTip();
-            var slot = _slots.First(candidate => candidate.Facet == facet);
+            var slot = _slots.First(candidate => candidate.Element == facet);
             var key = SakuraSourceCardText.ElementStateTipKey(slot.Element);
             var tips = new List<IHoverTip>
             {
@@ -386,9 +294,9 @@ internal static class SakuraElementStateHud
                     new LocString("static_hover_tips", $"{key}.title"),
                     new LocString("static_hover_tips", $"{key}.description"))
             };
-            if (_lockedStates.HasFlag(slot.LockState))
+            if (_lockedStates.HasElement(slot.Element))
             {
-                if (slot.LockState == SakuraLockedElementStates.Wind
+                if (slot.Element == SakuraElement.Wind
                     && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<WindSovereigntyPower>()))
                 {
                     tips.Add(HoverTipFactory.FromPower<WindSovereigntyPower>());
@@ -412,22 +320,13 @@ internal static class SakuraElementStateHud
         public ElementSlot(
             TextureRect facet,
             Control lockOverlay,
-            SakuraElementFacet facetId,
-            SakuraActiveElementStates state,
-            SakuraLockedElementStates lockState,
             SakuraElement element)
         {
             _facet = facet;
             _lock = lockOverlay;
-            Facet = facetId;
-            State = state;
-            LockState = lockState;
             Element = element;
         }
 
-        public SakuraElementFacet Facet { get; }
-        public SakuraActiveElementStates State { get; }
-        public SakuraLockedElementStates LockState { get; }
         public SakuraElement Element { get; }
 
         public void Apply(bool isActive, bool isLocked, bool pulse)

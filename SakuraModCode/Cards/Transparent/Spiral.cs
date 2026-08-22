@@ -31,8 +31,8 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
         [SakuraMemoryPile.PileId, SakuraCardHoverTips.TemporaryTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new SpiralDamageVar(5, ValueProp.Move),
-        new SpiralBlockVar(5, ValueProp.Move),
+        new SpiralDamageVar(6, ValueProp.Move),
+        new SpiralBlockVar(3, ValueProp.Move),
         new DynamicVar("MemoryScale", 1),
         new CardsVar("NextTurnCopies", 1),
         new CardsVar("ExtraCopies", 3)

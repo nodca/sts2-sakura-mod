@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.GameActions;
 using MegaCrit.Sts2.Core.TestSupport;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.TestProtocol;
 
@@ -45,7 +46,7 @@ internal static class ExtraEffectChoiceScenario
         var drawBefore = playerCombat.DrawPile.Cards.Count;
         var triggerBefore = SakuraActions.ExtraEffectTriggerCountThisTurn(player);
         var selector = new TestCardSelector();
-        selector.PrepareToSelect([1]);
+        selector.PrepareToSelect([0]);
         PlayCardAction playAction;
         using (CardSelectCmd.UseSelector(selector))
         {
@@ -55,19 +56,23 @@ internal static class ExtraEffectChoiceScenario
         var magicAfter = player.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0;
         var triggerAfter = SakuraActions.ExtraEffectTriggerCountThisTurn(player);
         var drawAfter = playerCombat.DrawPile.Cards.Count;
+        var manifestedCards = playerCombat.Hand.Cards
+            .Where(card => card.IsTemporary() && SakuraTransparentCardCatalog.IsTransparentCard(card))
+            .ToArray();
         assertions.True(
             "play_choice_context",
             playAction.PlayerChoiceContext is GameActionPlayerChoiceContext);
         assertions.Equal("magic_charge_spent_once_then_regained", 1, magicAfter);
         assertions.Equal("extra_effect_trigger_delta", 1, triggerAfter - triggerBefore);
-        assertions.Equal("choice_draw_count", 4, drawBefore - drawAfter);
+        assertions.Equal("choice_draw_count", 2, drawBefore - drawAfter);
+        assertions.Equal("choice_extra_manifest_count", 1, manifestedCards.Length);
         assertions.Equal("choice_energy_unchanged", energyBefore, playerCombat.Energy);
         assertions.True("choice_result_pile", playerCombat.DiscardPile.Cards.Contains(choice));
         assertions.Equal("choice_selector_released", null, CardSelectCmd.Selector);
         RuntimeTestHost.WriteCheckpoint(
             request,
             "extra_effect_choice_verified",
-            "Choice spent Magic Charge and resolved the deterministic Draw branch through PlayCardAction.");
+            "Choice spent Magic Charge and resolved Extra Manifest plus Draw through PlayCardAction.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -79,7 +84,7 @@ internal static class ExtraEffectChoiceScenario
                 {
                     $"RuntimeFixtureAction -> PowerCmd.Apply<{nameof(ClassicMagicChargePower)}>({FixtureMagicCharge})",
                     $"Generated {nameof(Choice)} -> hand",
-                    "TestCardSelector index 1 -> ChoiceDrawChoice"
+                    "TestCardSelector index 0 -> first Manifest atlas option"
                 }
             },
             ["before"] = new
@@ -96,6 +101,7 @@ internal static class ExtraEffectChoiceScenario
                 draw_count = drawAfter,
                 trigger_count = triggerAfter,
                 result_pile = choice.Pile?.Type,
+                manifested_count = manifestedCards.Length,
                 play_choice_context = playAction.PlayerChoiceContext?.GetType().FullName
             }
         };

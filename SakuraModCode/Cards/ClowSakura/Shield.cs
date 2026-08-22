@@ -27,13 +27,15 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowShield() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Basic, TargetType.None)
 {
+    internal const int MetallicizeBlock = 3;
+
     public override bool GainsBlock => true;
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Loner];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new SakuraSourceBlockVar(5, ValueProp.Move, SourceCardIdentity.Shield),
-        new PowerVar<ClassicShieldWardPower>(SakuraMagicCharge.ShieldMetallicizeBlock)
+        new PowerVar<ClassicShieldWardPower>(MetallicizeBlock)
     ];
     protected override HashSet<CardTag> CanonicalTags => [CardTag.Defend];
 

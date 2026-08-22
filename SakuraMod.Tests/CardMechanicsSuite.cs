@@ -268,6 +268,19 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void ThroughPropagationIgnoresImmutableCardSources()
+    {
+        var immutableCard = new ClowSword();
+
+        RegressionTestHarness.Require(
+            !immutableCard.IsMutable
+            && SakuraThroughResolution.ExpandDamageTargets(
+                Array.Empty<Creature>(),
+                immutableCard) is null,
+            "Expected scoped Through propagation to fail open without reading Owner from an immutable card source.");
+    }
+
+    [Fact]
     public void SakuraBigIncreasesAttackDamageBySixtySixPercent()
     {
         RegressionTestHarness.Require(
@@ -1031,26 +1044,26 @@ public sealed class CardMechanicsSuite
             && spiral.Type == CardType.Attack
             && spiral.TargetType == TargetType.AnyEnemy
             && spiral.CanonicalKeywords.SequenceEqual([SakuraKeywords.Wind])
-            && spiral.DynamicVars.Damage.IntValue == 5
+            && spiral.DynamicVars.Damage.IntValue == 6
             && spiral.DynamicVars.Damage is SpiralDamageVar
-            && spiral.DynamicVars.Block.IntValue == 5
+            && spiral.DynamicVars.Block.IntValue == 3
             && spiral.DynamicVars.Block is SpiralBlockVar
             && spiral.DynamicVars["MemoryScale"].IntValue == 1
             && spiral.DynamicVars["NextTurnCopies"].IntValue == 1
             && spiral.DynamicVars["ExtraCopies"].IntValue == 3
-            && SpiralRules.OutputWithMemory(5, 0) == 5
-            && SpiralRules.OutputWithMemory(5, 2) == 7
-            && SpiralRules.OutputWithMemory(5, 4) == 9
-            && SpiralRules.OutputWithMemory(5, 6) == 11
-            && upgradedSpiral.DynamicVars.Damage.IntValue == 5
-            && upgradedSpiral.DynamicVars.Block.IntValue == 5
-            && SpiralRules.OutputWithMemory(upgradedSpiral.DynamicVars.Damage.IntValue, 4) == 9
+            && SpiralRules.OutputWithMemory(6, 0) == 6
+            && SpiralRules.OutputWithMemory(6, 2) == 8
+            && SpiralRules.OutputWithMemory(6, 4) == 10
+            && SpiralRules.OutputWithMemory(6, 6) == 12
+            && upgradedSpiral.DynamicVars.Damage.IntValue == 6
+            && upgradedSpiral.DynamicVars.Block.IntValue == 3
+            && SpiralRules.OutputWithMemory(upgradedSpiral.DynamicVars.Damage.IntValue, 4) == 10
             && new SpiralNextTurnPower().InstanceType == PowerInstanceType.Instanced
             && new SpiralNextTurnPower().StackType == PowerStackType.Counter
             && !new SpiralNextTurnPower().IsVisible
             && RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("BeforeHandDraw")
             && !RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("AfterPlayerTurnStart"),
-            "Expected Spiral and Spiral+ to deal 5 damage and Block plus Memory, with the upgrade value supplied by a one-shot next-hand-draw Power.");
+            "Expected Spiral and Spiral+ to deal 6 damage and gain 3 Block plus Memory, with the upgrade value supplied by a one-shot next-hand-draw Power.");
         RegressionTestHarness.Require(
             spiralSource.Contains("AddTemporaryGeneratedCardToHand<Spiral>", StringComparison.Ordinal)
             && spiralSource.Contains("freeThisTurn: true", StringComparison.Ordinal)
@@ -1100,7 +1113,7 @@ public sealed class CardMechanicsSuite
             && clowFlower.Elements == SakuraElementSet.Earth
             && clowFlower.CanonicalKeywords.SequenceEqual([CardKeyword.Exhaust])
             && clowFlower.DynamicVars.Energy.IntValue == 2
-            && SakuraMagicCharge.FlowerExtraEnergy == 2
+            && ClowFlower.ExtraEnergy == 2
             && upgradedClowFlower.Keywords.Contains(CardKeyword.Exhaust)
             && upgradedClowFlower.Keywords.Contains(CardKeyword.Retain)
             && upgradedClowFlower.DynamicVars.Energy.IntValue == 3
@@ -1384,7 +1397,7 @@ public sealed class CardMechanicsSuite
         var blankSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Blank.cs"));
         RegressionTestHarness.Require(
-            blankSource.Contains("SakuraGeneratedCardLifecycle.GrantTemporary(choiceContext, card)", StringComparison.Ordinal)
+            blankSource.Contains("SakuraForgotten.GrantTemporary(choiceContext, card)", StringComparison.Ordinal)
             && blankSource.Contains("PowerCmd.Apply<DrawCardsNextTurnPower>", StringComparison.Ordinal)
             && blankSource.IndexOf("PowerCmd.Apply<DrawCardsNextTurnPower>", StringComparison.Ordinal)
                 < blankSource.IndexOf("if (activation.IsActive)", StringComparison.Ordinal),

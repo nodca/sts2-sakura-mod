@@ -66,7 +66,7 @@ public sealed class DarkSovereigntyPower : SakuraPowerModel
             Flash();
             SakuraElementStateHud.NotifyPrevented(
                 target.Player,
-                SakuraElementLockProjection.ForPower(canonicalPower));
+                SakuraElementState.LocksForPower(canonicalPower));
             return true;
         }
 
@@ -168,7 +168,7 @@ public sealed class DarkConfinementSelectionPower : SakuraPowerModel
 
         if (await CardCmd.Afflict<DarkConfinementAffliction>(card, 1) is null)
             return;
-        if (!await SakuraGeneratedCardLifecycle.GrantTemporary(choiceContext, card))
+        if (!await SakuraForgotten.GrantTemporary(choiceContext, card))
         {
             CardCmd.ClearAffliction(card);
             return;

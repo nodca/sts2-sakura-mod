@@ -55,11 +55,14 @@ public sealed class CombatVisualPerformanceSuite
                 $"Expected the Element State HUD to subscribe and unsubscribe Creature.{eventName}.");
         }
 
+        var owner = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraElementState.cs"));
         RegressionTestHarness.Require(
-            source.Contains("power is ClassicEarthyPower", StringComparison.Ordinal)
-            && source.Contains("or ClassicFireyPower", StringComparison.Ordinal)
-            && source.Contains("or ClassicWateryPower", StringComparison.Ordinal)
-            && source.Contains("or ClassicWindyPower", StringComparison.Ordinal)
+            source.Contains("SakuraElementState.IsTriggerPower(power)", StringComparison.Ordinal)
+            && owner.Contains("ClassicEarthyPower", StringComparison.Ordinal)
+            && owner.Contains("ClassicFireyPower", StringComparison.Ordinal)
+            && owner.Contains("ClassicWateryPower", StringComparison.Ordinal)
+            && owner.Contains("ClassicWindyPower", StringComparison.Ordinal)
             && source.Contains("state.Refresh(animateNewlyActive: false)", StringComparison.Ordinal)
             && !source.Contains("AwaitProcessFrame", StringComparison.Ordinal)
             && !source.Contains("RefreshUntilUnmounted", StringComparison.Ordinal)

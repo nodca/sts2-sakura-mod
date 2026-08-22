@@ -163,7 +163,7 @@ public sealed class WindSovereigntyPower : SakuraPowerModel
         {
             modifiedAmount = 0;
             Flash();
-            SakuraElementStateHud.NotifyPrevented(target.Player, SakuraLockedElementStates.Wind);
+            SakuraElementStateHud.NotifyPrevented(target.Player, SakuraElementSet.Wind);
             return true;
         }
 

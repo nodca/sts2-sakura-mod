@@ -69,10 +69,10 @@ public sealed class SakuraRelicParitySuite
                 isEligible: false),
             "Expected Red Cape to grant only eligible Clow Cards a free Extra Effect.");
         RegressionTestHarness.Require(
-            SakuraExtraEffectTransaction.ShouldAddSakuraVoid(false, true, false)
-            && !SakuraExtraEffectTransaction.ShouldAddSakuraVoid(true, true, false)
-            && !SakuraExtraEffectTransaction.ShouldAddSakuraVoid(false, true, true)
-            && !SakuraExtraEffectTransaction.ShouldAddSakuraVoid(false, false, true),
+            SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: true, hasPinkTransformationCostume: false)
+            && !SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: true, hasPinkTransformationCostume: true)
+            && !SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: false, hasPinkTransformationCostume: false)
+            && !SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: false, hasPinkTransformationCostume: true),
             "Expected Pink Transformation Costume to suppress only normal Sakura-card Void generation.");
 
         var six = ClassicFrogRaincoatRelic.Accumulate(0, 6, 3);

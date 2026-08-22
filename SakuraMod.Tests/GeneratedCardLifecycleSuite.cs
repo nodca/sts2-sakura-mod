@@ -36,7 +36,6 @@ public sealed class GeneratedCardLifecycleSuite
             freeThisTurn: true,
             addTemporary: false);
         RegressionTestHarness.Require(rememberedCopy.RemoveTemporary, "Expected remembered copy to remove stale Temporary.");
-        RegressionTestHarness.Require(rememberedCopy.RemoveManifestAtlasOrigin, "Expected remembered copies to remove stale Manifest origin.");
         RegressionTestHarness.Require(!rememberedCopy.AddTemporary, "Expected remembered copy to avoid Temporary unless requested.");
         RegressionTestHarness.Require(!rememberedCopy.PreventTemporaryMemoryReturn, "Expected non-Temporary remembered copies not to need a Memory exception.");
         RegressionTestHarness.Require(rememberedCopy.FreeThisTurn, "Expected remembered copy to honor free-this-turn.");
@@ -120,5 +119,23 @@ public sealed class GeneratedCardLifecycleSuite
             TemporaryModifier.CleanupPileTypes.SequenceEqual(
                 [PileType.Hand, PileType.Play, PileType.Discard, PileType.Draw]),
             "Expected Temporary cleanup to scan active vanilla combat piles in deterministic order without moving cards out of Exhaust.");
+    }
+
+    [Fact]
+    public void CaptureAndManifestOriginAreAbsentFromProduction()
+    {
+        var sourceRoot = Path.GetDirectoryName(RegressionTestHarness.FindRepoFile("SakuraMod.csproj"))!;
+        foreach (var file in Directory.EnumerateFiles(
+                     Path.Combine(sourceRoot, "SakuraModCode"),
+                     "*.cs",
+                     SearchOption.AllDirectories))
+        {
+            var source = File.ReadAllText(file);
+            RegressionTestHarness.Require(
+                !source.Contains("CaptureCandidateTypes", StringComparison.Ordinal)
+                && !source.Contains("ManifestAtlasOriginModifier", StringComparison.Ordinal)
+                && !source.Contains("AddManifestAtlasOrigin", StringComparison.Ordinal),
+                $"Expected {Path.GetRelativePath(sourceRoot, file)} not to keep Capture candidates or Manifest origin state.");
+        }
     }
 }
