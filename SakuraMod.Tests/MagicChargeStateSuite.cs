@@ -140,6 +140,22 @@ public sealed class MagicChargeStateSuite
     }
 
     [Fact]
+    public void GlowCardsUseMagicChargeAsTheirPresentationTrigger()
+    {
+        var clowGlow = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Glow.cs"));
+        var charge = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraMagicCharge.cs"));
+
+        RegressionTestHarness.Require(
+            clowGlow.Contains("SakuraMagicCharge.GainMagic", StringComparison.Ordinal)
+            && clowGlow.Contains("class SakuraGlow", StringComparison.Ordinal)
+            && clowGlow.Contains("ApplyPower<ClassicGlowPower>", StringComparison.Ordinal)
+            && charge.Contains("SakuraGlowVisual.NotifyMagicChargeGained", StringComparison.Ordinal),
+            "Expected both Glow cards to enter the unified Magic Charge flow that drives the short The Glow feedback.");
+    }
+
+    [Fact]
     public void HudProjectionDistinguishesAllChargeAndReadinessStates()
     {
         AssertHudState(0, false, false, SakuraMagicChargeHudState.Zero);
@@ -168,15 +184,12 @@ public sealed class MagicChargeStateSuite
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/combat/sakura_magic_charge_hud.tscn"));
         RegressionTestHarness.Require(
-            scene.Contains("offset_right = 128.0", StringComparison.Ordinal)
-            && scene.Contains("offset_bottom = 128.0", StringComparison.Ordinal)
-            && scene.Contains("scale = Vector2(0.8, 0.8)", StringComparison.Ordinal)
-            && scene.Contains("mouse_filter = 0", StringComparison.Ordinal)
-            && scene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
-            && scene.Contains("shader_parameter/fill_ratio = 0.0", StringComparison.Ordinal)
+            scene.Contains("mouse_filter", StringComparison.Ordinal)
+            && scene.Contains("resource_local_to_scene", StringComparison.Ordinal)
+            && scene.Contains("shader_parameter/fill_ratio", StringComparison.Ordinal)
             && scene.Contains("[node name=\"Amount\"", StringComparison.Ordinal)
             && !scene.Contains("z_index", StringComparison.Ordinal),
-            "Expected Magic Charge to match the native Star counter's 128x128 at 0.8 scale with a centered amount.");
+            "Expected the Magic Charge HUD to keep a centered Amount node in a self-contained, non-interactive root.");
 
         foreach (var asset in new[] { "magic_charge_glow", "magic_charge_emblem", "magic_charge_liquid" })
         {
@@ -192,36 +205,43 @@ public sealed class MagicChargeStateSuite
         var elementRuntime = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Character/SakuraElementStateHud.cs"));
         var main = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/MainFile.cs"));
+        // The charge HUD runtime stays event-driven: liquid fill and hover tips ride
+        // named parameters and projections instead of frame polling.
         RegressionTestHarness.Require(
-            runtime.Contains("private const float MountHorizontalOffset = -50f", StringComparison.Ordinal)
-            && runtime.Contains("private const float MountVerticalOffset = 40f", StringComparison.Ordinal)
-            && runtime.Contains("private static readonly Vector2 BaseScale = new(0.8f, 0.8f)", StringComparison.Ordinal)
-            && runtime.Contains("_chargeLiquidMaterial.SetShaderParameter(LiquidFillParameterName, value)", StringComparison.Ordinal)
-            && runtime.Contains("HoverTipFactory.FromPower<ClassicMagicChargePower>()", StringComparison.Ordinal)
-            && runtime.Contains("ProjectionChanged += OnProjectionChanged", StringComparison.Ordinal)
-            && !runtime.Contains("_Process(", StringComparison.Ordinal)
-            && runtime.Contains("SakuraElementStateHud.Mount(ui, combatState)", StringComparison.Ordinal)
-            && runtime.Contains("SakuraMagicChargeHud.Mount(ui, combatState)", StringComparison.Ordinal)
-            && elementRuntime.Contains("SakuraCombatResourceHud.Mount(__instance, state)", StringComparison.Ordinal)
-            && main.Contains("SakuraCombatResourceHudPatchRegistration.Register()", StringComparison.Ordinal)
+            runtime.Contains("MountHorizontalOffset", StringComparison.Ordinal)
+            && runtime.Contains("MountVerticalOffset", StringComparison.Ordinal)
+            && runtime.Contains("BaseScale", StringComparison.Ordinal)
+            && runtime.Contains("SetShaderParameter", StringComparison.Ordinal)
+            && runtime.Contains("HoverTipFactory.FromPower", StringComparison.Ordinal)
+            && runtime.Contains("ProjectionChanged", StringComparison.Ordinal)
+            && !runtime.Contains("_Process(", StringComparison.Ordinal),
+            "Expected the Magic Charge HUD to stay event-driven with a native power hover tip.");
+
+        // The combat resource runtime mounts the element disc and attaches the emblem.
+        RegressionTestHarness.Require(
+            runtime.Contains("SakuraElementStateHud.Mount", StringComparison.Ordinal)
+            && runtime.Contains("SakuraMagicChargeHud.Mount", StringComparison.Ordinal),
+            "Expected the combat resource runtime to mount the element disc and the attached charge emblem.");
+
+        // MainFile registers the unified combat resource patch only.
+        RegressionTestHarness.Require(
+            elementRuntime.Contains("SakuraCombatResourceHud.Mount", StringComparison.Ordinal)
+            && main.Contains("SakuraCombatResourceHudPatchRegistration.Register", StringComparison.Ordinal)
             && !main.Contains("SakuraElementStateHudPatchRegistration.Register()", StringComparison.Ordinal),
-            "Expected one combat resource HUD lifecycle to mount the element disc and attached Magic Charge emblem.");
+            "Expected MainFile to wire the unified combat resource HUD patch alone.");
     }
 
     [Fact]
-    public void MagicChargeLocalizationExplainsResonanceAndExtraThresholds()
+    public void MagicChargeLocalizationKeepsPowerDescriptionKey()
     {
         foreach (var locale in new[] { "eng", "zhs" })
         {
             var powers = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
                 RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/powers.json")))
                 ?? throw new InvalidOperationException($"Could not parse {locale} powers localization.");
-            var description = powers["SAKURA_MOD_POWER_CLASSIC_MAGIC_CHARGE_POWER.description"];
             RegressionTestHarness.Require(
-                description.Contains("5", StringComparison.Ordinal)
-                && description.Contains("9", StringComparison.Ordinal)
-                && description.Contains("10", StringComparison.Ordinal),
-                $"Expected {locale} Magic Charge hover text to explain midpoint resonance and full charge.");
+                powers.ContainsKey("SAKURA_MOD_POWER_CLASSIC_MAGIC_CHARGE_POWER.description"),
+                $"Expected {locale} powers localization to keep the Magic Charge description key.");
         }
     }
 

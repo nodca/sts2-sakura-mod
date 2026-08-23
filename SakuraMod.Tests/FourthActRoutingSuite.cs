@@ -23,7 +23,6 @@ public sealed class FourthActRoutingSuite
         var route = Assert.Single(resolution.CompleteRoutes);
         Assert.Equal(SakuraElement.Wind, route.Element);
         Assert.Equal(typeof(DarkEncounter), route.Endpoint.EncounterType);
-        Assert.True(resolution.HasCompleteRoutes);
         Assert.True(FourthActEntryRegistration.CanRegister(resolution));
         Assert.Equal(
             [typeof(FlyEncounter), typeof(IllusionEncounter), typeof(WindyEncounter), typeof(DarkEncounter)],

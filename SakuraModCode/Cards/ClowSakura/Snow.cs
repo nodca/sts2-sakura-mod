@@ -38,7 +38,32 @@ public class ClowSnow() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Unc
         new DynamicVar("ExtraDamage", ExtraDamage)
     ];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        SnowBlizzardVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            CombatState!.HittableEnemies.ToList(),
+            cues => ResolveSnowMechanics(choiceContext, play, cues));
+
+    protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        SnowBlizzardVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            CombatState!.HittableEnemies.ToList(),
+            async cues =>
+            {
+                await ResolveSnowMechanics(choiceContext, play, cues);
+                cues.Finale();
+                await SakuraSnowRules.ApplyFrostbite(
+                    choiceContext,
+                    this,
+                    await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies.ToList(), ExtraDamage));
+            });
+
+    private async Task ResolveSnowMechanics(
+        PlayerChoiceContext choiceContext,
+        CardPlay play,
+        SnowBlizzardVfx.Cues cues)
     {
         var count = SakuraSnowRules.PlayedWateryCards(this);
         for (var i = 0; i < count; i++)
@@ -47,20 +72,12 @@ public class ClowSnow() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Unc
             if (target is null)
                 return;
 
+            cues.Impact(target);
             await SakuraSnowRules.ApplyFrostbite(
                 choiceContext,
                 this,
                 await DealDamage(choiceContext, target, SnowDamage()));
         }
-    }
-
-    protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await PlayCard(choiceContext, play);
-        await SakuraSnowRules.ApplyFrostbite(
-            choiceContext,
-            this,
-            await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies.ToList(), ExtraDamage));
     }
 
     protected override void OnUpgrade()
@@ -82,18 +99,27 @@ public class SakuraSnow() : SakuraFormCard(1, CardType.Attack, TargetType.AllEne
         new SakuraCombatHistoryCountVar(SakuraSnowRules.PlayedWateryCards)
     ];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        var count = SakuraSnowRules.PlayedWateryCards(this);
-        for (var i = 0; i < count; i++)
-        {
-            var attack = await DealDamageToEnemies(
-                choiceContext,
-                CombatState!.HittableEnemies.ToList(),
-                SnowDamage());
-            await SakuraSnowRules.ApplyFrostbite(choiceContext, this, attack);
-        }
-    }
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        SnowBlizzardVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            CombatState!.HittableEnemies.ToList(),
+            async cues =>
+            {
+                var count = SakuraSnowRules.PlayedWateryCards(this);
+                for (var i = 0; i < count; i++)
+                {
+                    // One beat strikes the whole enemy line at once, so every
+                    // snapshot target takes a dart before the shared attack lands.
+                    var targets = CombatState!.HittableEnemies.ToList();
+                    foreach (var target in targets)
+                        cues.Impact(target);
+                    await SakuraSnowRules.ApplyFrostbite(
+                        choiceContext,
+                        this,
+                        await DealDamageToEnemies(choiceContext, targets, SnowDamage()));
+                }
+            });
 
     private int SnowDamage() => ReleasedValue(SakuraSnowRules.PerCardDamageVar);
 }

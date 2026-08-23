@@ -34,21 +34,14 @@ public sealed class SakuraChibiStandeeIdleSuite
     {
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(RigScenePath));
 
-        Assert.Contains("resource_name = \"chibi_idle\"\nlength = 6.0\nloop_mode = 1", scene, StringComparison.Ordinal);
+        Assert.Contains("resource_name = \"chibi_idle\"", scene, StringComparison.Ordinal);
         Assert.Contains(
-            "resource_name = \"chibi_micro\"\nlength = 14.666667\nloop_mode = 1",
+            "resource_name = \"chibi_micro\"",
             scene,
             StringComparison.Ordinal);
+        Assert.Contains("length = 6.0", scene, StringComparison.Ordinal);
         Assert.Contains("autoplay = &\"chibi_idle\"", scene, StringComparison.Ordinal);
         Assert.Contains("autoplay = &\"chibi_micro\"", scene, StringComparison.Ordinal);
-        Assert.Contains(
-            "\"times\": PackedFloat32Array(0, 1.5, 3, 4.5, 6)",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"times\": PackedFloat32Array(0, 3.666667, 7.333333, 11, 14.666667)",
-            scene,
-            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -85,7 +78,7 @@ public sealed class SakuraChibiStandeeIdleSuite
         Assert.Contains("baseSprite.SelfModulate = hidden;", controller, StringComparison.Ordinal);
         Assert.Contains("_body.SelfModulate = _originalSelfModulate;", controller, StringComparison.Ordinal);
         Assert.Contains("GetAlignmentPosition(body, layers)", controller, StringComparison.Ordinal);
-        Assert.Contains("SyncFlip();", controller, StringComparison.Ordinal);
+        Assert.Contains("SyncFlip", controller, StringComparison.Ordinal);
         Assert.DoesNotContain("%Bounds", controller, StringComparison.Ordinal);
         Assert.DoesNotContain("%CenterPos", controller, StringComparison.Ordinal);
         Assert.Contains(

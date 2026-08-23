@@ -163,6 +163,9 @@ internal static class SakuraMagicCharge
 
             currentPower.NotifyProjectionChanged();
         }
+
+        if (currentPower is not null && currentAmount > previousAmount)
+            SakuraGlowVisual.NotifyMagicChargeGained(owner.Creature, currentAmount - previousAmount);
     }
 
     public static void SetFreeForRestOfTurn(CardModel card)

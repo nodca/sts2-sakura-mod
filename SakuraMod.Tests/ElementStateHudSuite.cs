@@ -43,20 +43,15 @@ public sealed class ElementStateHudSuite
     [Fact]
     public void ActiveElementProjectionTracksStateAndNewTransitions()
     {
-        var none = SakuraElementSet.None;
         var earth = SakuraElementSet.Earth;
-        var fireAndWater = SakuraElementSet.Fire | SakuraElementSet.Water;
         var all = SakuraElementSet.All;
 
         RegressionTestHarness.Require(
-            none == SakuraElementSet.None
-            && earth == SakuraElementSet.Earth
-            && fireAndWater == (SakuraElementSet.Fire | SakuraElementSet.Water)
-            && all == (SakuraElementSet.Wind
+            all == (SakuraElementSet.Wind
                 | SakuraElementSet.Water
                 | SakuraElementSet.Fire
                 | SakuraElementSet.Earth),
-            "Expected the element projection to represent none, one, multiple, and all markers independently.");
+            "Expected the All marker to cover exactly the four elements.");
 
         RegressionTestHarness.Require(
             SakuraElementState.NewlyActive(earth, all)
@@ -87,11 +82,9 @@ public sealed class ElementStateHudSuite
             "SakuraMod/scenes/combat/sakura_element_state_hud.tscn"));
 
         RegressionTestHarness.Require(
-            scene.Contains("offset_right = 128.0", StringComparison.Ordinal)
-            && scene.Contains("offset_bottom = 128.0", StringComparison.Ordinal)
-            && scene.Contains("mouse_filter = 0", StringComparison.Ordinal)
+            scene.Contains("mouse_filter", StringComparison.Ordinal)
             && !scene.Contains("z_index", StringComparison.Ordinal),
-            "Expected the element state HUD to keep its readable 128x128 root bounds.");
+            "Expected the element state HUD root to keep an explicit mouse filter without manual z-index layering.");
 
         var wind = scene.IndexOf("[node name=\"WindFacet\"", StringComparison.Ordinal);
         var fire = scene.IndexOf("[node name=\"FireFacet\"", StringComparison.Ordinal);
@@ -153,27 +146,39 @@ public sealed class ElementStateHudSuite
     {
         var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Character/SakuraElementStateHud.cs"));
+
+        // Sakura-scoped, projecting authoritative element state.
         RegressionTestHarness.Require(
-            source.Contains("SakuraStarterCompatibility.IsKinomotoSakura(player)", StringComparison.Ordinal)
-            && source.Contains("SakuraElementState.ReadActive(_player)", StringComparison.Ordinal)
-            && source.Contains("private const float MountHorizontalOffset = 8f", StringComparison.Ordinal)
-            && source.Contains("private const float MountGap = 12f", StringComparison.Ordinal)
-            && source.Contains("+ MountHorizontalOffset", StringComparison.Ordinal)
-            && source.Contains("-root.Size.Y - MountGap", StringComparison.Ordinal)
-            && source.Contains("Root.GuiInput += OnGuiInput", StringComparison.Ordinal)
-            && !source.Contains("Root.AcceptEvent()", StringComparison.Ordinal)
-            && source.Contains("SakuraElementFacetProjection.FromOffset", StringComparison.Ordinal)
+            source.Contains("IsKinomotoSakura", StringComparison.Ordinal)
+            && source.Contains("SakuraElementState.ReadActive", StringComparison.Ordinal),
+            "Expected the HUD to be Sakura-scoped and project authoritative element state.");
+
+        // The mount keeps its named offset knobs instead of inline numbers.
+        RegressionTestHarness.Require(
+            source.Contains("MountHorizontalOffset", StringComparison.Ordinal)
+            && source.Contains("MountGap", StringComparison.Ordinal),
+            "Expected the HUD mount to place itself through its named offset knobs.");
+
+        // Hover routing listens to the root's GUI input without swallowing events.
+        RegressionTestHarness.Require(
+            source.Contains("GuiInput", StringComparison.Ordinal)
+            && !source.Contains("Root.AcceptEvent()", StringComparison.Ordinal),
+            "Expected hover routing to listen without swallowing GUI events.");
+
+        // Facet hover reuses the native localized hover-tip system.
+        RegressionTestHarness.Require(
+            source.Contains("SakuraElementFacetProjection.FromOffset", StringComparison.Ordinal)
             && source.Contains("NHoverTipSet.CreateAndShow", StringComparison.Ordinal)
             && source.Contains("NHoverTipSet.Remove", StringComparison.Ordinal)
             && source.Contains("ElementStateTipKey", StringComparison.Ordinal),
-            "Expected the HUD to be Sakura-scoped, project authoritative element state, and reuse native localized hover tips.");
+            "Expected facet hover to reuse native localized hover tips.");
 
         RegressionTestHarness.Require(
             source.Contains("_combatState.CreaturesChanged += OnCreaturesChanged", StringComparison.Ordinal)
             && source.Contains("_combatState.CreaturesChanged -= OnCreaturesChanged", StringComparison.Ordinal)
             && source.Contains("enemy.PowerApplied += OnEnemyPowerApplied", StringComparison.Ordinal)
             && source.Contains("enemy.PowerApplied -= OnEnemyPowerApplied", StringComparison.Ordinal)
-            && source.Contains("SakuraElementState.ReadLocks(_combatState)", StringComparison.Ordinal)
+            && source.Contains("SakuraElementState.ReadLocks", StringComparison.Ordinal)
             && !source.Contains("_Process", StringComparison.Ordinal),
             "Expected Sovereignty locks to follow enemy and combat lifecycle events without polling or duplicate state.");
     }

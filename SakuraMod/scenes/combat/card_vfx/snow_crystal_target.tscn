@@ -1,0 +1,31 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" uid="uid://cjhoyclpk6tb3" path="res://SakuraMod/shaders/card_vfx/snow_blizzard.gdshader" id="1_snow"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_snow"]
+resource_local_to_scene = true
+shader = ExtResource("1_snow")
+shader_parameter/layer = 1
+shader_parameter/region_size = Vector2(300, 340)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/curtain = 0.0
+shader_parameter/dart = 0.0
+shader_parameter/dart_spin = 0.0
+shader_parameter/bloom = 0.0
+shader_parameter/frost = 0.0
+shader_parameter/opacity = 1.0
+
+[node name="SnowCrystalTarget" type="Node2D"]
+
+[node name="CrystalBody" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_snow")
+offset_left = -150.0
+offset_top = -170.0
+offset_right = 150.0
+offset_bottom = 170.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)

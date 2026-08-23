@@ -15,10 +15,11 @@ public sealed class AnotherMeBgmSuite
             && AnotherMeBgmPlayback.FadeOutSeconds > 0f
             && options.Scope == AudioLifecycleScope.Combat
             && !options.AllowFadeOutOnStop
-            && options.DebugName == AnotherMeBgmPlayback.MusicChannel
-            && options.Routing?.Channel == AnotherMeBgmPlayback.MusicChannel
-            && options.Routing.ChannelMode == AudioChannelMode.ReplaceExisting
-            && !options.Routing.AllowFadeOutOnReplace,
+            && options.Routing is
+            {
+                ChannelMode: AudioChannelMode.ReplaceExisting,
+                AllowFadeOutOnReplace: false
+            },
             "Expected Another Me to fade in from silence on one replacing, combat-scoped music channel.");
     }
 

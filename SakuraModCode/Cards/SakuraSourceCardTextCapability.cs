@@ -137,6 +137,9 @@ internal static class SakuraSourceCardText
         if (card is ClowFreeze or ClowSnow or SakuraSnow)
             yield return SakuraKeywords.Frostbite;
 
+        if (card is SpellTurn)
+            yield return SakuraKeywords.Purge;
+
         if (card.ShowsSakuraCardVoidTip)
             yield return SakuraKeywords.SakuraCard;
 

@@ -43,11 +43,17 @@ public sealed class CommandDispatcherSuite
 
         var help = writer.ToString();
         Assert.Contains("scripts/test-mod combat [--scenario <id>]", help, StringComparison.Ordinal);
-        Assert.Contains("affliction-visual-layout", help, StringComparison.Ordinal);
-        Assert.Contains("dark-selection-combat-reentry", help, StringComparison.Ordinal);
-        Assert.Contains("exchange-four-pile-selection", help, StringComparison.Ordinal);
-        Assert.Contains("generated-pile-memory", help, StringComparison.Ordinal);
-        Assert.Contains("windy-bind-draw", help, StringComparison.Ordinal);
+        foreach (var scenario in new[]
+                 {
+                     "affliction-visual-layout",
+                     "dark-selection-combat-reentry",
+                     "exchange-four-pile-selection",
+                     "generated-pile-memory",
+                     "windy-bind-draw"
+                 })
+        {
+            Assert.Contains(scenario, help, StringComparison.Ordinal);
+        }
     }
 
     [Theory]
@@ -68,15 +74,21 @@ public sealed class CommandDispatcherSuite
         MultiplayerCommand.PrintHelp(writer);
         var help = writer.ToString();
         Assert.Contains("scripts/test-mod multiplayer --scenario <id>", help, StringComparison.Ordinal);
-        Assert.Contains("clow-defensive-powers", help, StringComparison.Ordinal);
-        Assert.Contains("clow-silent-client", help, StringComparison.Ordinal);
-        Assert.Contains("clow-shield-client", help, StringComparison.Ordinal);
-        Assert.Contains("clow-shield-ward", help, StringComparison.Ordinal);
-        Assert.Contains("sealed-wand-charge", help, StringComparison.Ordinal);
-        Assert.Contains("turn-end-damage-sync", help, StringComparison.Ordinal);
-        Assert.Contains("three-player-defensive-powers (3 peers)", help, StringComparison.Ordinal);
-        Assert.Contains("three-player-repair-jump (3 peers)", help, StringComparison.Ordinal);
-        Assert.Contains("three-player-repair-jump-load (3 peers)", help, StringComparison.Ordinal);
-        Assert.Contains("three-player-mirror-copy (3 peers)", help, StringComparison.Ordinal);
+        foreach (var scenario in new[]
+                 {
+                     "clow-defensive-powers",
+                     "clow-silent-client",
+                     "clow-shield-client",
+                     "clow-shield-ward",
+                     "sealed-wand-charge",
+                     "turn-end-damage-sync",
+                     "three-player-defensive-powers (3 peers)",
+                     "three-player-repair-jump (3 peers)",
+                     "three-player-repair-jump-load (3 peers)",
+                     "three-player-mirror-copy (3 peers)"
+                 })
+        {
+            Assert.Contains(scenario, help, StringComparison.Ordinal);
+        }
     }
 }

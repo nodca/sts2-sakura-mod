@@ -360,7 +360,7 @@
   "SAKURAMOD-COMPASS.selectionPrompt": "选择 1 张库洛牌。",
   "SAKURA_MOD_CARD_SPELL_TURN.title": "转牌",
   "SAKURA_MOD_CARD_SPELL_TURN.selectionPrompt": "选择 1 张要转化为小樱牌的库洛牌。",
-  "SAKURA_MOD_CARD_SPELL_TURN.description": "[gold]符咒[/gold]\n选择手牌中的 1 张符合条件的[gold]库洛牌[/gold]，将其牌组本体转化为对应[gold]小樱牌[/gold]，并将该[gold]小樱牌[/gold]加入手牌。",
+  "SAKURA_MOD_CARD_SPELL_TURN.description": "[gold]符咒[/gold] [gold]移除[/gold]\n选择手牌中的 1 张符合条件的[gold]库洛牌[/gold]，将其牌组本体转化为对应[gold]小樱牌[/gold]，并将该[gold]小樱牌[/gold]加入手牌。",
   "SAKURA_MOD_CARD_SPELL_EMPTY_SPELL.title": "空法术",
   "SAKURA_MOD_CARD_SPELL_EMPTY_SPELL.selectionPrompt": "选择 1 张要书写的法术。",
   "SAKURA_MOD_CARD_SPELL_EMPTY_SPELL.description": "[gold]符咒[/gold]\n选择火神、雷帝、风华或水龙中的 1 张加入手牌。",

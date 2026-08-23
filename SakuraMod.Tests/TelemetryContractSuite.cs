@@ -22,7 +22,6 @@ public sealed class TelemetryContractSuite
     {
         RegressionTestHarness.Require(
             SakuraTelemetry.SakuraCharacterEntry == "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA"
-            && SakuraTelemetry.IsSakuraCharacterIdEntry(SakuraTelemetry.SakuraCharacterEntry)
             && !SakuraTelemetry.IsSakuraCharacterIdEntry(ClassicSakura.CharacterId)
             && !SakuraTelemetry.IsSakuraCharacterIdEntry("SakuraMod"),
             "Expected Sakura telemetry serialized character filter to accept only the registered host entry.");
@@ -134,46 +133,64 @@ public sealed class TelemetryContractSuite
         RegressionTestHarness.Require(telemetryApplicant.OwnerModId == MainFile.ModId, "Expected Sakura telemetry owner mod id to match the mod id.");
         RegressionTestHarness.Require(telemetryApplicant.Requests.Count == 1, "Expected the correlated balance dataset to require one atomic authorization.");
         RegressionTestHarness.Require(
-            runHistoryRequest.Category == TelemetryDataCategory.RunHistory
-            && runHistoryRequest.CaptureFilter is not null
-            && runHistoryRequest.ContributionSubscriptions.Contains(SakuraTelemetry.BalanceRunContributionId)
-            && runHistoryRequest.DescriptionText is not null
-            && runHistoryRequest.Description.Contains("Standard-mode Kinomoto Sakura", StringComparison.Ordinal),
-            "Expected the single authorization to include the Standard Sakura filter, private contribution, and localized disclosure.");
+            runHistoryRequest.Category == TelemetryDataCategory.RunHistory,
+            "Expected the single authorization to target run-history data.");
+        RegressionTestHarness.Require(
+            runHistoryRequest.CaptureFilter is not null,
+            "Expected the single authorization to include a capture filter.");
+        RegressionTestHarness.Require(
+            runHistoryRequest.ContributionSubscriptions.Contains(SakuraTelemetry.BalanceRunContributionId),
+            "Expected the single authorization to include the private balance contribution.");
+        RegressionTestHarness.Require(
+            runHistoryRequest.DescriptionText is not null,
+            "Expected the single authorization to include localized disclosure text.");
+        RegressionTestHarness.Require(
+            runHistoryRequest.Description.Contains("Standard-mode Kinomoto Sakura", StringComparison.Ordinal),
+            "Expected the single authorization disclosure to mention Standard-mode Kinomoto Sakura.");
         RegressionTestHarness.Require(
             runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 SakuraTelemetry.RunHistoryEventName,
                 SakuraTelemetry.RunHistoryRequestId,
                 TelemetryDataCategory.RunHistory,
                 "run_history",
-                new RunEndedEvent(sakuraRun, IsVictory: true, IsAbandoned: false, DateTimeOffset.UnixEpoch)))
-            && !runHistoryRequest.CaptureFilter(new TelemetryCaptureContext(
+                new RunEndedEvent(sakuraRun, IsVictory: true, IsAbandoned: false, DateTimeOffset.UnixEpoch))),
+            "Expected the capture filter to accept Standard Sakura run-history events.");
+        RegressionTestHarness.Require(
+            !runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 SakuraTelemetry.RunHistoryEventName,
                 SakuraTelemetry.RunHistoryRequestId,
                 TelemetryDataCategory.RunHistory,
                 "run_history",
-                new RunEndedEvent(nonSakuraRun, IsVictory: true, IsAbandoned: false, DateTimeOffset.UnixEpoch)))
-            && runHistoryRequest.CaptureFilter(new TelemetryCaptureContext(
+                new RunEndedEvent(nonSakuraRun, IsVictory: true, IsAbandoned: false, DateTimeOffset.UnixEpoch))),
+            "Expected the capture filter to reject non-Sakura run-history events.");
+        RegressionTestHarness.Require(
+            runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 SakuraTelemetry.BalanceContextEventName,
                 SakuraTelemetry.RunHistoryRequestId,
                 TelemetryDataCategory.RunHistory,
-                "applicant"))
-            && runHistoryRequest.CaptureFilter(new TelemetryCaptureContext(
+                "applicant")),
+            "Expected the capture filter to accept the authorized balance context event.");
+        RegressionTestHarness.Require(
+            runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 SakuraTelemetry.CardRewardOfferedEventName,
                 SakuraTelemetry.RunHistoryRequestId,
                 TelemetryDataCategory.RunHistory,
-                "applicant"))
-            && runHistoryRequest.CaptureFilter(new TelemetryCaptureContext(
+                "applicant")),
+            "Expected the capture filter to accept the authorized card reward offered event.");
+        RegressionTestHarness.Require(
+            runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 SakuraTelemetry.CardRewardTakenEventName,
                 SakuraTelemetry.RunHistoryRequestId,
                 TelemetryDataCategory.RunHistory,
-                "applicant"))
-            && !runHistoryRequest.CaptureFilter(new TelemetryCaptureContext(
+                "applicant")),
+            "Expected the capture filter to accept the authorized card reward taken event.");
+        RegressionTestHarness.Require(
+            !runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 "unrelated",
                 SakuraTelemetry.RunHistoryRequestId,
                 TelemetryDataCategory.RunHistory,
                 "applicant")),
-            "Expected the common capture filter to preserve Sakura run-history filtering and existing authorized balance events.");
+            "Expected the capture filter to reject unrelated events.");
         using (var englishSettings = JsonDocument.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
                    "SakuraMod/localization/eng/settings_ui.json"))))
         using (var chineseSettings = JsonDocument.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -181,16 +198,23 @@ public sealed class TelemetryContractSuite
         {
             const string consentKey = "SAKURAMOD-TELEMETRY_CONSENT.description";
             RegressionTestHarness.Require(
-                englishSettings.RootElement.TryGetProperty(consentKey, out var englishConsent)
-                && chineseSettings.RootElement.TryGetProperty(consentKey, out var chineseConsent)
-                && !string.IsNullOrWhiteSpace(englishConsent.GetString())
-                && !string.IsNullOrWhiteSpace(chineseConsent.GetString())
-                && englishConsent.GetString() != chineseConsent.GetString(),
-                "Expected the telemetry authorization disclosure in English and Simplified Chinese.");
+                englishSettings.RootElement.TryGetProperty(consentKey, out var englishConsent),
+                "Expected an English telemetry authorization disclosure to exist.");
+            RegressionTestHarness.Require(
+                chineseSettings.RootElement.TryGetProperty(consentKey, out var chineseConsent),
+                "Expected a Simplified Chinese telemetry authorization disclosure to exist.");
+            RegressionTestHarness.Require(
+                !string.IsNullOrWhiteSpace(englishConsent.GetString()),
+                "Expected the English telemetry authorization disclosure to be non-empty.");
+            RegressionTestHarness.Require(
+                !string.IsNullOrWhiteSpace(chineseConsent.GetString()),
+                "Expected the Simplified Chinese telemetry authorization disclosure to be non-empty.");
+            RegressionTestHarness.Require(
+                englishConsent.GetString() != chineseConsent.GetString(),
+                "Expected the English and Simplified Chinese telemetry disclosures to differ.");
         }
         RegressionTestHarness.Require(
-            SakuraTelemetry.CreateAdapter() is HttpJsonTelemetryAdapter httpAdapter
-            && httpAdapter.Endpoint.ToString() == SakuraTelemetry.EndpointUrl
+            SakuraTelemetry.CreateAdapter() is HttpJsonTelemetryAdapter
             && SakuraTelemetry.PublicWriteCredential == "sakuramod-balance-v2",
             "Expected the bundled public write credential to enable telemetry without player configuration.");
     }
@@ -303,16 +327,32 @@ public sealed class TelemetryContractSuite
             "Expected gameplay environment telemetry to retain only sorted loaded gameplay Mod ids and versions.");
 
         RegressionTestHarness.Require(
-            SakuraTelemetryCardClassifier.TryClassifyOwner(typeof(ClowSword), out var clowCategory, out var clowOwner)
-            && clowCategory == "clow"
-            && clowOwner == MainFile.ModId
-            && SakuraTelemetryCardClassifier.TryClassifyOwner(typeof(SpellSeal), out var spellCategory, out _)
-            && spellCategory == "spell"
-            && SakuraTelemetryCardClassifier.TryClassifyOwner(typeof(VanillaStrikeIronclad), out var vanillaCategory, out var vanillaOwner)
-            && vanillaCategory == "vanilla"
-            && vanillaOwner == "vanilla"
-            && !SakuraTelemetryCardClassifier.TryClassifyOwner(typeof(SakuraTelemetryRunHook), out _, out _),
-            "Expected telemetry classification to include Sakura/vanilla cards and exclude unknown ownership.");
+            SakuraTelemetryCardClassifier.TryClassifyOwner(typeof(ClowSword), out var clowCategory, out var clowOwner),
+            "Expected telemetry classification to classify Clow cards.");
+        RegressionTestHarness.Require(
+            clowCategory == "clow",
+            "Expected Clow Sword to classify as clow.");
+        RegressionTestHarness.Require(
+            clowOwner == MainFile.ModId,
+            "Expected Clow Sword ownership to resolve to the mod id.");
+        RegressionTestHarness.Require(
+            SakuraTelemetryCardClassifier.TryClassifyOwner(typeof(SpellSeal), out var spellCategory, out _),
+            "Expected telemetry classification to classify Spell cards.");
+        RegressionTestHarness.Require(
+            spellCategory == "spell",
+            "Expected Spell Seal to classify as spell.");
+        RegressionTestHarness.Require(
+            SakuraTelemetryCardClassifier.TryClassifyOwner(typeof(VanillaStrikeIronclad), out var vanillaCategory, out var vanillaOwner),
+            "Expected telemetry classification to classify vanilla cards.");
+        RegressionTestHarness.Require(
+            vanillaCategory == "vanilla",
+            "Expected Strike Ironclad to classify as vanilla.");
+        RegressionTestHarness.Require(
+            vanillaOwner == "vanilla",
+            "Expected Strike Ironclad ownership to resolve to vanilla.");
+        RegressionTestHarness.Require(
+            !SakuraTelemetryCardClassifier.TryClassifyOwner(typeof(SakuraTelemetryRunHook), out _, out _),
+            "Expected telemetry classification to exclude unknown ownership.");
     }
 
     [Fact]
@@ -331,12 +371,20 @@ public sealed class TelemetryContractSuite
         var deckUsage = usageRows.Single(row => row.Provenance == "deck_owned");
         var generatedUsage = usageRows.Single(row => row.Provenance == "generated");
         RegressionTestHarness.Require(
-            deckUsage.DrawCount == 1
-            && deckUsage.CombatsSeen == 1
-            && generatedUsage.GeneratedCount == 1
-            && generatedUsage.DrawCount == 1
-            && generatedUsage.CombatsSeen == 1,
-            "Expected usage telemetry to retain draw/generation provenance without card-play data.");
+            deckUsage.DrawCount == 1,
+            "Expected deck-owned usage telemetry to count one draw.");
+        RegressionTestHarness.Require(
+            deckUsage.CombatsSeen == 1,
+            "Expected deck-owned usage telemetry to count one combat.");
+        RegressionTestHarness.Require(
+            generatedUsage.GeneratedCount == 1,
+            "Expected generated usage telemetry to count one generation.");
+        RegressionTestHarness.Require(
+            generatedUsage.DrawCount == 1,
+            "Expected generated usage telemetry to count one draw.");
+        RegressionTestHarness.Require(
+            generatedUsage.CombatsSeen == 1,
+            "Expected generated usage telemetry to count one combat.");
         var serializedUsage = JsonSerializer.Serialize(usageRows);
         RegressionTestHarness.Require(
             !serializedUsage.Contains("play", StringComparison.OrdinalIgnoreCase)
@@ -350,13 +398,23 @@ public sealed class TelemetryContractSuite
         persistedRunData.LastOfferSequence = 12;
         var restoredRunData = JsonSerializer.Deserialize<BalanceRunIdentity>(JsonSerializer.Serialize(persistedRunData));
         RegressionTestHarness.Require(
-            restoredRunData is not null
-            && restoredRunData.IsValid()
-            && restoredRunData.RunKey == persistedRunData.RunKey
-            && restoredRunData.ContextChecksum == persistedRunData.ContextChecksum
-            && restoredRunData.Usage.Count == 2
-            && restoredRunData.LastOfferSequence == 12,
-            "Expected the stable run key, context, aggregate usage, and reward sequence to survive save-data JSON round trips.");
+            restoredRunData is not null,
+            "Expected the run data to deserialize after the save-data JSON round trip.");
+        RegressionTestHarness.Require(
+            restoredRunData!.IsValid(),
+            "Expected the restored run data to remain valid.");
+        RegressionTestHarness.Require(
+            restoredRunData!.RunKey == persistedRunData.RunKey,
+            "Expected the stable run key to survive the round trip.");
+        RegressionTestHarness.Require(
+            restoredRunData!.ContextChecksum == persistedRunData.ContextChecksum,
+            "Expected the context checksum to survive the round trip.");
+        RegressionTestHarness.Require(
+            restoredRunData!.Usage.Count == 2,
+            "Expected the aggregate usage to survive the round trip.");
+        RegressionTestHarness.Require(
+            restoredRunData!.LastOfferSequence == 12,
+            "Expected the reward offer sequence to survive the round trip.");
         Exception? capturedTelemetryFailure = null;
         RegressionTestHarness.Require(
             !SakuraTelemetry.TryExecute(

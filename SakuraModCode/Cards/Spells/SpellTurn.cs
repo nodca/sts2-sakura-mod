@@ -29,9 +29,15 @@ public class SpellTurn() : SpellCard(-2, CardType.Skill, CardRarity.Token, Targe
 {
     private static LocString Prompt => CardLoc<SpellTurn>("selectionPrompt");
 
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain, CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain];
     public override int MaxUpgradeLevel => 0;
     protected override bool IsPlayable => CardPile.GetCards(Owner, PileType.Hand).Any(SakuraSourceCardRules.IsEligibleClowForTurn);
+
+    protected override PileType GetResultPileTypeForCardPlay() =>
+        ResultPileFor(base.GetResultPileTypeForCardPlay());
+
+    internal static PileType ResultPileFor(PileType basePile) =>
+        basePile == PileType.Discard ? PileType.None : basePile;
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {

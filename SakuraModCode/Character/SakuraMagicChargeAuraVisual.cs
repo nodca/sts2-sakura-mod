@@ -23,6 +23,7 @@ internal static class SakuraMagicChargeAuraVisualPatch
     private static void ReadyPostfix(NCreature __instance)
     {
         SakuraMagicChargeAuraVisual.Mount(__instance);
+        SakuraGlowVisual.Mount(__instance);
         SakuraElementStateVisuals.Mount(__instance);
         SakuraKeroCombatCompanion.Mount(__instance);
         FourthActCombatFeedbackVisuals.Mount(__instance);

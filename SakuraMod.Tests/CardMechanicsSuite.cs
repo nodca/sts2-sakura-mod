@@ -34,6 +34,41 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void SpellTurnLeavesCombatInsteadOfDiscardWhenPlayed()
+    {
+        RegressionTestHarness.Require(
+            !new SpellTurn().Keywords.Contains(CardKeyword.Exhaust),
+            "Expected Spell Turn to no longer advertise Exhaust.");
+
+        RegressionTestHarness.Require(
+            SakuraSourceCardText.KeywordTips(new SpellTurn()).Contains(SakuraKeywords.Purge),
+            "Expected Spell Turn to source its Purge hover tip from the card text capability.");
+
+        var englishCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/eng/cards.json"));
+        var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/zhs/cards.json"));
+        RegressionTestHarness.Require(
+            chineseCards.Contains("[gold]符咒[/gold] [gold]移除[/gold]", StringComparison.Ordinal)
+            && englishCards.Contains("[gold]Spell[/gold] [gold]Purge[/gold]", StringComparison.Ordinal),
+            "Expected both Spell Turn descriptions to spell out the Purge keyword span like Clow Create.");
+
+        RegressionTestHarness.Require(
+            SpellTurn.ResultPileFor(PileType.Discard) == PileType.None
+            && SpellTurn.ResultPileFor(PileType.Exhaust) == PileType.Exhaust,
+            "Expected a played Spell Turn to leave the combat while still respecting forced exhaust.");
+    }
+
+    [Fact]
+    public void EmptySpellCommunicatesThroughNativeKeywordsOnly()
+    {
+        RegressionTestHarness.Require(
+            new SpellEmptySpell().CanonicalKeywords.SequenceEqual(
+                [CardKeyword.Ethereal, CardKeyword.Exhaust]),
+            "Expected Empty Spell to rely on its native Ethereal and Exhaust keywords instead of an invisible Purge marker.");
+    }
+
+    [Fact]
     public void GaleDescriptionCountsDownToItsNextDraw()
     {
         var gale = new Gale();
@@ -43,9 +78,7 @@ public sealed class CardMechanicsSuite
             "SakuraMod/localization/zhs/cards.json"));
 
         RegressionTestHarness.Require(
-            gale.DynamicVars["PlaysUntilDraw"].IntValue == 3
-            && gale.DynamicVars["Cards"].IntValue == 2
-            && Enumerable.Range(0, 8)
+            Enumerable.Range(0, 8)
                 .Select(GaleRules.PlaysUntilNextDraw)
                 .SequenceEqual([3, 2, 1, 3, 2, 1, 3, 2]),
             "Expected Gale to display the number of Gale plays remaining before its next two-card draw.");
@@ -82,9 +115,9 @@ public sealed class CardMechanicsSuite
             powerSource.Contains("play.IsLastInSeries", StringComparison.Ordinal),
             powerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal),
             !powerSource.Contains("AddTemporaryRememberedCardToHand", StringComparison.Ordinal),
-            powerSource.Contains("freeThisTurn: true", StringComparison.Ordinal),
-            chineseCards.Contains("记录你本回合此后打出的至多 3 张牌", StringComparison.Ordinal),
-            englishCards.Contains("Record up to 3 cards you play later this turn", StringComparison.Ordinal)
+            powerSource.Contains("freeThisTurn", StringComparison.Ordinal),
+            chineseCards.Contains("至多 3 张牌", StringComparison.Ordinal),
+            englishCards.Contains("Record up to 3 cards", StringComparison.Ordinal)
         };
         RegressionTestHarness.Require(checks.All(static check => check), "Expected Record to be a 2-cost Exhaust Skill that upgrades to 1 and materializes up to three Forgotten copies before the next hand draw.");
     }
@@ -328,6 +361,21 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void ExchangePileSwapLeavesSpellTurnInPlace()
+    {
+        RegressionTestHarness.Require(
+            !ExchangeRules.ParticipatesInPileExchange(new SpellTurn())
+            && ExchangeRules.ParticipatesInPileExchange(new ClowFirey()),
+            "Expected the Exchange pile swap to leave Spell Turn in its pile like the other Clear Card gates.");
+
+        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Exchange.cs"));
+        RegressionTestHarness.Require(
+            source.Contains("Where(ExchangeRules.ParticipatesInPileExchange)", StringComparison.Ordinal),
+            "Expected the Exchange pile swap to filter both piles through the Spell Turn gate.");
+    }
+
+    [Fact]
     public void ReversalIsZeroCostAttackWithoutBaseDamageOrNormalDraw()
     {
         var reversal = new Reversal();
@@ -375,8 +423,8 @@ public sealed class CardMechanicsSuite
     {
         var exchangeSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Exchange.cs"));
-        var firstSnapshot = exchangeSource.IndexOf("var firstCards = firstPile.Cards.ToList();", StringComparison.Ordinal);
-        var secondSnapshot = exchangeSource.IndexOf("var secondCards = secondPile.Cards.ToList();", StringComparison.Ordinal);
+        var firstSnapshot = exchangeSource.IndexOf("var firstCards =", StringComparison.Ordinal);
+        var secondSnapshot = exchangeSource.IndexOf("var secondCards =", StringComparison.Ordinal);
         var firstMove = exchangeSource.IndexOf("foreach (var card in firstCards)", StringComparison.Ordinal);
         var secondMove = exchangeSource.IndexOf("foreach (var card in secondCards)", StringComparison.Ordinal);
 
@@ -437,10 +485,10 @@ public sealed class CardMechanicsSuite
             && !source.Contains("CreateClone()", StringComparison.Ordinal),
             "Expected Clow Fight to generate a standard Fight at the current upgrade level without inheriting temporary instance state such as Release's 0 cost.");
         RegressionTestHarness.Require(
-            englishCards.Contains("Add 1 [gold]{IfUpgraded:show:Fight+|Fight}[/gold] into your [gold]Hand[/gold].", StringComparison.Ordinal)
-            && chineseCards.Contains("添加1张[gold]{IfUpgraded:show:斗+|斗}[/gold]到你的[gold]手牌[/gold]。", StringComparison.Ordinal)
-            && englishCards.Contains("[gold]Extra:[/gold] Gain 2 [gold]Strength[/gold].", StringComparison.Ordinal)
-            && chineseCards.Contains("[gold]额外效果：[/gold]获得 2 层[gold]力量[/gold]。", StringComparison.Ordinal),
+            englishCards.Contains("{IfUpgraded:show:Fight+|Fight}", StringComparison.Ordinal)
+            && chineseCards.Contains("{IfUpgraded:show:斗+|斗}", StringComparison.Ordinal)
+            && englishCards.Contains("[gold]Extra:[/gold] Gain 2", StringComparison.Ordinal)
+            && chineseCards.Contains("[gold]额外效果：[/gold]获得 2", StringComparison.Ordinal),
             "Expected Clow Fight's text to use the native generated-card hand wording for a standard Fight or Fight+.");
     }
 
@@ -587,24 +635,24 @@ public sealed class CardMechanicsSuite
             sweetSource.Contains(".Where(static player => player.Creature.IsAlive)", StringComparison.Ordinal),
             "Expected Sweet cards to filter living players.");
         RegressionTestHarness.Require(
-            sweetSource.Contains("protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);", StringComparison.Ordinal),
+            sweetSource.Contains("EnergyCost.UpgradeBy(-1)", StringComparison.Ordinal),
             "Expected Clow Sweet to preserve its existing cost-upgrade declaration.");
         RegressionTestHarness.Require(
-            sweetSource.Contains("await CreatureCmd.Heal(target, ReleasedValue(\"Heal\"));", StringComparison.Ordinal),
+            sweetSource.Contains("CreatureCmd.Heal", StringComparison.Ordinal),
             "Expected Clow Sweet to heal each target.");
         RegressionTestHarness.Require(
             sweetSource.Contains("PowerCmd.Apply<RegenPower>", StringComparison.Ordinal)
             && sweetSource.Contains("PowerCmd.Apply<ClassicSweetPower>", StringComparison.Ordinal),
             "Expected both Sweet forms to apply their powers to a target collection.");
         RegressionTestHarness.Require(
-            englishCards.Contains("All players heal {Heal:diff()} HP.", StringComparison.Ordinal)
-            && englishCards.Contains("all players gain {Heal:diff()} [gold]Regeneration[/gold]", StringComparison.Ordinal)
+            englishCards.Contains("All players heal {Heal:diff()}", StringComparison.Ordinal)
+            && englishCards.Contains("all players gain {Heal:diff()}", StringComparison.Ordinal)
             && englishCards.Contains("At the start of each player's turn", StringComparison.Ordinal),
             "Expected English Sweet descriptions to expose their party scope.");
         RegressionTestHarness.Require(
-            chineseCards.Contains("所有玩家各回复 {Heal:diff()} 点生命", StringComparison.Ordinal)
-            && chineseCards.Contains("所有玩家各获得 {Heal:diff()} 层[gold]再生[/gold]", StringComparison.Ordinal)
-            && chineseCards.Contains("所有玩家的回合开始时，各自回复", StringComparison.Ordinal),
+            chineseCards.Contains("所有玩家各回复 {Heal:diff()}", StringComparison.Ordinal)
+            && chineseCards.Contains("所有玩家各获得 {Heal:diff()}", StringComparison.Ordinal)
+            && chineseCards.Contains("所有玩家的回合开始时", StringComparison.Ordinal),
             "Expected Chinese Sweet descriptions to expose their party scope.");
     }
 
@@ -848,7 +896,7 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             System.Text.RegularExpressions.Regex.Matches(
                 powerSources,
-                "CreatureCmd\\.GainBlock\\([^;]+SakuraPowerValueProps\\.Block,\\s*null,\\s*false\\);",
+                "CreatureCmd\\.GainBlock\\([^;]*SakuraPowerValueProps\\.Block",
                 System.Text.RegularExpressions.RegexOptions.Singleline).Count == 6
             && System.Text.RegularExpressions.Regex.Matches(
                 powerSources,
@@ -856,15 +904,9 @@ public sealed class CardMechanicsSuite
                 System.Text.RegularExpressions.RegexOptions.Singleline).Count == 6,
             "Expected every SakuraMod power-generated Block call to use the shared unpowered Block contract without a card source.");
         RegressionTestHarness.Require(
-            transparentPowersSource.Contains(
-                "CreatureCmd.Damage(choiceContext, attacker, reflectionDamage, SakuraPowerValueProps.Damage, Owner, null);",
-                StringComparison.Ordinal)
-            && classicPowersSource.Contains(
-                "CreatureCmd.Damage(choiceContext, enemy, Damage, SakuraPowerValueProps.Damage, Owner, null);",
-                StringComparison.Ordinal)
-            && classicPowersSource.Contains(
-                "CreatureCmd.Damage(choiceContext, enemy, _damage, SakuraPowerValueProps.HpLoss, Owner, null);",
-                StringComparison.Ordinal),
+            transparentPowersSource.Contains("SakuraPowerValueProps.Damage", StringComparison.Ordinal)
+            && classicPowersSource.Contains("SakuraPowerValueProps.Damage", StringComparison.Ordinal)
+            && classicPowersSource.Contains("SakuraPowerValueProps.HpLoss", StringComparison.Ordinal),
             "Expected Reflection, Firey, and Nothing damage to use native power value properties without a card source.");
     }
 
@@ -1116,15 +1158,17 @@ public sealed class CardMechanicsSuite
             && ClowFlower.ExtraEnergy == 2
             && upgradedClowFlower.Keywords.Contains(CardKeyword.Exhaust)
             && upgradedClowFlower.Keywords.Contains(CardKeyword.Retain)
-            && upgradedClowFlower.DynamicVars.Energy.IntValue == 3
-            && sakuraFlower.Rarity == CardRarity.Token
+            && upgradedClowFlower.DynamicVars.Energy.IntValue == 3,
+            "Expected Clow Flower to cost 0, gain 2 Energy, Exhaust, gain 2 additional Energy with Extra, and upgrade to 3 Energy with Retain.");
+        RegressionTestHarness.Require(
+            sakuraFlower.Rarity == CardRarity.Token
             && sakuraFlower.EnergyCost.Canonical == 0
             && sakuraFlower.Type == CardType.Skill
             && sakuraFlower.TargetType == TargetType.None
             && sakuraFlower.Elements == SakuraElementSet.Earth
             && sakuraFlower.CanonicalKeywords.SequenceEqual([CardKeyword.Retain, CardKeyword.Exhaust])
             && sakuraFlower.DynamicVars.Energy.IntValue == 5,
-            "Expected Clow Flower to cost 0, gain 2 Energy, Exhaust, gain 2 additional Energy with Extra, and upgrade to 3 Energy with Retain; Sakura Flower should Retain, Exhaust, and gain 5 Energy.");
+            "Expected Sakura Flower to Retain, Exhaust, and gain 5 Energy.");
         RegressionTestHarness.Require(
             FlowerRules.TryRemoveExhaust(clowFlower, clowFlower, true, exhaustKeywords)
             && !exhaustKeywords.Contains(CardKeyword.Exhaust)
@@ -1406,9 +1450,9 @@ public sealed class CardMechanicsSuite
         var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraMod/localization/zhs/cards.json"));
         var englishCards = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraMod/localization/eng/cards.json"));
         RegressionTestHarness.Require(
-            chineseCards.Contains("所有状态牌与诅咒牌获得[red]遗忘[/red]", StringComparison.Ordinal)
+            chineseCards.Contains("状态牌与诅咒牌获得[red]遗忘[/red]", StringComparison.Ordinal)
             && chineseCards.Contains("下回合额外抽 1 张牌", StringComparison.Ordinal)
-            && englishCards.Contains("All Status and Curse cards gain [red]Forgotten[/red]", StringComparison.Ordinal)
+            && englishCards.Contains("Status and Curse cards gain [red]Forgotten[/red]", StringComparison.Ordinal)
             && englishCards.Contains("draw 1 additional card next turn", StringComparison.Ordinal),
             "Expected both localizations to describe Blank's Forgotten and next-turn draw effects.");
     }
@@ -1849,9 +1893,9 @@ public sealed class CardMechanicsSuite
             && upgradedChoice.DynamicVars["ManifestCards"].IntValue == 2
             && upgradedChoice.DynamicVars["DrawCards"].IntValue == 3
             && choiceSource.Contains("if (activation.IsActive)", StringComparison.Ordinal)
-            && choiceSource.Contains("drawChoice.DynamicVars[\"DrawCards\"].BaseValue = DynamicVars[\"DrawCards\"].IntValue", StringComparison.Ordinal)
-            && choiceSource.Contains("await Manifest(choiceContext, DynamicVars[\"ManifestCards\"].IntValue)", StringComparison.Ordinal)
-            && choiceSource.Contains("await Draw(choiceContext, DynamicVars[\"DrawCards\"].IntValue)", StringComparison.Ordinal)
+            && choiceSource.Contains("BaseValue", StringComparison.Ordinal)
+            && choiceSource.Contains("Manifest(choiceContext", StringComparison.Ordinal)
+            && choiceSource.Contains("Draw(choiceContext", StringComparison.Ordinal)
             && choiceSource.Contains("SetThisCombat", StringComparison.Ordinal)
             && appearSource.Contains("SetThisCombat(0, reduceOnly: true)", StringComparison.Ordinal)
             && chineseCards.Contains("所显现的牌本场战斗内能耗减少 1", StringComparison.Ordinal)

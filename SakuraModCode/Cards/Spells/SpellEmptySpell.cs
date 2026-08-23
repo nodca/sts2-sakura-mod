@@ -37,7 +37,7 @@ public class SpellEmptySpell() : SpellCard(0, CardType.Skill, CardRarity.Token, 
     ];
 
     public override int MaxUpgradeLevel => 0;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Ethereal, CardKeyword.Exhaust, SakuraKeywords.Purge];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Ethereal, CardKeyword.Exhaust];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {

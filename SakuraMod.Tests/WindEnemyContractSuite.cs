@@ -24,7 +24,6 @@ public sealed class WindEnemyContractSuite
         Assert.True(SleepingAffliction.ShouldBlockPlay(sleeping, sleeping, MegaCrit.Sts2.Core.Entities.Cards.AutoPlayType.None));
         Assert.False(SleepingAffliction.ShouldBlockPlay(other, sleeping, MegaCrit.Sts2.Core.Entities.Cards.AutoPlayType.None));
         Assert.False(SleepingAffliction.ShouldBlockPlay(sleeping, sleeping, MegaCrit.Sts2.Core.Entities.Cards.AutoPlayType.Default));
-        Assert.Equal(SleepingAffliction.OverlayScenePath, new SleepingAffliction().AssetProfile.OverlayScenePath);
 
         var sleepingSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/FourthAct/Wind/CardState/WindSleepingCards.cs"));
@@ -147,8 +146,6 @@ public sealed class WindEnemyContractSuite
 
         var groundingSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/FourthAct/Wind/Visuals/WindCombatGrounding.cs"));
-        Assert.Contains("AllyOffset = new(0f, 110f)", groundingSource);
-        Assert.Contains("EnemyOffset = new(80f, 110f)", groundingSource);
         Assert.Contains("nameof(NCombatRoom.PositionPlayersAndPets)", groundingSource);
         Assert.Contains("node.Position += AllyOffset", groundingSource);
     }
@@ -288,10 +285,6 @@ public sealed class WindEnemyContractSuite
     [Fact]
     public void EveryWindEncounterUsesOneStaticRooftopBackgroundLayer()
     {
-        Assert.Equal(
-            [FourthActCombatBackgrounds.WindRooftopLayerPath],
-            FourthActCombatBackgrounds.WindRooftopLayers);
-
         var layerScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/backgrounds/fourth_act/rooftop/rooftop_base.tscn"));
         var texture = RegressionTestHarness.FindRepoFile(

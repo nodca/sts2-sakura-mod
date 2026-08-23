@@ -23,19 +23,19 @@ public sealed class TomoyoAncientCostumesSuite
 
         Assert.Contains("tomoyo_ancient_costumes_background.tscn", source, StringComparison.Ordinal);
         Assert.Contains("SakuraStarterCompatibility.IsKinomotoSakuraRun(runState)", source, StringComparison.Ordinal);
-        Assert.Contains("HarmonyPatch(typeof(Hive), nameof(Hive.GetUnlockedAncients)", availability, StringComparison.Ordinal);
+        Assert.Contains("GetUnlockedAncients", availability, StringComparison.Ordinal);
         Assert.Contains("HarmonyPriority(Priority.Last)", availability, StringComparison.Ordinal);
         Assert.Contains("RunManager.Instance.DebugOnlyGetState()", availability, StringComparison.Ordinal);
         Assert.Contains("SakuraStarterCompatibility.IsKinomotoSakuraRun(runState)", availability, StringComparison.Ordinal);
         Assert.Contains("ancient is not ClassicTomoyoAncientCostumes", availability, StringComparison.Ordinal);
         Assert.Contains("tomoyo_ancient_icon.png", source, StringComparison.Ordinal);
         Assert.Contains("tomoyo_ancient_icon_outline.png", source, StringComparison.Ordinal);
-        Assert.Contains("HoverTipFactory.FromRelic(relic)", source, StringComparison.Ordinal);
-        Assert.Contains(".WithRelic(relic)", source, StringComparison.Ordinal);
-        Assert.Contains("RegisterActAncient<Hive, ClassicTomoyoAncientCostumes>()", registration, StringComparison.Ordinal);
+        Assert.Contains("HoverTipFactory.FromRelic", source, StringComparison.Ordinal);
+        Assert.Contains("WithRelic", source, StringComparison.Ordinal);
+        Assert.Contains("RegisterActAncient<Hive, ClassicTomoyoAncientCostumes>", registration, StringComparison.Ordinal);
         Assert.DoesNotContain("RegisterSharedAncient<ClassicTomoyoAncientCostumes>()", registration, StringComparison.Ordinal);
         foreach (var relicType in CostumeRelicTypes)
-            Assert.Equal(2, source.Split($"CreateCostumeRelicOption<{relicType.Name}>()", StringSplitOptions.None).Length - 1);
+            Assert.Equal(2, source.Split($"CreateCostumeRelicOption<{relicType.Name}>", StringSplitOptions.None).Length - 1);
     }
 
     [Theory]

@@ -7,7 +7,6 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
-using MegaCrit.Sts2.Core.Nodes.Pooling;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.TestSupport;
@@ -33,15 +32,8 @@ internal abstract class CelVfxSession : IDisposable
     /// would be a second owner of the value the shaders already fixed.
     /// </summary>
     protected const float StepFrequency = 12f;
-    private const float CardRiseDuration = 0.24f;
-    private const float WandTapDownDuration = 0.08f;
-    private const float WandTapRecoverDuration = 0.11f;
     private const float StandardPreludeLeadDuration = 0.18f;
-    private const float CardFadeDuration = 0.12f;
     private const float WandPreludeHoldDuration = 2f / StepFrequency;
-    private const float CardScale = 0.46f;
-    private const float CardRiseDistance = 62f;
-    private const float WandTapRadians = -0.12f;
     private const float SpeedLineDiameter = 560f;
     private const int PreludeZIndex = 4000;
 
@@ -57,20 +49,9 @@ internal abstract class CelVfxSession : IDisposable
     private float _preludeElapsed;
     private float _preludeHoldRemaining;
     private float _preludeHoldAt;
-    private float _cardRise;
-    private Control? _preludeCardOrigin;
-    private NCard? _preludeCard;
     private NCard? _standardPreludeCard;
-    private NCard? _suppressedNativeCard;
-    private CardModel? _suppressedNativeCardModel;
-    private bool _suppressedNativeCardWasVisible;
     private ColorRect? _preludeLines;
     private ShaderMaterial? _preludeLineMaterial;
-    private SakuraChibiWandRig? _wandRig;
-    private float _wandRestRotation;
-    private StringName? _pausedMicroAnimation;
-    private double _pausedMicroPosition;
-    private bool _resumeMicroAnimation;
 
     protected CelVfxSession(Node2D root, NCombatRoom room)
     {
@@ -368,95 +349,27 @@ internal abstract class CelVfxSession : IDisposable
             return IsActive();
         }
 
-        if (SakuraChibiStandeeIdleController.TryGet(casterNode) is { } chibiController
-            && chibiController.TryGetWandPreludeRig(out var rig))
-        {
-            return await PlayChibiWandPrelude(card, casterNode, rig);
-        }
-
-        if (SakuraStandeeIdleController.TryGet(casterNode) is not null)
-            return await PlayStandardPrelude(card, casterNode);
+        if (SakuraChibiStandeeIdleController.TryGet(casterNode) is not null
+            || SakuraStandeeIdleController.TryGet(casterNode) is not null)
+            return await PlayStandardPrelude(card);
 
         return IsActive();
     }
 
-    private async Task<bool> PlayChibiWandPrelude(
-        CardModel card,
-        NCreature casterNode,
-        SakuraChibiWandRig rig)
-    {
-        try
-        {
-            CreateWandPrelude(card, casterNode, rig);
-            TaskHelper.RunSafely(TrackWandPreludePosition());
-
-            var rise = Track(_root.CreateTween());
-            rise.TweenMethod(
-                    Callable.From<float>(value => _cardRise = value),
-                    0f,
-                    1f,
-                    CardRiseDuration)
-                .SetEase(Tween.EaseType.Out)
-                .SetTrans(Tween.TransitionType.Cubic);
-            if (!await WaitActive(CardRiseDuration))
-                return false;
-
-            PauseMicroAnimation(rig);
-            var tap = Track(rig.WandRoot.CreateTween());
-            tap.TweenProperty(
-                    rig.WandRoot,
-                    "rotation",
-                    _wandRestRotation + WandTapRadians,
-                    WandTapDownDuration)
-                .SetEase(Tween.EaseType.In)
-                .SetTrans(Tween.TransitionType.Quad);
-            if (!await WaitActive(WandTapDownDuration))
-                return false;
-
-            BeginWandPreludeHold();
-            var recover = Track(rig.WandRoot.CreateTween());
-            recover.TweenProperty(
-                    rig.WandRoot,
-                    "rotation",
-                    _wandRestRotation,
-                    WandTapRecoverDuration)
-                .SetEase(Tween.EaseType.Out)
-                .SetTrans(Tween.TransitionType.Back);
-            if (_preludeCardOrigin is { } cardOrigin)
-            {
-                var cardFade = Track(_root.CreateTween());
-                cardFade.TweenProperty(cardOrigin, "modulate:a", 0f, CardFadeDuration)
-                    .SetEase(Tween.EaseType.InOut)
-                    .SetTrans(Tween.TransitionType.Sine);
-            }
-
-            // The wand-card contact releases the card-specific effect. This session
-            // retires only its card and lines; the room presenter owns the circle.
-            TaskHelper.RunSafely(RetireWandPrelude(WandTapRecoverDuration));
-            return IsActive();
-        }
-        catch (Exception exception)
-        {
-            MainFile.Logger.Error($"Cel VFX wand prelude failed for {card.Id}: {exception}");
-            Dispose();
-            return false;
-        }
-    }
-
-    private async Task<bool> PlayStandardPrelude(CardModel card, NCreature casterNode)
+    private async Task<bool> PlayStandardPrelude(CardModel card)
     {
         if (!TryFindNativePlayedCard(card, out var nativeCard))
             return IsActive();
 
         try
         {
-            CreateStandardPrelude(card, casterNode, nativeCard);
+            CreateStandardPrelude(nativeCard);
             TaskHelper.RunSafely(TrackWandPreludePosition());
             if (!await WaitActive(StandardPreludeLeadDuration))
                 return false;
 
             BeginWandPreludeHold();
-            TaskHelper.RunSafely(RetireWandPrelude(0f));
+            TaskHelper.RunSafely(RetireWandPrelude());
             return IsActive();
         }
         catch (Exception exception)
@@ -556,36 +469,7 @@ internal abstract class CelVfxSession : IDisposable
         material.SetShaderParameter("held_at", heldAt);
     }
 
-    private void CreateWandPrelude(CardModel card, NCreature casterNode, SakuraChibiWandRig rig)
-    {
-        CreatePreludeLayers();
-
-        var cardOrigin = new Control
-        {
-            Name = "SakuraCelWandPreludeCard",
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            ZAsRelative = false,
-            ZIndex = PreludeZIndex
-        };
-        _room.CombatVfxContainer.AddChildSafely(cardOrigin);
-        _preludeCardOrigin = cardOrigin;
-
-        var preview = NCard.Create(card)
-            ?? throw new InvalidOperationException($"Could not create Cel VFX card preview for {card.Id}.");
-        _preludeCard = preview;
-        cardOrigin.AddChildSafely(preview);
-        preview.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
-        preview.Position = Vector2.Zero;
-        preview.Scale = Vector2.One * CardScale;
-        preview.MouseFilter = Control.MouseFilterEnum.Ignore;
-        _wandRig = rig;
-        _wandRestRotation = rig.WandRoot.Rotation;
-        _cardRise = 0f;
-        UpdateWandPreludePosition();
-        SuppressNativePlayedCard(card);
-    }
-
-    private void CreateStandardPrelude(CardModel card, NCreature casterNode, NCard nativeCard)
+    private void CreateStandardPrelude(NCard nativeCard)
     {
         CreatePreludeLayers();
         _standardPreludeCard = nativeCard;
@@ -619,22 +503,6 @@ internal abstract class CelVfxSession : IDisposable
         _preludeLineMaterial.SetShaderParameter("speed_lines_enabled", 1f);
     }
 
-    private void SuppressNativePlayedCard(CardModel card)
-    {
-        if (_suppressedNativeCard is not null
-            || !TryFindNativePlayedCard(card, out var nativeCard)
-            || ReferenceEquals(nativeCard, _preludeCard)
-            || !GodotObject.IsInstanceValid(nativeCard))
-        {
-            return;
-        }
-
-        _suppressedNativeCard = nativeCard;
-        _suppressedNativeCardModel = card;
-        _suppressedNativeCardWasVisible = nativeCard.Visible;
-        nativeCard.Visible = false;
-    }
-
     private bool TryFindNativePlayedCard(CardModel card, out NCard nativeCard)
     {
         nativeCard = null!;
@@ -650,22 +518,6 @@ internal abstract class CelVfxSession : IDisposable
         return true;
     }
 
-    private void RestoreNativePlayedCard()
-    {
-        var nativeCard = _suppressedNativeCard;
-        var cardModel = _suppressedNativeCardModel;
-        var wasVisible = _suppressedNativeCardWasVisible;
-        _suppressedNativeCard = null;
-        _suppressedNativeCardModel = null;
-
-        if (nativeCard is not null
-            && GodotObject.IsInstanceValid(nativeCard)
-            && ReferenceEquals(nativeCard.Model, cardModel))
-        {
-            nativeCard.Visible = wasVisible;
-        }
-    }
-
     private void BeginWandPreludeHold()
     {
         if (!IsActive())
@@ -677,14 +529,9 @@ internal abstract class CelVfxSession : IDisposable
         ApplyClockUniforms();
     }
 
-    private async Task RetireWandPrelude(float recoveryDuration)
+    private async Task RetireWandPrelude()
     {
-        if (recoveryDuration > 0f && !await WaitActive(recoveryDuration))
-            return;
-        RestoreWandRig();
-
-        var remainingHold = WandPreludeHoldDuration - recoveryDuration;
-        if (remainingHold > 0f && !await WaitActive(remainingHold))
+        if (!await WaitActive(WandPreludeHoldDuration))
             return;
         ReleaseWandPrelude();
     }
@@ -726,24 +573,6 @@ internal abstract class CelVfxSession : IDisposable
             return;
         }
 
-        if (_wandRig is { } rig
-            && GodotObject.IsInstanceValid(rig.Tip)
-            && _preludeCardOrigin is { } cardOrigin)
-        {
-            var cardHeight = CardDisplaySize(_preludeCard?.Model).Y * CardScale;
-            var tip = rig.Tip.GlobalPosition;
-            var cardCenter = tip
-                + Vector2.Up * cardHeight * 0.5f
-                + Vector2.Down * CardRiseDistance * (1f - _cardRise);
-            cardOrigin.GlobalPosition = cardCenter;
-            // The card remains full-face and unmirrored. Only the world-space anchor
-            // follows the flipped chibi rig, so left/right standee orientation cannot
-            // invert the card art or inherit the rig's 0.28 scale.
-            cardOrigin.Scale = Vector2.One;
-            lines.GlobalPosition = cardCenter - lines.Size * 0.5f;
-            return;
-        }
-
         if (_standardPreludeCard is { } nativeCard
             && GodotObject.IsInstanceValid(nativeCard)
             && nativeCard.IsInsideTree())
@@ -754,66 +583,10 @@ internal abstract class CelVfxSession : IDisposable
         }
     }
 
-    private static Vector2 CardDisplaySize(CardModel? card)
-    {
-        if (card is not null
-            && SakuraCardCatalog.TryGetMetadata(card, out var metadata)
-            && metadata.Era == SourceEraClass.Clear)
-        {
-            return SakuraCardGeometry.ClearLayoutSize;
-        }
-        return SakuraCardGeometry.ClassicLayoutSize;
-    }
-
-    private void PauseMicroAnimation(SakuraChibiWandRig rig)
-    {
-        var player = rig.MicroAnimationPlayer;
-        _resumeMicroAnimation = player.IsPlaying();
-        _pausedMicroAnimation = player.CurrentAnimation;
-        _pausedMicroPosition = player.CurrentAnimationPosition;
-        if (_resumeMicroAnimation)
-            player.Pause();
-    }
-
-    private void RestoreWandRig()
-    {
-        if (_wandRig is not { } rig)
-            return;
-
-        if (GodotObject.IsInstanceValid(rig.WandRoot))
-            rig.WandRoot.Rotation = _wandRestRotation;
-        if (_resumeMicroAnimation
-            && GodotObject.IsInstanceValid(rig.MicroAnimationPlayer)
-            && _pausedMicroAnimation is { } pausedAnimation
-            && !pausedAnimation.IsEmpty)
-        {
-            rig.MicroAnimationPlayer.Play(pausedAnimation);
-            rig.MicroAnimationPlayer.Seek(_pausedMicroPosition, update: true);
-        }
-        _wandRig = null;
-        _resumeMicroAnimation = false;
-    }
-
     private void ReleaseWandPrelude()
     {
-        RestoreWandRig();
         _preludeLineMaterial = null;
-
-        if (_preludeCard is { } card && GodotObject.IsInstanceValid(card))
-        {
-            card.GetParent()?.RemoveChild(card);
-            NodePool.Free(card);
-        }
-        _preludeCard = null;
         _standardPreludeCard = null;
-
-        if (_preludeCardOrigin is { } origin
-            && GodotObject.IsInstanceValid(origin)
-            && !origin.IsQueuedForDeletion())
-        {
-            origin.QueueFreeSafely();
-        }
-        _preludeCardOrigin = null;
 
         if (_preludeLines is { } lines
             && GodotObject.IsInstanceValid(lines)
@@ -822,7 +595,6 @@ internal abstract class CelVfxSession : IDisposable
             lines.QueueFreeSafely();
         }
         _preludeLines = null;
-
     }
 
     private void OnCombatEnded(CombatRoom _) => Dispose();
@@ -851,7 +623,6 @@ internal abstract class CelVfxSession : IDisposable
         }
         _tweens.Clear();
         ReleaseWandPrelude();
-        RestoreNativePlayedCard();
         if (queueFree
             && GodotObject.IsInstanceValid(_root)
             && !_root.IsQueuedForDeletion())

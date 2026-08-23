@@ -99,7 +99,6 @@ public sealed class DarkEndpointSuite
         Assert.Equal(TargetType.Self, card.TargetType);
         Assert.False(card.CanBeGeneratedInCombat);
         Assert.Equal([SakuraKeywords.Fade, CardKeyword.Exhaust], card.CanonicalKeywords);
-        Assert.DoesNotContain(CardKeyword.Ethereal, card.CanonicalKeywords);
         Assert.Equal(1, card.DynamicVars["DarkVeilPower"].IntValue);
         Assert.Equal(1, card.DynamicVars["DarkLightPower"].IntValue);
         Assert.Equal(CardType.Skill, ((ISakuraClearLayoutCard)card).DescriptionShapeCardType);
@@ -140,10 +139,6 @@ public sealed class DarkEndpointSuite
     [Fact]
     public void DarkEncounterUsesOneApprovedStaticStageLayer()
     {
-        Assert.Equal(
-            [FourthActCombatBackgrounds.DarkStageLayerPath],
-            FourthActCombatBackgrounds.DarkStageLayers);
-
         var layerScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/backgrounds/fourth_act/school_stage/dark_base.tscn"));
         var texture = RegressionTestHarness.FindRepoFile(

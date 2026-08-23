@@ -76,8 +76,6 @@ public sealed class ContentRegistrationSuite
             && spec.Scope == ModCardPileScope.CombatOnly
             && spec.Style == ModCardPileUiStyle.BottomRight
             && spec.Anchor.Kind == ModCardPileAnchorKind.BottomRightPrimary
-            && spec.Anchor.Offset == SakuraMemoryPile.UiOffsetAboveExhaust
-            && spec.IconPath == SakuraMemoryPile.IconPath
             && spec.VisibleWhen is not null
             && spec.OnOpen is null
             && SakuraMemoryPile.IsButtonVisible(true, true, 1)

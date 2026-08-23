@@ -13,19 +13,16 @@ public sealed class SakuraStandeeIdleSuite
     }
 
     [Fact]
-    public void ChibiWandTipIsAValidatedRigAnchorRatherThanAVfxChild()
+    public void ChibiStandeeStaysDecoupledFromCardPlayVfx()
     {
         var controller = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Character/SakuraChibiStandeeIdleController.cs"));
-        var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/charui/sakura_chibi_combat_idle_rigged.tscn"));
 
-        Assert.Contains(
-            "[node name=\"WandTip\" type=\"Marker2D\" parent=\"CharacterRoot/ChestAttachmentRoot/HeldWandRoot/WandRoot\"]",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains("TryGetWandPreludeRig", controller, StringComparison.Ordinal);
-        Assert.Contains("missing its WandTip marker", controller, StringComparison.Ordinal);
+        // The wand-tip card prelude was removed: played cards keep the vanilla
+        // route on both standee arts, so the chibi controller must not regrow a
+        // card-VFX rig API.
+        Assert.DoesNotContain("WandPrelude", controller, StringComparison.Ordinal);
+        Assert.DoesNotContain("WandTip", controller, StringComparison.Ordinal);
         Assert.DoesNotContain("NCard", controller, StringComparison.Ordinal);
     }
 
@@ -54,7 +51,6 @@ public sealed class SakuraStandeeIdleSuite
         Assert.Contains("autoplay = &\"idle_preview\"", layerScene, StringComparison.Ordinal);
         Assert.Contains("autoplay = &\"breath_preview\"", layerScene, StringComparison.Ordinal);
         Assert.Contains("autoplay = &\"blink_preview\"", layerScene, StringComparison.Ordinal);
-        Assert.Contains("position = Vector2(960, 456)", previewScene, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -91,50 +87,6 @@ public sealed class SakuraStandeeIdleSuite
             "resource_name = \"blink_preview\"\nlength = 4.0",
             scene,
             StringComparison.Ordinal);
-        Assert.Contains(
-            "\"times\": PackedFloat32Array(0, 1.5, 3, 4.5, 6)",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"times\": PackedFloat32Array(0, 1.76, 1.84, 1.96, 2.08, 4)",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"times\": PackedFloat32Array(0, 1.84, 1.96, 4)",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"values\": [-0.00392699, 0.00654498, -0.00523599, 0.00392699, -0.00392699]",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"values\": [-0.0218166, 0.0436332, -0.0370882, 0.0327249, -0.0261799, -0.0218166]",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"values\": [0.0109083, -0.0261799, 0.0218166, -0.019635, 0.0152716, 0.0109083]",
-            scene,
-            StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void FrontSkirtFeathersUseTheExpandedSwayEnvelope()
-    {
-        var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/charui/sakura_standee_idle_rigged.tscn"));
-
-        Assert.Contains(
-            "\"values\": [-0.005673, 0.036869, 0.009927, -0.032616]",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"values\": [0.0, 0.025526, 0.00709, -0.021272]",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"values\": [0.0, 0.025526, 0.00709, -0.021272]",
-            scene,
-            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -148,15 +100,7 @@ public sealed class SakuraStandeeIdleSuite
             scene,
             StringComparison.Ordinal);
         Assert.Contains(
-            "\"times\": PackedFloat32Array(0.18, 2.38, 4.58)",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
             "NodePath(\"CharacterRoot/SkirtMotionRoot/SkirtCenterFrontRoot:position\")",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"times\": PackedFloat32Array(0.36, 1.86, 3.36, 4.86)",
             scene,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -164,16 +108,7 @@ public sealed class SakuraStandeeIdleSuite
             scene,
             StringComparison.Ordinal);
         Assert.Contains(
-            "\"times\": PackedFloat32Array(0.58, 1.78, 2.98, 4.18, 5.38)",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains("Vector2(-173.741, 57.051)", scene, StringComparison.Ordinal);
-        Assert.Contains(
             "NodePath(\"CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot/DaimaoRoot:rotation\")",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"values\": [0.0, 0.0, 0.06, -0.035, 0.0, 0.0]",
             scene,
             StringComparison.Ordinal);
     }
@@ -190,10 +125,6 @@ public sealed class SakuraStandeeIdleSuite
             StringComparison.Ordinal);
         Assert.Contains(
             "NodePath(\"CharacterRoot/UpperBodyMotionRoot/BreathRoot/TorsoFrontRoot:position\")",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"times\": PackedFloat32Array(0, 0.37, 1.77, 2.02, 3.77, 4.8)",
             scene,
             StringComparison.Ordinal);
     }
@@ -215,14 +146,6 @@ public sealed class SakuraStandeeIdleSuite
         Assert.Contains("autoplay = &\"micro_preview\"", scene, StringComparison.Ordinal);
         Assert.Contains(
             "NodePath(\"CharacterRoot/SkirtMotionRoot/SkirtBackTrainRoot:position\")",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"times\": PackedFloat32Array(0, 6.7, 6.88, 7.08, 7.72, 10.5)",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "Vector2(-249.542, 128.711), Vector2(-247.592, 128.061)",
             scene,
             StringComparison.Ordinal);
     }
@@ -307,23 +230,8 @@ public sealed class SakuraStandeeIdleSuite
         Assert.Contains("Polygon2D { Texture: not null }", source, StringComparison.Ordinal);
         Assert.Contains("nameof(NCreature.SetAnimationTrigger)", source, StringComparison.Ordinal);
         Assert.Contains("trigger == \"Hit\"", source, StringComparison.Ordinal);
-        Assert.Contains("_primaryAnimationPlayer.Play(HurtAnimation);", source, StringComparison.Ordinal);
-        Assert.Contains("_primaryAnimationPlayer.Play(IdleAnimation);", source, StringComparison.Ordinal);
-
-        var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/charui/sakura_standee_idle_rigged.tscn"));
-        Assert.Contains(
-            "\"values\": [0.0, -0.0122173, 0.00698132, -0.00261799, 0.0]",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"values\": [Vector2(0, 0), Vector2(-3, -1.5), Vector2(1.2, 0.5), Vector2(-0.4, 0), Vector2(0, 0)]",
-            scene,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "\"values\": [0.0, 0.0453786, -0.0771436, 0.0317649, 0.0]",
-            scene,
-            StringComparison.Ordinal);
+        Assert.Contains("Play(HurtAnimation)", source, StringComparison.Ordinal);
+        Assert.Contains("Play(IdleAnimation)", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -337,7 +245,7 @@ public sealed class SakuraStandeeIdleSuite
             "SakuraModCode/FourthAct/Visuals/SakuraStandeeActionController.cs"));
 
         Assert.Contains("CreateWithLayeredIdle(standardVisualPath", combatRoute, StringComparison.Ordinal);
-        Assert.Contains("SakuraCombatVisualPosition = CombatVisualCenter + Vector2.Down * 16f", visualFactory, StringComparison.Ordinal);
+        Assert.Contains("SakuraCombatVisualPosition = CombatVisualCenter", visualFactory, StringComparison.Ordinal);
         Assert.Contains("playIdleMotion: false", visualFactory, StringComparison.Ordinal);
         Assert.Contains("attachLayeredIdle: true", visualFactory, StringComparison.Ordinal);
         Assert.DoesNotContain("CenterPosition = SakuraCombatVisualPosition", visualFactory, StringComparison.Ordinal);

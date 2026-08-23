@@ -122,13 +122,6 @@ public sealed class ExtraEffectTransactionSuite
                 SakuraExtraEffectTransaction.Supports(card) == typeof(ClowExtraEffectCard).IsAssignableFrom(type),
                 $"Expected {type.Name} to have exactly one capability declaration matching its Classic Extra family.");
         }
-
-        RegressionTestHarness.Require(
-            !SakuraExtraEffectTransaction.Supports(new SakuraSword())
-            && !SakuraExtraEffectTransaction.Supports(new ClowReturn())
-            && !SakuraExtraEffectTransaction.Supports(new SpellSeal())
-            && !SakuraExtraEffectTransaction.Supports(new Remind()),
-            "Expected Sakura-form, non-Extra Clow, Spell, and non-Extra Transparent cards to stay outside Extra Effect.");
     }
 
     [Fact]

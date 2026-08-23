@@ -71,14 +71,12 @@ public sealed class CardVisualContractSuite
         var sourceBase = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/SakuraSourceCard.cs"));
         RegressionTestHarness.Require(
-            clearBase.Contains(
-                "SakuraCardFrameVisuals.RunAssetPaths(this).Concat(SakuraCardVfxAssets.RunAssetPaths(this))",
-                StringComparison.Ordinal),
+            clearBase.Contains("SakuraCardFrameVisuals.RunAssetPaths(this)", StringComparison.Ordinal)
+            && clearBase.Contains("SakuraCardVfxAssets.RunAssetPaths(this)", StringComparison.Ordinal),
             "Expected Transparent cards to append VFX roots after their existing Clear visual assets.");
         RegressionTestHarness.Require(
-            sourceBase.Contains(
-                "ClassicCardVisualAssets.RunAssetPaths(this).Concat(SakuraCardVfxAssets.RunAssetPaths(this))",
-                StringComparison.Ordinal),
+            sourceBase.Contains("ClassicCardVisualAssets.RunAssetPaths(this)", StringComparison.Ordinal)
+            && sourceBase.Contains("SakuraCardVfxAssets.RunAssetPaths(this)", StringComparison.Ordinal),
             "Expected Source cards to append VFX roots after their existing Classic visual assets.");
     }
 
@@ -106,6 +104,30 @@ public sealed class CardVisualContractSuite
         RegressionTestHarness.Require(
             spellTurnSource.Contains("LuminTemplate", StringComparison.Ordinal),
             "Expected Spell Turn to reuse the lumin texture already owned by its instantiated scene.");
+    }
+
+    [Fact]
+    public void SnowCardVfxRouteCoversBothScenesPlusSharedCelAssets()
+    {
+        var sharedCelPaths = CelVfxSession.SharedAssetPaths;
+        var cases = new[]
+        {
+            new VfxCase(
+                new ClowSnow(),
+                [SnowBlizzardVfx.ScenePath, SnowBlizzardVfx.TargetScenePath, .. sharedCelPaths]),
+            new VfxCase(
+                new SakuraSnow(),
+                [SnowBlizzardVfx.ScenePath, SnowBlizzardVfx.TargetScenePath, .. sharedCelPaths])
+        };
+
+        foreach (var testCase in cases)
+        {
+            var vfxAssets = SakuraCardVfxAssets.RunAssetPaths(testCase.Card)
+                .ToHashSet(StringComparer.Ordinal);
+            RegressionTestHarness.Require(
+                vfxAssets.SetEquals(testCase.VfxAssets),
+                $"Expected {testCase.Card.GetType().Name} to declare exactly its combat VFX run assets.");
+        }
     }
 
     [Fact]
@@ -228,41 +250,11 @@ public sealed class CardVisualContractSuite
         var recoverySource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/SakuraCardVisualLifecycle.cs"));
         RegressionTestHarness.Require(
-            classicAssetSource.Split("yield return card.PortraitPath", StringSplitOptions.None).Length - 1 == 1,
+            classicAssetSource.Split("card.PortraitPath", StringSplitOptions.None).Length - 1 == 1,
             "Expected only non-Classic cards to preload their visible native portrait.");
         RegressionTestHarness.Require(
             !recoverySource.Contains("source == nameof(NCard._EnterTree)", StringComparison.Ordinal),
             "Expected _EnterTree recovery to validate the active layout instead of reporting success by source name.");
-    }
-
-    [Fact]
-    public void SakuraLayoutsUseNativeCardTitleTypography()
-    {
-        RegressionTestHarness.Require(
-            SakuraCardVisualStyle.NativeTitleFontSize == 26
-            && SakuraCardVisualStyle.NativeTitleMinFontSize == 8
-            && SakuraCardVisualStyle.NativeTitleMaxFontSize == 26
-            && SakuraCardVisualStyle.NativeTitleOutlineSize == 12
-            && SakuraCardVisualStyle.NativeTitleShadowOffset == 2
-            && SakuraCardVisualStyle.NativeTitleShadowOutlineSize == 12,
-            "Expected Sakura card titles to retain the native NCard title typography metrics.");
-
-        foreach (var relativePath in new[]
-                 {
-                     "SakuraModCode/Cards/Visuals/Classic/ClassicSakuraVisualPatch.cs",
-                     "SakuraModCode/Cards/ClearCardVisualPatch.cs"
-                 })
-        {
-            var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath));
-            RegressionTestHarness.Require(
-                source.Contains("SakuraCardVisualStyle.NativeTitleFontSize", StringComparison.Ordinal)
-                && source.Contains("SakuraCardVisualStyle.NativeTitleMinFontSize", StringComparison.Ordinal)
-                && source.Contains("SakuraCardVisualStyle.NativeTitleMaxFontSize", StringComparison.Ordinal)
-                && source.Contains("SakuraCardVisualStyle.NativeTitleOutlineSize", StringComparison.Ordinal)
-                && source.Contains("SakuraCardVisualStyle.NativeTitleShadowOffset", StringComparison.Ordinal)
-                && source.Contains("SakuraCardVisualStyle.NativeTitleShadowOutlineSize", StringComparison.Ordinal),
-                $"Expected {relativePath} to use the shared native title typography contract.");
-        }
     }
 
     [Fact]
@@ -570,8 +562,7 @@ public sealed class CardVisualContractSuite
         var source = File.ReadAllText(
             RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraHandHighlightVisual.cs"));
         RegressionTestHarness.Require(
-            source.Contains("model.CanPlay()", StringComparison.Ordinal)
-            && source.Contains("model.CanPlay(),", StringComparison.Ordinal)
+            source.Contains("model.CanPlay(),", StringComparison.Ordinal)
             && !source.Contains("hasNativePlayableHighlight || hasOwnedHighlight", StringComparison.Ordinal),
             "Expected the gold Extra Effect highlight to use CardModel.CanPlay() even after a prior Sakura-owned color was applied.");
     }

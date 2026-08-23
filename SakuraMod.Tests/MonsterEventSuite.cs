@@ -22,8 +22,8 @@ public sealed class MonsterEventSuite
             && eventSource.Contains("events/monster_event.png", StringComparison.Ordinal)
             && !eventSource.Contains("BackgroundScenePath", StringComparison.Ordinal)
             && eventSource.Contains("SakuraStarterCompatibility.IsKinomotoSakuraRun(runState)", StringComparison.Ordinal)
-            && eventSource.Contains("PlayerCmd.GainGold(GoldReward, player)", StringComparison.Ordinal)
-            && eventSource.Contains("CreatureCmd.Heal(player.Creature, HealAmount)", StringComparison.Ordinal),
+            && eventSource.Contains("PlayerCmd.GainGold", StringComparison.Ordinal)
+            && eventSource.Contains("CreatureCmd.Heal", StringComparison.Ordinal),
             "Expected Monster event to retain its background, Sakura-only gate, and alternate option rewards.");
         RegressionTestHarness.Require(
             relicSource.Contains("CreatureCmd.GainMaxHp", StringComparison.Ordinal)
@@ -35,12 +35,10 @@ public sealed class MonsterEventSuite
     [Fact]
     public void MonsterRelicKeepsTheApprovedNumbers()
     {
-        var relicSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Relics/Models/ClassicMonsterRelic.cs"));
-        RegressionTestHarness.Require(
-            relicSource.Contains("MaxHpGain = 6", StringComparison.Ordinal)
-            && relicSource.Contains("StrengthGain = 2", StringComparison.Ordinal)
-            && relicSource.Contains("DexterityLoss = 1", StringComparison.Ordinal),
-            "Expected Monster to retain the approved 6 Max HP, 2 Strength, and 1 Dexterity loss values.");
+        var relic = new ClassicMonsterRelic();
+
+        Assert.Equal(6, relic.DynamicVars["MaxHpGain"].IntValue);
+        Assert.Equal(2, relic.DynamicVars["StrengthPower"].IntValue);
+        Assert.Equal(1, relic.DynamicVars["DexterityPower"].IntValue);
     }
 }

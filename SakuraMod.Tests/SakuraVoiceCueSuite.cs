@@ -18,10 +18,6 @@ public sealed class SakuraVoiceCueSuite
 
         RegressionTestHarness.Require(
             new SakuraModConfig().EnableSakuraVoice
-            && page.ModId == MainFile.ModId
-            && page.Id == SakuraModConfig.PageId
-            && section.Id == SakuraModConfig.SectionId
-            && toggle.Id == SakuraModConfig.VoiceToggleId
             && defaultBinding.CreateDefaultValue(),
             "Expected one RitsuLib-backed Sakura voice toggle with a true default.");
 

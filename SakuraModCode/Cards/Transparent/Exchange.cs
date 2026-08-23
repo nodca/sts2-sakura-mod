@@ -90,8 +90,8 @@ public class Exchange() : TransparentExtraEffectCard(0, CardType.Skill, CardRari
     {
         var firstPile = PileFor(firstKind);
         var secondPile = PileFor(secondKind);
-        var firstCards = firstPile.Cards.ToList();
-        var secondCards = secondPile.Cards.ToList();
+        var firstCards = firstPile.Cards.Where(ExchangeRules.ParticipatesInPileExchange).ToList();
+        var secondCards = secondPile.Cards.Where(ExchangeRules.ParticipatesInPileExchange).ToList();
         PileExchangeVfx.Play(
             Owner,
             firstPile.Type,
@@ -130,4 +130,12 @@ public class Exchange() : TransparentExtraEffectCard(0, CardType.Skill, CardRari
         };
 
     protected override void OnUpgrade() => RemoveKeywordIfPresent(CardKeyword.Exhaust);
+}
+
+internal static class ExchangeRules
+{
+    // A pile swap is a Clear Card recovery path, so Spell Turn must stay in
+    // its pile instead of re-entering circulation through Draw or Discard.
+    public static bool ParticipatesInPileExchange(CardModel card) =>
+        SakuraSourceCardRules.CanBeTargetedByClearCardEffects(card);
 }

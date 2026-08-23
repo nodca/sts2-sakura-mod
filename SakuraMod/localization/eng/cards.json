@@ -360,7 +360,7 @@
   "SAKURAMOD-COMPASS.selectionPrompt": "Choose a Clow card.",
   "SAKURA_MOD_CARD_SPELL_TURN.title": "Turn",
   "SAKURA_MOD_CARD_SPELL_TURN.selectionPrompt": "Choose a Clow card to turn into Sakura.",
-  "SAKURA_MOD_CARD_SPELL_TURN.description": "[gold]Spell[/gold].\nChoose an eligible [gold]Clow Card[/gold] in your hand. Remove its deck card and put the matching [gold]Sakura Card[/gold] into your deck and hand.",
+  "SAKURA_MOD_CARD_SPELL_TURN.description": "[gold]Spell[/gold] [gold]Purge[/gold].\nChoose an eligible [gold]Clow Card[/gold] in your hand. Remove its deck card and put the matching [gold]Sakura Card[/gold] into your deck and hand.",
   "SAKURA_MOD_CARD_SPELL_EMPTY_SPELL.title": "Empty Spell",
   "SAKURA_MOD_CARD_SPELL_EMPTY_SPELL.selectionPrompt": "Choose a spell to write.",
   "SAKURA_MOD_CARD_SPELL_EMPTY_SPELL.description": "[gold]Spell[/gold].\nChoose 1 of Huo Shen, Lei Di, Feng Hua, or Shui Long and put it into your hand.",

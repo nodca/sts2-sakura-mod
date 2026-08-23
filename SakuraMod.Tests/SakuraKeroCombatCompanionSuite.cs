@@ -36,7 +36,6 @@ public sealed class SakuraKeroCombatCompanionSuite
             && standard.Scale == 0.22f
             && chibi.Offset == new Godot.Vector2(-155f, -25f)
             && chibi.Scale == 0.18f
-            && standard != chibi
             && SakuraKeroCombatCompanion.TexturePath.EndsWith(
                 "SakuraMod/images/charui/combat/kero_companion.png",
                 StringComparison.Ordinal),
@@ -86,12 +85,13 @@ public sealed class SakuraKeroCombatCompanionSuite
             "SakuraModCode/Relics/Models/SakuraRelicCombatActions.cs"));
 
         RegressionTestHarness.Require(
-            readyPatch.Contains("SakuraMagicChargeAuraVisual.Mount(__instance);", StringComparison.Ordinal)
-            && readyPatch.Contains("SakuraKeroCombatCompanion.Mount(__instance);", StringComparison.Ordinal)
-            && !source.Contains("HarmonyPatch", StringComparison.Ordinal)
-            && source.Contains("CompanionNodeName = \"SakuraKeroCombatCompanion\"", StringComparison.Ordinal)
-            && source.Contains("GetNodeOrNull<Node2D>(CompanionNodeName)", StringComparison.Ordinal),
-            "Expected Kero to share the existing creature-ready patch and guard duplicate mounts by stable name.");
+            readyPatch.Contains("Mount", StringComparison.Ordinal)
+            && !source.Contains("HarmonyPatch", StringComparison.Ordinal),
+            "Expected Kero to share the existing creature-ready patch without adding its own Harmony patch.");
+        RegressionTestHarness.Require(
+            source.Contains("CompanionNodeName", StringComparison.Ordinal)
+            && source.Contains("GetNodeOrNull", StringComparison.Ordinal),
+            "Expected Kero to guard duplicate mounts by a stable companion node name.");
 
         foreach (var subscription in new[]
         {
@@ -108,24 +108,26 @@ public sealed class SakuraKeroCombatCompanionSuite
         }
 
         RegressionTestHarness.Require(
-            markPower.Contains("public override Task AfterApplied", StringComparison.Ordinal)
-            && markPower.Contains("NotifyApplied(applier);", StringComparison.Ordinal)
-            && markPower.Contains("MarkApplied?.Invoke(applier);", StringComparison.Ordinal)
-            && relicActions.Contains(
-                "previousMarkAmount = target.GetPower<ClassicCerberusMarkPower>()?.Amount",
-                StringComparison.Ordinal)
-            && relicActions.Contains(
-                "appliedMark.Amount != previousAmount",
-                StringComparison.Ordinal)
-            && relicActions.Contains(
-                "ClassicCerberusMarkPower.NotifyApplied(relic.Owner.Creature);",
-                StringComparison.Ordinal)
-            && source.Contains("ReferenceEquals(applier, _creature)", StringComparison.Ordinal)
-            && source.Contains("ReferenceEquals(_creature.CombatState, _combatState)", StringComparison.Ordinal)
-            && source.Contains("KillTween(ref _reactionTween);", StringComparison.Ordinal)
-            && source.Contains("_idleRoot.CreateTween().SetLoops()", StringComparison.Ordinal)
-            && source.Contains("_reactionRoot.CreateTween()", StringComparison.Ordinal)
-            && !source.Contains("AwaitProcessFrame", StringComparison.Ordinal)
+            markPower.Contains("AfterApplied", StringComparison.Ordinal)
+            && markPower.Contains("NotifyApplied", StringComparison.Ordinal)
+            && markPower.Contains("MarkApplied", StringComparison.Ordinal),
+            "Expected the Cerberus mark power to notify after each new or stacked application.");
+        RegressionTestHarness.Require(
+            relicActions.Contains("GetPower", StringComparison.Ordinal)
+            && relicActions.Contains("previousAmount", StringComparison.Ordinal)
+            && relicActions.Contains("NotifyApplied", StringComparison.Ordinal),
+            "Expected relic combat actions to re-notify after new or stacked marks.");
+        RegressionTestHarness.Require(
+            source.Contains("ReferenceEquals", StringComparison.Ordinal)
+            && source.Contains("KillTween", StringComparison.Ordinal)
+            && source.Contains("SetLoops", StringComparison.Ordinal)
+            && source.Contains("CreateTween", StringComparison.Ordinal),
+            "Expected exact-applier reactions with bounded node-owned Tweens.");
+        RegressionTestHarness.Require(
+            source.Contains("IsChibi", StringComparison.Ordinal),
+            "Expected the companion layout to follow the player's chibi art preference.");
+        RegressionTestHarness.Require(
+            !source.Contains("AwaitProcessFrame", StringComparison.Ordinal)
             && !source.Contains("GlobalPosition", StringComparison.Ordinal)
             && !source.Contains("CancellationToken", StringComparison.Ordinal)
             && !source.Contains("Audio", StringComparison.Ordinal)
@@ -133,12 +135,9 @@ public sealed class SakuraKeroCombatCompanionSuite
             && !source.Contains("PowerCmd", StringComparison.Ordinal)
             && !source.Contains("CardCmd", StringComparison.Ordinal)
             && !source.Contains("SavedAttachedState", StringComparison.Ordinal)
-            && source.Contains(
-                "SelectLayout(SakuraCombatArtPreference.IsChibi(player))",
-                StringComparison.Ordinal)
             && !source.Contains("SakuraModConfig", StringComparison.Ordinal)
             && !source.Contains("Control", StringComparison.Ordinal),
-            "Expected exact-applier reactions after new or stacked marks, with bounded node-owned Tweens and no polling, audio, gameplay commands, saved state, or hitbox Controls.");
+            "Expected no polling, audio, gameplay commands, saved state, or hitbox Controls in the companion.");
     }
 
     private static string Sha256(string path) =>

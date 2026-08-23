@@ -3,11 +3,6 @@ using MegaCrit.Sts2.Core.Nodes.Combat;
 
 namespace SakuraMod.SakuraModCode.Character;
 
-internal readonly record struct SakuraChibiWandRig(
-    Marker2D Tip,
-    Node2D WandRoot,
-    AnimationPlayer MicroAnimationPlayer);
-
 internal sealed partial class SakuraChibiStandeeIdleController : Node2D
 {
     internal const string NodeName = "SakuraChibiStandeeIdleController";
@@ -96,23 +91,6 @@ internal sealed partial class SakuraChibiStandeeIdleController : Node2D
     internal float FacingSign =>
         GodotObject.IsInstanceValid(_body) && _body.FlipH ? -1f : 1f;
 
-    internal bool TryGetWandPreludeRig(out SakuraChibiWandRig rig)
-    {
-        var tip = _layers.GetNodeOrNull<Marker2D>(
-            "CharacterRoot/ChestAttachmentRoot/HeldWandRoot/WandRoot/WandTip");
-        var wandRoot = _layers.GetNodeOrNull<Node2D>(
-            "CharacterRoot/ChestAttachmentRoot/HeldWandRoot/WandRoot");
-        var microAnimationPlayer = _layers.GetNodeOrNull<AnimationPlayer>("MicroAnimationPlayer");
-        if (tip is null || wandRoot is null || microAnimationPlayer is null)
-        {
-            rig = default;
-            return false;
-        }
-
-        rig = new SakuraChibiWandRig(tip, wandRoot, microAnimationPlayer);
-        return Visible && IsInsideTree();
-    }
-
     public override void _Process(double delta) => SyncFlip();
 
     public override void _ExitTree()
@@ -169,14 +147,6 @@ internal sealed partial class SakuraChibiStandeeIdleController : Node2D
 
             layers.Free();
             MainFile.Logger.Error($"Sakura chibi rigged idle scene has an invalid animation player at {path}.");
-            return null;
-        }
-
-        if (layers.GetNodeOrNull<Marker2D>(
-                "CharacterRoot/ChestAttachmentRoot/HeldWandRoot/WandRoot/WandTip") is null)
-        {
-            layers.Free();
-            MainFile.Logger.Error("Sakura chibi layered idle scene is missing its WandTip marker.");
             return null;
         }
 

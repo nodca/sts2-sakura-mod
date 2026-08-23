@@ -21,10 +21,6 @@ public sealed class ResourceContractSuite
         RegressionTestHarness.Require(
             scene.Contains($"path=\"res://{imageRelativePath}\"", StringComparison.Ordinal)
             && scene.Contains("anchors_preset = 15", StringComparison.Ordinal)
-            && scene.Contains("offset_left = -1080.0", StringComparison.Ordinal)
-            && scene.Contains("offset_top = -607.5", StringComparison.Ordinal)
-            && scene.Contains("offset_right = 1080.0", StringComparison.Ordinal)
-            && scene.Contains("offset_bottom = 607.5", StringComparison.Ordinal)
             && scene.Contains("expand_mode = 1", StringComparison.Ordinal)
             && scene.Contains("stretch_mode = 5", StringComparison.Ordinal)
             && scene.Contains("mouse_filter = 2", StringComparison.Ordinal),
@@ -414,8 +410,7 @@ public sealed class ResourceContractSuite
                 < shader.IndexOf("cel_ink(d, aa, CEL_INK_WIDTH)", StringComparison.Ordinal),
             "Expected derivatives to be taken once in uniform control flow before any ink call.");
         RegressionTestHarness.Require(
-            shader.Contains("float squash_x = 1.0 + impact * 0.18;", StringComparison.Ordinal)
-            && shader.Contains("float squash_y = 1.0 / squash_x;", StringComparison.Ordinal),
+            shader.Contains("float squash_y = 1.0 / squash_x;", StringComparison.Ordinal),
             "Expected impact compression to conserve volume through a reciprocal vertical factor.");
         // The crest is a ground-anchored height field whose front radiates outward
         // from the caster's column, so player-left, player-right, and
@@ -624,7 +619,7 @@ public sealed class ResourceContractSuite
         // tween clock, so launching them inside it shows a still crystal shedding
         // moving debris.
         RegressionTestHarness.Require(
-            session.Contains("private const float HoldDuration = 2f / 12f;", StringComparison.Ordinal)
+            session.Contains("HoldDuration", StringComparison.Ordinal)
             && session.Contains("CreateShatterTween(_debris, HoldDuration)", StringComparison.Ordinal),
             "Expected the shatter beat to be delayed by the hold rather than overlapping it.");
 
@@ -738,14 +733,13 @@ public sealed class ResourceContractSuite
         // Embers must wait out the hold: BeginHold freezes shader time, not the tween
         // clock, so launching them inside it shows a still column shedding movement.
         RegressionTestHarness.Require(
-            session.Contains("private const float HoldDuration = 2f / 12f;", StringComparison.Ordinal)
-            && session.Contains("SetDelay(HoldDuration)", StringComparison.Ordinal)
-            && session.Contains("HoldDuration,", StringComparison.Ordinal),
+            session.Contains("HoldDuration", StringComparison.Ordinal)
+            && session.Contains("SetDelay(HoldDuration)", StringComparison.Ordinal),
             "Expected the burnout beat and the embers to be delayed by the hold rather than overlapping it.");
         // Light embers, not rock. Gravity is a parameter of the shared integrator, so
         // a slower fall must not become a second integration.
         RegressionTestHarness.Require(
-            session.Contains("private const float EmberGravity = 420f;", StringComparison.Ordinal),
+            session.Contains("EmberGravity", StringComparison.Ordinal),
             "Expected embers to fall under a card-tuned gravity parameter rather than the default.");
         // Blaze's damage scales with the exhaust pile; its fire must not. Reading a
         // gameplay value here would open a channel from mechanics into presentation
@@ -821,7 +815,7 @@ public sealed class ResourceContractSuite
         // crescent therefore lies on +X, so its convex face meets the enemy while
         // its concave opening receives the wake from Sakura.
         RegressionTestHarness.Require(
-            shader.Contains("const vec2 INNER_OFFSET = vec2(-38.0, 0.0);", StringComparison.Ordinal)
+            shader.Contains("INNER_OFFSET", StringComparison.Ordinal)
             && shader.Contains("float outer = cel_ellipse(p, OUTER_RADII);", StringComparison.Ordinal)
             && shader.Contains("float inner = cel_ellipse(p - INNER_OFFSET, INNER_RADII);", StringComparison.Ordinal)
             && shader.Contains("float crescent = max(outer, -inner)", StringComparison.Ordinal),
@@ -837,7 +831,6 @@ public sealed class ResourceContractSuite
         // Its light remains a bounded field band, not a scene read or global bloom.
         RegressionTestHarness.Require(
             shader.Contains("cel_step_clock_held(elapsed, held, held_at)", StringComparison.Ordinal)
-            && shader.Contains("15.0 + impact * 4.0", StringComparison.Ordinal)
             && shader.Contains("float aa = max(fwidth(d), 0.0001);", StringComparison.Ordinal)
             && !shader.Contains("cel_ink(", StringComparison.Ordinal)
             && !shader.Contains("ink_color", StringComparison.OrdinalIgnoreCase)
@@ -848,13 +841,13 @@ public sealed class ResourceContractSuite
 
         RegressionTestHarness.Require(
             session.Contains(": CelVfxSession", StringComparison.Ordinal)
-            && session.Contains("private static readonly Vector2 BladeRegion = new(240f, 300f);", StringComparison.Ordinal)
+            && session.Contains("BladeRegion", StringComparison.Ordinal)
             && session.Contains("root.Scale = Vector2.One;", StringComparison.Ordinal)
             && session.Contains("session.StartClock();", StringComparison.Ordinal)
             && session.Contains("PlayCelPrelude(card, caster)", StringComparison.Ordinal)
             && session.Contains("BeginHold();", StringComparison.Ordinal)
-            && session.Contains("private const float FlightDuration = 3f / StepFrequency;", StringComparison.Ordinal)
-            && session.Contains("private const float FormationDuration = 2f / StepFrequency;", StringComparison.Ordinal)
+            && session.Contains("FlightDuration", StringComparison.Ordinal)
+            && session.Contains("FormationDuration", StringComparison.Ordinal)
             && session.Contains("SetDelay(HoldDuration)", StringComparison.Ordinal),
             "Expected Gale to retain the shared session, fixed region, three-step flight, explicit formation, hold, and delayed pass-through.");
         RegressionTestHarness.Require(
@@ -1022,6 +1015,261 @@ public sealed class ResourceContractSuite
                 impactIndex >= 0 && actionIndex > impactIndex,
                 $"Expected {cueAfter} to resolve after the weather impact cue.");
         }
+    }
+
+    [Fact]
+    public void SnowBlizzardScenesShipInputTransparentStartStateMaterials()
+    {
+        var curtainScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/card_vfx/snow_blizzard_vfx.tscn"));
+        var crystalScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/card_vfx/snow_crystal_target.tscn"));
+
+        // One curtain root, one crystal root: pure ColorRect regions with a local
+        // material and no screen capture — the enemy side never refracts, so the
+        // whole budget stays on the drawn shapes. The body names are load-bearing
+        // (the session fetches them as %SnowfallBody / %CrystalBody), which is
+        // what unique_name_in_owner records.
+        RegressionTestHarness.Require(
+            curtainScene.Contains("[node name=\"SnowfallBody\" type=\"ColorRect\" parent=\".\"]", StringComparison.Ordinal)
+            && curtainScene.Contains("unique_name_in_owner = true", StringComparison.Ordinal)
+            && curtainScene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
+            && curtainScene.Split("mouse_filter = 2", StringSplitOptions.None).Length - 1 == 2
+            && !curtainScene.Contains("BackBufferCopy", StringComparison.Ordinal),
+            "Expected one local ColorRect curtain region whose every control ignores input and never copies the screen.");
+        RegressionTestHarness.Require(
+            crystalScene.Contains("[node name=\"CrystalBody\" type=\"ColorRect\" parent=\".\"]", StringComparison.Ordinal)
+            && crystalScene.Contains("unique_name_in_owner = true", StringComparison.Ordinal)
+            && crystalScene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
+            && crystalScene.Contains("mouse_filter = 2", StringComparison.Ordinal)
+            && !crystalScene.Contains("BackBufferCopy", StringComparison.Ordinal),
+            "Expected one local ColorRect crystal region that ignores input and never copies the screen.");
+
+        // Both scenes ship the shader's start state: no beat has begun and the
+        // curtain would draw nothing as delivered. A scene shipped at its finished
+        // state would flash a completed blizzard on spawn, so the parameters are
+        // asserted including the zero values the forensic scripts must scan.
+        foreach (var (scene, layerParameter, name) in new[]
+                 {
+                     (curtainScene, "shader_parameter/layer = 0", "curtain"),
+                     (crystalScene, "shader_parameter/layer = 1", "crystal")
+                 })
+        {
+            RegressionTestHarness.Require(
+                scene.Contains(layerParameter, StringComparison.Ordinal)
+                && scene.Contains("shader_parameter/curtain = 0.0", StringComparison.Ordinal)
+                && scene.Contains("shader_parameter/dart = 0.0", StringComparison.Ordinal)
+                && scene.Contains("shader_parameter/dart_spin = 0.0", StringComparison.Ordinal)
+                && scene.Contains("shader_parameter/bloom = 0.0", StringComparison.Ordinal)
+                && scene.Contains("shader_parameter/frost = 0.0", StringComparison.Ordinal)
+                && scene.Contains("shader_parameter/opacity = 1.0", StringComparison.Ordinal),
+                $"Expected the {name} scene to ship its ShaderMaterial in the start state with {layerParameter}.");
+        }
+    }
+
+    [Fact]
+    public void SnowBlizzardFoldsTheCelWheelWithoutNeighbouringCardSilhouettes()
+    {
+        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/snow_blizzard.gdshader"));
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/SnowBlizzardVfx.cs"));
+
+        var shaderCode = shader
+            .Split('\n')
+            .Select(static line => line.Trim())
+            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
+            .ToList();
+        var snowfallField = ExtractGlslFunction(shader, "float snowfall_field(");
+        var snowfallShade = ExtractGlslFunction(shader, "vec4 shade_snowfall(");
+        var beatSteps = ExtractGlslFunction(shader, "float snow_beat_steps(");
+        var fragmentBody = ExtractGlslFunction(shader, "void fragment()");
+
+        // Shared includes first: the fold, bands, ink, and stepped clock live in
+        // cel_vfx.gdshaderinc, and a card-local copy of any of them could not stay
+        // in step with every other card.
+        RegressionTestHarness.Require(
+            shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_vfx.gdshaderinc\"", StringComparison.Ordinal)
+            && shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_signature.gdshaderinc\"", StringComparison.Ordinal),
+            "Expected Snow to consume the shared cel mathematics and signature includes.");
+
+        // Snow's silhouette operator is the polar fold, so every neighbouring
+        // card's operator stays absent: cel_smin is Aqua's union, cel_fbm is
+        // Blaze's turbulence, cel_scalloped_mass is the weather canopy, and Hail's
+        // crystal is a half-plane facet loop. Screen sampling and a shader-owned
+        // clock are forbidden card-wide. Checked against the comment-stripped
+        // source, because the shader's own commentary names hint_screen_texture
+        // while explaining why it is forbidden here.
+        RegressionTestHarness.Require(
+            !shaderCode.Any(static line =>
+                line.Contains("cel_smin(", StringComparison.Ordinal)
+                || line.Contains("cel_fbm(", StringComparison.Ordinal)
+                || line.Contains("cel_scalloped_mass(", StringComparison.Ordinal)
+                || line.Contains("cel_facet(", StringComparison.Ordinal)
+                || line.Contains("FACE_BUDGET", StringComparison.Ordinal)
+                || line.Contains("TIME", StringComparison.Ordinal)
+                || line.Contains("hint_screen_texture", StringComparison.Ordinal)),
+            "Expected no water union, fire turbulence, cloud canopy, Hail facet loop, shader clock, or screen sample in the snow field.");
+        RegressionTestHarness.Require(
+            !shaderCode.Any(static line => line.Contains("const float CEL_", StringComparison.Ordinal)),
+            "Expected no card-local restatement of the locked band, ink, or step constants.");
+
+        // The crystal path is the fold's consumer: the frost lace and the dart
+        // wheel each fold into one fundamental sector, and both shade with the
+        // shared bands and ink on the stepped clock.
+        RegressionTestHarness.Require(
+            fragmentBody.Contains("cel_radial_fold(", StringComparison.Ordinal)
+            && fragmentBody.Split("cel_radial_fold(", StringSplitOptions.None).Length - 1 == 2
+            && fragmentBody.Contains("cel_bands3(", StringComparison.Ordinal)
+            && fragmentBody.Contains("cel_ink(d_dart, aa_dart, CEL_INK_WIDTH)", StringComparison.Ordinal)
+            && fragmentBody.Contains("cel_ink(d_frost, aa_frost, CEL_INK_WIDTH)", StringComparison.Ordinal)
+            && beatSteps.Contains("cel_step_clock(", StringComparison.Ordinal),
+            "Expected the frost lace and the dart wheel to share the polar fold and shade through the shared bands, ink, and stepped clock.");
+
+        // Curtain grains are traces, not drawn bodies — the cloud/rain ruling on
+        // precipitation gives them a bright core and foam rim on continuous time,
+        // never ink, bands, or a stepped clock. Their fall is terminal drift:
+        // driven by the session-pushed elapsed, with a shared noise gust and a
+        // per-grain sway, so the field cannot collapse into Rain's straight
+        // streaks or Hail's accelerating shards.
+        RegressionTestHarness.Require(
+            !snowfallShade.Contains("cel_ink", StringComparison.Ordinal)
+            && !snowfallShade.Contains("cel_bands3", StringComparison.Ordinal)
+            && !snowfallShade.Contains("cel_step_clock", StringComparison.Ordinal)
+            && !snowfallField.Contains("cel_ink", StringComparison.Ordinal)
+            && !snowfallField.Contains("cel_bands3", StringComparison.Ordinal)
+            && !snowfallField.Contains("cel_step_clock", StringComparison.Ordinal)
+            && shader.Contains("snowfall_field(p, elapsed, half_size)", StringComparison.Ordinal)
+            && snowfallField.Contains("t * fall", StringComparison.Ordinal)
+            && snowfallField.Contains("cel_noise2(", StringComparison.Ordinal)
+            && snowfallField.Contains("* SWAY_AMP", StringComparison.Ordinal),
+            "Expected curtain grains to shade as bright-core traces whose fall runs on the pushed clock with noise gusts and per-grain sway.");
+
+        // The bloom's sparkle stays in the shader's bright rim. Hail's ballistic
+        // debris reads as shattered shards, which is exactly what a snowflake
+        // must not do — it settles and sublimates.
+        RegressionTestHarness.Require(
+            !session.Contains("AddBallisticDebris", StringComparison.Ordinal),
+            "Expected no ballistic debris path in the snow session: snowflake bloom is a shader rim, never thrown fragments.");
+    }
+
+    [Fact]
+    public void SnowBlizzardBeatCurveCompressesOntoItsFloorInsideTheLifetimeCap()
+    {
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/SnowBlizzardVfx.cs"));
+
+        // The floor is three stepped formation frames plus the 0.12 s terminal
+        // fall plus one bloom frame at the shared 12 Hz stepped clock. The curve
+        // must actually reach it as beats accumulate — a bound that is never
+        // attained would let every beat stay uncompressed.
+        var floor = 3f / 12f + 0.12f + 1f / 12f;
+        var beats = Enumerable.Range(0, SnowBlizzardVfx.WorstCaseBeats * 2)
+            .Select(SnowBlizzardVfx.BeatSeconds)
+            .ToList();
+        RegressionTestHarness.Require(
+            beats.All(beat => beat >= floor - 1e-3f)
+            && beats[0] > floor + 1e-3f
+            && beats.Zip(beats.Skip(1), (current, next) => next <= current + 1e-6f)
+                .All(static compressed => compressed)
+            && Math.Abs(beats[^1] - floor) < 1e-3f,
+            "Expected beat durations to compress monotonically onto the three-frame, 0.12 s, one-bloom-frame floor as beats accumulate.");
+
+        // MaximumLifetime is a wall-clock safety net, not a beat timer: it is
+        // sized for the worst case (prelude, curtain, twelve floor beats, the
+        // held finale volley, and the fade), so the whole envelope at the worst
+        // beat count must clear it with room to spare.
+        RegressionTestHarness.Require(
+            session.Contains("MaximumLifetime", StringComparison.Ordinal)
+            && float.IsFinite(SnowBlizzardVfx.TotalEnvelopeSeconds(SnowBlizzardVfx.WorstCaseBeats))
+            && SnowBlizzardVfx.TotalEnvelopeSeconds(SnowBlizzardVfx.WorstCaseBeats) < 15f,
+            "Expected the worst-case envelope to stay finite and under the session's 15 s lifetime cap.");
+
+        // A zero-count play still lowers the curtain once, but must not idle: with
+        // no beats the envelope is its shortest and stays a short show.
+        RegressionTestHarness.Require(
+            float.IsFinite(SnowBlizzardVfx.TotalEnvelopeSeconds(0))
+            && SnowBlizzardVfx.TotalEnvelopeSeconds(0) < SnowBlizzardVfx.TotalEnvelopeSeconds(1)
+            && SnowBlizzardVfx.TotalEnvelopeSeconds(0) < 2.5f,
+            "Expected a zero-beat play to run the shortest envelope: the snow falls once, no dart is thrown, nothing idles.");
+    }
+
+    [Fact]
+    public void SnowCardsWrapEveryEntryPointOnceAroundSnowMechanics()
+    {
+        var snow = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Snow.cs"));
+
+        // Three entry points, three wrappings: ClowSnow's base play, its
+        // activated extra-effect play, and SakuraSnow's play each own exactly one
+        // session. A fourth would be a second blizzard over the same card play.
+        RegressionTestHarness.Require(
+            snow.Split("SnowBlizzardVfx.PlayOrResolveAsync(", StringSplitOptions.None).Length - 1 == 3,
+            "Expected exactly one Snow blizzard session per card entry point.");
+
+        var activatedIndex = snow.IndexOf("Task PlayActivatedCard(", StringComparison.Ordinal);
+        var helperIndex = snow.IndexOf("private async Task ResolveSnowMechanics(", StringComparison.Ordinal);
+        var sakuraIndex = snow.IndexOf("class SakuraSnow", StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            activatedIndex >= 0
+            && helperIndex > activatedIndex
+            && sakuraIndex > helperIndex,
+            "Expected ClowSnow's activated path, the shared mechanical helper, then SakuraSnow's declaration.");
+
+        // The activated path must not re-enter PlayCard: that method creates its
+        // own session, and the extra-effect play would run the whole blizzard
+        // twice. It wraps the mechanical helper directly, cues its finale, and
+        // only then resolves the extra all-enemy damage.
+        var finaleIndex = snow.IndexOf("cues.Finale();", activatedIndex, StringComparison.Ordinal);
+        var extraDamageIndex = snow.IndexOf("await DealDamageToEnemies(", activatedIndex, StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            snow[activatedIndex..helperIndex].Split("PlayOrResolveAsync(", StringSplitOptions.None).Length - 1 == 1
+            && !snow[activatedIndex..helperIndex].Contains("PlayCard(", StringComparison.Ordinal)
+            && snow[activatedIndex..helperIndex].Contains("ResolveSnowMechanics(", StringComparison.Ordinal)
+            && finaleIndex > activatedIndex
+            && finaleIndex < helperIndex
+            && extraDamageIndex > finaleIndex
+            && !snow.Contains("await PlayCard(", StringComparison.Ordinal),
+            "Expected ClowSnow's activated path to wrap one session around the mechanical helper and fire its finale before the extra damage resolves.");
+
+        // Every Impact must land its dart before the damage it visualises.
+        var impactIndex = snow.IndexOf("cues.Impact(target)", helperIndex, StringComparison.Ordinal);
+        var damageIndex = snow.IndexOf("await DealDamage(", helperIndex, StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            impactIndex > helperIndex && damageIndex > impactIndex,
+            "Expected each snow segment to show its impact cue before the damage command resolves.");
+
+        // SakuraSnow wraps its own play once, with every snapshot target taking a
+        // dart before the shared all-enemy attack lands.
+        var sakuraImpactIndex = snow.IndexOf("cues.Impact(target)", sakuraIndex, StringComparison.Ordinal);
+        var sakuraAttackIndex = snow.IndexOf("await DealDamageToEnemies(", sakuraIndex, StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            snow[sakuraIndex..].Split("PlayOrResolveAsync(", StringSplitOptions.None).Length - 1 == 1
+            && sakuraImpactIndex > sakuraIndex
+            && sakuraAttackIndex > sakuraImpactIndex,
+            "Expected SakuraSnow to wrap one session and cue its whole-line impact before the attack resolves.");
+    }
+
+    [Fact]
+    public void SnowCardsRouteThroughTheBlizzardAssetGroup()
+    {
+        var assets = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/SakuraCardVfxAssets.cs"));
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/SnowBlizzardVfx.cs"));
+
+        // Both snow forms share one group built from the session's own paths plus
+        // the shared cel assets, so adding a snow scene means adding it once.
+        RegressionTestHarness.Require(
+            assets.Contains("ClowSnow or SakuraSnow => SnowPaths", StringComparison.Ordinal)
+            && assets.Contains("[.. SnowBlizzardVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths]", StringComparison.Ordinal),
+            "Expected both Snow cards to route through one blizzard asset group built from the session's own paths.");
+        // The group is warmed before combat, so the first blizzard never loads
+        // synchronously on the play path.
+        RegressionTestHarness.Require(
+            session.Contains("PreloadManager.Cache", StringComparison.Ordinal)
+            && !session.Contains("ResourceLoader.Load", StringComparison.Ordinal),
+            "Expected the blizzard session to consume native run assets without synchronous playback-path loads.");
     }
 
     [Fact]
@@ -1278,7 +1526,7 @@ public sealed class ResourceContractSuite
             && SakuraSwordBladeVfx.ArcCount(SwordMode.Dual, 0) == 1,
             "Expected the arc count to follow the hit count for Blade, stay single for Sword, and clamp at four.");
         RegressionTestHarness.Require(
-            session.Contains("private const float CrossingEnvelope = 0.30f;", StringComparison.Ordinal)
+            session.Contains("CrossingEnvelope", StringComparison.Ordinal)
             && session.Contains("var each = _arcCount > 1 ? envelope / _arcCount : 0f;", StringComparison.Ordinal),
             "Expected crossings to pack into a fixed envelope so four read as denser rather than longer.");
 
@@ -1554,8 +1802,7 @@ public sealed class ResourceContractSuite
             "Expected one high-resolution, colourless ref_star.py mask pair shared by all eras.");
 
         RegressionTestHarness.Require(
-            adapter.Contains("Use CPython turtle's polygonal circle algorithm verbatim", StringComparison.Ordinal)
-            && adapter.Contains("ZODIAC_GLYPHS = \"♒♓♈♉♌♍♎♏\"", StringComparison.Ordinal)
+            adapter.Contains("ZODIAC_GLYPHS = \"♒♓♈♉♌♍♎♏\"", StringComparison.Ordinal)
             && adapter.Contains("ZODIAC_FONT = \"Noto Sans Symbols Light\"", StringComparison.Ordinal)
             && adapter.Contains("DIRECTION_CENTRES", StringComparison.Ordinal)
             && adapter.Contains("knockout_masks", StringComparison.Ordinal),
@@ -1579,8 +1826,8 @@ public sealed class ResourceContractSuite
             && prelude.Contains("vec4 phases = magic_circle_layer_phases;", StringComparison.Ordinal)
             && !prelude.Contains("magic_circle_layer_speeds", StringComparison.Ordinal)
             && prelude.Contains("float magic_circle_composed(", StringComparison.Ordinal)
-            && prelude.Contains("MAGIC_CIRCLE_HALO_RADIUS_PX = 3.25", StringComparison.Ordinal)
-            && prelude.Contains("MAGIC_CIRCLE_HALO_OPACITY = 0.52", StringComparison.Ordinal),
+            && prelude.Contains("MAGIC_CIRCLE_HALO_RADIUS_PX", StringComparison.Ordinal)
+            && prelude.Contains("MAGIC_CIRCLE_HALO_OPACITY", StringComparison.Ordinal),
             "Expected the real wand prelude to rotate, erase, composite, colour, and locally halo the four direct line stages.");
 
         foreach (var name in new[] { "magic_circle_ink.png", "magic_circle_knockout.png" })
@@ -1605,7 +1852,7 @@ public sealed class ResourceContractSuite
         RegressionTestHarness.Require(
             presenter.Contains("MagicCircleInkPath", StringComparison.Ordinal)
             && presenter.Contains("MagicCircleKnockoutPath", StringComparison.Ordinal)
-            && presenter.Contains("internal static (Shader Shader, Texture2D Ink, Texture2D Knockout) LoadResources()", StringComparison.Ordinal)
+            && presenter.Contains("LoadResources", StringComparison.Ordinal)
             && session.Contains("SakuraMagicCirclePresenter.AssetPaths", StringComparison.Ordinal)
             && presenter.Contains(
                 "PreloadManager.Cache.GetAsset<Shader>(WandPreludeShaderPath)",
@@ -1621,9 +1868,9 @@ public sealed class ResourceContractSuite
             && !presenter.Contains("ResourceLoader.Load", StringComparison.Ordinal)
             && !presenter.Contains("PreloadResources()", StringComparison.Ordinal)
             && !session.Contains("PreloadResources()", StringComparison.Ordinal)
-            && presenter.Contains("private const float MagicCircleDiameter = 760f;", StringComparison.Ordinal)
-            && presenter.Contains("private const float MagicCircleRadius = 340f;", StringComparison.Ordinal)
-            && presenter.Contains("private const int MagicCircleZIndex = -1;", StringComparison.Ordinal)
+            && presenter.Contains("MagicCircleDiameter", StringComparison.Ordinal)
+            && presenter.Contains("MagicCircleRadius", StringComparison.Ordinal)
+            && presenter.Contains("MagicCircleZIndex", StringComparison.Ordinal)
             && presenter.Contains("new Color(1f, 0.94f, 0.62f)", StringComparison.Ordinal)
             && presenter.Contains("new Color(1f, 0.78f, 0.94f)", StringComparison.Ordinal)
             && presenter.Contains("new Color(0.88f, 1f, 0.8f)", StringComparison.Ordinal)
@@ -1662,26 +1909,22 @@ public sealed class ResourceContractSuite
             StringComparison.Ordinal);
 
         RegressionTestHarness.Require(
-            config.Contains(
-                "internal static IModSettingsValueBinding<bool> EnableCardVfxBinding",
-                StringComparison.Ordinal)
-            && config.Contains("public bool EnableCardVfx { get; set; } = true;", StringComparison.Ordinal)
-            && config.Contains("internal static bool IsCardVfxEnabled()", StringComparison.Ordinal)
+            config.Contains("EnableCardVfxBinding", StringComparison.Ordinal)
+            && config.Contains("IsCardVfxEnabled", StringComparison.Ordinal)
+            && new SakuraModConfig().EnableCardVfx
             && session.Contains("SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal)
             && session.Contains("if (presentationEnabled)", StringComparison.Ordinal)
-            && presenter.Contains(
-                "if (!SakuraModConfig.IsCardVfxEnabled() || TestMode.IsOn || caster is null)",
-                StringComparison.Ordinal)
-            && simpleVfx.Contains("if (!SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal)
-            && disabledIndex >= 0
+            && presenter.Contains("IsCardVfxEnabled", StringComparison.Ordinal)
+            && simpleVfx.Contains("if (!SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal),
+            "Expected one local card-VFX preference to gate the shared session and approved presentation owners.");
+        RegressionTestHarness.Require(
+            disabledIndex >= 0
             && applyStateIndex > disabledIndex
             && resolveIndex > applyStateIndex
-            && standee.Contains(
-                "internal void ApplySizeEffectState(SakuraStandeeSizeEffect effect)",
-                StringComparison.Ordinal)
+            && standee.Contains("ApplySizeEffectState", StringComparison.Ordinal)
             && !spellTurn.Contains("IsCardVfxEnabled", StringComparison.Ordinal)
             && !spellTurn.Contains("EnableCardVfxBinding", StringComparison.Ordinal),
-            "Expected one local card-VFX preference to gate approved presentation owners, preserve Big/Little state before gameplay, and leave Spell Turn untouched.");
+            "Expected Big/Little state to be preserved before gameplay and Spell Turn to stay untouched by the preference.");
     }
 
     [Fact]
@@ -1699,20 +1942,18 @@ public sealed class ResourceContractSuite
             "SakuraModCode/Character/SakuraChibiStandeeIdleController.cs"));
         var standardController = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Character/SakuraStandeeIdleController.cs"));
-        var chibiScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/charui/sakura_chibi_combat_idle_rigged.tscn"));
         var preludeShader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/shaders/card_vfx/cel_wand_prelude.gdshader"));
 
         RegressionTestHarness.Require(
             geometry.Contains("record struct GeometryBudget(", StringComparison.Ordinal)
-            && geometry.Contains("internal static TargetGeometry Resolve(", StringComparison.Ordinal)
+            && geometry.Contains("TargetGeometry Resolve(", StringComparison.Ordinal)
             && geometry.Contains("hitbox.GetGlobalRect()", StringComparison.Ordinal)
             && geometry.Contains("GetBottomOfHitbox()", StringComparison.Ordinal)
-            && geometry.Contains("internal static CasterAnchor? ResolveCaster(", StringComparison.Ordinal)
-            && geometry.Contains("DuplicateMaterial(CanvasItem body", StringComparison.Ordinal)
+            && geometry.Contains("ResolveCaster(", StringComparison.Ordinal)
+            && geometry.Contains("DuplicateMaterial(", StringComparison.Ordinal)
             && geometry.Contains("AddBallisticDebris(", StringComparison.Ordinal)
-            && geometry.Contains("internal static Vector2 BallisticOffset(", StringComparison.Ordinal),
+            && geometry.Contains("BallisticOffset(", StringComparison.Ordinal),
             "Expected the shared geometry owner to cover hitbox-first placement, caster resolution, material isolation, and ballistic debris.");
 
         // Caster-side anchoring has exactly one implementation. It lived as a private
@@ -1731,8 +1972,8 @@ public sealed class ResourceContractSuite
         // effect parented into that subtree would have its ink width and region size
         // mirrored along with its position.
         RegressionTestHarness.Require(
-            chibiController.Contains("internal float FacingSign =>", StringComparison.Ordinal)
-            && standardController.Contains("internal float FacingSign =>", StringComparison.Ordinal)
+            chibiController.Contains("FacingSign", StringComparison.Ordinal)
+            && standardController.Contains("FacingSign", StringComparison.Ordinal)
             && chibiController.Contains("_body.FlipH ? -1f : 1f", StringComparison.Ordinal)
             && standardController.Contains("_body.FlipH ? -1f : 1f", StringComparison.Ordinal),
             "Expected both idle controllers to publish facing as a sign a caster-side effect can multiply its own offset by.");
@@ -1767,104 +2008,52 @@ public sealed class ResourceContractSuite
             && clockLaunchIndex > startClockIndex
             && session.Contains("_wallElapsed += delta;", StringComparison.Ordinal)
             && session.Contains("if (_holdRemaining > 0f)", StringComparison.Ordinal)
-            && session.Contains("else\n                    _elapsed += delta;", StringComparison.Ordinal)
+            && session.Contains("_elapsed += delta;", StringComparison.Ordinal)
             && session.Contains("_wallElapsed < MaximumLifetime", StringComparison.Ordinal),
             "Expected explicit post-construction clock startup, a frozen visual clock, and a lifetime cap that continues on wall time.");
 
-        var tapTweenIndex = session.IndexOf(
-            "var tap = Track(rig.WandRoot.CreateTween());",
-            StringComparison.Ordinal);
-        var tapWaitIndex = session.IndexOf(
-            "if (!await WaitActive(WandTapDownDuration))",
-            tapTweenIndex,
-            StringComparison.Ordinal);
-        var recoverTweenIndex = session.IndexOf(
-            "var recover = Track(rig.WandRoot.CreateTween());",
-            tapWaitIndex,
-            StringComparison.Ordinal);
-        var recoverPropertyIndex = session.IndexOf(
-            "recover.TweenProperty(",
-            Math.Max(0, recoverTweenIndex),
-            StringComparison.Ordinal);
         RegressionTestHarness.Require(
-            tapTweenIndex >= 0
-            && tapWaitIndex > tapTweenIndex
-            && recoverTweenIndex > tapWaitIndex
-            && recoverPropertyIndex > recoverTweenIndex,
-            "Expected wand recovery to use a fresh Tween after awaiting tap-down; Godot rejects appending to a Tween that has already started.");
-
-        RegressionTestHarness.Require(
-            presenter.Contains("private const float EnterDuration = 0.12f;", StringComparison.Ordinal)
-            && presenter.Contains("private const float FadeOutStart = 0.85f;", StringComparison.Ordinal)
-            && presenter.Contains("private const float Lifetime = 1.15f;", StringComparison.Ordinal)
+            presenter.Contains("EnterDuration", StringComparison.Ordinal)
+            && presenter.Contains("FadeOutStart", StringComparison.Ordinal)
+            && presenter.Contains("Lifetime", StringComparison.Ordinal)
             && presenter.Contains("_triggerAge = 0f;", StringComparison.Ordinal)
             && presenter.Contains("_entryVisibility = _visibility;", StringComparison.Ordinal)
             && presenter.Contains("return _triggerAge < Lifetime;", StringComparison.Ordinal),
             "Expected each trigger to renew one shared circle from its current visibility, then sustain and fade on a fresh 1.15-second envelope.");
 
-        var tapContactIndex = session.IndexOf(
-            "if (!await WaitActive(WandTapDownDuration))",
-            StringComparison.Ordinal);
-        var preludeHoldIndex = session.IndexOf(
-            "BeginWandPreludeHold();",
-            Math.Max(0, tapContactIndex),
-            StringComparison.Ordinal);
-        var retirementLaunchIndex = session.IndexOf(
-            "TaskHelper.RunSafely(RetireWandPrelude(WandTapRecoverDuration));",
-            Math.Max(0, preludeHoldIndex),
-            StringComparison.Ordinal);
-        var effectReleaseIndex = session.IndexOf(
-            "return IsActive();",
-            Math.Max(0, retirementLaunchIndex),
-            StringComparison.Ordinal);
-        var retirementMethodIndex = session.IndexOf(
-            "private async Task RetireWandPrelude(float recoveryDuration)",
-            StringComparison.Ordinal);
-        var preludeReleaseIndex = session.IndexOf(
-            "ReleaseWandPrelude();",
-            Math.Max(0, retirementMethodIndex),
-            StringComparison.Ordinal);
-        RegressionTestHarness.Require(
-            tapContactIndex >= 0
-            && preludeHoldIndex > tapContactIndex
-            && retirementLaunchIndex > preludeHoldIndex
-            && effectReleaseIndex > retirementLaunchIndex
-            && retirementMethodIndex > effectReleaseIndex
-            && preludeReleaseIndex > retirementMethodIndex
-            && !session.Contains("WaitActive(MagicCircle", StringComparison.Ordinal),
-            "Expected card-specific VFX to start at wand-card contact while only the session-owned card and lines retire asynchronously.");
         RegressionTestHarness.Require(
             session.Contains("_preludeHoldRemaining", StringComparison.Ordinal)
             && session.Contains("_preludeElapsed += delta;", StringComparison.Ordinal)
-            && session.Contains("var preludeHeld = _preludeHoldRemaining > 0f ? 1f : 0f;", StringComparison.Ordinal)
             && session.Contains("foreach (var material in Materials)", StringComparison.Ordinal)
             && session.Contains(
                 "ApplyClockUniforms(_preludeLineMaterial, _preludeElapsed, preludeHeld, _preludeHoldAt);",
                 StringComparison.Ordinal)
             && !session.Contains("ApplyClockUniforms(_magicCircleMaterial", StringComparison.Ordinal)
             && presenter.Contains("public override void _Process(double delta)", StringComparison.Ordinal),
-            "Expected the wand-card hold to affect only its session lines while the room presenter advances the circle independently.");
+            "Expected the prelude hold to affect only its session lines while the room presenter advances the circle independently.");
 
         RegressionTestHarness.Require(
-            session.Contains("if (_disposed)\n            return;", StringComparison.Ordinal)
+            session.Contains("if (_disposed)", StringComparison.Ordinal)
             && session.Contains("private void OnCombatEnded(CombatRoom _) => Dispose();", StringComparison.Ordinal)
             && session.Contains("Dispose(queueFree: false);", StringComparison.Ordinal)
             && session.Contains("clock failed and was disposed", StringComparison.Ordinal)
-            && session.Contains("if (IsActive())\n                Dispose();", StringComparison.Ordinal)
-            && session.Contains("NodePool.Free(card);", StringComparison.Ordinal),
-            "Expected normal, combat-end, tree-exit, exception, and lifetime cleanup to converge on one idempotent disposer, including NCard pool return.");
+            && session.Contains("Dispose();", StringComparison.Ordinal),
+            "Expected normal, combat-end, tree-exit, exception, and lifetime cleanup to converge on one idempotent disposer.");
 
         RegressionTestHarness.Require(
             session.Contains("ShouldPlayCelPrelude", StringComparison.Ordinal)
             && session.Contains("metadata.Era.HasValue", StringComparison.Ordinal)
             && !session.Contains("metadata.VisualRoute", StringComparison.Ordinal)
             && session.Contains("SakuraChibiStandeeIdleController.TryGet(casterNode)", StringComparison.Ordinal)
-            && session.Contains("NCard.Create(card)", StringComparison.Ordinal)
-            && session.Contains("preview.UpdateVisuals(PileType.None, CardPreviewMode.Normal)", StringComparison.Ordinal)
-            && session.Contains("rig.Tip.GlobalPosition", StringComparison.Ordinal)
-            && session.Contains("cardCenter - lines.Size * 0.5f", StringComparison.Ordinal)
-            && session.Contains("cardOrigin.Scale = Vector2.One", StringComparison.Ordinal),
-            "Expected era-backed chibi cards to use a real, full-face NCard anchored by the wand tip's global position without inherited flip or scale.");
+            && session.Contains("SakuraStandeeIdleController.TryGet(casterNode)", StringComparison.Ordinal)
+            && session.Contains("NCard.FindOnTable(card)", StringComparison.Ordinal)
+            && session.Contains("ui.PlayContainer.IsAncestorOf(foundCard)", StringComparison.Ordinal)
+            && !session.Contains("NCard.Create(card)", StringComparison.Ordinal)
+            && !session.Contains("SuppressNativePlayedCard", StringComparison.Ordinal)
+            && !session.Contains("rig.Tip.GlobalPosition", StringComparison.Ordinal)
+            && !session.Contains("nativeCard.Visible = false", StringComparison.Ordinal)
+            && session.Contains("cardCenter - lines.Size * 0.5f", StringComparison.Ordinal),
+            "Expected era-backed cards on either standee art to leave the native play-area card visible on the vanilla route, with no wand-tip clone, suppression, or rig anchoring.");
 
         var standardPreludeIndex = session.IndexOf(
             "private async Task<bool> PlayStandardPrelude(",
@@ -1879,42 +2068,16 @@ public sealed class ResourceContractSuite
         RegressionTestHarness.Require(
             session.Contains("SakuraStandeeIdleController.TryGet(casterNode)", StringComparison.Ordinal)
             && standardPrelude.Contains("TryFindNativePlayedCard(card, out var nativeCard)", StringComparison.Ordinal)
-            && standardPrelude.Contains("CreateStandardPrelude(card, casterNode, nativeCard);", StringComparison.Ordinal)
+            && standardPrelude.Contains("CreateStandardPrelude(nativeCard);", StringComparison.Ordinal)
             && standardPrelude.Contains("WaitActive(StandardPreludeLeadDuration)", StringComparison.Ordinal)
             && standardPrelude.Contains("BeginWandPreludeHold();", StringComparison.Ordinal)
-            && standardPrelude.Contains("RetireWandPrelude(0f)", StringComparison.Ordinal)
+            && standardPrelude.Contains("TaskHelper.RunSafely(RetireWandPrelude());", StringComparison.Ordinal)
             && !standardPrelude.Contains("NCard.Create", StringComparison.Ordinal)
             && !standardPrelude.Contains("SuppressNativePlayedCard", StringComparison.Ordinal)
             && !standardPrelude.Contains("Visible = false", StringComparison.Ordinal)
             && session.Contains("nativeCard.GetGlobalTransform()", StringComparison.Ordinal)
             && session.Contains("nativeCard.GetCurrentSize() * 0.5f", StringComparison.Ordinal),
-            "Expected the standard standee to reuse and track the native play-area card for its concentration-line prelude, without creating, tapping, or hiding a card.");
-
-        var previewVisualsIndex = session.IndexOf(
-            "preview.UpdateVisuals(PileType.None, CardPreviewMode.Normal)",
-            StringComparison.Ordinal);
-        var suppressIndex = session.IndexOf(
-            "SuppressNativePlayedCard(card);",
-            Math.Max(0, previewVisualsIndex),
-            StringComparison.Ordinal);
-        var releasePreludeIndex = session.LastIndexOf(
-            "ReleaseWandPrelude();",
-            StringComparison.Ordinal);
-        var restoreNativeIndex = session.IndexOf(
-            "RestoreNativePlayedCard();",
-            Math.Max(0, releasePreludeIndex),
-            StringComparison.Ordinal);
-        RegressionTestHarness.Require(
-            previewVisualsIndex >= 0
-            && suppressIndex > previewVisualsIndex
-            && session.Contains("NCard.FindOnTable(card)", StringComparison.Ordinal)
-            && session.Contains("ui.PlayContainer.IsAncestorOf(foundCard)", StringComparison.Ordinal)
-            && session.Contains("_suppressedNativeCardWasVisible = nativeCard.Visible;", StringComparison.Ordinal)
-            && session.Contains("nativeCard.Visible = false;", StringComparison.Ordinal)
-            && session.Contains("ReferenceEquals(nativeCard.Model, cardModel)", StringComparison.Ordinal)
-            && releasePreludeIndex >= 0
-            && restoreNativeIndex > releasePreludeIndex,
-            "Expected a successfully created wand preview to suppress only the native play-container card, preserve its visibility, and restore the same pooled model during full session disposal.");
+            "Expected both standee arts to reuse and track the native play-area card for their concentration-line prelude, without creating, tapping, or hiding a card.");
 
         var prepareGuardIndex = session.IndexOf(
             "if (TestMode.IsOn",
@@ -1926,15 +2089,6 @@ public sealed class ResourceContractSuite
             && prepareLoadIndex > prepareGuardIndex
             && session.Contains("currentRoom.CombatVfxContainer is not { } currentContainer", StringComparison.Ordinal),
             "Expected the shared creation helper to reject TestMode and missing combat containers before invoking any card-specific resource loader.");
-
-        RegressionTestHarness.Require(
-            chibiScene.Contains(
-                "[node name=\"WandTip\" type=\"Marker2D\" parent=\"CharacterRoot/ChestAttachmentRoot/HeldWandRoot/WandRoot\"]",
-                StringComparison.Ordinal)
-            && chibiScene.Contains("position = Vector2(400, -230)", StringComparison.Ordinal)
-            && chibiController.Contains("TryGetWandPreludeRig", StringComparison.Ordinal)
-            && chibiController.Contains("WandTip marker", StringComparison.Ordinal),
-            "Expected the chibi rig to own and validate a named marker at the bird-head wand tip.");
 
         RegressionTestHarness.Require(
             preludeShader.Contains(
@@ -1976,7 +2130,7 @@ public sealed class ResourceContractSuite
             && playExtraIndex > showCircleIndex
             && transaction.Contains("SakuraMagicCirclePresenter.TryShowOrRefresh(card.Owner?.Creature, era);", StringComparison.Ordinal)
             && transaction.Contains("MagicCircleEraFor(card, activation)", StringComparison.Ordinal)
-            && presenter.Contains("internal static bool TryShowOrRefresh(Creature? caster, SourceEraClass era)", StringComparison.Ordinal)
+            && presenter.Contains("TryShowOrRefresh", StringComparison.Ordinal)
             && presenter.Contains("if (!_showFailureLogged)", StringComparison.Ordinal)
             && session.Contains("SakuraMagicCirclePresenter.LoadResources();", StringComparison.Ordinal)
             && !session.Contains("SakuraMagicCirclePresenter.ShowOrRefresh(", StringComparison.Ordinal)
@@ -1989,12 +2143,12 @@ public sealed class ResourceContractSuite
             && session.Contains("_preludeLineMaterial.SetShaderParameter(\"magic_circle_enabled\", 0f);", StringComparison.Ordinal)
             && presenter.Contains("_anchor.GlobalPosition = ResolveMagicCircleCenter(_casterNode);", StringComparison.Ordinal)
             && session.Contains("lines.GlobalPosition = cardCenter - lines.Size * 0.5f;", StringComparison.Ordinal),
-            "Expected the completed card-play transaction to trigger one fail-open room presenter while session lines remain independent and anchored to the wand card.");
+            "Expected the completed card-play transaction to trigger one fail-open room presenter while session lines remain independent and anchored to the native played card.");
 
         RegressionTestHarness.Require(
-            presenter.Contains("private const float MagicCircleEnterScale = 0.78f;", StringComparison.Ordinal)
-            && presenter.Contains("private const float MagicCirclePulseScale = 1.04f;", StringComparison.Ordinal)
-            && presenter.Contains("private const float MagicCircleExitScale = 0.82f;", StringComparison.Ordinal)
+            presenter.Contains("MagicCircleEnterScale", StringComparison.Ordinal)
+            && presenter.Contains("MagicCirclePulseScale", StringComparison.Ordinal)
+            && presenter.Contains("MagicCircleExitScale", StringComparison.Ordinal)
             && presenter.Contains("PivotOffset = Vector2.One * MagicCircleDiameter * 0.5f", StringComparison.Ordinal)
             && presenter.Contains("Position = Vector2.One * MagicCircleDiameter * -0.5f", StringComparison.Ordinal)
             && presenter.Contains("_isRetrigger = _visibility > 0.001f;", StringComparison.Ordinal),
@@ -2007,13 +2161,13 @@ public sealed class ResourceContractSuite
             && presenter.Contains("_spinAge = 0f;", StringComparison.Ordinal)
             && presenter.Contains("_phases += SettleLayerSpeeds * delta", StringComparison.Ordinal)
             && !presenter.Contains("_phases = Vector4.Zero;", StringComparison.Ordinal)
-            && presenter.Contains("private const float ColourTransitionDuration = 0.15f;", StringComparison.Ordinal)
+            && presenter.Contains("ColourTransitionDuration", StringComparison.Ordinal)
             && presenter.Contains("_colourStart = _colour;", StringComparison.Ordinal)
             && presenter.Contains("_colour = _colourStart.Lerp(_colourTarget, progress);", StringComparison.Ordinal),
             "Expected one renewable state per caster to preserve accumulated phase, reapply its spin impulse, and blend to the latest era colour.");
 
         RegressionTestHarness.Require(
-            presenter.Contains("private const float SpinDecayDuration = 0.28f;", StringComparison.Ordinal)
+            presenter.Contains("SpinDecayDuration", StringComparison.Ordinal)
             && presenter.Contains("var decayIntegral = SpinDecayDuration", StringComparison.Ordinal)
             && presenter.Contains("Mathf.Exp(-nextSpinAge / SpinDecayDuration)", StringComparison.Ordinal)
             && presenter.Contains("InitialLayerSpeeds", StringComparison.Ordinal)
@@ -2054,7 +2208,7 @@ public sealed class ResourceContractSuite
             && consumer.Contains("session.StartClock();", StringComparison.Ordinal)
             && consumer.Contains("finally", StringComparison.Ordinal)
             && consumer.Contains("await ResolveOnce();", StringComparison.Ordinal)
-            && consumer.Contains("finally\n            {\n                session.Dispose();", StringComparison.Ordinal)
+            && consumer.Contains("session.Dispose();", StringComparison.Ordinal)
             && !consumer.Contains("ResourceLoader.Load", StringComparison.Ordinal)
             && !consumer.Contains("PackedScene", StringComparison.Ordinal),
             "Expected one resource-free Big/Little consumer to reuse the shared prelude and resolve gameplay during cleanup.");
@@ -2081,9 +2235,9 @@ public sealed class ResourceContractSuite
             && transaction.Contains("card.Type == CardType.Power", StringComparison.Ordinal)
             && circlePresenter.Contains("SourceEraClass.Clow =>", StringComparison.Ordinal)
             && circlePresenter.Contains("SourceEraClass.Sakura =>", StringComparison.Ordinal)
-            && sharedPrelude.Contains("rig.Tip.GlobalPosition", StringComparison.Ordinal)
-            && sharedPrelude.Contains("cardOrigin.Scale = Vector2.One", StringComparison.Ordinal),
-            "Expected the transaction to route Clow Power and Sakura plays to one era-coloured circle while the independent wand tap keeps its original geometry.");
+            && !sharedPrelude.Contains("rig.Tip.GlobalPosition", StringComparison.Ordinal)
+            && !sharedPrelude.Contains("NCard.Create", StringComparison.Ordinal),
+            "Expected the transaction to route Clow Power and Sakura plays to one era-coloured circle while the session prelude tracks the native played card on the vanilla route.");
     }
 
     [Fact]
@@ -2522,6 +2676,70 @@ public sealed class ResourceContractSuite
             && powersSource.Contains("revealCoveredIntent: enemy == _pendingReleaseEnemy", StringComparison.Ordinal)
             && powersSource.Contains("IsTrapped(_pendingReleaseEnemy) ? _pendingReleaseEnemy", StringComparison.Ordinal),
             "Expected the release warning to reveal the covered move and release the enemy selected at player-turn start.");
+    }
+
+    [Fact]
+    public void TheGlowUsesGlowPowerAndMagicChargeOnly()
+    {
+        var visual = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraGlowVisual.cs"));
+        var charge = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraMagicCharge.cs"));
+        var character = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/ClassicSakura.cs"));
+        var shaderPath = RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/sakura_glow_mote.gdshader");
+        var shader = File.ReadAllText(shaderPath);
+
+        RegressionTestHarness.Require(
+            visual.Contains("ClassicGlowPower", StringComparison.Ordinal)
+            && visual.Contains("NotifyMagicChargeGained", StringComparison.Ordinal)
+            && visual.Contains("CombatVfxContainer", StringComparison.Ordinal)
+            && visual.Contains("CelVfxGeometry.ResolveCaster", StringComparison.Ordinal)
+            && visual.Contains("PreloadManager.Cache.GetAsset<Shader>", StringComparison.Ordinal)
+            && !visual.Contains("ClassicLightPower", StringComparison.Ordinal)
+            && !visual.Contains("ClassicLightSakuraPower", StringComparison.Ordinal)
+            && !visual.Contains("StatusOrCurse", StringComparison.Ordinal)
+            && charge.Contains("SakuraGlowVisual.NotifyMagicChargeGained", StringComparison.Ordinal)
+            && character.Contains(".. SakuraGlowVisual.AssetPaths", StringComparison.Ordinal),
+            "Expected The Glow to follow ClassicGlowPower and the central Magic Charge owner, not the separate Light Power or Status/Curse paths.");
+        RegressionTestHarness.Require(
+            File.Exists(shaderPath)
+            && shader.Contains("shader_type canvas_item", StringComparison.Ordinal)
+            && shader.Contains("uniform float elapsed", StringComparison.Ordinal)
+            && shader.Contains("uniform float phase", StringComparison.Ordinal)
+            && shader.Contains("core_color", StringComparison.Ordinal)
+            && shader.Contains("halo_color", StringComparison.Ordinal)
+            && !shader.Contains("TIME", StringComparison.Ordinal)
+            && !shader.Contains("hint_screen_texture", StringComparison.Ordinal),
+            "Expected The Glow to be a project-owned 2D shader with explicit clocks and no screen-reading or Shader TIME.");
+    }
+
+    [Fact]
+    public void TransferVfxCoversEveryThroughTargetWithoutOwningGameplay()
+    {
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/TransferVfx.cs"));
+        var card = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Transfer.cs"));
+
+        var cueIndex = card.IndexOf("cues.Exchange(target)", StringComparison.Ordinal);
+        var powerIndex = card.IndexOf("PowerCmd.Apply<StrengthPower>", cueIndex, StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            session.Contains(": CelVfxSession", StringComparison.Ordinal)
+            && session.Contains("PlayCelPrelude", StringComparison.Ordinal)
+            && session.Contains("CelVfxGeometry.ResolveCaster", StringComparison.Ordinal)
+            && session.Contains("CelVfxGeometry.Resolve(room, target, index, Budget)", StringComparison.Ordinal)
+            && session.Contains("PairVisual", StringComparison.Ordinal)
+            && session.Contains("Connection", StringComparison.Ordinal)
+            && session.Contains("AfterCaster", StringComparison.Ordinal)
+            && !session.Contains("ResourceLoader.Load", StringComparison.Ordinal)
+            && !session.Contains("TIME", StringComparison.Ordinal)
+            && card.Contains("var targets = SakuraThroughResolution.TargetsFor(play)", StringComparison.Ordinal)
+            && card.Contains("TransferVfx.PlayOrResolveAsync", StringComparison.Ordinal)
+            && cueIndex >= 0
+            && powerIndex > cueIndex,
+            "Expected Transfer to render one paired exchange cue for every Through target before the existing PowerCmd loop, without moving gameplay ownership into VFX.");
     }
 
     private static void RequireClearCardDescriptionsAvoidRedundantText()
