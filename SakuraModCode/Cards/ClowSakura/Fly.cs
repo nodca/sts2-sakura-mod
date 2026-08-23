@@ -25,23 +25,31 @@ using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class ClowFly() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.None)
+public class ClowFly() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
-    private const int MagicChargeCost = 3;
     private const int ExtraDraw = 2;
 
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2)];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Innate, CardKeyword.Exhaust];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2), new DynamicVar("Magic", 1)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        DrawAndGainMagic(choiceContext, 0);
+
+    protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        DrawAndGainMagic(choiceContext, ExtraDraw);
+
+    private async Task DrawAndGainMagic(PlayerChoiceContext choiceContext, int extraDraw)
     {
-        await CardPileCmd.Draw(choiceContext, ReleasedValue("Cards"), Owner, false);
-        if (!IsUpgraded)
-            await SakuraMagicCharge.SpendUpToMagic(choiceContext, Owner, MagicChargeCost);
+        await CardPileCmd.Draw(choiceContext, ReleasedValue("Cards") + extraDraw, Owner, false);
+        await SakuraMagicCharge.GainMagic(choiceContext, Owner, ReleasedMagic(), this);
     }
 
-    protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await CardPileCmd.Draw(choiceContext, ReleasedValue("Cards") + ExtraDraw, Owner, false);
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Cards.UpgradeValueBy(1);
+        DynamicVars["Magic"].UpgradeValueBy(1);
+    }
 }
 
 public class SakuraFly() : SakuraFormCard(1, CardType.Power, TargetType.None)
@@ -52,4 +60,3 @@ public class SakuraFly() : SakuraFormCard(1, CardType.Power, TargetType.None)
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicFlyPower>(choiceContext, Owner.Creature, ReleasedValue("Cards"));
 }
-

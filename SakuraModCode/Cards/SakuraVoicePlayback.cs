@@ -47,6 +47,9 @@ public static class SakuraVoicePlayback
 {
     internal const string ReleaseVoicePath = $"{MainFile.ResPath}/voices/dream_wand.ogg";
     internal const string SealVoicePath = $"{MainFile.ResPath}/voices/stabilize.ogg";
+    // FMOD reads the loose package files directly; the imported res:// twins only supply the envelope duration.
+    internal const string ReleaseVoiceRelativePath = "voices/dream_wand.ogg";
+    internal const string SealVoiceRelativePath = "voices/stabilize.ogg";
     internal const string VoiceChannel = $"{MainFile.ModId}.Voice";
     internal const float FadeInSeconds = 0.18f;
     internal const float FadeOutSeconds = 0.28f;
@@ -95,8 +98,15 @@ public static class SakuraVoicePlayback
                 || IsChannelBusy())
                 return;
 
+            var externalPath = ExternalVoicePathFor(cue.Value);
+            if (!File.Exists(externalPath))
+            {
+                ReportFailureOnce(cue.Value, $"voice file not found: {externalPath}");
+                return;
+            }
+
             var result = GameAudioService.Shared.PlayOneShot(
-                new ResourceSoundFileSource(PathFor(cue.Value)),
+                AudioSource.File(externalPath),
                 CreatePlaybackOptions(cue.Value));
 
             if (!result.Succeeded || result.Handle is not AudioFileHandle handle)
@@ -136,6 +146,21 @@ public static class SakuraVoicePlayback
         SakuraVoiceCue.Seal => SealVoicePath,
         _ => throw new ArgumentOutOfRangeException(nameof(cue), cue, null)
     };
+
+    internal static string ExternalVoicePathFor(SakuraVoiceCue cue) => cue switch
+    {
+        SakuraVoiceCue.Release => ResolveExternalVoicePath(ReleaseVoiceRelativePath),
+        SakuraVoiceCue.Seal => ResolveExternalVoicePath(SealVoiceRelativePath),
+        _ => throw new ArgumentOutOfRangeException(nameof(cue), cue, null)
+    };
+
+    private static string ResolveExternalVoicePath(string relativePath)
+    {
+        var modDirectory = Path.GetDirectoryName(typeof(MainFile).Assembly.Location);
+        return Path.Combine(
+            modDirectory ?? AppContext.BaseDirectory,
+            relativePath.Replace('/', Path.DirectorySeparatorChar));
+    }
 
     internal static AudioPlaybackOptions CreatePlaybackOptions(SakuraVoiceCue cue) => new()
     {

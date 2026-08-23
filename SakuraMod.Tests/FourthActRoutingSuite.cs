@@ -68,14 +68,16 @@ public sealed class FourthActRoutingSuite
     }
 
     [Theory]
-    [InlineData(true, true, 2, 3, true)]
-    [InlineData(false, true, 2, 3, false)]
-    [InlineData(true, false, 2, 3, false)]
-    [InlineData(true, true, 1, 3, false)]
-    [InlineData(true, true, 2, 4, false)]
+    [InlineData(true, true, false, 2, 3, true)]
+    [InlineData(false, true, false, 2, 3, false)]
+    [InlineData(true, false, false, 2, 3, false)]
+    [InlineData(true, true, true, 2, 3, false)]
+    [InlineData(true, true, false, 1, 3, false)]
+    [InlineData(true, true, false, 2, 4, false)]
     public void RunTransitionOnlyAppendsTheMissingSakuraFourthSlot(
         bool hasCompleteRoute,
         bool canEnterFourthAct,
+        bool currentRoomIsVictoryRoom,
         int currentActIndex,
         int actCount,
         bool expected) =>
@@ -84,6 +86,7 @@ public sealed class FourthActRoutingSuite
             SakuraFourthActRunTransition.ShouldAppendSlot(
                 hasCompleteRoute,
                 canEnterFourthAct,
+                currentRoomIsVictoryRoom,
                 currentActIndex,
                 actCount));
 

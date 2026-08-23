@@ -83,18 +83,25 @@ internal static class SakuraFourthActRunTransition
     internal static bool ShouldAppendSlot(
         bool hasCompleteRoute,
         bool canEnterFourthAct,
+        bool currentRoomIsVictoryRoom,
         int currentActIndex,
         int actCount) =>
         hasCompleteRoute
         && canEnterFourthAct
+        && !currentRoomIsVictoryRoom
         && currentActIndex == FourthActEntryRegistration.FourthActSlotIndex - 1
         && actCount == FourthActEntryRegistration.FourthActSlotIndex;
 
     internal static void TryAppendSlot(RunState runState)
     {
+        // EnterNextAct can also fire while the run sits in the Architect victory
+        // room (vanilla ends the run there, and 0.111.0+ reaches it whenever
+        // another mod votes to move on). Appending then would start the fourth
+        // act after the finale instead of letting the run end.
         if (!ShouldAppendSlot(
                 FourthActEntryRegistration.CanRegister(FourthActRouteCatalog.Resolve()),
                 FourthActEntryRegistration.CanEnter(runState),
+                runState.CurrentRoom is { IsVictoryRoom: true },
                 runState.CurrentActIndex,
                 runState.Acts.Count))
         {

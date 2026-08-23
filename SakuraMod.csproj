@@ -57,6 +57,7 @@
         <None Include="project.godot"/>
         <None Include="SakuraMod/**" />
         <SakuraExternalMusic Include="SakuraMod/music/**/*.ogg" />
+        <SakuraExternalVoice Include="SakuraMod/voices/**/*.ogg" />
     </ItemGroup>
 
     <ItemGroup>
@@ -79,6 +80,10 @@
         <Copy
             SourceFiles="@(SakuraExternalMusic)"
             DestinationFiles="@(SakuraExternalMusic->'$(SakuraPackageRoot)music/%(RecursiveDir)%(Filename)%(Extension)')"
+            SkipUnchangedFiles="true" />
+        <Copy
+            SourceFiles="@(SakuraExternalVoice)"
+            DestinationFiles="@(SakuraExternalVoice->'$(SakuraPackageRoot)voices/%(RecursiveDir)%(Filename)%(Extension)')"
             SkipUnchangedFiles="true" />
     </Target>
 

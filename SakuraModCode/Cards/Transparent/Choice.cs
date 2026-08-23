@@ -18,7 +18,7 @@ using STS2RitsuLib.Cards.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("ManifestCards", 1), new CardsVar("DrawCards", 2)];

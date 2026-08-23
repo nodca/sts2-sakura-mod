@@ -89,6 +89,31 @@ public sealed class SakuraVoiceCueSuite
     }
 
     [Fact]
+    public void VoiceCuesPlayLooseFilesResolvedBesideTheAssembly()
+    {
+        var playback = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraVoicePlayback.cs"));
+        var releaseExternal = SakuraVoicePlayback.ExternalVoicePathFor(SakuraVoiceCue.Release);
+        var sealExternal = SakuraVoicePlayback.ExternalVoicePathFor(SakuraVoiceCue.Seal);
+        var separator = Path.DirectorySeparatorChar;
+
+        RegressionTestHarness.Require(
+            Path.IsPathRooted(releaseExternal)
+            && Path.IsPathRooted(sealExternal)
+            && releaseExternal.EndsWith(
+                SakuraVoicePlayback.ReleaseVoiceRelativePath.Replace('/', separator),
+                StringComparison.Ordinal)
+            && sealExternal.EndsWith(
+                SakuraVoicePlayback.SealVoiceRelativePath.Replace('/', separator),
+                StringComparison.Ordinal)
+            && playback.Contains("AudioSource.File(externalPath)", StringComparison.Ordinal)
+            && !playback.Contains("ResourceSoundFileSource", StringComparison.Ordinal)
+            && playback.IndexOf("File.Exists(externalPath)", StringComparison.Ordinal)
+                < playback.IndexOf("AudioSource.File(externalPath)", StringComparison.Ordinal),
+            "Expected both cues to resolve loose package files beside the mod assembly and gate FMOD playback on file presence.");
+    }
+
+    [Fact]
     public void EligibleCardsRequestTheirVoiceCueAtPlayStart()
     {
         var spellCards = string.Join(

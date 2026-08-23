@@ -344,7 +344,7 @@ public sealed class CardMechanicsSuite
             && new Hail().Rarity == CardRarity.Uncommon
             && new Lucid().Rarity == CardRarity.Uncommon
             && new Rewind().Rarity == CardRarity.Rare
-            && new SakuraMod.SakuraModCode.Cards.Action().Rarity == CardRarity.Rare
+            && new SakuraMod.SakuraModCode.Cards.Action().Rarity == CardRarity.Uncommon
             && new Kindness().Rarity == CardRarity.Rare
             && new ClowIllusion().Rarity == CardRarity.Uncommon,
             "Expected the requested Clow and Transparent card rarities to remain stable.");
@@ -466,6 +466,28 @@ public sealed class CardMechanicsSuite
             new SakuraDash().CanonicalKeywords.SequenceEqual([CardKeyword.Retain, CardKeyword.Exhaust])
             && new ClowDash().CanonicalKeywords.SequenceEqual([CardKeyword.Exhaust]),
             "Expected only Sakura Dash to Retain while both forms Exhaust after use.");
+    }
+
+    [Fact]
+    public void ClowFlyIsAnInnateOneShotMagicChargeStarter()
+    {
+        var baseCard = new ClowFly();
+        var upgradedCard = RegressionTestHarness.MutableForCostTest(new ClowFly());
+        upgradedCard.UpgradeInternal();
+        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Fly.cs"));
+
+        RegressionTestHarness.Require(
+            baseCard.EnergyCost.Canonical == 1
+            && baseCard.Rarity == CardRarity.Uncommon
+            && baseCard.CanonicalKeywords.SequenceEqual([CardKeyword.Innate, CardKeyword.Exhaust])
+            && baseCard.DynamicVars.Cards.IntValue == 2
+            && baseCard.DynamicVars["Magic"].IntValue == 1
+            && upgradedCard.DynamicVars.Cards.IntValue == 3
+            && upgradedCard.DynamicVars["Magic"].IntValue == 2
+            && source.Contains("SakuraMagicCharge.GainMagic(choiceContext, Owner, ReleasedMagic(), this)", StringComparison.Ordinal)
+            && !source.Contains("SpendUpToMagic", StringComparison.Ordinal),
+            "Expected the Uncommon Clow Fly to cost 1, be Innate and Exhaust, draw 2/3, gain 1/2 explicit Magic Charge, and never spend Magic Charge.");
     }
 
     [Fact]
@@ -1888,6 +1910,7 @@ public sealed class CardMechanicsSuite
 
         RegressionTestHarness.Require(
             choice.EnergyCost.Canonical == 0
+            && choice.Rarity == CardRarity.Rare
             && choice.DynamicVars["ManifestCards"].IntValue == 1
             && choice.DynamicVars["DrawCards"].IntValue == 2
             && upgradedChoice.DynamicVars["ManifestCards"].IntValue == 2

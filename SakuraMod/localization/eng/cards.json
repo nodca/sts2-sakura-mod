@@ -244,7 +244,7 @@
   "SAKURA_MOD_CARD_SAKURA_DASH.title": "Dash",
   "SAKURA_MOD_CARD_SAKURA_DASH.description": "[gold]Sakura Card[/gold] [gold]Windy[/gold]\nDraw until your hand is full.",
   "SAKURA_MOD_CARD_CLOW_FLY.title": "Fly",
-  "SAKURA_MOD_CARD_CLOW_FLY.description": "[gold]Windy[/gold]\nDraw {Cards:diff()} cards. {IfUpgraded:show:|\nSpend up to 3 [gold]Magic Charge[/gold].}",
+  "SAKURA_MOD_CARD_CLOW_FLY.description": "[gold]Windy[/gold]\nDraw {Cards:diff()} cards.\nGain {Magic:diff()} [gold]Magic Charge[/gold].",
   "SAKURA_MOD_CARD_CLOW_FLY.extraDescription": "[gold]Extra:[/gold] Draw 2 additional cards.",
   "SAKURA_MOD_CARD_SAKURA_FLY.title": "Fly",
   "SAKURA_MOD_CARD_SAKURA_FLY.description": "[gold]Sakura Card[/gold] [gold]Windy[/gold]\nAt the start of your turn, draw {Cards:diff()} cards.",

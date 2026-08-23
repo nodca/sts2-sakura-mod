@@ -244,7 +244,7 @@
   "SAKURA_MOD_CARD_SAKURA_DASH.title": "驱",
   "SAKURA_MOD_CARD_SAKURA_DASH.description": "[gold]小樱牌[/gold] [gold]风[/gold]\n抽牌，直至达到手牌上限。",
   "SAKURA_MOD_CARD_CLOW_FLY.title": "飞",
-  "SAKURA_MOD_CARD_CLOW_FLY.description": "[gold]风[/gold]\n抽 {Cards:diff()} 张牌。{IfUpgraded:show:|\n消耗至多 3 点[gold]魔力充能[/gold]。}",
+  "SAKURA_MOD_CARD_CLOW_FLY.description": "[gold]风[/gold]\n抽 {Cards:diff()} 张牌。\n获得 {Magic:diff()} 点[gold]魔力充能[/gold]。",
   "SAKURA_MOD_CARD_CLOW_FLY.extraDescription": "[gold]额外效果：[/gold]额外抽 2 张牌。",
   "SAKURA_MOD_CARD_SAKURA_FLY.title": "飞",
   "SAKURA_MOD_CARD_SAKURA_FLY.description": "[gold]小樱牌[/gold] [gold]风[/gold]\n回合开始时，抽 {Cards:diff()} 张牌。",
