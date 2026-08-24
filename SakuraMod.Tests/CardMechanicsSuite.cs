@@ -478,7 +478,7 @@ public sealed class CardMechanicsSuite
             "SakuraModCode/Cards/ClowSakura/Fly.cs"));
 
         RegressionTestHarness.Require(
-            baseCard.EnergyCost.Canonical == 1
+            baseCard.EnergyCost.Canonical == 0
             && baseCard.Rarity == CardRarity.Uncommon
             && baseCard.CanonicalKeywords.SequenceEqual([CardKeyword.Innate, CardKeyword.Exhaust])
             && baseCard.DynamicVars.Cards.IntValue == 2
@@ -487,7 +487,7 @@ public sealed class CardMechanicsSuite
             && upgradedCard.DynamicVars["Magic"].IntValue == 2
             && source.Contains("SakuraMagicCharge.GainMagic(choiceContext, Owner, ReleasedMagic(), this)", StringComparison.Ordinal)
             && !source.Contains("SpendUpToMagic", StringComparison.Ordinal),
-            "Expected the Uncommon Clow Fly to cost 1, be Innate and Exhaust, draw 2/3, gain 1/2 explicit Magic Charge, and never spend Magic Charge.");
+            "Expected the Uncommon Clow Fly to cost 0, be Innate and Exhaust, draw 2/3, gain 1/2 explicit Magic Charge, and never spend Magic Charge.");
     }
 
     [Fact]

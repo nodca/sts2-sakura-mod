@@ -58,6 +58,8 @@ public static class SakuraVoicePlayback
     private static readonly HashSet<SakuraVoiceCue> ReportedFailures = [];
     private static AudioFileHandle? _activeHandle;
     private static Tween? _envelopeTween;
+    private static float _envelopeVolume;
+    private static SceneTree? _volumeRefreshTree;
     private static IDisposable? _combatEndedSubscription;
     private static IDisposable? _runEndedSubscription;
     private static IDisposable? _mainMenuReadySubscription;
@@ -199,7 +201,7 @@ public static class SakuraVoicePlayback
         var tween = tree.CreateTween();
         _envelopeTween = tween;
         tween.TweenMethod(
-                Callable.From<float>(volume => SetVolume(handle, volume)),
+                Callable.From<float>(volume => ApplyEnvelopeVolume(handle, volume)),
                 0f,
                 1f,
                 FadeInSeconds)
@@ -207,20 +209,50 @@ public static class SakuraVoicePlayback
             .SetEase(Tween.EaseType.Out);
         tween.TweenInterval(holdSeconds);
         tween.TweenMethod(
-                Callable.From<float>(volume => SetVolume(handle, volume)),
+                Callable.From<float>(volume => ApplyEnvelopeVolume(handle, volume)),
                 1f,
                 0f,
                 FadeOutSeconds)
             .SetTrans(Tween.TransitionType.Sine)
             .SetEase(Tween.EaseType.In);
         tween.TweenCallback(Callable.From(() => CompleteEnvelope(handle, tween)));
+        _envelopeVolume = 0f;
+        AttachVolumeRefresh(tree);
         return true;
     }
 
-    private static void SetVolume(AudioFileHandle handle, float volume)
+    private static void ApplyEnvelopeVolume(AudioFileHandle handle, float volume)
     {
-        if (ReferenceEquals(_activeHandle, handle) && handle.IsValid)
-            handle.TrySetVolume(volume);
+        if (!ReferenceEquals(_activeHandle, handle))
+            return;
+
+        _envelopeVolume = volume;
+        if (handle.IsValid)
+            handle.TrySetVolume(volume * SakuraGameVolumeFollower.VoiceFactor());
+    }
+
+    private static void AttachVolumeRefresh(SceneTree tree)
+    {
+        if (_volumeRefreshTree is not null)
+            return;
+
+        _volumeRefreshTree = tree;
+        tree.ProcessFrame += RefreshVolumeFromGameBuses;
+    }
+
+    private static void DetachVolumeRefresh()
+    {
+        if (_volumeRefreshTree is not { } tree)
+            return;
+
+        _volumeRefreshTree = null;
+        tree.ProcessFrame -= RefreshVolumeFromGameBuses;
+    }
+
+    private static void RefreshVolumeFromGameBuses()
+    {
+        if (_activeHandle is { IsValid: true } handle)
+            handle.TrySetVolume(_envelopeVolume * SakuraGameVolumeFollower.VoiceFactor());
     }
 
     private static void StopActivePlayback(AudioFileHandle handle)
@@ -230,6 +262,7 @@ public static class SakuraVoicePlayback
 
         KillEnvelope();
         _activeHandle = null;
+        DetachVolumeRefresh();
         handle.TryStop(allowFadeOut: false);
         handle.Dispose();
     }
@@ -244,6 +277,7 @@ public static class SakuraVoicePlayback
             return;
 
         _activeHandle = null;
+        DetachVolumeRefresh();
         handle.TryStop(allowFadeOut: false);
         handle.Dispose();
     }
@@ -255,6 +289,7 @@ public static class SakuraVoicePlayback
             return;
 
         _activeHandle = null;
+        DetachVolumeRefresh();
         handle.TryStop(allowFadeOut: false);
         handle.Dispose();
     }

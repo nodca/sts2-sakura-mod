@@ -69,7 +69,7 @@ public sealed class AnotherMeBgmSuite
             && source.Contains("ResourceLoader.Load<AudioStream>(ResourcePath)?.GetLength()", StringComparison.Ordinal)
             && source.Contains("completionTween.SetIgnoreTimeScale();", StringComparison.Ordinal)
             && source.Contains("completionTween.SetPauseMode(Tween.TweenPauseMode.Process);", StringComparison.Ordinal)
-            && source.Contains("Callable.From<float>(volume => SetVolume(handle, volume))", StringComparison.Ordinal)
+            && source.Contains("Callable.From<float>(volume => ApplyEnvelopeVolume(handle, volume))", StringComparison.Ordinal)
             && source.Contains(".SetTrans(Tween.TransitionType.Sine)", StringComparison.Ordinal)
             && source.Contains(".SetEase(Tween.EaseType.Out);", StringComparison.Ordinal)
             && source.Contains(".SetEase(Tween.EaseType.In);", StringComparison.Ordinal),

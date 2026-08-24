@@ -25,7 +25,7 @@ using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class ClowFly() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None)
+public class ClowFly() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
     private const int ExtraDraw = 2;
 

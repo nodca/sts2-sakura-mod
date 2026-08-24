@@ -38,33 +38,62 @@ public class ClowFreeze() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.U
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await GainBlock(play, ReleasedBlock());
-        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
-        {
-            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+        // The prelude forms one cage per target before any gameplay resolves,
+        // so the session takes its own snapshot at play entry — one enumeration,
+        // the Sword precedent. The damage loop below keeps enumerating inside
+        // the propagation-suppressed block exactly as before: hoisting that
+        // enumeration out would change who is struck under an active Through
+        // scope, and this change owns presentation only.
+        var targets = SakuraThroughResolution.TargetsFor(play).ToList();
+        await FreezeCageVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            targets,
+            FreezeWeight.Medium,
+            async cues =>
             {
-                await DealDamage(choiceContext, target, ReleasedDamage());
-                await ApplyPower<SakuraFrostbitePower>(choiceContext, target, ReleasedValue("SakuraFrostbitePower"));
-            }
-        });
+                await GainBlock(play, ReleasedBlock());
+                await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+                {
+                    foreach (var target in SakuraThroughResolution.TargetsFor(play))
+                    {
+                        cues.Shatter(target);
+                        await DealDamage(choiceContext, target, ReleasedDamage());
+                        await ApplyPower<SakuraFrostbitePower>(choiceContext, target, ReleasedValue("SakuraFrostbitePower"));
+                    }
+                });
+            });
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await GainBlock(play, ReleasedBlock());
-        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
-        {
-            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+        // Activated is the same show one tier heavier: the doubled Frostbite is
+        // a bigger play, and the weight axis carries that without a second
+        // orchestration.
+        var targets = SakuraThroughResolution.TargetsFor(play).ToList();
+        await FreezeCageVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            targets,
+            FreezeWeight.Heavy,
+            async cues =>
             {
-                await DealDamage(choiceContext, target, ReleasedDamage());
-                var frostbite = ReleasedValue("SakuraFrostbitePower");
-                var existingFrostbite = target.GetPower<SakuraFrostbitePower>()?.Amount ?? 0;
-                await ApplyPower<SakuraFrostbitePower>(
-                    choiceContext,
-                    target,
-                    SakuraFreezeRules.DoubledApplicationAmount(existingFrostbite, frostbite));
-            }
-        });
+                await GainBlock(play, ReleasedBlock());
+                await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+                {
+                    foreach (var target in SakuraThroughResolution.TargetsFor(play))
+                    {
+                        cues.Shatter(target);
+                        await DealDamage(choiceContext, target, ReleasedDamage());
+                        var frostbite = ReleasedValue("SakuraFrostbitePower");
+                        var existingFrostbite = target.GetPower<SakuraFrostbitePower>()?.Amount ?? 0;
+                        await ApplyPower<SakuraFrostbitePower>(
+                            choiceContext,
+                            target,
+                            SakuraFreezeRules.DoubledApplicationAmount(existingFrostbite, frostbite));
+                    }
+                });
+            });
     }
 
     protected override void OnUpgrade()
@@ -88,19 +117,31 @@ public class SakuraFreeze() : SakuraFormCard(2, CardType.Attack, TargetType.AnyE
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await GainBlock(play, ReleasedBlock());
-        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
-        {
-            foreach (var target in SakuraThroughResolution.TargetsFor(play))
+        // Same snapshot rule as the Clow form's two paths; the release form is
+        // the richest tier by the frequency axis, not by a longer orchestration.
+        var targets = SakuraThroughResolution.TargetsFor(play).ToList();
+        await FreezeCageVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            targets,
+            FreezeWeight.Heavy,
+            async cues =>
             {
-                await DealDamage(choiceContext, target, ReleasedDamage());
-                var isEliteOrBossTarget = SakuraEnemyRules.IsEliteOrBossTarget(target);
-                var frostbite = SakuraFreezeRules.FrostbiteAmount(
-                    ReleasedValue("SakuraFrostbitePower"),
-                    ReleasedValue("ExtraFrostbite"),
-                    isEliteOrBossTarget);
-                await ApplyPower<SakuraFrostbitePower>(choiceContext, target, frostbite);
-            }
-        });
+                await GainBlock(play, ReleasedBlock());
+                await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+                {
+                    foreach (var target in SakuraThroughResolution.TargetsFor(play))
+                    {
+                        cues.Shatter(target);
+                        await DealDamage(choiceContext, target, ReleasedDamage());
+                        var isEliteOrBossTarget = SakuraEnemyRules.IsEliteOrBossTarget(target);
+                        var frostbite = SakuraFreezeRules.FrostbiteAmount(
+                            ReleasedValue("SakuraFrostbitePower"),
+                            ReleasedValue("ExtraFrostbite"),
+                            isEliteOrBossTarget);
+                        await ApplyPower<SakuraFrostbitePower>(choiceContext, target, frostbite);
+                    }
+                });
+            });
     }
 }

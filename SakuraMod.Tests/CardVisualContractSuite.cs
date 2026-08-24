@@ -131,6 +131,30 @@ public sealed class CardVisualContractSuite
     }
 
     [Fact]
+    public void FreezeCardVfxRouteCoversBothScenesPlusSharedCelAssets()
+    {
+        var sharedCelPaths = CelVfxSession.SharedAssetPaths;
+        var cases = new[]
+        {
+            new VfxCase(
+                new ClowFreeze(),
+                [FreezeCageVfx.ScenePath, FreezeCageVfx.TargetScenePath, .. sharedCelPaths]),
+            new VfxCase(
+                new SakuraFreeze(),
+                [FreezeCageVfx.ScenePath, FreezeCageVfx.TargetScenePath, .. sharedCelPaths])
+        };
+
+        foreach (var testCase in cases)
+        {
+            var vfxAssets = SakuraCardVfxAssets.RunAssetPaths(testCase.Card)
+                .ToHashSet(StringComparer.Ordinal);
+            RegressionTestHarness.Require(
+                vfxAssets.SetEquals(testCase.VfxAssets),
+                $"Expected {testCase.Card.GetType().Name} to declare exactly its combat VFX run assets.");
+        }
+    }
+
+    [Fact]
     public void CardLibrarySortingPreservesCatalogAndNativePriority()
     {
         var defaultLibrarySort = new List<SortingOrders>

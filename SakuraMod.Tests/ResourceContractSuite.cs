@@ -1273,6 +1273,233 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
+    public void FreezeCageScenesShipInputTransparentStartStateMaterials()
+    {
+        var rootScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/card_vfx/freeze_cage_vfx.tscn"));
+        var targetScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/card_vfx/freeze_cage_target.tscn"));
+
+        // One root scene is instantiated once in each native combat VFX layer.
+        // The target stays a pure ColorRect region with a local material and no
+        // screen capture: the rear spines and front shards get their depth from
+        // the game's existing BackCombatVfxContainer/CombatVfxContainer split.
+        RegressionTestHarness.Require(
+            rootScene.Contains("[node name=\"Cages\" type=\"Node2D\" parent=\".\"]", StringComparison.Ordinal)
+            && rootScene.Contains("unique_name_in_owner = true", StringComparison.Ordinal)
+            && rootScene.Contains("mouse_filter = 2", StringComparison.Ordinal)
+            && !rootScene.Contains("BackBufferCopy", StringComparison.Ordinal),
+            "Expected a reusable cage container root whose pass-through control ignores input and never copies the screen.");
+        RegressionTestHarness.Require(
+            targetScene.Contains("[node name=\"CageBody\" type=\"ColorRect\" parent=\".\"]", StringComparison.Ordinal)
+            && targetScene.Contains("unique_name_in_owner = true", StringComparison.Ordinal)
+            && targetScene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
+            && targetScene.Contains("mouse_filter = 2", StringComparison.Ordinal)
+            && targetScene.Contains("shader_parameter/layer_mode = 0.0", StringComparison.Ordinal)
+            && !targetScene.Contains("BackBufferCopy", StringComparison.Ordinal),
+            "Expected one local ColorRect cage region with a rear-layer default that ignores input and never copies the screen.");
+
+        // The target scene ships the shader's start state: no beat has begun,
+        // so rise = 0 leaves nothing between the ground and growth planes and
+        // the scene draws no cage at all as delivered. A scene shipped at its
+        // finished state would flash a completed prison on spawn.
+        RegressionTestHarness.Require(
+            targetScene.Contains("shader_parameter/rise = 0.0", StringComparison.Ordinal)
+            && targetScene.Contains("shader_parameter/shatter = 0.0", StringComparison.Ordinal)
+            && targetScene.Contains("shader_parameter/glint = 0.0", StringComparison.Ordinal)
+            && targetScene.Contains("shader_parameter/opacity = 1.0", StringComparison.Ordinal)
+            && targetScene.Contains("shader_parameter/weight = 0.5", StringComparison.Ordinal),
+            "Expected the cage scene to ship its ShaderMaterial in the start state, rise at zero included.");
+    }
+
+    [Fact]
+    public void FreezeCageUsesGroundedSpinesWithoutNeighbouringCardSilhouettes()
+    {
+        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/freeze_cage.gdshader"));
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/FreezeCageVfx.cs"));
+
+        var shaderCode = shader
+            .Split('\n')
+            .Select(static line => line.Trim())
+            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
+            .ToList();
+        var fragmentBody = ExtractGlslFunction(shader, "void fragment()");
+
+        // Shared includes first: the bands, ink, hash, and stepped clock live in
+        // cel_vfx.gdshaderinc, and a card-local copy of any of them could not
+        // stay in step with every other card.
+        RegressionTestHarness.Require(
+            shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_vfx.gdshaderinc\"", StringComparison.Ordinal)
+            && shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_signature.gdshaderinc\"", StringComparison.Ordinal),
+            "Expected Freeze to consume the shared cel mathematics and signature includes.");
+
+        // Freeze's silhouette operator is its own grounded tapered-spine array.
+        // Neighbouring card operators stay absent: cel_smin is Aqua's union,
+        // cel_fbm is Blaze's turbulence, cel_radial_fold is Snow's repeated
+        // wheel, cel_facet is the rounded/faceted crystal language, and
+        // cel_scalloped_mass is the weather canopy. Screen sampling and a
+        // shader-owned clock are forbidden card-wide. Checked against the
+        // comment-stripped source because the shader commentary documents the
+        // visual distinction but must not satisfy the contract by itself.
+        RegressionTestHarness.Require(
+            !shaderCode.Any(static line =>
+                line.Contains("cel_smin(", StringComparison.Ordinal)
+                || line.Contains("cel_fbm(", StringComparison.Ordinal)
+                || line.Contains("cel_radial_fold(", StringComparison.Ordinal)
+                || line.Contains("cel_facet(", StringComparison.Ordinal)
+                || line.Contains("cel_scalloped_mass(", StringComparison.Ordinal)
+                || line.Contains("hint_screen_texture", StringComparison.Ordinal)
+                || line.Contains("TIME", StringComparison.Ordinal)),
+            "Expected no water union, fire turbulence, snow fold, facet flattening, cloud canopy, shader clock, or screen sample in the cage field.");
+        RegressionTestHarness.Require(
+            !shaderCode.Any(static line => line.Contains("const float CEL_", StringComparison.Ordinal)),
+            "Expected no card-local restatement of the locked band, ink, or step constants.");
+
+        // The operator itself is a fixed-budget set of floor-anchored tapered
+        // segments. The two layer modes share one shader: the rear owns seven
+        // possible tall spines, the front owns four possible low shards, and
+        // the weight selects the Medium/Heavy count without creating nodes.
+        // Shading goes through the shared bands and ink with band edges against
+        // fwidth(depth) + 0.002 rather than the silhouette field's derivative.
+        // rise arrives already floored onto whole growth frames by the session,
+        // so the shader holds no second quantizer.
+        RegressionTestHarness.Require(
+            shader.Contains("const int BACK_SPINE_BUDGET = 7", StringComparison.Ordinal)
+            && shader.Contains("const int FRONT_SPINE_BUDGET = 4", StringComparison.Ordinal)
+            && shader.Contains("uniform float layer_mode", StringComparison.Ordinal)
+            && fragmentBody.Contains("back_base_fraction", StringComparison.Ordinal)
+            && fragmentBody.Contains("front_base_fraction", StringComparison.Ordinal)
+            && fragmentBody.Contains("cel_tapered_segment", StringComparison.Ordinal)
+            && fragmentBody.Contains("float spine_count", StringComparison.Ordinal)
+            && fragmentBody.Contains("float front_count", StringComparison.Ordinal)
+            && fragmentBody.Contains("float ring_gate = foreground", StringComparison.Ordinal)
+            && fragmentBody.Contains("cel_bands3(", StringComparison.Ordinal)
+            && fragmentBody.Contains("cel_ink(d, aa_d, CEL_INK_WIDTH)", StringComparison.Ordinal)
+            && fragmentBody.Contains("fwidth(depth) + 0.002", StringComparison.Ordinal)
+            && session.Contains("Mathf.Floor(Mathf.Clamp(value, 0f, 1f) * steps) / steps", StringComparison.Ordinal)
+            && !fragmentBody.Contains("cel_step_clock(", StringComparison.Ordinal),
+            "Expected the enclosure to use grounded tapered spine arrays, layered foreground control, and shared bands and ink, with the growth floor session-owned.");
+
+        // The scatter stays one session-driven progress consumed by the shader:
+        // no ballistic formula may be retyped outside BallisticOffset, and this
+        // card has no ballistic motion at all — the wedges fly at terminal
+        // velocity, linear in that progress.
+        RegressionTestHarness.Require(
+            !session.Contains("AddBallisticDebris", StringComparison.Ordinal)
+            && !session.Contains("BallisticOffset", StringComparison.Ordinal),
+            "Expected no ballistic path in the freeze session: the scatter is shader-side linear travel off one progress.");
+
+        RegressionTestHarness.Require(
+            session.Contains("BackCombatVfxContainer", StringComparison.Ordinal)
+            && session.Contains("FrontMaterial", StringComparison.Ordinal)
+            && session.Contains("BackMaterial", StringComparison.Ordinal)
+            && session.Contains("DisposePresentation", StringComparison.Ordinal)
+            && session.Contains("ReleaseBackRoot", StringComparison.Ordinal),
+            "Expected one Freeze session to own independent rear/front materials and idempotent back-layer cleanup.");
+    }
+
+    [Fact]
+    public void FreezeCageBeatsStayWholeFramesInsideTheLifetimeCap()
+    {
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/FreezeCageVfx.cs"));
+
+        // Every beat is counted in whole frames of the shared stepped clock,
+        // never in seconds: growth needs at least three frames to read as drawn,
+        // the glint and the hold are the standard two, and the burst keeps four.
+        RegressionTestHarness.Require(
+            FreezeCageVfx.MediumGrowthSteps == 5
+            && FreezeCageVfx.HeavyGrowthSteps == 6
+            && FreezeCageVfx.GrowthSteps(FreezeWeight.Medium) >= 3
+            && FreezeCageVfx.GrowthSteps(FreezeWeight.Heavy) >= 3
+            && FreezeCageVfx.GrowthSteps(FreezeWeight.Heavy) > FreezeCageVfx.GrowthSteps(FreezeWeight.Medium)
+            && FreezeCageVfx.GlintSteps == 2
+            && FreezeCageVfx.HoldSteps == 2
+            && FreezeCageVfx.ShatterBurstSteps >= 3,
+            "Expected every freeze beat to be whole stepped frames, with the heavy tier buying one growth frame.");
+
+        // MaximumLifetime is a wall-clock safety net, not a beat timer: sized
+        // for the worst case (prelude, growth, hold, glint, five serialized
+        // bursts, residue sublimation, fade) and asserted from the curve so a
+        // later re-tune fails here instead of truncating in combat.
+        RegressionTestHarness.Require(
+            session.Contains("MaximumLifetime", StringComparison.Ordinal)
+            && float.IsFinite(FreezeCageVfx.TotalEnvelopeSeconds(FreezeCageVfx.WorstCaseTargets))
+            && FreezeCageVfx.TotalEnvelopeSeconds(FreezeCageVfx.WorstCaseTargets) < 9f,
+            "Expected the worst-case envelope to stay finite and under the session's 9 s lifetime cap.");
+        RegressionTestHarness.Require(
+            float.IsFinite(FreezeCageVfx.TotalEnvelopeSeconds(0))
+            && FreezeCageVfx.TotalEnvelopeSeconds(0) < FreezeCageVfx.TotalEnvelopeSeconds(1)
+            && FreezeCageVfx.TotalEnvelopeSeconds(0) < 2.5f,
+            "Expected a single-target play to run the shortest envelope: the cage rises once, nothing idles.");
+    }
+
+    [Fact]
+    public void FreezeCardsWrapEveryEntryPointOnceAroundFreezeMechanics()
+    {
+        var freeze = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Freeze.cs"));
+
+        // Three entry points, three wrappings: ClowFreeze's base play, its
+        // activated extra-effect play, and SakuraFreeze's play each own exactly
+        // one session. A fourth would be a second prison over the same play.
+        RegressionTestHarness.Require(
+            freeze.Split("FreezeCageVfx.PlayOrResolveAsync(", StringSplitOptions.None).Length - 1 == 3,
+            "Expected exactly one Freeze cage session per card entry point.");
+
+        // Gameplay stays verbatim inside the wrapper: block first, then the
+        // propagation-suppressed block enumerating its own targets exactly as it
+        // did before the session existed. The prelude snapshot outside it is a
+        // separate enumeration for presentation, not a second gameplay pass.
+        RegressionTestHarness.Require(
+            freeze.Split("WithPropagationSuppressed", StringSplitOptions.None).Length - 1 == 3
+            && freeze.Split("foreach (var target in SakuraThroughResolution.TargetsFor(play))", StringSplitOptions.None).Length - 1 == 3
+            && freeze.Split("await GainBlock(play, ReleasedBlock());", StringSplitOptions.None).Length - 1 == 3,
+            "Expected every entry point to keep its block-then-suppressed-loop structure and its own in-loop target enumeration.");
+
+        // The weight axis: plain Clow is the medium tier, the activated path and
+        // the Sakura form share the heavy one — one orchestration, no branches.
+        RegressionTestHarness.Require(
+            freeze.Split("FreezeWeight.Medium", StringSplitOptions.None).Length - 1 == 1
+            && freeze.Split("FreezeWeight.Heavy", StringSplitOptions.None).Length - 1 == 2,
+            "Expected Medium on the plain Clow play and Heavy on the activated and Sakura plays.");
+
+        // Every shatter must land its burst on the frame of the damage it
+        // visualises: each cue sits immediately before its own DealDamage.
+        var segments = freeze.Split("cues.Shatter(target)", StringSplitOptions.None);
+        RegressionTestHarness.Require(
+            segments.Length == 4
+            && segments.Skip(1).All(static segment =>
+                segment.Contains("await DealDamage(", StringComparison.Ordinal)),
+            "Expected each freeze segment to fire its shatter cue immediately before its damage command resolves.");
+    }
+
+    [Fact]
+    public void FreezeCardsRouteThroughTheCageAssetGroup()
+    {
+        var assets = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/SakuraCardVfxAssets.cs"));
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/FreezeCageVfx.cs"));
+
+        // Both freeze forms share one group built from the session's own paths
+        // plus the shared cel assets, so adding a cage scene means adding it
+        // once.
+        RegressionTestHarness.Require(
+            assets.Contains("ClowFreeze or SakuraFreeze => FreezePaths", StringComparison.Ordinal)
+            && assets.Contains("[.. FreezeCageVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths]", StringComparison.Ordinal),
+            "Expected both Freeze cards to route through one cage asset group built from the session's own paths.");
+        // The group is warmed before combat, so the first prison never loads
+        // synchronously on the play path.
+        RegressionTestHarness.Require(
+            session.Contains("PreloadManager.Cache", StringComparison.Ordinal)
+            && !session.Contains("ResourceLoader.Load", StringComparison.Ordinal),
+            "Expected the cage session to consume native run assets without synchronous playback-path loads.");
+    }
+
+    [Fact]
     public void ShieldCardsHaveNoDedicatedCombatVfx()
     {
         var shield = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -2368,6 +2595,49 @@ public sealed class ResourceContractSuite
                 import.Contains($"source_file=\"res://{relativePath}\"", StringComparison.Ordinal)
                 && import.Contains("mipmaps/generate=false", StringComparison.Ordinal),
                 $"Expected {relativePath}.import to remain tracked and non-mipmapped.");
+        }
+    }
+
+    [Theory]
+    [InlineData("eng")]
+    [InlineData("zhs")]
+    public void AncientDialogueLinesProvideNextButtonKeys(string locale)
+    {
+        var relativePath = $"SakuraMod/localization/{locale}/ancients.json";
+        var entries = JsonSerializer.Deserialize<Dictionary<string, string>>(
+            File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath)))
+            ?? throw new InvalidOperationException($"Could not parse {relativePath}.");
+
+        // The game's AncientDialogueSet.PopulateLocKeys assigns every non-final dialogue line
+        // a "{line}.next" continue-button key; a missing entry renders the raw key on the button.
+        var linePattern = new System.Text.RegularExpressions.Regex(
+            @"^(?<dialogue>.+\.talk\.(?:firstVisitEver|ANY|[A-Z0-9_]+)\.\d+-)(?<line>\d+)(?<repeat>r?)\.(?:ancient|char)$");
+        var linesByDialogue = new Dictionary<string, List<(int Index, bool Repeat)>>();
+        foreach (var key in entries.Keys)
+        {
+            var match = linePattern.Match(key);
+            if (!match.Success)
+                continue;
+            var dialogue = match.Groups["dialogue"].Value;
+            var line = (int.Parse(match.Groups["line"].Value, CultureInfo.InvariantCulture),
+                match.Groups["repeat"].Value.Length > 0);
+            if (!linesByDialogue.TryGetValue(dialogue, out var lines))
+                linesByDialogue[dialogue] = lines = [];
+            lines.Add(line);
+        }
+
+        foreach (var (dialogue, lines) in linesByDialogue)
+        {
+            var finalLine = lines.Max(line => line.Index);
+            foreach (var (index, repeat) in lines)
+            {
+                if (index == finalLine)
+                    continue;
+                var nextKey = $"{dialogue}{index}{(repeat ? "r" : "")}.next";
+                RegressionTestHarness.Require(
+                    entries.ContainsKey(nextKey),
+                    $"Missing {nextKey} in {relativePath}: non-final ancient dialogue lines need a continue-button key.");
+            }
         }
     }
 

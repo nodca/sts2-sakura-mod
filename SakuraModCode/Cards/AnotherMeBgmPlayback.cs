@@ -22,6 +22,8 @@ internal static class AnotherMeBgmPlayback
 
     private static AudioMusicHandle? _musicHandle;
     private static Tween? _completionTween;
+    private static float _envelopeVolume;
+    private static SceneTree? _volumeRefreshTree;
     private static IDisposable? _combatEndedSubscription;
     private static IDisposable? _runEndedSubscription;
     private static IDisposable? _mainMenuReadySubscription;
@@ -92,6 +94,8 @@ internal static class AnotherMeBgmPlayback
             }
 
             _musicHandle = handle;
+            _envelopeVolume = 0f;
+            AttachVolumeRefresh(tree);
             var completionTween = tree.CreateTween();
             _completionTween = completionTween;
             completionTween.SetIgnoreTimeScale();
@@ -100,7 +104,7 @@ internal static class AnotherMeBgmPlayback
             var fadeOutSeconds = Math.Min(FadeOutSeconds, duration - fadeInSeconds);
             var holdSeconds = Math.Max(0d, duration - fadeInSeconds - fadeOutSeconds);
             completionTween.TweenMethod(
-                    Callable.From<float>(volume => SetVolume(handle, volume)),
+                    Callable.From<float>(volume => ApplyEnvelopeVolume(handle, volume)),
                     0f,
                     MusicVolume,
                     fadeInSeconds)
@@ -108,7 +112,7 @@ internal static class AnotherMeBgmPlayback
                 .SetEase(Tween.EaseType.Out);
             completionTween.TweenInterval(holdSeconds);
             completionTween.TweenMethod(
-                    Callable.From<float>(volume => SetVolume(handle, volume)),
+                    Callable.From<float>(volume => ApplyEnvelopeVolume(handle, volume)),
                     MusicVolume,
                     0f,
                     fadeOutSeconds)
@@ -146,14 +150,43 @@ internal static class AnotherMeBgmPlayback
 
         _completionTween = null;
         _musicHandle = null;
+        DetachVolumeRefresh();
         Release(handle);
         FinishStop(restoreRunMusic: true);
     }
 
-    private static void SetVolume(AudioMusicHandle handle, float volume)
+    private static void ApplyEnvelopeVolume(AudioMusicHandle handle, float volume)
     {
-        if (ReferenceEquals(_musicHandle, handle) && handle.IsValid)
-            handle.TrySetVolume(volume);
+        if (!ReferenceEquals(_musicHandle, handle))
+            return;
+
+        _envelopeVolume = volume;
+        if (handle.IsValid)
+            handle.TrySetVolume(volume * SakuraGameVolumeFollower.MusicFactor());
+    }
+
+    private static void AttachVolumeRefresh(SceneTree tree)
+    {
+        if (_volumeRefreshTree is not null)
+            return;
+
+        _volumeRefreshTree = tree;
+        tree.ProcessFrame += RefreshVolumeFromGameBuses;
+    }
+
+    private static void DetachVolumeRefresh()
+    {
+        if (_volumeRefreshTree is not { } tree)
+            return;
+
+        _volumeRefreshTree = null;
+        tree.ProcessFrame -= RefreshVolumeFromGameBuses;
+    }
+
+    private static void RefreshVolumeFromGameBuses()
+    {
+        if (_musicHandle is { IsValid: true } handle)
+            handle.TrySetVolume(_envelopeVolume * SakuraGameVolumeFollower.MusicFactor());
     }
 
     private static void StopImmediately(bool restoreRunMusic)
@@ -162,6 +195,7 @@ internal static class AnotherMeBgmPlayback
 
         var handle = _musicHandle;
         _musicHandle = null;
+        DetachVolumeRefresh();
         if (handle is not null)
             Release(handle);
 
