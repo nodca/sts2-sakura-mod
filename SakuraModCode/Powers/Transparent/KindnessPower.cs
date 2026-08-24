@@ -22,17 +22,27 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class KindnessPower : SakuraPowerModel
 {
+    private sealed class Data
+    {
+        public int ExtraPendingCount;
+    }
+
     protected override string IconFileName => "kindness.png";
 
-    private readonly Queue<bool> _pendingEffects = [];
-    private readonly HashSet<CardModel> _zeroCostCards = [];
     private CardModel? _targetCard;
+    private bool _returnedWithExtraEffect;
 
     public override PowerType Type => PowerType.Buff;
+    public override PowerInstanceType InstanceType => PowerInstanceType.Instanced;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public void QueueEffect(bool extraEffect) =>
-        _pendingEffects.Enqueue(extraEffect);
+    protected override object InitInternalData() => new Data();
+
+    public void RegisterPendingEffect(bool extraEffect)
+    {
+        if (extraEffect)
+            GetInternalData<Data>().ExtraPendingCount++;
+    }
 
     public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
         CardModel card,
@@ -43,15 +53,22 @@ public class KindnessPower : SakuraPowerModel
     {
         if (Amount <= 0
             || _targetCard is not null
-            || _pendingEffects.Count == 0
             || card.Owner?.Creature != Owner
             || !SakuraSourceCardRules.CanBeTargetedByClearCardEffects(card)
             || pileType != PileType.Exhaust)
             return (pileType, position);
 
         _targetCard = card;
-        if (_pendingEffects.Dequeue())
-            _zeroCostCards.Add(card);
+        var data = GetInternalData<Data>();
+        if (data.ExtraPendingCount > 0)
+        {
+            data.ExtraPendingCount--;
+            _returnedWithExtraEffect = true;
+        }
+        else
+        {
+            _returnedWithExtraEffect = false;
+        }
 
         return (PileType.Hand, CardPilePosition.Bottom);
     }
@@ -61,9 +78,14 @@ public class KindnessPower : SakuraPowerModel
         PileType pileType,
         CardPilePosition position)
     {
-        if (card == _targetCard && pileType != PileType.Hand)
-            _zeroCostCards.Remove(card);
+        if (card != _targetCard || pileType == PileType.Hand)
+            return Task.CompletedTask;
 
+        if (_returnedWithExtraEffect)
+            GetInternalData<Data>().ExtraPendingCount++;
+
+        _targetCard = null;
+        _returnedWithExtraEffect = false;
         return Task.CompletedTask;
     }
 
@@ -73,13 +95,21 @@ public class KindnessPower : SakuraPowerModel
             return;
 
         var card = play.Card;
-        if (_zeroCostCards.Remove(card))
+        if (_returnedWithExtraEffect)
         {
             card.EnergyCost.SetThisTurn(0, true);
             card.InvokeEnergyCostChanged();
         }
 
         _targetCard = null;
+        _returnedWithExtraEffect = false;
         await PowerCmd.Decrement(this);
+    }
+
+    public override Task AfterRemoved(Creature oldOwner)
+    {
+        _targetCard = null;
+        _returnedWithExtraEffect = false;
+        return Task.CompletedTask;
     }
 }

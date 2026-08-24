@@ -38,7 +38,14 @@ public sealed record PackageVerificationResult(
 public sealed class PackageVerifier(IPckInspector pckInspector)
 {
     private static readonly string[] RequiredFileNames =
-        ["SakuraMod.dll", "SakuraMod.json", "SakuraMod.pck", "music/another_me.ogg"];
+    [
+        "SakuraMod.dll",
+        "SakuraMod.json",
+        "SakuraMod.pck",
+        "music/another_me.ogg",
+        "voices/dream_wand.ogg",
+        "voices/stabilize.ogg"
+    ];
     private const string KeroCompanionImportPath =
         "res://SakuraMod/images/charui/combat/kero_companion.png.import";
     private const string KeroCompanionTexturePrefix =
@@ -153,7 +160,8 @@ public sealed class PackageVerifier(IPckInspector pckInspector)
             var relativePath = Path.GetRelativePath(packageDirectory, path).Replace(Path.DirectorySeparatorChar, '/');
             var allowed = RequiredFileNames.Contains(relativePath, StringComparer.Ordinal)
                 || relativePath == "SakuraMod.pdb"
-                || relativePath.StartsWith("music/", StringComparison.Ordinal);
+                || relativePath.StartsWith("music/", StringComparison.Ordinal)
+                || relativePath.StartsWith("voices/", StringComparison.Ordinal);
             if (!allowed)
             {
                 throw new InvalidDataException($"Package contains an unexpected file: {relativePath}");

@@ -11,7 +11,7 @@ public sealed class PackageVerifierSuite
 
         Assert.Equal("PASS", result.Status);
         Assert.Equal("SakuraMod", result.AssemblyName);
-        Assert.Equal(4, result.Files.Count);
+        Assert.Equal(6, result.Files.Count);
         Assert.All(result.Files, file => Assert.Matches("^[0-9a-f]{64}$", file.Sha256));
         Assert.Equal(3, result.PckPathCount);
     }
@@ -154,6 +154,9 @@ public sealed class PackageVerifierSuite
             File.WriteAllBytes(PckPath, [1]);
             Directory.CreateDirectory(Path.GetDirectoryName(AnotherMeBgmPath)!);
             File.WriteAllBytes(AnotherMeBgmPath, "OggS"u8.ToArray());
+            Directory.CreateDirectory(Path.Combine(_root, "voices"));
+            File.WriteAllBytes(Path.Combine(_root, "voices", "dream_wand.ogg"), "OggS"u8.ToArray());
+            File.WriteAllBytes(Path.Combine(_root, "voices", "stabilize.ogg"), "OggS"u8.ToArray());
         }
 
         public string ManifestPath => Path.Combine(_root, "SakuraMod.json");

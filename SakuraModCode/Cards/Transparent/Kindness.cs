@@ -35,7 +35,7 @@ public class Kindness() : TransparentExtraEffectCard(1, CardType.Skill, CardRari
             Owner.Creature,
             this,
             false);
-        power?.QueueEffect(activation.IsActive);
+        power?.RegisterPendingEffect(activation.IsActive);
     }
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);

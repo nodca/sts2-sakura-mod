@@ -97,6 +97,9 @@ public class SpellTurn() : SpellCard(-2, CardType.Skill, CardRarity.Token, Targe
         CardModel canonicalSakura)
     {
         var deckReplacement = Owner.RunState.CreateCard(canonicalSakura, Owner);
+        var enchantmentSource = ResolveEnchantmentSource(selected, deckCard);
+        if (enchantmentSource is not null)
+            SakuraCardEnchantmentTransfer.TransferEnchantment(enchantmentSource, deckReplacement);
         var results = (await CardCmd.Transform(
             [new CardTransformation(deckCard, deckReplacement)],
             null,
@@ -104,13 +107,25 @@ public class SpellTurn() : SpellCard(-2, CardType.Skill, CardRarity.Token, Targe
         if (results.Count == 0)
             return null;
 
+        var transformedDeckCard = results[0].cardAdded;
         var combatState = Owner.Creature.CombatState
             ?? throw new InvalidOperationException("Spell Turn requires an active combat.");
         var handCard = combatState.CreateCard(canonicalSakura, Owner);
+        if (enchantmentSource is not null)
+            SakuraCardEnchantmentTransfer.TransferEnchantment(enchantmentSource, handCard);
+        handCard.DeckVersion = transformedDeckCard;
         await CardPileCmd.AddGeneratedCardToCombat(handCard, PileType.Hand, Owner, CardPilePosition.Random);
         SakuraReleaseState.Reset(selected);
         await CardPileCmd.RemoveFromCombat(selected, skipVisuals: false);
         return handCard;
+    }
+
+    private static CardModel? ResolveEnchantmentSource(CardModel selected, CardModel deckCard)
+    {
+        if (deckCard.Enchantment is not null)
+            return deckCard;
+
+        return selected.Enchantment is not null ? selected : null;
     }
 }
 

@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.TestSupport;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.TestProtocol;
+using SpiralEnchantment = MegaCrit.Sts2.Core.Models.Enchantments.Spiral;
 
 namespace SakuraMod.RuntimeTests;
 
@@ -24,6 +25,9 @@ internal static class SpellTurnTransformationScenario
 
         var selectedClow = playerCombat.AllCards.OfType<ClowSword>().FirstOrDefault()
             ?? throw new InvalidOperationException("Starter combat did not contain ClowSword.");
+        if (selectedClow.DeckVersion is not { } deckClow)
+            throw new InvalidOperationException("Fixture ClowSword did not have a deck version.");
+        CardCmd.Enchant(ModelDb.Enchantment<SpiralEnchantment>().ToMutable(), deckClow, 1m);
         if (selectedClow.Pile?.Type != PileType.Hand)
         {
             var moveAction = new RuntimeFixtureAction(
@@ -51,9 +55,16 @@ internal static class SpellTurnTransformationScenario
         }
 
         var handSakura = playerCombat.Hand.Cards.OfType<SakuraSword>().ToArray();
+        var deckSakura = player.Deck.Cards.OfType<SakuraSword>().ToArray();
         assertions.Equal("deck_clow_decrement", deckClowBefore - 1, player.Deck.Cards.OfType<ClowSword>().Count());
-        assertions.Equal("deck_sakura_increment", deckSakuraBefore + 1, player.Deck.Cards.OfType<SakuraSword>().Count());
+        assertions.Equal("deck_sakura_increment", deckSakuraBefore + 1, deckSakura.Length);
         assertions.Equal("hand_sakura_count", 1, handSakura.Length);
+        assertions.True(
+            "deck_sakura_preserves_spiral",
+            deckSakura.Single().Enchantment is SpiralEnchantment);
+        assertions.True(
+            "hand_sakura_preserves_spiral",
+            handSakura.Single().Enchantment is SpiralEnchantment);
         assertions.Equal("selected_clow_removed_from_combat", false, playerCombat.AllCards.Contains(selectedClow));
         assertions.Equal("selected_clow_removed_from_hand", false, playerCombat.Hand.Cards.Contains(selectedClow));
         assertions.True("sakura_identity_registered", SakuraSourceCardRules.HasSakuraIdentity(player, selectedClow.Identity!.Value));

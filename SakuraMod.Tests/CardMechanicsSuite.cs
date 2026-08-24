@@ -60,6 +60,30 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void SpellTurnPreservesCompatibleEnchantmentDuringTransformation()
+    {
+        var spellTurnSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Spells/SpellTurn.cs"));
+        var transferSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraCardEnchantmentTransfer.cs"));
+        RegressionTestHarness.Require(
+            spellTurnSource.Contains("ResolveEnchantmentSource(selected, deckCard)", StringComparison.Ordinal)
+            && spellTurnSource.Contains("SakuraCardEnchantmentTransfer.TransferEnchantment(enchantmentSource, deckReplacement)", StringComparison.Ordinal)
+            && spellTurnSource.Contains("SakuraCardEnchantmentTransfer.TransferEnchantment(enchantmentSource, handCard)", StringComparison.Ordinal)
+            && spellTurnSource.Contains("handCard.DeckVersion = transformedDeckCard", StringComparison.Ordinal)
+            && !spellTurnSource.Contains("CardCmd.Enchant(", StringComparison.Ordinal)
+            && !spellTurnSource.Contains("CardCmd.Upgrade(", StringComparison.Ordinal),
+            "Expected Spell Turn to delegate enchantment transfer to the shared helper.");
+        RegressionTestHarness.Require(
+            transferSource.Contains("target.EnchantInternal(enchantmentCopy, enchantmentCopy.Amount)", StringComparison.Ordinal)
+            && transferSource.Contains("enchantmentCopy.ModifyCard()", StringComparison.Ordinal)
+            && transferSource.Contains("target.FinalizeUpgradeInternal()", StringComparison.Ordinal)
+            && !transferSource.Contains("CanEnchant(", StringComparison.Ordinal)
+            && !transferSource.Contains("CardCmd.Enchant(", StringComparison.Ordinal),
+            "Expected enchantment transfer to copy existing state through EnchantInternal only.");
+    }
+
+    [Fact]
     public void EmptySpellCommunicatesThroughNativeKeywordsOnly()
     {
         RegressionTestHarness.Require(
@@ -1494,9 +1518,11 @@ public sealed class CardMechanicsSuite
             && upgradedKindness.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0
             && new KindnessPower().Type == PowerType.Buff
             && new KindnessPower().StackType == PowerStackType.Counter
+            && new KindnessPower().InstanceType == PowerInstanceType.Instanced
             && RegressionTestHarness.DeclaresMethod<KindnessPower>("ModifyCardPlayResultPileTypeAndPosition")
             && RegressionTestHarness.DeclaresMethod<KindnessPower>("AfterModifyingCardPlayResultPileOrPosition")
-            && RegressionTestHarness.DeclaresMethod<KindnessPower>("AfterCardPlayed"),
+            && RegressionTestHarness.DeclaresMethod<KindnessPower>("AfterCardPlayed")
+            && RegressionTestHarness.DeclaresMethod<KindnessPower>("RegisterPendingEffect"),
             "Expected Kindness to return the next Exhausted card, set an Extra-returned card to 0 cost for this turn, and upgrade from 1 to 0 cost.");
 
         var appear = new Appear();
