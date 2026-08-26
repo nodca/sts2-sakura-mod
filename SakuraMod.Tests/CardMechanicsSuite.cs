@@ -202,7 +202,6 @@ public sealed class CardMechanicsSuite
             new SakuraFreeze(),
             new SakuraSong(),
             new Spiral(),
-            new Blank(),
             new Shade(),
             new Siege(),
             new Promise(),
@@ -213,7 +212,8 @@ public sealed class CardMechanicsSuite
         [
             new ClowNothing(),
             new ClowVoice(),
-            new Choice()
+            new Choice(),
+            new Blank()
         ];
         var nimble = new NimbleEnchantment();
 
@@ -1102,18 +1102,18 @@ public sealed class CardMechanicsSuite
         var upgradedAqua = RegressionTestHarness.MutableForCostTest(new Aqua());
         upgradedAqua.UpgradeInternal();
         RegressionTestHarness.Require(
-            new Aqua().EnergyCost.Canonical == 1
+            new Aqua().EnergyCost.Canonical == 0
             && !new Aqua().CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && new Aqua().DynamicVars.Damage.IntValue == 6
+            && new Aqua().DynamicVars.Damage.IntValue == 4
             && new Aqua().DynamicVars.Energy.IntValue == 1
             && SakuraCardHoverTips.KeywordTips(new Aqua()).Contains(SakuraKeywords.Frostbite)
             && AquaRules.DrawCount(0) == 0
             && AquaRules.DrawCount(1) == 1
-            && AquaRules.DrawCount(4) == 4
-            && AquaRules.HighestFrostbite([]) == 0
-            && AquaRules.HighestFrostbiteEnemy([]) is null
-            && upgradedAqua.DynamicVars.Damage.IntValue == 9,
-            "Expected Aqua to cost 1, deal 6/9 AOE damage, draw the highest Frostbite amount, and add 1 Energy and draw with Extra.");
+            && AquaRules.DrawCount(2) == 2
+            && AquaRules.FrostbiteEnemyCount([]) == 0
+            && AquaRules.FrostbiteEnemyForPresentation([]) is null
+            && upgradedAqua.DynamicVars.Damage.IntValue == 7,
+            "Expected Aqua to cost 0, deal 4/7 AOE damage, draw 1 per Frostbite enemy, and grant 1 Energy per Frostbite enemy with Extra.");
 
         var spiral = new Spiral();
         var upgradedSpiral = RegressionTestHarness.MutableForCostTest(new Spiral());
@@ -1473,9 +1473,9 @@ public sealed class CardMechanicsSuite
             && blank.Type == CardType.Skill
             && blank.TargetType == TargetType.Self
             && blank.CanonicalKeywords.SequenceEqual([SakuraKeywords.Earth, CardKeyword.Exhaust])
-            && blank.DynamicVars.Block.IntValue == 4
-            && upgradedBlank.DynamicVars.Block.IntValue == 7,
-            "Expected Blank to be a 1-cost Rare Earth Exhaust card with its 4-to-7 Block upgrade.");
+            && !blank.GainsBlock
+            && upgradedBlank.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0,
+            "Expected Blank to be a 1-cost Rare Earth Exhaust card that upgrades to 0 cost without Block.");
         RegressionTestHarness.Require(
             Blank.TargetPileTypes.SequenceEqual([PileType.Hand, PileType.Draw, PileType.Discard])
             && Blank.CanGainForgotten(CardType.Status, isForgotten: false)
@@ -1489,6 +1489,8 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             blankSource.Contains("SakuraForgotten.GrantTemporary(choiceContext, card)", StringComparison.Ordinal)
             && blankSource.Contains("PowerCmd.Apply<DrawCardsNextTurnPower>", StringComparison.Ordinal)
+            && blankSource.Contains("EnergyCost.UpgradeBy(-1)", StringComparison.Ordinal)
+            && !blankSource.Contains("GainBlock", StringComparison.Ordinal)
             && blankSource.IndexOf("PowerCmd.Apply<DrawCardsNextTurnPower>", StringComparison.Ordinal)
                 < blankSource.IndexOf("if (activation.IsActive)", StringComparison.Ordinal),
             "Expected Blank's ordinary effect to use the shared Forgotten grant path and apply vanilla next-turn draw before the Extra branch.");
@@ -1498,9 +1500,45 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             chineseCards.Contains("状态牌与诅咒牌获得[red]遗忘[/red]", StringComparison.Ordinal)
             && chineseCards.Contains("下回合额外抽 1 张牌", StringComparison.Ordinal)
+            && !chineseCards.Contains("SAKURA_MOD_CARD_BLANK.description\": \"获得 {Block:diff()}", StringComparison.Ordinal)
             && englishCards.Contains("Status and Curse cards gain [red]Forgotten[/red]", StringComparison.Ordinal)
-            && englishCards.Contains("draw 1 additional card next turn", StringComparison.Ordinal),
-            "Expected both localizations to describe Blank's Forgotten and next-turn draw effects.");
+            && englishCards.Contains("draw 1 additional card next turn", StringComparison.Ordinal)
+            && !englishCards.Contains("SAKURA_MOD_CARD_BLANK.description\": \"Gain {Block:diff()}", StringComparison.Ordinal),
+            "Expected both localizations to describe Blank's Forgotten and next-turn draw effects without Block.");
+    }
+
+    [Fact]
+    public void RewindSelectsMoreCardsOnUpgradeInsteadOfCostReduction()
+    {
+        var rewind = new Rewind();
+        var upgradedRewind = RegressionTestHarness.MutableForCostTest(new Rewind());
+        upgradedRewind.UpgradeInternal();
+
+        RegressionTestHarness.Require(
+            rewind.EnergyCost.Canonical == 1
+            && rewind.Rarity == CardRarity.Rare
+            && rewind.CanonicalKeywords.SequenceEqual([SakuraKeywords.Earth, CardKeyword.Exhaust])
+            && rewind.DynamicVars.Cards.IntValue == 1
+            && upgradedRewind.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
+            && upgradedRewind.DynamicVars.Cards.IntValue == 2,
+            "Expected Rewind to stay 1-cost on upgrade and select 1 then 2 exhaust cards.");
+
+        var rewindSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Rewind.cs"));
+        RegressionTestHarness.Require(
+            rewindSource.Contains("SelectUpToFromCards", StringComparison.Ordinal)
+            && rewindSource.Contains("MoveExistingCardToHand", StringComparison.Ordinal)
+            && rewindSource.Contains("SetToFreeThisTurn", StringComparison.Ordinal)
+            && rewindSource.Contains("DynamicVars.Cards.UpgradeValueBy(1)", StringComparison.Ordinal)
+            && !rewindSource.Contains("EnergyCost.UpgradeBy(-1)", StringComparison.Ordinal),
+            "Expected Rewind upgrade to increase exhaust selection count while keeping Extra free-this-turn.");
+
+        var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraMod/localization/zhs/cards.json"));
+        var englishCards = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraMod/localization/eng/cards.json"));
+        RegressionTestHarness.Require(
+            chineseCards.Contains("选择[gold]消耗堆[/gold]中的 {Cards:diff()} 张牌放入手牌", StringComparison.Ordinal)
+            && englishCards.Contains("Choose {Cards:diff()} card(s) from your [gold]exhaust pile[/gold]", StringComparison.Ordinal),
+            "Expected Rewind localizations to gold the exhaust pile and use Cards:diff().");
     }
 
     [Fact]

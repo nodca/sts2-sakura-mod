@@ -485,7 +485,7 @@ public sealed class ResourceContractSuite
         // the session before the reward awaits run. It must also stay after the
         // attack loop, since attacks can kill the enemy holding the maximum.
         var attackIndex = aqua.IndexOf("await SakuraActions.Attack", StringComparison.Ordinal);
-        var frostbiteIndex = aqua.IndexOf("AquaRules.HighestFrostbite(targets)", StringComparison.Ordinal);
+        var frostbiteIndex = aqua.IndexOf("AquaRules.FrostbiteEnemyCount(targets)", StringComparison.Ordinal);
         var freezeIndex = aqua.IndexOf("waterVfx?.PlayFreeze(frozen)", StringComparison.Ordinal);
         var releaseIndex = aqua.IndexOf("waterVfx?.Release()", StringComparison.Ordinal);
         var energyIndex = aqua.IndexOf("PlayerCmd.GainEnergy", StringComparison.Ordinal);

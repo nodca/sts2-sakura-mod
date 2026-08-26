@@ -11,6 +11,6 @@
   "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.aromaPrinciple": "...",
   "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.cardsModifierTitle": "Sakura Cards",
   "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.cardsModifierDescription": "Sakura cards will now appear in rewards and shops.",
-  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.banter.alive.endTurnPing": "...",
-  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.banter.dead.endTurnPing": "..."
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.banter.alive.endTurnPing": "Please!",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.banter.dead.endTurnPing": "[jitter]...[/jitter]"
 }

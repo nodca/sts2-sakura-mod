@@ -1,27 +1,22 @@
 using MegaCrit.Sts2.Core.Combat;
-using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
-using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Cards;
-using SakuraMod.SakuraModCode.Extensions;
 using SakuraMod.SakuraModCode.Powers;
-using STS2RitsuLib.Cards.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Aqua() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
+public class Aqua() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
     internal override IEnumerable<CardKeyword> ReferencedKeywords => [SakuraKeywords.Frostbite];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(6, ValueProp.Move),
+        new DamageVar(4, ValueProp.Move),
         new EnergyVar(1)
     ];
 
@@ -32,7 +27,7 @@ public class Aqua() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.
     {
         var targets = CombatState!.HittableEnemies.ToList();
         var waterVfx = AquaWaterSphereVfx.TryCreate(targets, Owner.Creature);
-        int highestFrostbite;
+        int frostbiteEnemies;
         try
         {
             if (waterVfx is not null)
@@ -44,11 +39,11 @@ public class Aqua() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.
             }
 
             // Read Frostbite after every attack resolves: attacks can kill the
-            // enemy holding the highest amount, and the rules filter on IsAlive.
+            // enemy holding Frostbite, and the rules filter on IsAlive.
             // The visual session is disposed by the finally below, so the freeze
             // beat has to start here rather than after it.
-            highestFrostbite = AquaRules.HighestFrostbite(targets);
-            if (AquaRules.HighestFrostbiteEnemy(targets) is { } frozen)
+            frostbiteEnemies = AquaRules.FrostbiteEnemyCount(targets);
+            if (AquaRules.FrostbiteEnemyForPresentation(targets) is { } frozen)
                 waterVfx?.PlayFreeze(frozen);
         }
         finally
@@ -56,15 +51,19 @@ public class Aqua() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.
             waterVfx?.Release();
         }
 
-        if (highestFrostbite <= 0)
+        if (frostbiteEnemies <= 0)
             return;
 
-        var extraAmount = activation.IsActive ? 1 : 0;
-        await PlayerCmd.GainEnergy(DynamicVars.Energy.IntValue + extraAmount, Owner);
-
-        var drawCount = AquaRules.DrawCount(highestFrostbite) + extraAmount;
+        var drawCount = AquaRules.DrawCount(frostbiteEnemies);
         if (drawCount > 0)
             await CardPileCmd.Draw(choiceContext, drawCount, Owner, false);
+
+        if (activation.IsActive)
+        {
+            var energy = frostbiteEnemies * DynamicVars.Energy.IntValue;
+            if (energy > 0)
+                await PlayerCmd.GainEnergy(energy, Owner);
+        }
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
@@ -72,27 +71,22 @@ public class Aqua() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.
 
 internal static class AquaRules
 {
-    internal static int HighestFrostbite(IEnumerable<Creature> enemies) =>
-        enemies
-            .Where(static enemy => enemy.IsAlive)
-            .Select(static enemy => enemy.GetPower<SakuraFrostbitePower>()?.Amount ?? 0)
-            .DefaultIfEmpty()
-            .Max();
+    internal static int FrostbiteEnemyCount(IEnumerable<Creature> enemies) =>
+        enemies.Count(HasFrostbite);
 
     /// <summary>
-    /// The live enemy carrying the highest Frostbite amount, or null when no
-    /// surviving enemy carries any. Presentation uses this to pick which
-    /// enclosure freezes; it never changes the reward amounts.
+    /// A live Frostbite enemy for the freeze presentation beat, preferring the
+    /// highest stack. Presentation only; it never changes reward amounts.
     /// </summary>
-    internal static Creature? HighestFrostbiteEnemy(IEnumerable<Creature> enemies) =>
+    internal static Creature? FrostbiteEnemyForPresentation(IEnumerable<Creature> enemies) =>
         enemies
-            .Where(static enemy => enemy.IsAlive)
-            .Select(static enemy => (Enemy: enemy, Amount: enemy.GetPower<SakuraFrostbitePower>()?.Amount ?? 0))
-            .Where(static candidate => candidate.Amount > 0)
-            .OrderByDescending(static candidate => candidate.Amount)
-            .Select(static candidate => candidate.Enemy)
+            .Where(HasFrostbite)
+            .OrderByDescending(static enemy => enemy.GetPower<SakuraFrostbitePower>()!.Amount)
             .FirstOrDefault();
 
-    internal static int DrawCount(int highestFrostbite) =>
-        Math.Max(0, highestFrostbite);
+    internal static int DrawCount(int frostbiteEnemyCount) =>
+        Math.Max(0, frostbiteEnemyCount);
+
+    private static bool HasFrostbite(Creature enemy) =>
+        enemy.IsAlive && (enemy.GetPower<SakuraFrostbitePower>()?.Amount ?? 0) > 0;
 }

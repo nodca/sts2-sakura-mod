@@ -11,6 +11,6 @@
   "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.aromaPrinciple": "...",
   "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.cardsModifierTitle": "小樱牌池",
   "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.cardsModifierDescription": "小樱的卡牌现在会出现在奖励和商店中。",
-  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.banter.alive.endTurnPing": "...",
-  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.banter.dead.endTurnPing": "..."
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.banter.alive.endTurnPing": "拜托啦！",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.banter.dead.endTurnPing": "[jitter]……[/jitter]"
 }
