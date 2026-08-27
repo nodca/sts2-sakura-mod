@@ -2,6 +2,7 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -22,15 +23,16 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class KindnessPower : SakuraPowerModel
 {
+    private const uint NoPendingTarget = uint.MaxValue;
+
     private sealed class Data
     {
         public int ExtraPendingCount;
+        public uint PendingTargetCombatCardIndex = NoPendingTarget;
+        public bool ReturnedWithExtraEffect;
     }
 
     protected override string IconFileName => "kindness.png";
-
-    private CardModel? _targetCard;
-    private bool _returnedWithExtraEffect;
 
     public override PowerType Type => PowerType.Buff;
     public override PowerInstanceType InstanceType => PowerInstanceType.Instanced;
@@ -38,10 +40,12 @@ public class KindnessPower : SakuraPowerModel
 
     protected override object InitInternalData() => new Data();
 
+    private Data State => GetInternalData<Data>();
+
     public void RegisterPendingEffect(bool extraEffect)
     {
         if (extraEffect)
-            GetInternalData<Data>().ExtraPendingCount++;
+            State.ExtraPendingCount++;
     }
 
     public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
@@ -51,24 +55,9 @@ public class KindnessPower : SakuraPowerModel
         PileType pileType,
         CardPilePosition position)
     {
-        if (Amount <= 0
-            || _targetCard is not null
-            || card.Owner?.Creature != Owner
-            || !SakuraSourceCardRules.CanBeTargetedByClearCardEffects(card)
-            || pileType != PileType.Exhaust)
+        if (!IsEligibleIntercept(card, pileType)
+            || State.PendingTargetCombatCardIndex != NoPendingTarget)
             return (pileType, position);
-
-        _targetCard = card;
-        var data = GetInternalData<Data>();
-        if (data.ExtraPendingCount > 0)
-        {
-            data.ExtraPendingCount--;
-            _returnedWithExtraEffect = true;
-        }
-        else
-        {
-            _returnedWithExtraEffect = false;
-        }
 
         return (PileType.Hand, CardPilePosition.Bottom);
     }
@@ -78,38 +67,78 @@ public class KindnessPower : SakuraPowerModel
         PileType pileType,
         CardPilePosition position)
     {
-        if (card != _targetCard || pileType == PileType.Hand)
+        if (pileType == PileType.Hand
+            && IsEligibleIntercept(card, PileType.Exhaust)
+            && State.PendingTargetCombatCardIndex == NoPendingTarget)
+        {
+            State.PendingTargetCombatCardIndex = NetCombatCard.FromModel(card).CombatCardIndex;
+            if (State.ExtraPendingCount > 0)
+            {
+                State.ExtraPendingCount--;
+                State.ReturnedWithExtraEffect = true;
+            }
+            else
+            {
+                State.ReturnedWithExtraEffect = false;
+            }
+
             return Task.CompletedTask;
+        }
 
-        if (_returnedWithExtraEffect)
-            GetInternalData<Data>().ExtraPendingCount++;
+        if (State.PendingTargetCombatCardIndex != NoPendingTarget
+            && ReferenceEquals(card, ResolvePendingTargetCard())
+            && pileType != PileType.Hand)
+        {
+            if (State.ReturnedWithExtraEffect)
+                State.ExtraPendingCount++;
 
-        _targetCard = null;
-        _returnedWithExtraEffect = false;
+            ClearPendingTarget();
+        }
+
         return Task.CompletedTask;
     }
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (play.Card != _targetCard || play.PlayIndex < play.PlayCount - 1)
+        if (play.Card != ResolvePendingTargetCard() || play.PlayIndex < play.PlayCount - 1)
             return;
 
         var card = play.Card;
-        if (_returnedWithExtraEffect)
+        if (State.ReturnedWithExtraEffect)
         {
             card.EnergyCost.SetThisTurn(0, true);
             card.InvokeEnergyCostChanged();
         }
 
-        _targetCard = null;
-        _returnedWithExtraEffect = false;
+        ClearPendingTarget();
         await PowerCmd.Decrement(this);
     }
 
     public override Task AfterRemoved(Creature oldOwner)
     {
-        _targetCard = null;
-        _returnedWithExtraEffect = false;
+        ClearPendingTarget();
         return Task.CompletedTask;
+    }
+
+    private bool IsEligibleIntercept(CardModel card, PileType pileType) =>
+        Amount > 0
+        && card.Owner?.Creature == Owner
+        && SakuraSourceCardRules.CanBeTargetedByClearCardEffects(card)
+        && pileType == PileType.Exhaust;
+
+    private CardModel? ResolvePendingTargetCard()
+    {
+        if (State.PendingTargetCombatCardIndex == NoPendingTarget
+            || Owner.Player?.PlayerCombatState is not { } playerCombat)
+            return null;
+
+        return playerCombat.AllCards.FirstOrDefault(card =>
+            NetCombatCard.FromModel(card).CombatCardIndex == State.PendingTargetCombatCardIndex);
+    }
+
+    private void ClearPendingTarget()
+    {
+        State.PendingTargetCombatCardIndex = NoPendingTarget;
+        State.ReturnedWithExtraEffect = false;
     }
 }

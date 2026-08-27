@@ -481,6 +481,24 @@ public sealed class CardVisualContractSuite
             SakuraDescriptionRegion.NormalizeText(new SakuraSword(), sakuraIdentityKeywordText)
                 == "「[gold]Sakura Card[/gold]」「[gold]Firey[/gold]」 [gold]Removable[/gold]\nCopy a [gold]Sakura Card[/gold].",
             "Expected Sakura Card and element identity labels to be bracketed without decorating unrelated keywords or body references.");
+        const string transparentElementOnlyHeader =
+            "[center][gold]Watery[/gold]\nChoose 1 enemy.[/center]";
+        RegressionTestHarness.Require(
+            SakuraDescriptionRegion.NormalizeText(new Mirage(), transparentElementOnlyHeader)
+                == "「[gold]Watery[/gold]」\nChoose 1 enemy.",
+            "Expected transparent element headers to receive identity brackets even when the card also owns native keywords not shown in the header.");
+        const string transparentEarthHeader =
+            "[center][gold]Earthy[/gold]\nGain [gold]3[/gold] Regen.[/center]";
+        RegressionTestHarness.Require(
+            SakuraDescriptionRegion.NormalizeText(new Repair(), transparentEarthHeader)
+                == "「[gold]Earthy[/gold]」\nGain [gold]3[/gold] Regen.",
+            "Expected transparent Earth headers to receive identity brackets when only the element label is rendered.");
+        const string aquaElementOnlyHeader =
+            "[center][gold]Watery[/gold]\nDeal [gold]4[/gold] damage.[/center]";
+        RegressionTestHarness.Require(
+            SakuraDescriptionRegion.NormalizeText(new Aqua(), aquaElementOnlyHeader)
+                == "「[gold]Watery[/gold]」\nDeal [gold]4[/gold] damage.",
+            "Expected transparent cards without Exhaust in the header to still bracket their element identity label.");
     }
 
     [Fact]

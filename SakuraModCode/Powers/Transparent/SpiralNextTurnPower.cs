@@ -38,7 +38,6 @@ public class SpiralNextTurnPower : SakuraPowerModel
         for (var i = 0; i < Amount; i++)
         {
             var card = combatState.CreateCard<Spiral>(player);
-            card.UpgradeInternal();
             await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
                 card,
                 new GeneratedCardOptions

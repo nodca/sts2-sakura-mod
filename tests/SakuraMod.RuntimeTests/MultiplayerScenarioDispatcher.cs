@@ -26,6 +26,8 @@ internal static class MultiplayerScenarioDispatcher
                 request, environment, assertions),
             SakuraMultiplayerScenarios.KindnessExhaustReturn => await KindnessExhaustReturnMultiplayerScenario.ExecuteAsync(
                 request, environment, assertions),
+            SakuraMultiplayerScenarios.KindnessDreamAppearSync => await KindnessDreamAppearMultiplayerScenario.ExecuteAsync(
+                request, environment, assertions),
             SakuraMultiplayerScenarios.ClowSilentHost
                 or SakuraMultiplayerScenarios.ClowSilentClient
                 or SakuraMultiplayerScenarios.ClowShieldHost

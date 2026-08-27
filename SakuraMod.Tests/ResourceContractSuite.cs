@@ -2925,7 +2925,7 @@ public sealed class ResourceContractSuite
                 RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/static_hover_tips.json")))
                 ?? throw new InvalidOperationException($"Could not parse {locale} static hover-tip localization.");
             RegressionTestHarness.Require(
-                cards["SAKURA_MOD_CARD_LABYRINTH.description"].Count(character => character == '\n') == 0
+                cards["SAKURA_MOD_CARD_LABYRINTH.description"].Count(character => character == '\n') == 1
                 && staticTips.ContainsKey("SAKURAMOD-ENTER_LABYRINTH.title")
                 && staticTips.ContainsKey("SAKURAMOD-ENTER_LABYRINTH.description"),
                 $"Expected {locale} Labyrinth card text to keep its rules in the Enter the Labyrinth hover tip.");

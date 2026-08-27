@@ -1,7 +1,8 @@
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Models.Powers;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
@@ -73,6 +74,15 @@ internal static class SakuraSourceCardText
         if (ReferencesSleepTip(card))
             tips.Add(HoverTipFactory.FromPower<ClassicSleepPower>());
 
+        if (ReferencesBlurTip(card))
+            tips.Add(HoverTipFactory.FromPower<BlurPower>());
+
+        if (ReferencesIntangibleTip(card))
+            tips.Add(HoverTipFactory.FromPower<IntangiblePower>());
+
+        if (ReferencesBufferTip(card))
+            tips.Add(HoverTipFactory.FromPower<BufferPower>());
+
         foreach (var key in StaticTipKeys(card))
             tips.Add(StaticTip(key));
         var keywordTips = KeywordTips(card).ToArray();
@@ -103,6 +113,15 @@ internal static class SakuraSourceCardText
 
     internal static bool ReferencesSleepTip(SakuraSourceCard card) =>
         card is ClowSleep or SakuraSleep;
+
+    internal static bool ReferencesBlurTip(SakuraSourceCard card) =>
+        card is ClowShadow;
+
+    internal static bool ReferencesIntangibleTip(SakuraSourceCard card) =>
+        card is SakuraShadow;
+
+    internal static bool ReferencesBufferTip(SakuraSourceCard card) =>
+        card is ClowSilent or SakuraSilent;
 
     internal static IEnumerable<string> StaticTipKeys(SakuraSourceCard card)
     {

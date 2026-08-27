@@ -128,18 +128,30 @@ public abstract class SakuraSourceCard(
             .Execute(choiceContext);
     }
 
-    protected async Task DealDamageToRandomEnemies(PlayerChoiceContext choiceContext, int amount, int hitCount, ValueProp props = ValueProp.Move)
+    protected async Task DealDamageToRandomEnemies(
+        PlayerChoiceContext choiceContext,
+        int amount,
+        int hitCount,
+        ValueProp props = ValueProp.Move,
+        string? hitVfx = null,
+        string? hitSfx = null,
+        bool spawnHitVfxAtBase = false)
     {
         if (hitCount <= 0)
             return;
 
-        await DamageCmd.Attack(amount)
+        var attack = DamageCmd.Attack(amount)
             .WithHitCount(hitCount)
             .FromCard(this)
             .WithValueProp(props)
             .WithNoAttackerAnim()
             .TargetingRandomOpponents(CombatState!)
-            .Execute(choiceContext);
+            .WithHitFx(hitVfx, hitSfx);
+
+        if (spawnHitVfxAtBase)
+            attack.WithHitVfxSpawnedAtBase();
+
+        await attack.Execute(choiceContext);
     }
 
     protected async Task TriggerCurrentPoison(

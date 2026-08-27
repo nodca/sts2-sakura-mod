@@ -60,7 +60,7 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
     {
         await GainBlock(play, ReleasedBlock());
 
-        var wateryCards = SakuraCloudEffects.CountWateryCards(CardPile.GetCards(Owner, PileType.Hand));
+        var wateryCards = SakuraCloudEffects.CountWateryCardsInHandAndExhaust(Owner);
         for (var i = 0; i < wateryCards; i++)
             await GainBlock(play, ReleasedBlock());
 
@@ -68,7 +68,7 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
             await SakuraCloudEffects.AddRainToHand(Owner, choiceContext, freeForCombat: false);
     }
 
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(2);
+    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
 
 public class SakuraCloud() : SakuraFormCard(1, CardType.Skill, TargetType.None)
@@ -106,6 +106,10 @@ public class SakuraCloud() : SakuraFormCard(1, CardType.Skill, TargetType.None)
 
 internal static class SakuraCloudEffects
 {
+    internal static int CountWateryCardsInHandAndExhaust(Player owner) =>
+        CountWateryCards(
+            CardPile.GetCards(owner, PileType.Hand).Concat(CardPile.GetCards(owner, PileType.Exhaust)));
+
     internal static int CountWateryCards(IEnumerable<CardModel> cards) =>
         cards.Count(static card => SakuraActions.HasElement(card, SakuraElement.Water));
 

@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -29,12 +30,25 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class ClassicDreamPower : SakuraPowerModel
 {
-    private readonly List<DreamSwap> _swaps = [];
+    private sealed class Data
+    {
+        public readonly List<DreamSwap> Swaps = [];
+    }
+
+    private sealed class DreamSwap
+    {
+        public required CardModel RestoredClow { get; init; }
+        public uint TemplateCombatCardIndex;
+    }
 
     protected override string IconFileName => "dream.png";
     protected override bool IsVisibleInternal => false;
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
+
+    protected override object InitInternalData() => new Data();
+
+    private List<DreamSwap> Swaps => GetInternalData<Data>().Swaps;
 
     public override Task AfterApplied(Creature? applier, CardModel? cardSource) =>
         ConvertCurrentHand();
@@ -70,7 +84,11 @@ public class ClassicDreamPower : SakuraPowerModel
             restoredClow.DeckVersion = original.DeckVersion;
             if (await ReplaceInPile(hand, original, template))
             {
-                _swaps.Add(new DreamSwap(restoredClow, template));
+                Swaps.Add(new DreamSwap
+                {
+                    RestoredClow = restoredClow,
+                    TemplateCombatCardIndex = NetCombatCard.FromModel(template).CombatCardIndex
+                });
             }
             else
             {
@@ -82,11 +100,15 @@ public class ClassicDreamPower : SakuraPowerModel
 
     private async Task ReturnOriginalClowCards()
     {
-        foreach (var swap in _swaps.ToList())
+        foreach (var swap in Swaps.ToList())
         {
-            if (swap.Template.Pile is { Type: PileType.Hand or PileType.Draw or PileType.Discard or PileType.Exhaust } pile)
+            var template = ResolveCombatCard(swap.TemplateCombatCardIndex);
+            if (template is null)
+                continue;
+
+            if (template.Pile is { Type: PileType.Hand or PileType.Draw or PileType.Discard or PileType.Exhaust } pile)
             {
-                await ReplaceInPile(pile, swap.Template, swap.RestoredClow);
+                await ReplaceInPile(pile, template, swap.RestoredClow);
                 continue;
             }
 
@@ -94,8 +116,12 @@ public class ClassicDreamPower : SakuraPowerModel
                 swap.RestoredClow.CardScope?.RemoveCard(swap.RestoredClow);
         }
 
-        _swaps.Clear();
+        Swaps.Clear();
     }
+
+    private CardModel? ResolveCombatCard(uint combatCardIndex) =>
+        Owner.Player?.PlayerCombatState?.AllCards.FirstOrDefault(card =>
+            NetCombatCard.FromModel(card).CombatCardIndex == combatCardIndex);
 
     private async Task<bool> ReplaceInPile(CardPile pile, CardModel oldCard, CardModel newCard)
     {
@@ -103,12 +129,10 @@ public class ClassicDreamPower : SakuraPowerModel
             return false;
 
         await CardPileCmd.RemoveFromCombat(oldCard, skipVisuals: false);
-        var result = await CardPileCmd.Add(newCard, pile, CardPilePosition.Random, this, skipVisuals: false);
+        var result = await CardPileCmd.Add(newCard, pile, CardPilePosition.Top, this, skipVisuals: false);
         if (!result.success || !ReferenceEquals(newCard.Pile, pile))
             throw new InvalidOperationException($"Failed to replace {oldCard.Id.Entry} with {newCard.Id.Entry}.");
 
         return true;
     }
-
-    private sealed record DreamSwap(CardModel RestoredClow, CardModel Template);
 }

@@ -1,6 +1,7 @@
 using Godot;
 using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
@@ -205,7 +206,7 @@ internal static class SakuraDescriptionRegion
         PackKeywordHeader(
             RemoveCenterTags(text).Trim(),
             BracketedIdentityKeywordCount(card),
-            NativeKeywordCount(card));
+            card);
 
     internal static bool IsExtraEffectDescriptionLineForTests(string text) =>
         IsExtraEffectDescriptionLine(text, 0, text.Length);
@@ -443,7 +444,7 @@ internal static class SakuraDescriptionRegion
             _ => throw new ArgumentOutOfRangeException(nameof(shape), shape, null)
         };
 
-    private static string PackKeywordHeader(string text, int bracketedKeywordCount, int nativeKeywordCount)
+    private static string PackKeywordHeader(string text, int bracketedKeywordCount, CardModel card)
     {
         var lines = text
             .Replace("\r\n", "\n", StringComparison.Ordinal)
@@ -461,7 +462,12 @@ internal static class SakuraDescriptionRegion
                 .Skip(keywordRunStart)
                 .Take(identityLine - keywordRunStart + 1)
                 .Sum(CountGoldSpans);
-            if (keywordSpanCount > nativeKeywordCount)
+            var nativeKeywordSpanCount = CountNativeKeywordGoldSpansInRun(
+                lines,
+                keywordRunStart,
+                identityLine,
+                card);
+            if (keywordSpanCount > nativeKeywordSpanCount)
                 lines[identityLine] = DecorateIdentityKeywords(lines[identityLine], bracketedKeywordCount);
         }
 
@@ -497,15 +503,98 @@ internal static class SakuraDescriptionRegion
         return SakuraActions.StaticElementSetOf(card).AsElements().Count();
     }
 
-    private static int NativeKeywordCount(CardModel card) =>
+    private static int CountNativeKeywordGoldSpansInRun(
+        IReadOnlyList<string> lines,
+        int keywordRunStart,
+        int identityLine,
+        CardModel card)
+    {
+        var count = 0;
+        for (var lineIndex = keywordRunStart; lineIndex <= identityLine; lineIndex++)
+        {
+            foreach (var span in ExtractGoldSpanTexts(lines[lineIndex]))
+            {
+                if (MatchesNativeAutomaticKeywordSpan(card, span))
+                    count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static IEnumerable<string> ExtractGoldSpanTexts(string line)
+    {
+        const string openTag = "[gold]";
+        const string closeTag = "[/gold]";
+        var position = 0;
+        while (true)
+        {
+            var open = line.IndexOf(openTag, position, StringComparison.OrdinalIgnoreCase);
+            if (open < 0)
+                yield break;
+            var close = line.IndexOf(closeTag, open + openTag.Length, StringComparison.OrdinalIgnoreCase);
+            if (close < 0)
+                yield break;
+
+            var text = line.Substring(open + openTag.Length, close - open - openTag.Length).Trim();
+            if (text.Length > 0)
+                yield return TrimTerminalKeywordPunctuation(text);
+
+            position = close + closeTag.Length;
+        }
+    }
+
+    private static bool MatchesNativeAutomaticKeywordSpan(CardModel card, string span) =>
         card.CanonicalKeywords
             .Concat(card.Keywords)
             .Distinct()
-            .Count(keyword => keyword == CardKeyword.Exhaust
-                || keyword == CardKeyword.Ethereal
-                || keyword == CardKeyword.Retain
-                || keyword == CardKeyword.Innate
-                || keyword == CardKeyword.Unplayable);
+            .Where(IsNativeAutomaticKeyword)
+            .Any(keyword => SpanMatchesKeywordTitle(span, keyword));
+
+    private static bool IsNativeAutomaticKeyword(CardKeyword keyword) =>
+        keyword == CardKeyword.Exhaust
+        || keyword == CardKeyword.Ethereal
+        || keyword == CardKeyword.Retain
+        || keyword == CardKeyword.Innate
+        || keyword == CardKeyword.Unplayable;
+
+    private static bool SpanMatchesKeywordTitle(string span, CardKeyword keyword)
+    {
+        foreach (var candidate in NativeKeywordTitleCandidates(keyword))
+        {
+            if (string.Equals(span, candidate, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static IEnumerable<string> NativeKeywordTitleCandidates(CardKeyword keyword)
+    {
+        yield return keyword.ToString();
+
+        var formatted = TryFormatKeywordTitle(keyword);
+        if (formatted is not null)
+            yield return formatted;
+    }
+
+    private static string? TryFormatKeywordTitle(CardKeyword keyword)
+    {
+        try
+        {
+            if (HoverTipFactory.FromKeyword(keyword) is HoverTip hoverTip)
+            {
+                var formatted = RemoveRichTextTags(hoverTip.Title ?? string.Empty).Trim();
+                return formatted.Length > 0 ? formatted : null;
+            }
+        }
+        catch
+        {
+            // LocManager may be unavailable in fast unit tests.
+        }
+
+        return null;
+    }
 
     private static int CountGoldSpans(string line)
     {

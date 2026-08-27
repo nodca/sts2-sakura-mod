@@ -28,6 +28,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class ClowFirey() : ClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)

@@ -241,6 +241,7 @@ public static class SakuraMultiplayerScenarios
     public const string ClowShieldWard = "clow-shield-ward";
     public const string ClowTwinPlayCount = "clow-twin-play-count";
     public const string KindnessExhaustReturn = "kindness-exhaust-return";
+    public const string KindnessDreamAppearSync = "kindness-dream-appear-sync";
     public const string SealedWandCharge = "sealed-wand-charge";
     public const string TurnEndDamageSync = "turn-end-damage-sync";
     public const string ThreePlayerDefensivePowers = "three-player-defensive-powers";
@@ -259,6 +260,7 @@ public static class SakuraMultiplayerScenarios
         ClowShieldWard,
         ClowTwinPlayCount,
         KindnessExhaustReturn,
+        KindnessDreamAppearSync,
         SealedWandCharge,
         TurnEndDamageSync,
         ThreePlayerDefensivePowers,

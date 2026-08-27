@@ -715,10 +715,10 @@ public sealed class CardMechanicsSuite
             && clowCloud.Rarity == CardRarity.Common
             && clowCloud.Elements == SakuraElementSet.Water
             && clowCloud.DynamicVars.Block.IntValue == 5
-            && upgradedClowCloud.DynamicVars.Block.IntValue == 7
+            && upgradedClowCloud.DynamicVars.Block.IntValue == 8
             && sakuraCloud.DynamicVars.Block.IntValue == 7
             && sakuraCloud.DynamicVars["ExtraBlock"].IntValue == 3,
-            "Expected Clow Cloud to block for 5 (7 upgraded) and Sakura Cloud to block for 7 plus 3 per Watery card.");
+            "Expected Clow Cloud to block for 5 (8 upgraded) and Sakura Cloud to block for 7 plus 3 per Watery card.");
         RegressionTestHarness.Require(
             SakuraSourceCardText.ElementStatesReferencedBy(clowCloud).SequenceEqual([SakuraElement.Water]),
             "Expected Clow Cloud to expose the Watery-state hover tip used by its conditional Rain generation.");
@@ -1157,17 +1157,17 @@ public sealed class CardMechanicsSuite
             && spiralSource.Contains("freeThisTurn: true", StringComparison.Ordinal)
             && !spiralSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("combatState.CreateCard<Spiral>(player)", StringComparison.Ordinal)
-            && spiralNextTurnPowerSource.Contains("card.UpgradeInternal();", StringComparison.Ordinal)
+            && !spiralNextTurnPowerSource.Contains("UpgradeInternal();", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("Pile = PileType.Draw", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("Position = CardPilePosition.Top", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("AddTemporary = true", StringComparison.Ordinal)
             && !spiralNextTurnPowerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal)
             && !spiralNextTurnPowerSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal)
-            && chineseCards.Contains("将 {NextTurnCopies:diff()} 张带有[red]遗忘[/red]的[gold]螺旋+[/gold]置于抽牌堆顶", StringComparison.Ordinal)
+            && chineseCards.Contains("将 {NextTurnCopies:diff()} 张带有[red]遗忘[/red]的[gold]螺旋[/gold]置于抽牌堆顶", StringComparison.Ordinal)
             && chineseCards.Contains("生成 {ExtraCopies:diff()} 张[gold]螺旋[/gold]，并给予[red]遗忘[/red]，本回合能耗为 0", StringComparison.Ordinal)
             && englishCards.Contains("on top of your draw pile", StringComparison.Ordinal)
             && englishCards.Contains("They cost 0 this turn", StringComparison.Ordinal),
-            "Expected Spiral+ to put an upgraded Forgotten Spiral on top before next turn's draw, while Extra generates three base Forgotten Spirals that cost 0 this turn.");
+            "Expected Spiral+ to put a base Forgotten Spiral on top before next turn's draw, while Extra generates three base Forgotten Spirals that cost 0 this turn.");
 
         var blockedHit = new DamageResult(null!, ValueProp.Move) { UnblockedDamage = 0 };
         var unblockedHit = new DamageResult(null!, ValueProp.Move) { UnblockedDamage = 1 };
@@ -1810,6 +1810,12 @@ public sealed class CardMechanicsSuite
             && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowWindy()) == typeof(SpellFengHua)
             && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowSword()) is null,
             "Expected the four Clow element-state cards to preview only their generated spell cards.");
+        RegressionTestHarness.Require(
+            new ClowEarthy().CanonicalKeywords.Contains(CardKeyword.Retain)
+            && new ClowFirey().CanonicalKeywords.Contains(CardKeyword.Retain)
+            && new ClowWatery().CanonicalKeywords.Contains(CardKeyword.Retain)
+            && new ClowWindy().CanonicalKeywords.Contains(CardKeyword.Retain),
+            "Expected the four Clow element-state cards to retain by default.");
 
         RegressionTestHarness.Require(
             SakuraSourceCardText.StaticTipKeys(new SpellHuoShen()).Count() >= 2,
@@ -1844,6 +1850,18 @@ public sealed class CardMechanicsSuite
             SakuraSourceCardText.ReferencesSleepTip(new ClowSleep())
             && SakuraSourceCardText.ReferencesSleepTip(new SakuraSleep()),
             "Expected Clow Sleep and Sakura Sleep hover tips to explain the Sleep power.");
+        RegressionTestHarness.Require(
+            SakuraSourceCardText.ReferencesBlurTip(new ClowShadow())
+            && !SakuraSourceCardText.ReferencesBlurTip(new SakuraShadow()),
+            "Expected Clow Shadow hover tips to explain Blur, but not Sakura Shadow.");
+        RegressionTestHarness.Require(
+            SakuraSourceCardText.ReferencesIntangibleTip(new SakuraShadow())
+            && !SakuraSourceCardText.ReferencesIntangibleTip(new ClowShadow()),
+            "Expected Sakura Shadow hover tips to explain Intangible, but not Clow Shadow.");
+        RegressionTestHarness.Require(
+            SakuraSourceCardText.ReferencesBufferTip(new ClowSilent())
+            && SakuraSourceCardText.ReferencesBufferTip(new SakuraSilent()),
+            "Expected Clow Silent and Sakura Silent hover tips to explain Buffer.");
         RegressionTestHarness.Require(
             SakuraSourceCardText.CounterpartPreviewIdentity(new ClowVoice()) == SourceCardIdentity.Voice
             && SakuraSourceCardText.StaticTipKeys(new ClowVoice()).Any()

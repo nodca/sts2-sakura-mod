@@ -191,8 +191,8 @@ internal static class GeneratedPileMemoryScenario
             .OfType<Spiral>()
             .Single(card => card.IsTemporary());
         assertions.True(
-            "upgraded_spiral_self_continues_as_fresh_upgraded_card",
-            continuedSpiral.CurrentUpgradeLevel == 1
+            "upgraded_spiral_self_continues_as_fresh_base_card",
+            continuedSpiral.CurrentUpgradeLevel == 0
             && continuedSpiral.Enchantment is null
             && continuedSpiral.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0);
 
