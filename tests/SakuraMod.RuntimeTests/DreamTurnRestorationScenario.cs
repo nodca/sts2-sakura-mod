@@ -1,4 +1,8 @@
+using System.Reflection;
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Multiplayer;
+using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.TestProtocol;
@@ -51,6 +55,27 @@ internal static class DreamTurnRestorationScenario
         assertions.Equal("temporary_sakura_removed_after_turn", false, playerCombat.AllCards.Contains(transformedSakura));
         assertions.Equal("dream_power_removed_after_turn", null, player.Creature.GetPower<ClassicDreamPower>());
 
+        if (restoredClow?.Pile?.Type != PileType.Hand)
+        {
+            var moveRestoredAction = new RuntimeFixtureAction(
+                player,
+                _ => SakuraActions.MoveExistingCardToHand(null, restoredClow!));
+            await CombatScenarioContext.EnqueueAndWaitAsync(moveRestoredAction);
+        }
+
+        var secondDream = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraDream>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(secondDream);
+        var removedTemplate = playerCombat.AllCards.OfType<SakuraSword>()
+            .First(card => card.DeckVersion is null);
+        var removedBackup = GetRestoredClone(
+            player.Creature.GetPower<ClassicDreamPower>()!,
+            NetCombatCard.FromModel(removedTemplate).CombatCardIndex);
+        await CardPileCmd.RemoveFromCombat(removedTemplate, skipVisuals: true);
+        await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
+
+        assertions.Equal("removed_template_backup_cleaned", false, combat.ContainsCard(removedBackup));
+        assertions.Equal("removed_template_backup_owner_cleared", null, removedBackup.Owner);
+
         RuntimeTestHost.WriteCheckpoint(
             request,
             "dream_turn_restoration_verified",
@@ -76,5 +101,18 @@ internal static class DreamTurnRestorationScenario
                 temporary_sakura_present = playerCombat.AllCards.Contains(transformedSakura)
             }
         };
+    }
+
+    private static CardModel GetRestoredClone(ClassicDreamPower power, uint templateCombatCardIndex)
+    {
+        var swaps = typeof(ClassicDreamPower)
+            .GetProperty("Swaps", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(power) as System.Collections.IEnumerable
+            ?? throw new InvalidOperationException("ClassicDreamPower swaps are unavailable.");
+        var swap = swaps.Cast<object>().Single(item =>
+            (uint)item.GetType().GetField("TemplateCombatCardIndex")!.GetValue(item)! == templateCombatCardIndex);
+        return (CardModel)swap.GetType()
+            .GetProperty("RestoredClow")!
+            .GetValue(swap)!;
     }
 }

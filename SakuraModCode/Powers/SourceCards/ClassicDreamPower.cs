@@ -104,7 +104,10 @@ public class ClassicDreamPower : SakuraPowerModel
         {
             var template = ResolveCombatCard(swap.TemplateCombatCardIndex);
             if (template is null)
+            {
+                RemoveRestoredCloneIfDetached(swap.RestoredClow);
                 continue;
+            }
 
             if (template.Pile is { Type: PileType.Hand or PileType.Draw or PileType.Discard or PileType.Exhaust } pile)
             {
@@ -112,16 +115,20 @@ public class ClassicDreamPower : SakuraPowerModel
                 continue;
             }
 
-            if (swap.RestoredClow.Pile is null)
-                swap.RestoredClow.CardScope?.RemoveCard(swap.RestoredClow);
+            RemoveRestoredCloneIfDetached(swap.RestoredClow);
         }
 
         Swaps.Clear();
     }
 
-    private CardModel? ResolveCombatCard(uint combatCardIndex) =>
-        Owner.Player?.PlayerCombatState?.AllCards.FirstOrDefault(card =>
-            NetCombatCard.FromModel(card).CombatCardIndex == combatCardIndex);
+    private static CardModel? ResolveCombatCard(uint combatCardIndex) =>
+        NetCombatCardDb.Instance.TryGetCard(combatCardIndex, out var card) ? card : null;
+
+    private static void RemoveRestoredCloneIfDetached(CardModel restoredClow)
+    {
+        if (restoredClow.Pile is null)
+            restoredClow.CardScope?.RemoveCard(restoredClow);
+    }
 
     private async Task<bool> ReplaceInPile(CardPile pile, CardModel oldCard, CardModel newCard)
     {

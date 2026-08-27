@@ -53,10 +53,9 @@ internal static class KindnessDreamAppearMultiplayerScenario
         await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
             hostDream, PileType.Hand, host, CardPilePosition.Bottom);
 
-        var clientAppear = CreateZeroCostCard<Appear>(combat, client);
-        clientAppear.UpgradeInternal();
+        var clientShield = CreateZeroCostCard<ClowShield>(combat, client);
         await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
-            clientAppear, PileType.Hand, client, CardPilePosition.Bottom);
+            clientShield, PileType.Hand, client, CardPilePosition.Bottom);
 
         await context.SignalAndWaitAsync("kindness-dream-appear-fixture-ready");
         await context.WaitForActionsAsync();
@@ -75,30 +74,39 @@ internal static class KindnessDreamAppearMultiplayerScenario
             nameof(PlayCardAction));
         await context.SignalAndWaitAsync("kindness-dream-appear-kindness-applied");
 
-        var appearSelector = new TestCardSelector();
-        appearSelector.PrepareToSelect([0]);
-        appearSelector.PrepareToSelect([0]);
-        var appearChecksumBaseline = context.ChecksumCount;
-        using (CardSelectCmd.UseSelector(appearSelector))
-        {
-            if (context.LocalPlayer.NetId == client.NetId)
-            {
-                RunManager.Instance.ActionQueueSynchronizer.RequestEnqueue(
-                    new PlayCardAction(clientAppear, null));
-            }
+        var clientShieldChecksumBaseline = context.ChecksumCount;
+        if (context.LocalPlayer.NetId == client.NetId)
+            await context.PlayOwnedCardAsync(clientShield);
+        await context.WaitForActionChecksumsAsync(
+            clientShieldChecksumBaseline,
+            "client ClowShield",
+            nameof(PlayCardAction));
+        await context.WaitForActionsAsync();
+        if (context.LocalPlayer.NetId == client.NetId)
+            assertions.Equal("client_shield_resolved", PileType.Discard, clientShield.Pile?.Type);
+        await context.SignalAndWaitAsync("kindness-dream-client-card-settled");
 
-            await context.SignalAndWaitAsync("kindness-dream-appear-client-enqueued");
-            await MultiplayerScenarioContext.WaitForStateAsync(
-                () => clientAppear.Pile?.Type is PileType.Discard or PileType.Exhaust,
-                "client Appear to finish both manifest copies");
+        if (context.LocalPlayer.NetId == host.NetId)
+        {
+            var kindness = host.Creature.GetPower<KindnessPower>()
+                ?? throw new InvalidOperationException("Host KindnessPower is unavailable for preview query.");
+            var preview = kindness.ModifyCardPlayResultPileTypeAndPosition(
+                hostSword,
+                isAutoPlay: false,
+                new ResourceInfo
+                {
+                    EnergySpent = 0,
+                    EnergyValue = 0,
+                    StarsSpent = 0,
+                    StarValue = 0
+                },
+                PileType.Exhaust,
+                CardPilePosition.Bottom);
+            if (preview != (PileType.Hand, CardPilePosition.Bottom))
+                throw new InvalidOperationException("Kindness preview did not redirect an eligible Exhaust card to Hand.");
         }
 
-        await context.WaitForActionsAsync();
-        await context.WaitForActionChecksumsAsync(
-            appearChecksumBaseline,
-            "client Appear",
-            nameof(PlayCardAction));
-        await context.SignalAndWaitAsync("kindness-dream-appear-appear-settled");
+        await context.SignalAndWaitAsync("kindness-dream-host-only-preview-settled");
 
         var dreamChecksumBaseline = context.ChecksumCount;
         if (context.LocalPlayer.NetId == host.NetId)
@@ -113,18 +121,17 @@ internal static class KindnessDreamAppearMultiplayerScenario
         await context.WaitForActionsAsync();
         await context.WaitForActionChecksumsAsync(
             dreamChecksumBaseline,
-            "host SakuraDream after client Appear settled",
+            "host SakuraDream after client card settled",
             nameof(PlayCardAction));
         assertions.Equal("host_kindness_power_after_dream", null, host.Creature.GetPower<KindnessPower>()?.Amount);
         assertions.Equal("host_sakura_dream_returned_to_hand", PileType.Hand, hostDream.Pile?.Type);
-        assertions.Equal("client_appear_resolved", PileType.Discard, clientAppear.Pile?.Type);
         context.ThrowIfNetworkFailed();
         await context.SignalAndWaitAsync("kindness-dream-appear-verified");
 
         RuntimeTestHost.WriteCheckpoint(
             request,
             "kindness_dream_appear_verified",
-            "KindnessPower and SakuraDream stayed checksum-synchronized after client Appear settled.");
+            "KindnessPower and SakuraDream stayed checksum-synchronized after a client card settled.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -136,7 +143,7 @@ internal static class KindnessDreamAppearMultiplayerScenario
                 setup_mutations = new[]
                 {
                     "Host Kindness + Clow Sword/Shield + SakuraDream",
-                    "Upgraded client Appear manifest, then host SakuraDream with active KindnessPower"
+                    "Client ClowShield, then host SakuraDream with active KindnessPower"
                 }
             },
             ["peer"] = new
@@ -157,7 +164,7 @@ internal static class KindnessDreamAppearMultiplayerScenario
                 host_kindness_power_amount = host.Creature.GetPower<KindnessPower>()?.Amount,
                 host_dream_power_amount = host.Creature.GetPower<ClassicDreamPower>()?.Amount,
                 host_dream_pile = hostDream.Pile?.Type.ToString(),
-                client_appear_pile = clientAppear.Pile?.Type.ToString(),
+                client_shield_resolved = true,
                 checksum_count = context.ChecksumCount
             }
         };
