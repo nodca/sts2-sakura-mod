@@ -18,7 +18,6 @@ public sealed class ExtraEffectTransactionSuite
         typeof(Flight),
         typeof(Gale),
         typeof(Gravitation),
-        typeof(Hail),
         typeof(Kindness),
         typeof(Lucid),
         typeof(Mirage),
@@ -28,6 +27,7 @@ public sealed class ExtraEffectTransactionSuite
         typeof(Reflect),
         typeof(Repair),
         typeof(Reversal),
+        typeof(Remind),
         typeof(Rewind),
         typeof(Shade),
         typeof(Siege),
@@ -89,8 +89,8 @@ public sealed class ExtraEffectTransactionSuite
                 == SourceEraClass.Sakura,
             "Expected Sakura Attacks, Skills, and Powers to show one Sakura circle, including overlapping Power triggers.");
         RegressionTestHarness.Require(
-            SakuraExtraEffectTransaction.MagicCircleEraFor(new Hail(), inactive) is null
-            && SakuraExtraEffectTransaction.MagicCircleEraFor(new Hail(), active)
+            SakuraExtraEffectTransaction.MagicCircleEraFor(new Aqua(), inactive) is null
+            && SakuraExtraEffectTransaction.MagicCircleEraFor(new Aqua(), active)
                 == SourceEraClass.Clear
             && SakuraExtraEffectTransaction.MagicCircleEraFor(new Dreaming(), inactive)
                 == SourceEraClass.Clear,

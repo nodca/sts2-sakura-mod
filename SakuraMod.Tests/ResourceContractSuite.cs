@@ -631,15 +631,13 @@ public sealed class ResourceContractSuite
         // Session creation, prelude, fail-open, and cleanup are behavioral contracts
         // of CelVfxSession.PlayOrResolveAsync and are covered through its in-memory
         // playback interface in CelVfxOrchestrationSuite.
-        // Impact lives in the Hit helper below PlayCard, so its ordering is asserted
-        // against the damage call it must precede rather than against file position:
-        // the damage number has to land on the frame the crystal strikes.
-        var hitIndex = hail.IndexOf("private async Task Hit(", StringComparison.Ordinal);
-        var impactIndex = hail.IndexOf("cues.Impact(target)", hitIndex, StringComparison.Ordinal);
-        var damageIndex = hail.IndexOf("CreatureCmd.Damage(", hitIndex, StringComparison.Ordinal);
+        // Impact must land on the same beat as the attack, so its ordering is asserted
+        // against the gameplay call it must precede inside the hit loop.
+        var impactIndex = hail.IndexOf("cues.Impact(target)", loopIndex, StringComparison.Ordinal);
+        var attackIndex = hail.IndexOf("SakuraActions.Attack(", loopIndex, StringComparison.Ordinal);
         RegressionTestHarness.Require(
-            hitIndex >= 0 && impactIndex > hitIndex && damageIndex > impactIndex,
-            "Expected each hit to show its ice impact before the damage command resolves.");
+            loopIndex >= 0 && impactIndex > loopIndex && attackIndex > impactIndex,
+            "Expected each hit to show its ice impact before the attack resolves.");
         // The VFX session and the hit loop must walk the same snapshot, taken before
         // any damage resolves.
         RegressionTestHarness.Require(

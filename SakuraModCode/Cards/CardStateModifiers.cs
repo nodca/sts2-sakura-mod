@@ -537,7 +537,7 @@ internal static class SakuraStateText
             nameof(Labyrinth) => "迷宫",
             nameof(Repair) => "修复",
             nameof(Reversal) => "逆转",
-            nameof(Rewind) => "倒流",
+            nameof(Rewind) => "逆戻",
             nameof(Snooze) => "打盹",
             nameof(Spiral) => "螺旋",
             nameof(Transfer) => "转移",

@@ -12,7 +12,7 @@ using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Reflect() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Reflect() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.Self)
 {
     public override bool GainsBlock => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];

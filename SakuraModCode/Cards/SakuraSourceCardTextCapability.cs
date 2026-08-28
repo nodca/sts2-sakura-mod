@@ -190,6 +190,7 @@ internal static class SakuraSourceCardText
     internal static bool ReferencesMagicChargeTip(SakuraSourceCard card) =>
         card is GrowingMagic or AnotherMe
         || card.Identity is SourceCardIdentity.Bubbles
+            or SourceCardIdentity.Change
             or SourceCardIdentity.Fight
             or SourceCardIdentity.Glow
             or SourceCardIdentity.Libra

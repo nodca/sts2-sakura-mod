@@ -1,72 +1,127 @@
 using MegaCrit.Sts2.Core.Combat;
-using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Commands;
-using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Extensions;
 using SakuraMod.SakuraModCode.Powers;
-using STS2RitsuLib.Cards.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Hail() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
+public class Hail() : TransparentCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
 {
-    private const int BaseHits = 2;
-
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
     internal override IEnumerable<CardKeyword> ReferencedKeywords => [SakuraKeywords.Frostbite];
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(3, ValueProp.Move),
-        new PowerVar<SakuraFrostbitePower>(1)
+        new HailDamageVar(6, ValueProp.Move),
+        new PowerVar<SakuraFrostbitePower>(1),
+        new DynamicVar("Magic", 10),
+        new DynamicVar("BonusDamage", 2)
     ];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
+    protected override async Task PlayCard(
+        PlayerChoiceContext choiceContext,
+        CardPlay play,
+        SakuraExtraEffectActivation activation)
     {
-        await using var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, this);
-        var frostbite = DynamicVars["SakuraFrostbitePower"].IntValue + (activation.IsActive ? 1 : 0);
-        // Snapshot the hittable set once. The VFX session needs the same list the
-        // hit loop walks, and ToList() is an immediate copy taken before any damage
-        // resolves, so hoisting it cannot change which enemies are struck.
+        var opportunity = SakuraMagicCharge.CaptureOpportunity(Owner);
+        await SakuraMagicCharge.TryApplyCapturedOpportunity(choiceContext, this, opportunity);
+
+        var maxSpend = DynamicVars["Magic"].IntValue;
+        var spent = HailRules.SpendableMagic(this);
+        if (spent > 0)
+            await SakuraMagicCharge.SpendUpToMagic(choiceContext, Owner, maxSpend);
+
+        var damage = HailRules.TotalDamage(this, spent);
+        var frostbite = DynamicVars["SakuraFrostbitePower"].IntValue;
         var targets = CombatState!.HittableEnemies.ToList();
         await HailIceShardVfx.PlayOrResolveAsync(this, Owner.Creature, targets, async cues =>
         {
             foreach (var target in targets)
             {
-                for (var i = 0; i < BaseHits && target.IsAlive; i++)
-                    await Hit(choiceContext, attack, target, cues);
+                if (!target.IsAlive)
+                    continue;
+
+                cues.Impact(target);
+                await SakuraActions.Attack(choiceContext, this, target, damage);
 
                 if (target.IsAlive)
-                    await PowerCmd.Apply<SakuraFrostbitePower>(choiceContext, target, frostbite, Owner.Creature, this, false);
+                    await PowerCmd.Apply<SakuraFrostbitePower>(
+                        choiceContext,
+                        target,
+                        frostbite,
+                        Owner.Creature,
+                        this,
+                        false);
             }
         });
     }
 
-    private async Task Hit(
-        PlayerChoiceContext choiceContext,
-        AttackContext attack,
-        Creature target,
-        HailIceShardVfx.Cues cues)
+    protected override void OnUpgrade()
     {
-        cues.Impact(target);
-        attack.AddHit(await CreatureCmd.Damage(
-            choiceContext,
-            target,
-            DynamicVars.Damage.IntValue,
-            SakuraActions.AttackProps(this, DynamicVars.Damage.Props),
-            Owner.Creature,
-            this));
+        DynamicVars.Damage.UpgradeValueBy(2);
+        DynamicVars["SakuraFrostbitePower"].UpgradeValueBy(1);
+    }
+}
+
+internal static class HailRules
+{
+    internal static int TotalDamage(CardModel card, int? spentMagic = null)
+    {
+        var spent = spentMagic ?? SpendableMagic(card);
+        return card.DynamicVars.Damage.IntValue + spent * card.DynamicVars["BonusDamage"].IntValue;
     }
 
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(1);
+    internal static int SpendableMagic(CardModel card)
+    {
+        if (!card.IsMutable || card.Owner is not { } owner)
+            return 0;
+
+        var maxSpend = card.DynamicVars["Magic"].IntValue;
+        var current = owner.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0;
+        return Math.Min(current, maxSpend);
+    }
+}
+
+internal sealed class HailDamageVar(decimal damage, ValueProp props) : DamageVar(damage, props)
+{
+    public override void UpdateCardPreview(
+        CardModel card,
+        CardPreviewMode previewMode,
+        Creature? target,
+        bool runGlobalHooks)
+    {
+        var baseValue = HailRules.TotalDamage(card);
+        decimal preview = baseValue;
+        if (card.Enchantment is not null)
+        {
+            preview += card.Enchantment.EnchantDamageAdditive(preview, Props);
+            preview *= card.Enchantment.EnchantDamageMultiplicative(preview, Props);
+            if (!card.IsEnchantmentPreview)
+                EnchantedValue = preview;
+        }
+
+        if (runGlobalHooks && card.IsMutable && card.Owner is { } owner)
+            preview = Hook.ModifyDamage(
+                owner.RunState,
+                card.CombatState,
+                target,
+                owner.Creature,
+                baseValue,
+                Props,
+                card,
+                ModifyDamageHookType.All,
+                previewMode,
+                out _);
+
+        PreviewValue = preview;
+    }
 }

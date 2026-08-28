@@ -47,9 +47,10 @@ public class SpellEmptySpell() : SpellCard(0, CardType.Skill, CardRarity.Token, 
             .Select(type => combatState.CreateCard(ModelDb.GetById<CardModel>(ModelDb.GetId(type)), Owner))
             .ToList();
 
+        CardModel? selected = null;
         try
         {
-            var selected = choices.Count == 1
+            selected = choices.Count == 1
                 ? choices[0]
                 : (await CardSelectCmd.FromSimpleGrid(
                     choiceContext,
@@ -64,14 +65,13 @@ public class SpellEmptySpell() : SpellCard(0, CardType.Skill, CardRarity.Token, 
             if (selected is null)
                 return;
 
-            var card = combatState.CreateCard(ModelDb.GetById<CardModel>(ModelDb.GetId(selected.GetType())), Owner);
-            await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, Owner, CardPilePosition.Random);
+            await CardPileCmd.AddGeneratedCardToCombat(selected, PileType.Hand, Owner, CardPilePosition.Random);
         }
         finally
         {
             foreach (var choice in choices)
             {
-                if (choice.Pile is null)
+                if (choice != selected && choice.Pile is null)
                     choice.CardScope?.RemoveCard(choice);
             }
         }

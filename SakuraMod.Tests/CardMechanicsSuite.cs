@@ -1153,7 +1153,7 @@ public sealed class CardMechanicsSuite
             && !RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("AfterPlayerTurnStart"),
             "Expected Spiral and Spiral+ to deal 6 damage and gain 3 Block plus Memory, with the upgrade value supplied by a one-shot next-hand-draw Power.");
         RegressionTestHarness.Require(
-            spiralSource.Contains("AddTemporaryGeneratedCardToHand<Spiral>", StringComparison.Ordinal)
+            spiralSource.Contains("AddTemporaryGeneratedCardsToHand<Spiral>", StringComparison.Ordinal)
             && spiralSource.Contains("freeThisTurn: true", StringComparison.Ordinal)
             && !spiralSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("combatState.CreateCard<Spiral>(player)", StringComparison.Ordinal)
@@ -1316,12 +1316,44 @@ public sealed class CardMechanicsSuite
 
         var upgradedHail = RegressionTestHarness.MutableForCostTest(new Hail());
         upgradedHail.UpgradeInternal();
+        var hailSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Hail.cs"));
         RegressionTestHarness.Require(
             new Hail().TargetType == TargetType.AllEnemies
-            && new Hail().DynamicVars.Damage.IntValue == 3
+            && new Hail().DynamicVars.Damage.IntValue == 6
             && new Hail().DynamicVars["SakuraFrostbitePower"].IntValue == 1
-            && upgradedHail.DynamicVars.Damage.IntValue == 4,
-            "Expected Hail to attack all enemies twice, apply 1 Frostbite, and upgrade damage from 3 to 4.");
+            && new Hail().DynamicVars["Magic"].IntValue == 10
+            && new Hail().DynamicVars["BonusDamage"].IntValue == 2
+            && upgradedHail.DynamicVars.Damage.IntValue == 8
+            && upgradedHail.DynamicVars["SakuraFrostbitePower"].IntValue == 2
+            && !SakuraCardModel.HasMagicChargeExtraEffect(new Hail())
+            && HailRules.TotalDamage(new Hail(), spentMagic: 4) == 14
+            && HailRules.TotalDamage(upgradedHail, spentMagic: 10) == 28
+            && hailSource.Contains("CaptureOpportunity", StringComparison.Ordinal)
+            && hailSource.Contains("TryApplyCapturedOpportunity", StringComparison.Ordinal)
+            && hailSource.IndexOf("TryApplyCapturedOpportunity", StringComparison.Ordinal)
+                < hailSource.IndexOf("SpendUpToMagic", StringComparison.Ordinal)
+            && hailSource.Contains("SpendUpToMagic", StringComparison.Ordinal),
+            "Expected Hail to lock element state before spending Magic Charge, deal 6/8 damage to all enemies, apply 1/2 Frostbite, and spend up to 10 Magic Charge for +2 damage each.");
+
+        var change = new ClowChange();
+        var upgradedChange = RegressionTestHarness.MutableForCostTest(new ClowChange());
+        upgradedChange.UpgradeInternal();
+        var changeSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Change.cs"));
+        RegressionTestHarness.Require(
+            change.EnergyCost.Canonical == 1
+            && change.Rarity == CardRarity.Common
+            && change.DynamicVars.Cards.IntValue == 2
+            && change.DynamicVars["Magic"].IntValue == 2
+            && upgradedChange.Keywords.Contains(CardKeyword.Retain)
+            && ChangeRules.DrawCount(discarded: true, baseDraw: 2, spentMagic: 0) == 2
+            && ChangeRules.DrawCount(discarded: true, baseDraw: 2, spentMagic: 2) == 4
+            && ChangeRules.DrawCount(discarded: false, baseDraw: 2, spentMagic: 2) == 2
+            && changeSource.Contains("CaptureOpportunity", StringComparison.Ordinal)
+            && changeSource.Contains("TryApplyCapturedOpportunity", StringComparison.Ordinal)
+            && changeSource.Contains("SpendUpToMagic", StringComparison.Ordinal),
+            "Expected Clow Change to discard up to 1 card for 2 draws, spend up to 2 Magic Charge for +1 draw each, lock element state before spending, and upgrade to Retain.");
 
         var swing = new Swing();
         var upgradedSwing = RegressionTestHarness.MutableForCostTest(new Swing());
@@ -1721,7 +1753,7 @@ public sealed class CardMechanicsSuite
         upgradedReflect.UpgradeInternal();
         RegressionTestHarness.Require(
             reflect.EnergyCost.Canonical == 1
-            && reflect.Rarity == CardRarity.Uncommon
+            && reflect.Rarity == CardRarity.Common
             && reflect.CanonicalKeywords.SequenceEqual([SakuraKeywords.Water])
             && reflect.DynamicVars.Block.IntValue == 5
             && upgradedReflect.DynamicVars.Block.IntValue == 8
@@ -1738,7 +1770,7 @@ public sealed class CardMechanicsSuite
             && ReflectionPower.ReflectedDamage(10, 2) == 10
             && ReflectionPower.ReflectedDamage(10, 1) == 5
             && !typeof(MainFile).Assembly.GetTypes().Any(static type => type.Name == "StrongReflectionPower"),
-            "Expected Reflect to be an Uncommon 1-cost card with 5/8 Block, 2/3 scaling Reflection stacks, and 2 additional stacks through Extra.");
+            "Expected Reflect to be a Common 1-cost card with 5/8 Block, 2/3 scaling Reflection stacks, and 2 additional stacks through Extra.");
 
         var clowTwin = new ClowTwin();
         var clowTwinLocalCost = clowTwin.EnergyCost.GetWithModifiers(CostModifiers.Local);
@@ -1792,8 +1824,8 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             SakuraCardModel.HasMagicChargeExtraEffect(new Exchange())
             && !SakuraCardModel.HasMagicChargeExtraEffect(new Synchronize())
-            && !SakuraCardModel.HasMagicChargeExtraEffect(new Remind()),
-            "Expected Exchange to support its pile-swap Extra effect while Synchronize and Remind remain non-Extra cards.");
+            && SakuraCardModel.HasMagicChargeExtraEffect(new Remind()),
+            "Expected Exchange and Remind to support Extra effects while Synchronize remains a non-Extra card.");
     }
 
     [Fact]
@@ -1831,8 +1863,9 @@ public sealed class CardMechanicsSuite
             SakuraSourceCardText.ElementStatesReferencedBy(new SakuraWave()).Count() == 4,
             "Expected Sakura Wave hover text to reference all four Classic element states.");
         RegressionTestHarness.Require(
-            SakuraSourceCardText.ReferencesMagicChargeTip(new ClowLock()),
-            "Expected Clow Lock hover tips to reference Magic Charge.");
+            SakuraSourceCardText.ReferencesMagicChargeTip(new ClowLock())
+            && SakuraSourceCardText.ReferencesMagicChargeTip(new ClowChange()),
+            "Expected Clow Lock and Change hover tips to reference Magic Charge.");
         RegressionTestHarness.Require(
             SakuraSourceCardText.KeywordTips(new SakuraShield()).Contains(SakuraKeywords.SakuraCard),
             "Expected Sakura card hover tips to explain Sakura Card void generation.");

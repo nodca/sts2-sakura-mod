@@ -68,13 +68,12 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
 
     private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        for (var i = 0; i < DynamicVars["ExtraCopies"].IntValue; i++)
-        {
-            await SakuraGeneratedCardLifecycle.AddTemporaryGeneratedCardToHand<Spiral>(
-                Owner,
-                freeThisTurn: true,
-                choiceContext);
-        }
+        await SakuraGeneratedCardLifecycle.AddTemporaryGeneratedCardsToHand<Spiral>(
+            Owner,
+            DynamicVars["ExtraCopies"].IntValue,
+            freeThisTurn: true,
+            choiceContext,
+            refreshGeneratedTransparentHandVisual: false);
     }
 
     protected override void OnUpgrade() { }

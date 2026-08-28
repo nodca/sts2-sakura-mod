@@ -22,7 +22,7 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Remind() : TransparentCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Remind() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     private static LocString SelectionPrompt => CardLoc<Remind>("selectionPrompt");
 
@@ -61,6 +61,46 @@ public class Remind() : TransparentCard(1, CardType.Skill, CardRarity.Rare, Targ
         finally
         {
             SakuraGeneratedCardLifecycle.RemoveDetachedGeneratedChoices(copies);
+        }
+
+        if (activation.IsActive)
+            await ApplyExtraEffect(choiceContext);
+    }
+
+    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext)
+    {
+        var combatState = CombatState
+            ?? throw new InvalidOperationException("Remind extra effect requires combat.");
+        var templates = new CardModel[]
+        {
+            combatState.CreateCard<Time>(Owner),
+            combatState.CreateCard<Rewind>(Owner)
+        };
+
+        CardModel? selected = null;
+        try
+        {
+            selected = await SakuraActions.SelectFromCardPreviews(
+                this,
+                choiceContext,
+                templates,
+                cancelable: false);
+            if (selected is null)
+                return;
+
+            await SakuraGeneratedCardLifecycle.AddGeneratedCardToHand(
+                selected,
+                choiceContext,
+                refreshGeneratedTransparentHandVisual: false);
+            await SakuraActions.ReduceCostThisTurn(choiceContext, this, selected);
+        }
+        finally
+        {
+            foreach (var template in templates)
+            {
+                if (template != selected && template.Pile is null)
+                    template.CardScope?.RemoveCard(template);
+            }
         }
     }
 

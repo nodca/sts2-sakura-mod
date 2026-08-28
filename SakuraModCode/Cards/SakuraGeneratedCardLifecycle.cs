@@ -44,10 +44,8 @@ internal static class SakuraGeneratedCardLifecycle
         bool freeThisTurn,
         PlayerChoiceContext context) where T : CardModel
     {
-        var combatState = owner.Creature.CombatState
-            ?? throw new InvalidOperationException($"Generated {typeof(T).Name} requires an active combat.");
-        var card = combatState.CreateCard<T>(owner);
-        return await AddTemporaryGeneratedCardToHand(card, freeThisTurn, context);
+        var cards = await AddTemporaryGeneratedCardsToHand<T>(owner, 1, freeThisTurn, context);
+        return cards[0];
     }
 
     public static Task<CardModel> AddTemporaryGeneratedCardToHand(
@@ -55,6 +53,30 @@ internal static class SakuraGeneratedCardLifecycle
         bool freeThisTurn,
         PlayerChoiceContext context) =>
         AddGeneratedCardToCombat(card, TemporaryCopyOptions(freeThisTurn), context);
+
+    public static async Task<IReadOnlyList<CardModel>> AddTemporaryGeneratedCardsToHand<T>(
+        Player owner,
+        int count,
+        bool freeThisTurn,
+        PlayerChoiceContext context,
+        bool refreshGeneratedTransparentHandVisual = true) where T : CardModel
+    {
+        if (count <= 0)
+            return [];
+
+        var combatState = owner.Creature.CombatState
+            ?? throw new InvalidOperationException($"Generated {typeof(T).Name} requires an active combat.");
+        var cards = new List<CardModel>(count);
+        for (var i = 0; i < count; i++)
+            cards.Add(combatState.CreateCard<T>(owner));
+
+        await AddGeneratedCardsToCombat(
+            cards,
+            TemporaryCopyOptions(freeThisTurn) with { Pile = PileType.Hand },
+            context,
+            refreshGeneratedTransparentHandVisual);
+        return cards;
+    }
 
     public static async Task<CardModel?> AddRememberedCopyToHand(CardModel card, bool freeThisTurn) =>
         await AddGeneratedCopyToHand(
@@ -77,8 +99,13 @@ internal static class SakuraGeneratedCardLifecycle
     public static Task<CardModel> AddGeneratedCardToHand(
         CardModel card,
         PlayerChoiceContext? context = null,
-        CardPilePosition position = CardPilePosition.Random) =>
-        AddGeneratedCardToCombat(card, GeneratedCardToHandOptions(position), context);
+        CardPilePosition position = CardPilePosition.Random,
+        bool refreshGeneratedTransparentHandVisual = true) =>
+        AddGeneratedCardToCombat(
+            card,
+            GeneratedCardToHandOptions(position),
+            context,
+            refreshGeneratedTransparentHandVisual);
 
     public static async Task<CardModel> AddGeneratedCardToCombat(
         CardModel card,
@@ -125,6 +152,41 @@ internal static class SakuraGeneratedCardLifecycle
         return results;
     }
 
+    public static async Task<IReadOnlyList<CardModel>> AddGeneratedCardsToCombat(
+        IReadOnlyList<CardModel> cards,
+        GeneratedCardOptions options,
+        PlayerChoiceContext? context = null,
+        bool refreshGeneratedTransparentHandVisual = true)
+    {
+        if (cards.Count == 0)
+            return cards;
+
+        var destinationPile = options.Pile ?? PileType.Hand;
+        var position = options.Position ?? CardPilePosition.Random;
+        var temporaryGrantedFlags = new bool[cards.Count];
+        for (var i = 0; i < cards.Count; i++)
+        {
+            ApplyGeneratedCardOptions(cards[i], options, out temporaryGrantedFlags[i]);
+            TrackGeneratedTransparentHandVisualCard(
+                cards[i],
+                destinationPile,
+                refreshGeneratedTransparentHandVisual);
+        }
+
+        await AddGeneratedCardsToCombatWithResults(cards, destinationPile, cards[0].Owner, position);
+
+        for (var i = 0; i < cards.Count; i++)
+        {
+            await FinalizeGeneratedCardAdd(
+                cards[i],
+                context,
+                temporaryGrantedFlags[i],
+                refreshGeneratedTransparentHandVisual);
+        }
+
+        return cards;
+    }
+
     public static async Task<CardModel?> AddGeneratedCopyToHand(
         CardModel card,
         GeneratedCardOptions options,
@@ -168,19 +230,7 @@ internal static class SakuraGeneratedCardLifecycle
         PlayerChoiceContext? context = null,
         bool refreshGeneratedTransparentHandVisual = true)
     {
-        if (options.RemoveTemporary)
-            card.RemoveTemporaryForExchange();
-
-        var temporaryGranted = false;
-        if (options.AddTemporary)
-        {
-            var hadTemporary = card.IsTemporary();
-            card.MakeTemporary(returnsToMemory: !options.PreventTemporaryMemoryReturn);
-            temporaryGranted = !hadTemporary && card.IsTemporary();
-        }
-
-        if (options.FreeThisTurn)
-            card.EnergyCost.SetThisTurnOrUntilPlayed(0, reduceOnly: true);
+        ApplyGeneratedCardOptions(card, options, out var temporaryGranted);
 
         var destinationPile = options.Pile ?? PileType.Hand;
         TrackGeneratedTransparentHandVisualCard(card, destinationPile, refreshGeneratedTransparentHandVisual);
@@ -190,12 +240,45 @@ internal static class SakuraGeneratedCardLifecycle
             card.Owner,
             options.Position ?? CardPilePosition.Random);
 
+        await FinalizeGeneratedCardAdd(
+            card,
+            context,
+            temporaryGranted,
+            refreshGeneratedTransparentHandVisual);
+        return result;
+    }
+
+    private static void ApplyGeneratedCardOptions(
+        CardModel card,
+        GeneratedCardOptions options,
+        out bool temporaryGranted)
+    {
+        if (options.RemoveTemporary)
+            card.RemoveTemporaryForExchange();
+
+        temporaryGranted = false;
+        if (options.AddTemporary)
+        {
+            var hadTemporary = card.IsTemporary();
+            card.MakeTemporary(returnsToMemory: !options.PreventTemporaryMemoryReturn);
+            temporaryGranted = !hadTemporary && card.IsTemporary();
+        }
+
+        if (options.FreeThisTurn)
+            card.EnergyCost.SetThisTurnOrUntilPlayed(0, reduceOnly: true);
+    }
+
+    private static async Task FinalizeGeneratedCardAdd(
+        CardModel card,
+        PlayerChoiceContext? context,
+        bool temporaryGranted,
+        bool refreshGeneratedTransparentHandVisual)
+    {
         if (temporaryGranted && context is not null)
             await TriggerTemporaryGranted(context, card);
 
         if (refreshGeneratedTransparentHandVisual)
             RefreshGeneratedTransparentHandVisual(card);
-        return result;
     }
 
     private static void NotifyGeneratedPileAddFinished(CardModel card, PileType requestedPile)
