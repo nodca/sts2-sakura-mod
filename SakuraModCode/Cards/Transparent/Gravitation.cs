@@ -28,28 +28,35 @@ public class Gravitation() : TransparentExtraEffectCard(0, CardType.Skill, CardR
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        SakuraCardPlayVfx.PlayGravitation(CombatState!.HittableEnemies);
-        var power = await PowerCmd.Apply<GravitationHoldPower>(
-            choiceContext,
-            Owner.Creature,
-            1,
-            Owner.Creature,
-            this,
-            false);
-        power?.ExcludeSource(this);
-        if (activation.IsActive)
-            await ApplyExtraEffect(choiceContext, play);
+        await GravitationVfx.PlayOrResolveAsync(this, Owner.Creature, async cues =>
+        {
+            var power = await PowerCmd.Apply<GravitationHoldPower>(
+                choiceContext,
+                Owner.Creature,
+                1,
+                Owner.Creature,
+                this,
+                false);
+            power?.ExcludeSource(this);
+            if (power is not null)
+                cues.OpenWell();
+            if (activation.IsActive)
+                await ApplyExtraEffect(choiceContext, cues);
+        });
     }
 
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
+    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, GravitationVfx.Cues cues)
     {
-        await ChooseFromPileToHand(choiceContext, PileType.Discard);
-        await ChooseFromPileToHand(choiceContext, PileType.Draw);
+        await ChooseFromPileToHand(choiceContext, PileType.Discard, cues);
+        await ChooseFromPileToHand(choiceContext, PileType.Draw, cues);
     }
 
     protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Retain);
 
-    private async Task ChooseFromPileToHand(PlayerChoiceContext choiceContext, PileType pileType)
+    private async Task ChooseFromPileToHand(
+        PlayerChoiceContext choiceContext,
+        PileType pileType,
+        GravitationVfx.Cues cues)
     {
         var card = await SakuraActions.SelectFromCards(
             this,
@@ -57,7 +64,10 @@ public class Gravitation() : TransparentExtraEffectCard(0, CardType.Skill, CardR
             CardPile.Get(pileType, Owner)!.Cards,
             cancelable: false);
         if (card is not null)
+        {
             await SakuraActions.MoveExistingCardToHand(this, card);
+            cues.PullFromPile(pileType, card);
+        }
     }
 }
 

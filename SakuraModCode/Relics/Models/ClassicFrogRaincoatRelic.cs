@@ -99,7 +99,7 @@ public class ClassicFrogRaincoatRelic : SakuraRelicModel
         var copies = await SakuraMemoryPile.Consume(Owner, [selected]);
         try
         {
-            await SakuraGeneratedCardLifecycle.AddTemporaryRememberedCardToHand(
+            await SakuraGeneratedCardLifecycle.AddRememberedCardToHand(
                 copies.Single(),
                 freeThisTurn: true,
                 context: choiceContext);

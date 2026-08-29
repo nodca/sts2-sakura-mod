@@ -33,6 +33,12 @@ public class GravitationHoldPower : SakuraPowerModel
 
     public void ExcludeSource(CardModel card) => _excludedSources.Add(card);
 
+    public override Task AfterApplied(Creature? applier, CardModel? cardSource)
+    {
+        GravitationHoldVisual.Mount(Owner);
+        return Task.CompletedTask;
+    }
+
     public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
         CardModel card,
         bool isAutoPlay,
@@ -60,6 +66,7 @@ public class GravitationHoldPower : SakuraPowerModel
 
         _returnCounts[card] = _returnCounts.GetValueOrDefault(card) + 1;
         card.InvokeEnergyCostChanged();
+        GravitationHoldVisual.NotifyReturned(Owner, card);
         return Task.CompletedTask;
     }
 
@@ -99,6 +106,7 @@ public class GravitationHoldPower : SakuraPowerModel
         _excludedSources.Clear();
         _pendingReturns.Clear();
         _returnCounts.Clear();
+        GravitationHoldVisual.NotifyRemoved(oldOwner);
         return Task.CompletedTask;
     }
 }

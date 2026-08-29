@@ -29,6 +29,12 @@ public class ClowSword() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ba
 {
     internal const int ExtraHpLoss = 15;
 
+    // Vanilla strike sound: the Ironclad's character attack sfx, played by the game
+    // when a Strike's attack animation fires (CharacterModel.AttackSfx convention,
+    // no override in the Ironclad character model). The sword stroke replaces that
+    // animation, so the sound is carried on the damage instead.
+    internal const string StrikeSfx = "event:/sfx/characters/ironclad/ironclad_attack";
+
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Loner];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(6, ValueProp.Move, SourceCardIdentity.Sword)];
@@ -69,7 +75,7 @@ public class ClowSword() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ba
                 // Before the damage: the freeze and the contact flash belong on the frame
                 // the game's own damage number lands.
                 cues.Impact(target);
-                await DealDamage(choiceContext, target, CurrentDamage());
+                await DealDamage(choiceContext, target, CurrentDamage(), hitSfx: StrikeSfx);
             });
     }
 
@@ -106,7 +112,7 @@ public class SakuraSword() : SakuraFormCard(1, CardType.Attack, TargetType.AnyEn
                     foreach (var target in targets)
                     {
                         cues.Impact(target);
-                        await DealDamage(choiceContext, target, ReleasedDamage());
+                        await DealDamage(choiceContext, target, ReleasedDamage(), hitSfx: ClowSword.StrikeSfx);
                         await DealDamage(
                             choiceContext,
                             target,

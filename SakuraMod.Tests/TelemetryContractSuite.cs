@@ -185,6 +185,20 @@ public sealed class TelemetryContractSuite
                 "applicant")),
             "Expected the capture filter to accept the authorized card reward taken event.");
         RegressionTestHarness.Require(
+            runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
+                SakuraTelemetryCoverage.SessionStartedEventName,
+                SakuraTelemetry.RunHistoryRequestId,
+                TelemetryDataCategory.RunHistory,
+                "applicant")),
+            "Expected the capture filter to accept the authorized session started coverage event.");
+        RegressionTestHarness.Require(
+            runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
+                SakuraTelemetryCoverage.CoverageEventName,
+                SakuraTelemetry.RunHistoryRequestId,
+                TelemetryDataCategory.RunHistory,
+                "applicant")),
+            "Expected the capture filter to accept the authorized run coverage event.");
+        RegressionTestHarness.Require(
             !runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 "unrelated",
                 SakuraTelemetry.RunHistoryRequestId,
@@ -306,6 +320,25 @@ public sealed class TelemetryContractSuite
                 JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
                     "tools/telemetry-ingestion/internal/contracts/testdata/card_reward_taken_v2.json")))),
             "Expected the client reward-take JSON to match the server fixture field-for-field.");
+        RegressionTestHarness.Require(
+            JsonNode.DeepEquals(
+                SakuraTelemetryCoverage.BuildSessionStartedPayload("0.9.0"),
+                JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
+                    "tools/telemetry-ingestion/internal/contracts/testdata/session_started_v1.json")))),
+            "Expected the client session-started JSON to match the server fixture field-for-field.");
+        var startedCoverage = new SakuraTelemetryCoverageAccumulator();
+        startedCoverage.RecordContextCaptured();
+        RegressionTestHarness.Require(
+            JsonNode.DeepEquals(
+                SakuraTelemetryCoverage.BuildCoveragePayload(
+                    fixtureContext.RunKey,
+                    SakuraTelemetryCoverage.StageStarted,
+                    playerCount: 1,
+                    sakuraPlayerCount: 1,
+                    startedCoverage),
+                JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
+                    "tools/telemetry-ingestion/internal/contracts/testdata/balance_run_coverage_started_v1.json")))),
+            "Expected the client run-coverage JSON to match the started fixture field-for-field.");
     }
 
     [Fact]
@@ -480,6 +513,89 @@ public sealed class TelemetryContractSuite
             pendingBeforeLoad.DrainSkipped().Count == 1
             && reconstructedAfterLoad.DrainSkipped().Count == 0,
             "Expected pending Card Reward Correlation offers to be empty after reconstruction.");
+    }
+
+    [Fact]
+    public void CoverageEmissionIsConsentGatedAndContainsLifecycleCounters()
+    {
+        var disabled = new RecordingTelemetryClient { Enabled = false };
+        RegressionTestHarness.Require(
+            SakuraTelemetryCoverage.CaptureIfEnabled(
+                disabled,
+                SakuraTelemetryCoverage.SessionStartedEventName,
+                SakuraTelemetryCoverage.BuildSessionStartedPayload("0.9.0"))
+            == false
+            && disabled.Captured.Count == 0,
+            "Expected coverage capture to emit nothing when run_history is not enabled.");
+
+        var enabled = new RecordingTelemetryClient { Enabled = true };
+        var accumulator = new SakuraTelemetryCoverageAccumulator();
+        accumulator.RecordContextCaptured();
+        accumulator.RecordOffer(captured: true);
+        accumulator.RecordTake(captured: false);
+        accumulator.RecordFailure(CoverageFailureKind.Unknown);
+        accumulator.SetLastOfferSequence(3);
+        RegressionTestHarness.Require(
+            SakuraTelemetryCoverage.TryCaptureRunCoverage(
+                enabled,
+                "018f6b8d-78ef-7a63-8f4a-4d663f3f0e61",
+                SakuraTelemetryCoverage.StageCheckpoint,
+                playerCount: 1,
+                sakuraPlayerCount: 1,
+                accumulator)
+            &&
+            enabled.Captured.Count == 1
+            && enabled.Captured[0].EventName == SakuraTelemetryCoverage.CoverageEventName,
+            "Expected enabled coverage capture to send one run coverage event.");
+
+        var payload = enabled.Captured[0].Payload!.AsObject();
+        RegressionTestHarness.Require(
+            payload["stage"]!.GetValue<string>() == SakuraTelemetryCoverage.StageCheckpoint
+            && payload["expected"]!["reward_offers"]!.GetValue<int>() == 1
+            && payload["captured"]!["reward_offers"]!.GetValue<int>() == 1
+            && payload["expected"]!["reward_takes"]!.GetValue<int>() == 1
+            && payload["captured"]!["reward_takes"]!.GetValue<int>() == 0
+            && payload["captured"]!["completed"]!.GetValue<int>() == 0
+            && payload["capture_failure_counts"]!["unknown"]!.GetValue<int>() == 1
+            && payload["last_offer_sequence"]!.GetValue<int>() == 3,
+            "Expected coverage lifecycle counters to record expected, captured, and bounded failure counts.");
+        RegressionTestHarness.Require(
+            !payload.ToJsonString().Contains("card_id", StringComparison.Ordinal)
+            && !payload.ToJsonString().Contains("exception", StringComparison.Ordinal),
+            "Expected coverage payloads to omit card identity and unrestricted exception text.");
+        RegressionTestHarness.Require(
+            SakuraTelemetryCoverage.ClassifyFailure(new JsonException("bad json")) == CoverageFailureKind.Serialization
+            && SakuraTelemetryCoverage.ClassifyFailure(new InvalidOperationException("other")) == CoverageFailureKind.Unknown,
+            "Expected coverage failures to stay in bounded reason codes.");
+        Exception? contained = null;
+        RegressionTestHarness.Require(
+            !SakuraTelemetry.TryExecute(
+                static () => throw new InvalidOperationException("coverage boom"),
+                exception => contained = exception)
+            && contained is InvalidOperationException,
+            "Expected coverage capture failures to stay contained.");
+    }
+
+    private sealed class RecordingTelemetryClient : ITelemetryClient
+    {
+        public bool Enabled { get; set; }
+        public List<(string EventName, JsonNode? Payload)> Captured { get; } = [];
+        public string ApplicantId => MainFile.ModId;
+        public bool IsEnabled(string requestId) => Enabled && requestId == SakuraTelemetry.RunHistoryRequestId;
+        public void Capture(string eventName, string requestId, IReadOnlyDictionary<string, object?>? properties = null)
+        {
+        }
+        public void CapturePayload(
+            string eventName,
+            string requestId,
+            JsonNode payload,
+            IReadOnlyDictionary<string, object?>? properties = null)
+        {
+            Captured.Add((eventName, payload));
+        }
+        public void CaptureException(Exception exception, IReadOnlyDictionary<string, object?>? properties = null)
+        {
+        }
     }
 
     private static SakuraTelemetryRunContext FixtureContext() => new(

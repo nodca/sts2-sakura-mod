@@ -50,7 +50,7 @@ public class ClowMirror() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Co
     private async Task CopyMirrorTarget(PlayerChoiceContext choiceContext, int copies)
     {
         var choices = CardPile.GetCards(Owner, PileType.Hand)
-            .Where(IsMirrorCopyCandidate)
+            .Where(card => card != this && card is not SpellCard)
             .ToList();
         if (choices.Count == 0)
             return;
@@ -71,15 +71,10 @@ public class ClowMirror() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Co
 
         for (var i = 0; i < copies; i++)
         {
-            var copy = SakuraSourceCardRules.CreateMirrorCopySource(selected);
+            var copy = selected.CreateClone();
             await CardPileCmd.AddGeneratedCardToCombat(copy, PileType.Hand, Owner, CardPilePosition.Random);
         }
     }
-
-    private bool IsMirrorCopyCandidate(CardModel card) =>
-        card != this
-        && card is SakuraSourceCard { IsClassicSourceCard: true, Identity: { } identity }
-        && identity is not SourceCardIdentity.Mirror and not SourceCardIdentity.Create;
 }
 
 public class SakuraMirror() : SakuraFormCard(0, CardType.Skill, TargetType.None)
@@ -93,7 +88,7 @@ public class SakuraMirror() : SakuraFormCard(0, CardType.Skill, TargetType.None)
     {
         var combatState = Owner.Creature.CombatState
             ?? throw new InvalidOperationException("Sakura Mirror card choices require an active combat.");
-        var choices = SakuraSourceCardRules.AllClowTemplates(Owner)
+        var choices = SakuraSourceCardRules.AllClowAndTransparentTemplates(Owner)
             .Select(template => combatState.CreateCard(template, Owner))
             .ToList();
         if (choices.Count == 0)
@@ -117,7 +112,7 @@ public class SakuraMirror() : SakuraFormCard(0, CardType.Skill, TargetType.None)
             if (selected is null)
                 return;
 
-            var copy = SakuraSourceCardRules.CreateMirrorCopySource(selected);
+            var copy = selected.CreateClone();
             await CardPileCmd.AddGeneratedCardToCombat(copy, PileType.Hand, Owner, CardPilePosition.Random);
         }
         finally

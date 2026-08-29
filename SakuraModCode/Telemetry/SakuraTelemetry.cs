@@ -66,6 +66,7 @@ internal static class SakuraTelemetry
             RitsuLibFramework.RegisterTelemetryApplicant(CreateApplicant());
             SakuraTelemetryRunHooks.Register();
             _registered = true;
+            SakuraTelemetryCoverage.TryCaptureSessionStarted();
         }
         catch (Exception exception)
         {
@@ -106,7 +107,9 @@ internal static class SakuraTelemetry
             : context.SourceData is null
               && context.EventName is BalanceContextEventName
                   or CardRewardOfferedEventName
-                  or CardRewardTakenEventName;
+                  or CardRewardTakenEventName
+                  or SakuraTelemetryCoverage.SessionStartedEventName
+                  or SakuraTelemetryCoverage.CoverageEventName;
 
     internal static bool IsSakuraSerializableRun(SerializableRun? run) =>
         run is { GameMode: GameMode.Standard, Players.Count: > 0 }
@@ -154,16 +157,22 @@ internal static class SakuraTelemetry
             mods);
     }
 
-    internal static void CaptureRunContext(SakuraTelemetryRunContext context)
+    internal static bool CaptureRunContext(SakuraTelemetryRunContext context)
     {
         var client = RitsuLibFramework.GetTelemetryClient(ApplicantId);
-        if (!client.IsEnabled(RunHistoryRequestId))
-            return;
-
-        client.CapturePayload(
+        return SakuraTelemetryCoverage.CaptureIfEnabled(
+            client,
             BalanceContextEventName,
-            RunHistoryRequestId,
             JsonSerializer.SerializeToNode(context)!);
+    }
+
+    internal static bool CaptureApplicantPayload(
+        string eventName,
+        JsonNode payload,
+        IReadOnlyDictionary<string, object?>? properties = null)
+    {
+        var client = RitsuLibFramework.GetTelemetryClient(ApplicantId);
+        return SakuraTelemetryCoverage.CaptureIfEnabled(client, eventName, payload, properties);
     }
 
     internal static JsonObject BuildCardRewardOfferedPayload(CardRewardOfferSnapshot snapshot) =>
@@ -327,9 +336,11 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
     private ConditionalWeakTable<Player, CardRewardCorrelation<CardRewardOfferSnapshot>> _rewardStates = new();
     private BalanceRunIdentity? _runData;
     private SakuraTelemetryRunContext? _context;
+    private SakuraTelemetryCoverageAccumulator _coverage = new();
     private bool _activated;
     private bool _captureBalance;
     private bool _captureRewards;
+    private bool _terminalCoverageSent;
 
     // ModelDb constructs every mod-owned AbstractModel through a public parameterless constructor.
     public SakuraTelemetryRunHook()
@@ -358,9 +369,11 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
         _rewardStates = new ConditionalWeakTable<Player, CardRewardCorrelation<CardRewardOfferSnapshot>>();
         _runData = null;
         _context = null;
+        _coverage = new SakuraTelemetryCoverageAccumulator();
         _activated = false;
         _captureBalance = false;
         _captureRewards = false;
+        _terminalCoverageSent = false;
     }
 
     internal void Activate()
@@ -388,7 +401,19 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
         _runData.Context = _context;
         _runData.ContextChecksum = SakuraTelemetryContract.ContextChecksum(_context);
         SakuraTelemetry.PersistRunData(BoundRunState, _runData);
-        SakuraTelemetry.CaptureRunContext(_context);
+        SakuraTelemetryCoverage.TryCaptureSessionStarted();
+        SakuraTelemetry.TryExecute(
+            () =>
+            {
+                if (SakuraTelemetry.CaptureRunContext(_context))
+                    _coverage.RecordContextCaptured();
+            },
+            exception =>
+            {
+                _coverage.RecordFailure(SakuraTelemetryCoverage.ClassifyFailure(exception));
+                SakuraTelemetry.LogCaptureFailure("run context", exception);
+            });
+        EmitCoverage(SakuraTelemetryCoverage.StageStarted);
     }
 
     internal void Disable()
@@ -445,7 +470,10 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
 
             _usage.EndCombat();
             _runData.Usage = _usage.Snapshot();
+            _coverage.SetLastOfferSequence(_runData.LastOfferSequence);
             SakuraTelemetry.PersistRunData(BoundRunState, _runData);
+            if (_coverage.HasUnpublishedChanges)
+                EmitCoverage(SakuraTelemetryCoverage.StageCheckpoint);
         });
         return Task.CompletedTask;
     }
@@ -471,13 +499,17 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
         if (!_captureBalance || _runData is null || _context is null)
             return null;
 
+        EmitTerminalCoverage();
         _runData.Usage = _usage.Snapshot();
         SakuraTelemetry.PersistRunData(BoundRunState, _runData);
-        return JsonSerializer.SerializeToNode(new SakuraTelemetryBalanceRun(
+        var contribution = JsonSerializer.SerializeToNode(new SakuraTelemetryBalanceRun(
             SakuraTelemetryContract.Version,
             _runData.RunKey,
             _runData.ContextChecksum,
             _runData.Usage));
+        if (contribution is not null)
+            _coverage.RecordCompletedCaptured();
+        return contribution;
     }
 
     internal void CaptureSkippedOffers()
@@ -540,11 +572,13 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
                 .Select(static card => new CardRewardCorrelationCard(card.CardId, card.UpgradeLevel))
                 .ToArray()));
 
-        RitsuLibFramework.GetTelemetryClient(SakuraTelemetry.ApplicantId).CapturePayload(
-            SakuraTelemetry.CardRewardOfferedEventName,
-            SakuraTelemetry.RunHistoryRequestId,
-            SakuraTelemetry.BuildCardRewardOfferedPayload(snapshot),
-            SakuraTelemetry.BuildCardRewardProperties(snapshot));
+        CaptureCountedEvent(
+            record: captured => _coverage.RecordOffer(captured),
+            () => SakuraTelemetry.CaptureApplicantPayload(
+                SakuraTelemetry.CardRewardOfferedEventName,
+                SakuraTelemetry.BuildCardRewardOfferedPayload(snapshot),
+                SakuraTelemetry.BuildCardRewardProperties(snapshot)));
+        _coverage.SetLastOfferSequence(snapshot.OfferSequence);
     }
 
     private void CaptureCardRewardTaken(Player player)
@@ -600,16 +634,65 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
         return _runData.LastOfferSequence;
     }
 
-    private static void CaptureTakenPayload(
+    private void CaptureTakenPayload(
         CardRewardOfferSnapshot snapshot,
         IReadOnlyList<SakuraTelemetryCardChoice> choices,
         bool skipped)
     {
-        RitsuLibFramework.GetTelemetryClient(SakuraTelemetry.ApplicantId).CapturePayload(
-            SakuraTelemetry.CardRewardTakenEventName,
-            SakuraTelemetry.RunHistoryRequestId,
-            SakuraTelemetry.BuildCardRewardTakenPayload(snapshot, choices, skipped),
-            SakuraTelemetry.BuildCardRewardProperties(snapshot));
+        CaptureCountedEvent(
+            record: captured => _coverage.RecordTake(captured),
+            () => SakuraTelemetry.CaptureApplicantPayload(
+                SakuraTelemetry.CardRewardTakenEventName,
+                SakuraTelemetry.BuildCardRewardTakenPayload(snapshot, choices, skipped),
+                SakuraTelemetry.BuildCardRewardProperties(snapshot)));
+    }
+
+    private void EmitTerminalCoverage()
+    {
+        if (_terminalCoverageSent || _runData is null)
+            return;
+
+        _terminalCoverageSent = true;
+        _coverage.SetLastOfferSequence(_runData.LastOfferSequence);
+        EmitCoverage(SakuraTelemetryCoverage.StageTerminalAttempted);
+    }
+
+    private void EmitCoverage(string stage)
+    {
+        if (_runData is null)
+            return;
+
+        SakuraTelemetry.TryExecute(
+            () =>
+            {
+                var client = RitsuLibFramework.GetTelemetryClient(SakuraTelemetry.ApplicantId);
+                if (SakuraTelemetryCoverage.TryCaptureRunCoverage(
+                    client,
+                    _runData.RunKey,
+                    stage,
+                    BoundRunState.Players.Count,
+                    BoundRunState.Players.Count(static player => SakuraTelemetry.IsSakuraCharacterId(player.Character.Id)),
+                    _coverage))
+                    _coverage.MarkPublished();
+            },
+            exception =>
+            {
+                _coverage.RecordFailure(SakuraTelemetryCoverage.ClassifyFailure(exception));
+                SakuraTelemetry.LogCaptureFailure("coverage " + stage, exception);
+            });
+    }
+
+    private void CaptureCountedEvent(Action<bool> record, Func<bool> capture)
+    {
+        var captured = false;
+        SakuraTelemetry.TryExecute(
+            () => captured = capture(),
+            exception =>
+            {
+                _coverage.RecordFailure(SakuraTelemetryCoverage.ClassifyFailure(exception));
+                SakuraTelemetry.LogCaptureFailure("counted capture", exception);
+            });
+        record(captured);
     }
 
     private static void Guard(string phase, Action action)

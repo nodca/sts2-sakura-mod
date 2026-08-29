@@ -100,18 +100,20 @@ public abstract class SakuraSourceCard(
     protected static Creature RequiredTarget(CardPlay play) =>
         play.Target ?? throw new InvalidOperationException("Card target is required by this card's TargetType.");
 
-    protected async Task<AttackCommand?> DealDamage(PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move, int hitCount = 1)
+    protected async Task<AttackCommand?> DealDamage(PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move, int hitCount = 1, string? hitSfx = null, Func<Creature, Task>? onHit = null)
     {
         if (hitCount <= 0)
             return null;
 
-        return await DamageCmd.Attack(amount)
+        var attack = DamageCmd.Attack(amount)
             .WithHitCount(hitCount)
             .FromCard(this)
             .WithValueProp(props)
             .WithNoAttackerAnim()
-            .Targeting(target)
-            .Execute(choiceContext);
+            .Targeting(target);
+        if (hitSfx != null)
+            attack.WithHitFx(null, hitSfx);
+        return await WithHitObserver(attack, onHit).Execute(choiceContext);
     }
 
     protected async Task<AttackCommand?> DealDamageToEnemies(PlayerChoiceContext choiceContext, IEnumerable<Creature> targets, int amount, ValueProp props = ValueProp.Move, int hitCount = 1)
@@ -128,17 +130,18 @@ public abstract class SakuraSourceCard(
             .Execute(choiceContext);
     }
 
-    protected async Task DealDamageToRandomEnemies(
+    protected async Task<AttackCommand?> DealDamageToRandomEnemies(
         PlayerChoiceContext choiceContext,
         int amount,
         int hitCount,
         ValueProp props = ValueProp.Move,
         string? hitVfx = null,
         string? hitSfx = null,
-        bool spawnHitVfxAtBase = false)
+        bool spawnHitVfxAtBase = false,
+        Func<Creature, Task>? onHit = null)
     {
         if (hitCount <= 0)
-            return;
+            return null;
 
         var attack = DamageCmd.Attack(amount)
             .WithHitCount(hitCount)
@@ -151,7 +154,70 @@ public abstract class SakuraSourceCard(
         if (spawnHitVfxAtBase)
             attack.WithHitVfxSpawnedAtBase();
 
-        await attack.Execute(choiceContext);
+        return await WithHitObserver(attack, onHit).Execute(choiceContext);
+    }
+
+    /// <summary>
+    /// Attaches a per-hit target observer to an attack, or returns it untouched
+    /// when no caller asked for one.
+    /// </summary>
+    /// <remarks>
+    /// The engine resolves one hit as: call every <c>WithHitVfxNode</c> factory
+    /// with the creature this hit is about to strike, then await
+    /// <c>BeforeDamage</c>, then run <c>CreatureCmd.Damage</c> against that same
+    /// creature. Returning <see langword="null"/> from the factory makes
+    /// <c>AddChildSafely</c> a no-op, so the factory is a pure observer here: the
+    /// caller learns the target without contributing a node.
+    /// <para>
+    /// <c>pending</c> is copied out and cleared before the await because a hit
+    /// whose factory never ran would otherwise replay the previous hit's target.
+    /// That is not hypothetical: the engine skips the factory entirely when
+    /// <c>Creature.GetVfxContainer()</c> is null, which is exactly what happens
+    /// under <c>TestMode</c>, and it also skips it when the attack has no valid
+    /// target left. In both cases no damage follows either, so skipping the
+    /// observer keeps the two in step.
+    /// </para>
+    /// <para>
+    /// There is deliberately no <c>IsAlive</c> check on the way out. A creature
+    /// can only reach <c>pending</c> by the factory having just run for it, and
+    /// nothing applies damage between the factory and <c>BeforeDamage</c>, so a
+    /// target cannot die inside that window. One that died earlier simply never
+    /// reaches the factory again, and gating on <c>IsAlive</c> here would do
+    /// nothing except drop the flash on the hit that killed it — which is the
+    /// one hit that most needs to be seen landing.
+    /// </para>
+    /// <para>
+    /// Both current callers resolve exactly one creature per hit — random
+    /// targeting, or a single fixed target — which is what the observer assumes.
+    /// An attack that damaged several creatures in one hit would fire the
+    /// factory once per creature but run <c>BeforeDamage</c> once, so the
+    /// observer is not built for that shape.
+    /// </para>
+    /// <para>
+    /// The engine's own remark on <c>BeforeDamage</c> asks for a first-class
+    /// builder method once several attacks share the logic. This is that method:
+    /// the alternative is every caller restating the observer pair.
+    /// </para>
+    /// </remarks>
+    private static AttackCommand WithHitObserver(AttackCommand attack, Func<Creature, Task>? onHit)
+    {
+        if (onHit is null)
+            return attack;
+
+        Creature? pending = null;
+        return attack
+            .WithHitVfxNode(target =>
+            {
+                pending = target;
+                return null;
+            })
+            .BeforeDamage(async () =>
+            {
+                var target = pending;
+                pending = null;
+                if (target is not null)
+                    await onHit(target);
+            });
     }
 
     protected async Task TriggerCurrentPoison(
@@ -324,6 +390,20 @@ internal static class SakuraSourceCardRules
         AvailableClowTemplates(owner)
             .Where(static card => card is not ClowNothing)
             .ToList();
+
+    public static IReadOnlyList<CardModel> AllClowAndTransparentTemplates(Player owner)
+    {
+        var availableTypes = ModelDb.CardPool<ClassicSakuraCardPool>()
+            .GetUnlockedCards(owner.UnlockState, owner.RunState.CardMultiplayerConstraint)
+            .Select(static card => card.GetType())
+            .ToHashSet();
+        return AllClowTemplates(owner)
+            .Concat(
+                SakuraCardCatalog.SourceCardTypes(SourceEraClass.Clear)
+                    .Where(availableTypes.Contains)
+                    .Select(TypeToCard))
+            .ToList();
+    }
 
     public static CardModel CreateRandomDreamClowCard(Player owner)
     {

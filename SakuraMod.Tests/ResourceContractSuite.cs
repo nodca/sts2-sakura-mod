@@ -523,7 +523,7 @@ public sealed class ResourceContractSuite
         // remaining helpers still have callers and stay.
         // QuadraticPoints followed the same rule one card later: Gale was its only
         // remaining caller, so rebuilding Gale on the shared cel layer orphaned it.
-        // AddEllipse still serves Time and Gravitation, so it stays — the pair is
+        // AddEllipse still serves Time, so it stays — the pair is
         // asserted together to keep "orphaned" meaning "has no caller" rather than
         // "belongs to a retired card".
         RegressionTestHarness.Require(
@@ -872,6 +872,122 @@ public sealed class ResourceContractSuite
             && gale.Contains("ApplyExtraEffect(choiceContext)", StringComparison.Ordinal)
             && gale.Contains("AfterCardPlayed", StringComparison.Ordinal),
             "Expected Gale to preserve its attack, Extra copies, draw cadence, and cue synchronization.");
+    }
+
+    [Fact]
+    public void ArrowBowProjectileStaysATravelledArrowWithNoOtherCardOperator()
+    {
+        var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/card_vfx/arrow_bow_target.tscn"));
+        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/arrow_bow.gdshader"));
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/ArrowBowProjectileVfx.cs"));
+
+        RegressionTestHarness.Require(
+            scene.Contains("[node name=\"ArrowBody\" type=\"ColorRect\"", StringComparison.Ordinal)
+            && scene.Contains("unique_name_in_owner = true", StringComparison.Ordinal)
+            && scene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
+            && scene.Contains("shader_parameter/formation = 0.0", StringComparison.Ordinal)
+            && scene.Contains("mouse_filter = 2", StringComparison.Ordinal)
+            && !scene.Contains("BackBufferCopy", StringComparison.Ordinal),
+            "Expected one local ColorRect arrow region that ships in its start state, ignores input, and never copies the screen.");
+
+        foreach (var uniform in new[]
+                 {
+                     "elapsed", "held", "held_at", "seed", "formation", "flight", "impact",
+                     "star_head", "weight", "opacity"
+                 })
+        {
+            Assert.Contains($"uniform float {uniform}", shader, StringComparison.Ordinal);
+        }
+        Assert.Contains("uniform vec2 region_size", shader, StringComparison.Ordinal);
+
+        // The region is the one fact three files state. The session is the one
+        // that has to match, because it overrides the value before the first
+        // frame is drawn: a disagreement silently ships the smaller region and
+        // clips a hard edge across the wake and the contact burst.
+        var shaderRegion = RegionPair(shader, "uniform vec2 region_size = vec2(");
+        var sceneRegion = RegionPair(scene, "shader_parameter/region_size = Vector2(");
+        var sessionRegion = RegionPair(session, "ArrowRegion = new(");
+        RegressionTestHarness.Require(
+            shaderRegion == sceneRegion && sceneRegion == sessionRegion,
+            $"Expected one arrow region across the shader {shaderRegion}, the scene {sceneRegion}, and the session {sessionRegion}.");
+
+        var shaderCode = shader
+            .Split('\n')
+            .Select(static line => line.Trim())
+            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
+            .ToList();
+
+        // Arrow is an object that travelled: one tapered shaft, one head, and a
+        // wake of three tapered strokes, all unioned with min. Sakura's star head
+        // writes one ray and takes the other four from the shared radial fold
+        // rather than drawing five arms, and the contact burst is the shared
+        // speed-lines primitive rather than a second burst.
+        RegressionTestHarness.Require(
+            shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_vfx.gdshaderinc\"", StringComparison.Ordinal)
+            && shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_signature.gdshaderinc\"", StringComparison.Ordinal)
+            && shader.Contains("cel_step_clock_held(elapsed, held, held_at)", StringComparison.Ordinal)
+            && shaderCode.Any(static line => line.Contains("cel_tapered_segment(", StringComparison.Ordinal))
+            && shaderCode.Any(static line => line.Contains("cel_radial_fold(", StringComparison.Ordinal))
+            && shaderCode.Any(static line => line.Contains("cel_speed_lines(", StringComparison.Ordinal)),
+            "Expected the arrow to be built from the shared tapered segment, radial fold, and speed lines on the held stepped clock.");
+
+        // With colour removed Arrow still has to read as having travelled, and
+        // the slash is the nearest neighbour in shape — another thin bright mark.
+        // cel_bipointed_stroke is that mark's operator, so its absence is the
+        // executable form of the distinction between the two. The rest are the
+        // other cards' signatures, each of which would pull the arrow onto
+        // another silhouette.
+        RegressionTestHarness.Require(
+            !shaderCode.Any(static line =>
+                line.Contains("cel_bipointed_stroke(", StringComparison.Ordinal)
+                || line.Contains("cel_smin(", StringComparison.Ordinal)
+                || line.Contains("cel_fbm(", StringComparison.Ordinal)
+                || line.Contains("cel_scalloped_mass(", StringComparison.Ordinal)
+                || line.Contains("cel_facet(", StringComparison.Ordinal)
+                || line.Contains("= max(outer, -inner)", StringComparison.Ordinal)),
+            "Expected Arrow to stay a tapered projectile rather than a slash, a fluid mass, a turbulent column, a weather canopy, a crystal, or Gale's crescent.");
+        RegressionTestHarness.Require(
+            !shader.Contains("TIME", StringComparison.Ordinal)
+            && !shader.Contains("hint_screen_texture", StringComparison.Ordinal)
+            && !shader.Contains("SCREEN_TEXTURE", StringComparison.Ordinal)
+            && !shader.Contains("SCREEN_UV", StringComparison.Ordinal)
+            && !shaderCode.Any(static line => line.Contains("const float CEL_", StringComparison.Ordinal)),
+            "Expected the arrow field to take its clock from the shared session, with no screen sampling and no restated art-language constants.");
+
+        RegressionTestHarness.Require(
+            session.Contains(": CelVfxSession", StringComparison.Ordinal)
+            && session.Contains("session.StartClock();", StringComparison.Ordinal)
+            && session.Contains("PlayCelPrelude(card, caster)", StringComparison.Ordinal)
+            && session.Contains("PreloadManager.Cache.GetScene", StringComparison.Ordinal)
+            && session.Contains("room.CombatVfxContainer.AddChildSafely(root)", StringComparison.Ordinal)
+            && session.Contains("CelVfxGeometry.BallisticOffset(", StringComparison.Ordinal)
+            && session.Contains("CelVfxGeometry.AddBallisticDebris(", StringComparison.Ordinal)
+            && session.Contains("FlightFor(index)", StringComparison.Ordinal)
+            // Local +X is the direction of travel by the field's own contract, so
+            // the node has to carry that angle or the arrow is drawn level while
+            // it climbs. Gale established the same alignment for its carrier.
+            && session.Contains("_root.Rotation = rotation;", StringComparison.Ordinal)
+            && !session.Contains("ResourceLoader.Load", StringComparison.Ordinal)
+            // Parenting into the standee subtree would mirror the region and the
+            // ink width along with the position.
+            && !session.Contains("GetCreatureNode(caster)).AddChild", StringComparison.Ordinal),
+            "Expected the arrow session to inherit the shared skeleton, clock, prelude, run-asset cache, container, parabola, bounded schedule, and travel-aligned attitude.");
+
+        static (float Width, float Height) RegionPair(string source, string prefix)
+        {
+            var start = source.IndexOf(prefix, StringComparison.Ordinal);
+            RegressionTestHarness.Require(
+                start >= 0,
+                $"Expected {prefix} to declare the arrow region size.");
+            var end = source.IndexOf(')', start + prefix.Length);
+            var parts = source[(start + prefix.Length)..end].Split(',');
+            return (
+                float.Parse(parts[0].Trim().TrimEnd('f'), CultureInfo.InvariantCulture),
+                float.Parse(parts[1].Trim().TrimEnd('f'), CultureInfo.InvariantCulture));
+        }
     }
 
     [Fact]
@@ -2120,6 +2236,18 @@ public sealed class ResourceContractSuite
             "SakuraModCode/FourthAct/Visuals/SakuraStandeeActionController.cs"));
         var spellTurn = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Visuals/Classic/SpellTurnTransformationVfx.cs"));
+        var gravitationHold = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/GravitationHoldVisual.cs"));
+        var gravitationVfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/GravitationVfx.cs"));
+        var gravitationCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Gravitation.cs"));
+        var arrowVfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/ArrowBowProjectileVfx.cs"));
+        var arrowCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Arrow.cs"));
+        var timeCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Time.cs"));
 
         var disabledIndex = bigLittle.IndexOf(
             "if (!SakuraModConfig.IsCardVfxEnabled())",
@@ -2140,7 +2268,16 @@ public sealed class ResourceContractSuite
             && session.Contains("SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal)
             && session.Contains("if (presentationEnabled)", StringComparison.Ordinal)
             && presenter.Contains("IsCardVfxEnabled", StringComparison.Ordinal)
-            && simpleVfx.Contains("if (!SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal),
+            && simpleVfx.Contains("if (!SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal)
+            && simpleVfx.Contains("PlayTime", StringComparison.Ordinal)
+            && !simpleVfx.Contains("PlayGravitation", StringComparison.Ordinal)
+            && gravitationHold.Contains("SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal)
+            && gravitationVfx.Contains("CelVfxSession.PlayOrResolveAsync", StringComparison.Ordinal)
+            && gravitationCard.Contains("GravitationVfx.PlayOrResolveAsync", StringComparison.Ordinal)
+            && !gravitationCard.Contains("PlayGravitation", StringComparison.Ordinal)
+            && arrowVfx.Contains("CelVfxSession.PlayOrResolveAsync", StringComparison.Ordinal)
+            && arrowCard.Contains("ArrowBowProjectileVfx.PlayOrResolveAsync", StringComparison.Ordinal)
+            && timeCard.Contains("SakuraCardPlayVfx.PlayTime", StringComparison.Ordinal),
             "Expected one local card-VFX preference to gate the shared session and approved presentation owners.");
         RegressionTestHarness.Require(
             disabledIndex >= 0
@@ -2714,9 +2851,12 @@ public sealed class ResourceContractSuite
                 $"Expected {locale} Forgotten hover text to explain only its general Memory rule.");
             RegressionTestHarness.Require(
                 locale == "zhs"
-                    ? remind.Contains("不会进入", StringComparison.Ordinal)
-                    : remind.Contains("do not enter", StringComparison.Ordinal),
-                $"Expected {locale} Remind hover text to own its no-return exception.");
+                    ? remind.Contains("本回合能耗为 0", StringComparison.Ordinal)
+                    : remind.Contains("cost 0 this turn", StringComparison.OrdinalIgnoreCase),
+                $"Expected {locale} Remind hover text to keep recalled copies free for the turn.");
+            RegressionTestHarness.Require(
+                !remind.Contains(forgottenTitle, termComparison),
+                $"Expected {locale} Remind hover text not to grant Forgotten to recalled copies.");
 
             var stateReferences = new Dictionary<string, string[]>
             {
@@ -2744,8 +2884,7 @@ public sealed class ResourceContractSuite
                 [
                     "SAKURAMOD-TEMPORARY.title",
                     "SAKURAMOD-TEMPORARY.description",
-                    "SAKURA_MOD_CARDPILE_MEMORY.description",
-                    "SAKURAMOD-REMIND.description"
+                    "SAKURA_MOD_CARDPILE_MEMORY.description"
                 ]
             };
             if (locale == "eng")
@@ -3008,6 +3147,78 @@ public sealed class ResourceContractSuite
             && cueIndex >= 0
             && powerIndex > cueIndex,
             "Expected Transfer to render one paired exchange cue for every Through target before the existing PowerCmd loop, without moving gameplay ownership into VFX.");
+    }
+
+    [Fact]
+    public void GravitationSpacetimeWellUsesPersistentHoldVisualWithoutOwningGameplay()
+    {
+        var hold = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/GravitationHoldVisual.cs"));
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/GravitationVfx.cs"));
+        var card = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Gravitation.cs"));
+        var power = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/Transparent/GravitationHoldPower.cs"));
+        var pileExchange = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/PileExchangeVfx.cs"));
+        var simpleVfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraCardPlayVfx.cs"));
+
+        var applyIndex = card.IndexOf("PowerCmd.Apply<GravitationHoldPower>", StringComparison.Ordinal);
+        var excludeIndex = card.IndexOf("power?.ExcludeSource(this)", StringComparison.Ordinal);
+        var powerGuardIndex = excludeIndex >= 0
+            ? card.IndexOf("if (power is not null)", excludeIndex, StringComparison.Ordinal)
+            : -1;
+        var openWellIndex = card.IndexOf("cues.OpenWell()", StringComparison.Ordinal);
+        var extraIndex = card.IndexOf("ApplyExtraEffect(choiceContext, cues)", StringComparison.Ordinal);
+        var moveIndex = card.IndexOf("MoveExistingCardToHand", StringComparison.Ordinal);
+        var pullIndex = card.IndexOf("cues.PullFromPile", StringComparison.Ordinal);
+        var energyIndex = power.IndexOf("InvokeEnergyCostChanged()", StringComparison.Ordinal);
+        var returnedIndex = power.IndexOf("GravitationHoldVisual.NotifyReturned", StringComparison.Ordinal);
+
+        RegressionTestHarness.Require(
+            session.Contains(": CelVfxSession", StringComparison.Ordinal)
+            && session.Contains("PlayCelPrelude", StringComparison.Ordinal)
+            && session.Contains("session => session.Dispose()", StringComparison.Ordinal)
+            && !session.Contains("NotifyRemoved", StringComparison.Ordinal)
+            && hold.Contains("CombatVfxContainer", StringComparison.Ordinal)
+            && hold.Contains("CelVfxGeometry.ResolveCaster", StringComparison.Ordinal)
+            && hold.Contains("FloorBias", StringComparison.Ordinal)
+            && hold.Contains("FacingSign", StringComparison.Ordinal)
+            && hold.Contains("TestMode.IsOn", StringComparison.Ordinal)
+            && hold.Contains("SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal)
+            && hold.Contains("MaxConcurrentOverlays = 4", StringComparison.Ordinal)
+            && hold.Contains("PileExchangeVfx.TryGetPileCenter", StringComparison.Ordinal)
+            && hold.Contains("CombatEnded", StringComparison.Ordinal)
+            && hold.Contains("TreeExiting", StringComparison.Ordinal)
+            && pileExchange.Contains("TryGetPileCenter", StringComparison.Ordinal)
+            && !hold.Contains("TIME", StringComparison.Ordinal)
+            && !hold.Contains("hint_screen_texture", StringComparison.Ordinal)
+            && !session.Contains("TIME", StringComparison.Ordinal)
+            && !session.Contains("ResourceLoader.Load", StringComparison.Ordinal)
+            && !hold.Contains("ResourceLoader.Load", StringComparison.Ordinal)
+            && !card.Contains("skipVisuals", StringComparison.Ordinal)
+            && !power.Contains("skipVisuals", StringComparison.Ordinal)
+            && card.Contains("MoveExistingCardToHand", StringComparison.Ordinal)
+            && card.Contains("GravitationVfx.PlayOrResolveAsync", StringComparison.Ordinal)
+            && !card.Contains("PlayGravitation", StringComparison.Ordinal)
+            && !simpleVfx.Contains("PlayGravitation", StringComparison.Ordinal)
+            && !simpleVfx.Contains("EnemyArea", StringComparison.Ordinal)
+            && simpleVfx.Contains("PlayTime", StringComparison.Ordinal)
+            && simpleVfx.Contains("AddEllipse", StringComparison.Ordinal)
+            && power.Contains("GravitationHoldVisual.Mount(Owner)", StringComparison.Ordinal)
+            && power.Contains("NotifyRemoved(oldOwner)", StringComparison.Ordinal)
+            && applyIndex >= 0
+            && excludeIndex > applyIndex
+            && powerGuardIndex > excludeIndex
+            && openWellIndex > powerGuardIndex
+            && extraIndex > openWellIndex
+            && moveIndex >= 0
+            && pullIndex > moveIndex
+            && energyIndex >= 0
+            && returnedIndex > energyIndex,
+            "Expected Gravitation to open a caster-foot well through a short cel session and a Power-tied persist owner, overlay native hand motion, and leave Time on SakuraCardPlayVfx.");
     }
 
     private static void RequireClearCardDescriptionsAvoidRedundantText()

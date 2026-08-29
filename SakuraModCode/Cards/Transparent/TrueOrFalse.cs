@@ -32,7 +32,7 @@ public class TrueOrFalse() : TransparentExtraEffectCard(0, CardType.Skill, CardR
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new CardsVar(2),
-        new EnergyVar(2)
+        new EnergyVar(1)
     ];
     protected override bool IsPlayable => SakuraCardModel.UsesMagicChargeExtraEffect(this)
         ? CanCompleteExtraEffect()

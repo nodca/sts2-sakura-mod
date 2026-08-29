@@ -1,0 +1,32 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" uid="uid://bapxg8ghtcqvj" path="res://SakuraMod/shaders/card_vfx/arrow_bow.gdshader" id="1_arrow"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_arrow"]
+resource_local_to_scene = true
+shader = ExtResource("1_arrow")
+shader_parameter/region_size = Vector2(240, 160)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/formation = 0.0
+shader_parameter/flight = 0.0
+shader_parameter/impact = 0.0
+shader_parameter/star_head = 0.0
+shader_parameter/weight = 0.0
+shader_parameter/ink_colour = Color(1, 0.94, 0.62, 1)
+shader_parameter/accent_colour = Color(1, 0.78, 0.94, 1)
+shader_parameter/opacity = 1.0
+
+[node name="ArrowTarget" type="Node2D"]
+
+[node name="ArrowBody" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_arrow")
+offset_left = -120.0
+offset_top = -80.0
+offset_right = 120.0
+offset_bottom = 80.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)

@@ -56,7 +56,9 @@ public class Blade() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
                     this,
                     target,
                     DynamicVars.CalculatedDamage,
-                    hitCount: hits);
+                    hitCount: hits,
+                    // Same family sound as the single-blade cards, per hit.
+                    hitSfx: ClowSword.StrikeSfx);
             },
             crossings: hits);
     }

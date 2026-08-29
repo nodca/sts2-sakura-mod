@@ -4,6 +4,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 internal static class SakuraCardVfxAssets
 {
+    private static readonly IReadOnlyList<string> ArrowPaths =
+        [.. ArrowBowProjectileVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> HailPaths =
         [.. HailIceShardVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> BlazePaths =
@@ -21,6 +23,7 @@ internal static class SakuraCardVfxAssets
 
     public static IEnumerable<string> RunAssetPaths(CardModel card) => card switch
     {
+        ClowArrow or SakuraArrow => ArrowPaths,
         Aqua => AquaWaterSphereVfx.AssetPaths,
         Hail => HailPaths,
         Blaze => BlazePaths,

@@ -70,7 +70,7 @@ public class TrueOrFalseEnergyChoice() : SakuraOptionCard(CardType.Skill)
 {
     public override string EnglishName => "TRUE";
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Stabilize];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(1)];
 }
 
 internal enum ExchangePileKind

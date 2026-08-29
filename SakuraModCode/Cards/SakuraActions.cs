@@ -64,15 +64,18 @@ public static class SakuraActions
         SakuraCardModel source,
         Creature target,
         CalculatedDamageVar damage,
-        int hitCount = 1)
+        int hitCount = 1,
+        string? hitSfx = null)
     {
-        await DamageCmd.Attack(damage)
+        var attack = DamageCmd.Attack(damage)
             .WithHitCount(hitCount)
             .FromCard(source)
             .WithValueProp(AttackProps(source, damage.Props))
             .WithNoAttackerAnim()
-            .Targeting(target)
-            .Execute(context);
+            .Targeting(target);
+        if (hitSfx != null)
+            attack.WithHitFx(null, hitSfx);
+        await attack.Execute(context);
     }
 
     public static async Task Attack(

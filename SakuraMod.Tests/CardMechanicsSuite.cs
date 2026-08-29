@@ -138,7 +138,7 @@ public sealed class CardMechanicsSuite
             powerSource.Contains("MaxRecordedCards", StringComparison.Ordinal),
             powerSource.Contains("play.IsLastInSeries", StringComparison.Ordinal),
             powerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal),
-            !powerSource.Contains("AddTemporaryRememberedCardToHand", StringComparison.Ordinal),
+            !powerSource.Contains("AddRememberedCardToHand", StringComparison.Ordinal),
             powerSource.Contains("freeThisTurn", StringComparison.Ordinal),
             chineseCards.Contains("至多 3 张牌", StringComparison.Ordinal),
             englishCards.Contains("Record up to 3 cards", StringComparison.Ordinal)
@@ -793,12 +793,12 @@ public sealed class CardMechanicsSuite
             && !upgradedCard.Keywords.Contains(CardKeyword.Exhaust)
             && baseCard.DynamicVars.Cards.IntValue == 2
             && upgradedCard.DynamicVars.Cards.IntValue == 2
-            && baseCard.DynamicVars.Energy.IntValue == 2
-            && upgradedCard.DynamicVars.Energy.IntValue == 2
+            && baseCard.DynamicVars.Energy.IntValue == 1
+            && upgradedCard.DynamicVars.Energy.IntValue == 1
             && upgradedDrawChoice.DynamicVars.Cards.IntValue == 2
-            && upgradedEnergyChoice.DynamicVars.Energy.IntValue == 2
+            && upgradedEnergyChoice.DynamicVars.Energy.IntValue == 1
             && upgradedEnergyChoice.CanonicalKeywords.Contains(SakuraKeywords.Stabilize),
-            "Expected True or False to Exhaust only before upgrading and keep its 2-card/2-Energy values after upgrading.");
+            "Expected True or False to Exhaust only before upgrading and keep its 2-card/1-Energy values after upgrading.");
     }
 
     [Fact]
@@ -830,7 +830,7 @@ public sealed class CardMechanicsSuite
             && gale.DynamicVars["ExtraCopies"].IntValue == 3
             && reflect.DynamicVars.Block.IntValue == 7
             && trueOrFalse.DynamicVars.Cards.IntValue == 3
-            && trueOrFalse.DynamicVars.Energy.IntValue == 3
+            && trueOrFalse.DynamicVars.Energy.IntValue == 1
             && gale.Keywords.Contains(CardKeyword.Exhaust)
             && gale.Keywords.Contains(CardKeyword.Ethereal),
             "Expected Release to scale every Transparent Card dynamic value using the existing floor rule.");
@@ -845,7 +845,7 @@ public sealed class CardMechanicsSuite
             && gale.DynamicVars["ExtraCopies"].IntValue == 2
             && reflect.DynamicVars.Block.IntValue == 5
             && trueOrFalse.DynamicVars.Cards.IntValue == 2
-            && trueOrFalse.DynamicVars.Energy.IntValue == 2
+            && trueOrFalse.DynamicVars.Energy.IntValue == 1
             && !gale.Keywords.Contains(CardKeyword.Exhaust)
             && !gale.Keywords.Contains(CardKeyword.Ethereal),
             "Expected Release reset to restore Transparent Card values and temporary keywords.");
@@ -1018,7 +1018,9 @@ public sealed class CardMechanicsSuite
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("ModifyCardPlayResultPileTypeAndPosition")
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterModifyingCardPlayResultPileOrPosition")
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("TryModifyEnergyCostInCombat")
-            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterSideTurnEnd"),
+            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterSideTurnEnd")
+            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterApplied")
+            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterRemoved"),
             "Expected Gravitation to be a 0-cost rare Earth replay engine whose returned cards cost 1 more each time and which gains Retain on upgrade.");
 
         RegressionTestHarness.Require(

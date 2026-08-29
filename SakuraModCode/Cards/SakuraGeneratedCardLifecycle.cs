@@ -78,18 +78,15 @@ internal static class SakuraGeneratedCardLifecycle
         return cards;
     }
 
-    public static async Task<CardModel?> AddRememberedCopyToHand(CardModel card, bool freeThisTurn) =>
-        await AddGeneratedCopyToHand(
-            card,
-            RememberedCopyOptions(freeThisTurn, addTemporary: false));
-
-    public static async Task<CardModel> AddTemporaryRememberedCardToHand(
+    // Recalled Memory cards return as ordinary combat cards: stale Temporary is
+    // stripped and never re-granted; only the free-this-turn cost applies.
+    public static async Task<CardModel> AddRememberedCardToHand(
         CardModel card,
         bool freeThisTurn,
         PlayerChoiceContext context) =>
         await AddGeneratedCardToCombat(
             card,
-            RememberedCopyOptions(freeThisTurn, addTemporary: true) with
+            RememberedCopyOptions(freeThisTurn) with
             {
                 Pile = PileType.Hand
             },
@@ -458,12 +455,10 @@ internal static class SakuraGeneratedCardLifecycle
             FreeThisTurn = freeThisTurn
         };
 
-    internal static GeneratedCardOptions RememberedCopyOptions(bool freeThisTurn, bool addTemporary) =>
+    internal static GeneratedCardOptions RememberedCopyOptions(bool freeThisTurn) =>
         new()
         {
             RemoveTemporary = true,
-            AddTemporary = addTemporary,
-            PreventTemporaryMemoryReturn = addTemporary,
             FreeThisTurn = freeThisTurn
         };
 

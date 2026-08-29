@@ -223,6 +223,38 @@ internal abstract class CelVfxSession : IDisposable
             }
         }
 
+        /// <summary>
+        /// The awaitable counterpart of <see cref="Invoke"/>, for a cue the
+        /// gameplay callback waits on.
+        /// </summary>
+        /// <remarks>
+        /// Arrow needs this because its contact flash has to land on the frame
+        /// the damage resolves, and only the caller awaiting the cue can hold
+        /// damage back until the arrow arrives. The degradation is identical to
+        /// <see cref="Invoke"/>: a failed or absent session makes the cue a
+        /// no-op that returns immediately, never a wait that only exists when
+        /// presentation does. Waiting inside the presentation layer would give
+        /// players with card VFX on a longer combat than players with it off.
+        /// </remarks>
+        internal async Task InvokeAsync(string cueName, Func<TSession, Task> cue)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(cueName);
+            ArgumentNullException.ThrowIfNull(cue);
+            if (_session is not { } session)
+                return;
+
+            try
+            {
+                await cue(session);
+            }
+            catch (Exception exception)
+            {
+                _session = null;
+                ReportSafely(_reportFailure, cueName, exception);
+                DisposeSafely(session);
+            }
+        }
+
         internal void Finish()
         {
             if (_session is not { } session)

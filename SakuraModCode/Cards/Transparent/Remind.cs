@@ -52,7 +52,7 @@ public class Remind() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
         {
             foreach (var copy in copies)
             {
-                await SakuraGeneratedCardLifecycle.AddTemporaryRememberedCardToHand(
+                await SakuraGeneratedCardLifecycle.AddRememberedCardToHand(
                     copy,
                     freeThisTurn: true,
                     context: choiceContext);

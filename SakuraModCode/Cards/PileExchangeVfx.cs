@@ -52,6 +52,15 @@ public static class PileExchangeVfx
             "SakuraPileExchangeVfx");
     }
 
+    internal static bool TryGetPileCenter(NCombatRoom room, PileType pileType, out Vector2 center)
+    {
+        center = default;
+        if (room.Ui is null)
+            return false;
+
+        return TryResolveEndpoint(room, pileType, out center, out _);
+    }
+
     private static bool TryResolveEndpoint(
         NCombatRoom room,
         PileType pileType,

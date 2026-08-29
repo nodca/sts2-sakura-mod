@@ -89,6 +89,7 @@ public sealed class CardVisualContractSuite
                      "SakuraModCode/Cards/Visuals/Transparent/BlazeFireColumnVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/SakuraSwordBladeVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/CloudRainWeatherVfx.cs",
+                     "SakuraModCode/Cards/Visuals/Classic/ArrowBowProjectileVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/SpellTurnTransformationVfx.cs"
                  })
         {
@@ -152,6 +153,101 @@ public sealed class CardVisualContractSuite
                 vfxAssets.SetEquals(testCase.VfxAssets),
                 $"Expected {testCase.Card.GetType().Name} to declare exactly its combat VFX run assets.");
         }
+    }
+
+    [Fact]
+    public void ArrowCardVfxRouteCoversBothScenesPlusSharedCelAssets()
+    {
+        var sharedCelPaths = CelVfxSession.SharedAssetPaths;
+        var cases = new[]
+        {
+            new VfxCase(
+                new ClowArrow(),
+                [ArrowBowProjectileVfx.ScenePath, ArrowBowProjectileVfx.TargetScenePath, .. sharedCelPaths]),
+            new VfxCase(
+                new SakuraArrow(),
+                [ArrowBowProjectileVfx.ScenePath, ArrowBowProjectileVfx.TargetScenePath, .. sharedCelPaths])
+        };
+
+        foreach (var testCase in cases)
+        {
+            var vfxAssets = SakuraCardVfxAssets.RunAssetPaths(testCase.Card)
+                .ToHashSet(StringComparer.Ordinal);
+            RegressionTestHarness.Require(
+                vfxAssets.SetEquals(testCase.VfxAssets),
+                $"Expected {testCase.Card.GetType().Name} to declare exactly its combat VFX run assets.");
+        }
+    }
+
+    [Fact]
+    public void ArrowVolleyObservesTargetsResolvedByGameplay()
+    {
+        var arrowCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Arrow.cs"));
+        var vfxSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/ArrowBowProjectileVfx.cs"));
+        var sourceCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraSourceCard.cs"));
+        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/arrow_bow.gdshader"));
+
+        // Arrow strikes random enemies, so the volley may never guess a target:
+        // every creature it draws has to be the one the engine just resolved.
+        RegressionTestHarness.Require(
+            arrowCard.Contains("onHit: volley.Loose", StringComparison.Ordinal)
+            && !arrowCard.Contains("HittableEnemies", StringComparison.Ordinal),
+            "Expected Arrow to hand each hit's creature to the volley instead of guessing targets up front.");
+        RegressionTestHarness.Require(
+            sourceCard.Contains("private static AttackCommand WithHitObserver", StringComparison.Ordinal),
+            "Expected the per-hit observer to live in one first-class builder on the shared attack helpers.");
+        RegressionTestHarness.Require(
+            vfxSource.Contains("CelVfxSession.PlayOrResolveAsync", StringComparison.Ordinal)
+            && vfxSource.Contains("PreloadManager.Cache", StringComparison.Ordinal)
+            && !vfxSource.Contains("ResourceLoader.Load", StringComparison.Ordinal),
+            "Expected the Arrow session to inherit the one card-VFX preference from the shared session entry point.");
+        RegressionTestHarness.Require(
+            !shader.Contains("TIME", StringComparison.Ordinal)
+            && !shader.Contains("hint_screen_texture", StringComparison.Ordinal),
+            "Expected the Arrow field to take its clock from the shared session without shader TIME or screen sampling.");
+    }
+
+    /// <summary>
+    /// Arrow's added wait is capped, and the cap has to hold at every hit count a
+    /// real play can reach — a full hand plus X energy clears twenty.
+    /// </summary>
+    /// <remarks>
+    /// Asserted on the schedule itself rather than on the constants that feed it.
+    /// A cap stated as "four full flights and eight rapid ones" is one widened
+    /// tier away from a two-second cutscene, and nothing in a source contract
+    /// would notice; summing the real per-hit flight cannot drift the same way.
+    /// </remarks>
+    [Fact]
+    public void ArrowVolleyWaitsBoundedTimeWhateverTheHitCount()
+    {
+        var flightFor = typeof(ArrowBowProjectileVfx)
+            .GetMethod("FlightFor", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("Expected Arrow's private flight schedule.");
+        float FlightFor(int index) => (float)flightFor.Invoke(null, [index])!;
+
+        foreach (var hitCount in new[] { 1, 4, 10, 20, 40 })
+        {
+            var waited = 0d;
+            for (var index = 0; index < hitCount; index++)
+                waited += FlightFor(index);
+
+            RegressionTestHarness.Require(
+                waited <= 0.65d,
+                $"Expected a {hitCount}-hit volley to add at most 0.65s of waiting, got {waited:0.###}s.");
+        }
+
+        // Past the cap the volley stops waiting but must still be visible, which
+        // is the difference between a compressed volley and a dropped hit.
+        RegressionTestHarness.Require(
+            FlightFor(3) > 0f
+            && FlightFor(11) > 0f
+            && FlightFor(12) == 0f
+            && FlightFor(40) == 0f,
+            "Expected every hit up to the cap to travel and every hit past it to spend no time in flight.");
     }
 
     [Fact]

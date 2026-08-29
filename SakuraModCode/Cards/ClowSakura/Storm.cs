@@ -30,30 +30,57 @@ public class ClowStorm() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Un
     private const int Hits = 5;
 
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(4, ValueProp.Move), new DynamicVar("Magic", Hits)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new CalculationBaseVar(3),
+        new ExtraDamageVar(1),
+        new CalculatedDamageVar(ValueProp.Move).WithMultiplier(StormRules.WindCardsPlayedThisTurn),
+        new DynamicVar("Magic", Hits)
+    ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await SakuraMagicCharge.AddVoidToDiscardPile(choiceContext, Owner);
         var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, ReleasedDamage(), hitCount: ReleasedMagic());
+        await DealDamage(choiceContext, target, CalculatedDamage(target), hitCount: ReleasedMagic());
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await SakuraMagicCharge.AddVoidToDiscardPile(choiceContext, Owner);
-        await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies, ReleasedDamage(), hitCount: ReleasedMagic());
+        await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies, CalculatedDamage(null), hitCount: ReleasedMagic());
     }
 
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(2);
+    private int CalculatedDamage(Creature? target) =>
+        Math.Max(0, (int)DynamicVars.CalculatedDamage.Calculate(target));
+
+    protected override void OnUpgrade() => DynamicVars.CalculationBase.UpgradeValueBy(1);
+}
+
+internal static class StormRules
+{
+    public static decimal WindCardsPlayedThisTurn(CardModel card, Creature? _) =>
+        WindCardsPlayedThisTurnCount(card);
+
+    internal static int WindCardsPlayedThisTurnCount(CardModel card)
+    {
+        if (card.Owner is not { } owner || card.CombatState is null)
+            return 0;
+
+        return CombatManager.Instance.History.CardPlaysFinished
+            .Where(entry => entry.CardPlay.Card.Owner == owner && entry.HappenedThisTurn(card.CombatState))
+            .Select(entry => entry.CardPlay.Card)
+            .Count(CountsAsWindCard);
+    }
+
+    internal static bool CountsAsWindCard(CardModel card) =>
+        SakuraActions.HasElement(card, SakuraElement.Wind);
 }
 
 public class SakuraStorm() : SakuraFormCard(1, CardType.Attack, TargetType.None)
 {
-    private const int MaxDamageOffset = 8;
+    private const int MaxDamageOffset = 5;
 
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(1, ValueProp.Move), new DynamicVar("MaxDamage", 9), new DynamicVar("Magic", 7)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(4, ValueProp.Move), new DynamicVar("MaxDamage", 9), new DynamicVar("Magic", 7)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
