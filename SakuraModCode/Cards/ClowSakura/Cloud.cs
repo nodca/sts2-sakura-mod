@@ -31,7 +31,12 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
 
     public override bool GainsBlock => true;
     public override SakuraElementSet Elements => SakuraElementSet.Water;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceBlockVar(5, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new CalculationBaseVar(5),
+        new CalculationExtraVar(5),
+        new CalculatedBlockVar(ValueProp.Move).WithMultiplier(SakuraCloudEffects.WateryHandAndExhaustMultiplier)
+    ];
 
     protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         CloudRainWeatherVfx.PlayOrResolveAsync(
@@ -58,17 +63,20 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
 
     private async Task ResolveCloudMechanics(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await GainBlock(play, ReleasedBlock());
-
-        var wateryCards = SakuraCloudEffects.CountWateryCardsInHandAndExhaust(Owner);
-        for (var i = 0; i < wateryCards; i++)
-            await GainBlock(play, ReleasedBlock());
+        await GainBlock(play, CalculatedBlock());
 
         if (Owner.Creature.GetPower<ClassicWateryPower>()?.Amount > 0)
             await SakuraCloudEffects.AddRainToHand(Owner, choiceContext, freeForCombat: false);
     }
 
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
+    private int CalculatedBlock() =>
+        Math.Max(0, (int)DynamicVars.CalculatedBlock.Calculate(null));
+
+    protected override void OnUpgrade()
+    {
+        DynamicVars.CalculationBase.UpgradeValueBy(3);
+        DynamicVars.CalculationExtra.UpgradeValueBy(3);
+    }
 }
 
 public class SakuraCloud() : SakuraFormCard(1, CardType.Skill, TargetType.None)
@@ -77,8 +85,9 @@ public class SakuraCloud() : SakuraFormCard(1, CardType.Skill, TargetType.None)
     public override SakuraElementSet Elements => SakuraElementSet.Water;
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new SakuraSourceBlockVar(7, ValueProp.Move),
-        new BlockVar("ExtraBlock", 3, ValueProp.Move)
+        new CalculationBaseVar(7),
+        new CalculationExtraVar(3),
+        new CalculatedBlockVar(ValueProp.Move).WithMultiplier(SakuraCloudEffects.WateryDeckMultiplier)
     ];
 
     protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -94,14 +103,12 @@ public class SakuraCloud() : SakuraFormCard(1, CardType.Skill, TargetType.None)
 
     private async Task ResolveCloudMechanics(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await GainBlock(play, ReleasedBlock());
-
-        var wateryCards = SakuraCloudEffects.CountWateryCards(Owner.Deck.Cards);
-        for (var i = 0; i < wateryCards; i++)
-            await GainBlock(play, ReleasedValue("ExtraBlock"));
-
+        await GainBlock(play, CalculatedBlock());
         await SakuraCloudEffects.AddRainToHand(Owner, choiceContext, freeForCombat: true);
     }
+
+    private int CalculatedBlock() =>
+        Math.Max(0, (int)DynamicVars.CalculatedBlock.Calculate(null));
 }
 
 internal static class SakuraCloudEffects
@@ -109,6 +116,12 @@ internal static class SakuraCloudEffects
     internal static int CountWateryCardsInHandAndExhaust(Player owner) =>
         CountWateryCards(
             CardPile.GetCards(owner, PileType.Hand).Concat(CardPile.GetCards(owner, PileType.Exhaust)));
+
+    internal static decimal WateryHandAndExhaustMultiplier(CardModel card, Creature? _) =>
+        card.Owner is { } owner ? CountWateryCardsInHandAndExhaust(owner) : 0;
+
+    internal static decimal WateryDeckMultiplier(CardModel card, Creature? _) =>
+        card.Owner is { } owner ? CountWateryCards(owner.Deck.Cards) : 0;
 
     internal static int CountWateryCards(IEnumerable<CardModel> cards) =>
         cards.Count(static card => SakuraActions.HasElement(card, SakuraElement.Water));

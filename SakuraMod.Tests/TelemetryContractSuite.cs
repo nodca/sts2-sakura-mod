@@ -228,9 +228,30 @@ public sealed class TelemetryContractSuite
                 "Expected the English and Simplified Chinese telemetry disclosures to differ.");
         }
         RegressionTestHarness.Require(
-            SakuraTelemetry.CreateAdapter() is HttpJsonTelemetryAdapter
+            SakuraTelemetry.CreateAdapter() is SizeBoundedTelemetryAdapter
             && SakuraTelemetry.PublicWriteCredential == "sakuramod-balance-v2",
             "Expected the bundled public write credential to enable telemetry without player configuration.");
+    }
+
+    [Fact]
+    public void TelemetryAdapterSplitsSerializedBatchesBeforeTransportLimit()
+    {
+        var events = Enumerable.Range(0, 3)
+            .Select(index => new TelemetryEnvelope
+            {
+                ApplicantId = "SakuraMod",
+                EventName = "benchmark",
+                RequestId = "run_history",
+                Category = TelemetryDataCategory.RunHistory,
+                Payload = JsonNode.Parse($"{{\"value\":\"{new string('x', 80)}{index}\"}}")
+            })
+            .ToArray();
+
+        var batches = SizeBoundedTelemetryAdapter.SplitBatches("SakuraMod", events, maxBytes: 300);
+
+        RegressionTestHarness.Require(
+            batches.Count == 3 && batches.All(batch => batch.Count == 1),
+            "Expected oversized serialized telemetry events to be sent as separate bounded batches.");
     }
 
     [Fact]

@@ -94,12 +94,13 @@ internal static class SakuraTelemetry
         };
 
     internal static ITelemetryAdapter CreateAdapter() =>
-        new HttpJsonTelemetryAdapter(
-            EndpointUrl,
-            new Dictionary<string, string>
-            {
-                [AuthorizationHeaderName] = $"Bearer {PublicWriteCredential}"
-            });
+        new SizeBoundedTelemetryAdapter(
+            new HttpJsonTelemetryAdapter(
+                EndpointUrl,
+                new Dictionary<string, string>
+                {
+                    [AuthorizationHeaderName] = $"Bearer {PublicWriteCredential}"
+                }));
 
     internal static bool ShouldCaptureBalanceTelemetry(TelemetryCaptureContext context) =>
         context.SourceData is RunEndedEvent runEndedEvent

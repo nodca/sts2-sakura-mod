@@ -714,11 +714,13 @@ public sealed class CardMechanicsSuite
             clowCloud.EnergyCost.Canonical == 1
             && clowCloud.Rarity == CardRarity.Common
             && clowCloud.Elements == SakuraElementSet.Water
-            && clowCloud.DynamicVars.Block.IntValue == 5
-            && upgradedClowCloud.DynamicVars.Block.IntValue == 8
-            && sakuraCloud.DynamicVars.Block.IntValue == 7
-            && sakuraCloud.DynamicVars["ExtraBlock"].IntValue == 3,
-            "Expected Clow Cloud to block for 5 (8 upgraded) and Sakura Cloud to block for 7 plus 3 per Watery card.");
+            && clowCloud.DynamicVars.CalculationBase.IntValue == 5
+            && clowCloud.DynamicVars.CalculationExtra.IntValue == 5
+            && upgradedClowCloud.DynamicVars.CalculationBase.IntValue == 8
+            && upgradedClowCloud.DynamicVars.CalculationExtra.IntValue == 8
+            && sakuraCloud.DynamicVars.CalculationBase.IntValue == 7
+            && sakuraCloud.DynamicVars.CalculationExtra.IntValue == 3,
+            "Expected Clow Cloud to block for 5 plus 5 per Watery card (8/8 upgraded) and Sakura Cloud to block for 7 plus 3 per Watery card.");
         RegressionTestHarness.Require(
             SakuraSourceCardText.ElementStatesReferencedBy(clowCloud).SequenceEqual([SakuraElement.Water]),
             "Expected Clow Cloud to expose the Watery-state hover tip used by its conditional Rain generation.");
@@ -1324,19 +1326,19 @@ public sealed class CardMechanicsSuite
             new Hail().TargetType == TargetType.AllEnemies
             && new Hail().DynamicVars.Damage.IntValue == 6
             && new Hail().DynamicVars["SakuraFrostbitePower"].IntValue == 1
-            && new Hail().DynamicVars["Magic"].IntValue == 10
+            && new Hail().DynamicVars["Magic"].IntValue == 5
             && new Hail().DynamicVars["BonusDamage"].IntValue == 2
             && upgradedHail.DynamicVars.Damage.IntValue == 8
             && upgradedHail.DynamicVars["SakuraFrostbitePower"].IntValue == 2
             && !SakuraCardModel.HasMagicChargeExtraEffect(new Hail())
             && HailRules.TotalDamage(new Hail(), spentMagic: 4) == 14
-            && HailRules.TotalDamage(upgradedHail, spentMagic: 10) == 28
+            && HailRules.TotalDamage(upgradedHail, spentMagic: 5) == 18
             && hailSource.Contains("CaptureOpportunity", StringComparison.Ordinal)
             && hailSource.Contains("TryApplyCapturedOpportunity", StringComparison.Ordinal)
             && hailSource.IndexOf("TryApplyCapturedOpportunity", StringComparison.Ordinal)
                 < hailSource.IndexOf("SpendUpToMagic", StringComparison.Ordinal)
             && hailSource.Contains("SpendUpToMagic", StringComparison.Ordinal),
-            "Expected Hail to lock element state before spending Magic Charge, deal 6/8 damage to all enemies, apply 1/2 Frostbite, and spend up to 10 Magic Charge for +2 damage each.");
+            "Expected Hail to lock element state before spending Magic Charge, deal 6/8 damage to all enemies, apply 1/2 Frostbite, and spend up to 5 Magic Charge for +2 damage each.");
 
         var change = new ClowChange();
         var upgradedChange = RegressionTestHarness.MutableForCostTest(new ClowChange());

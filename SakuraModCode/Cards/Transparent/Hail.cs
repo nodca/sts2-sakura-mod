@@ -23,7 +23,7 @@ public class Hail() : TransparentCard(1, CardType.Attack, CardRarity.Uncommon, T
     [
         new HailDamageVar(6, ValueProp.Move),
         new PowerVar<SakuraFrostbitePower>(1),
-        new DynamicVar("Magic", 10),
+        new DynamicVar("Magic", 5),
         new DynamicVar("BonusDamage", 2)
     ];
 
