@@ -557,13 +557,15 @@ public sealed class TelemetryContractSuite
         accumulator.RecordFailure(CoverageFailureKind.Unknown);
         accumulator.SetLastOfferSequence(3);
         RegressionTestHarness.Require(
-            SakuraTelemetryCoverage.TryCaptureRunCoverage(
+            SakuraTelemetryCoverage.CaptureIfEnabled(
                 enabled,
-                "018f6b8d-78ef-7a63-8f4a-4d663f3f0e61",
-                SakuraTelemetryCoverage.StageCheckpoint,
-                playerCount: 1,
-                sakuraPlayerCount: 1,
-                accumulator)
+                SakuraTelemetryCoverage.CoverageEventName,
+                SakuraTelemetryCoverage.BuildCoveragePayload(
+                    "018f6b8d-78ef-7a63-8f4a-4d663f3f0e61",
+                    SakuraTelemetryCoverage.StageCheckpoint,
+                    playerCount: 1,
+                    sakuraPlayerCount: 1,
+                    accumulator))
             &&
             enabled.Captured.Count == 1
             && enabled.Captured[0].EventName == SakuraTelemetryCoverage.CoverageEventName,

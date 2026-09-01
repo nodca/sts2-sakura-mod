@@ -667,13 +667,15 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
             () =>
             {
                 var client = RitsuLibFramework.GetTelemetryClient(SakuraTelemetry.ApplicantId);
-                if (SakuraTelemetryCoverage.TryCaptureRunCoverage(
+                if (SakuraTelemetryCoverage.CaptureIfEnabled(
                     client,
-                    _runData.RunKey,
-                    stage,
-                    BoundRunState.Players.Count,
-                    BoundRunState.Players.Count(static player => SakuraTelemetry.IsSakuraCharacterId(player.Character.Id)),
-                    _coverage))
+                    SakuraTelemetryCoverage.CoverageEventName,
+                    SakuraTelemetryCoverage.BuildCoveragePayload(
+                        _runData.RunKey,
+                        stage,
+                        BoundRunState.Players.Count,
+                        BoundRunState.Players.Count(static player => SakuraTelemetry.IsSakuraCharacterId(player.Character.Id)),
+                        _coverage)))
                     _coverage.MarkPublished();
             },
             exception =>

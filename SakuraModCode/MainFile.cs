@@ -22,6 +22,8 @@ public partial class MainFile : Node
     public static void Initialize()
     {
         ModTypeDiscoveryHub.RegisterModAssembly(ModId, Assembly.GetExecutingAssembly());
+        Harmony harmony = new(ModId);
+
         SakuraModConfig.Register();
         SakuraCombatArtPreference.Register();
         SakuraCreateLegacy.Register();
@@ -33,8 +35,6 @@ public partial class MainFile : Node
         SakuraContentRegistration.Register();
         SakuraEventRegistration.Register();
         SakuraTelemetry.Register();
-
-        Harmony harmony = new(ModId);
 
         harmony.PatchAll();
         SakuraCardVisualPatchRegistration.Register();

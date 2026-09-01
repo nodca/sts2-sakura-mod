@@ -1688,11 +1688,16 @@ public sealed class CardMechanicsSuite
         var clowTime = new ClowTime();
         var upgradedClowTime = RegressionTestHarness.MutableForCostTest(new ClowTime());
         upgradedClowTime.UpgradeInternal();
+        var transparentTimeSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Time.cs"));
         var timePairSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/ClowSakura/Time.cs"));
         var clowTimeSource = timePairSource[..timePairSource.IndexOf(
             "public class SakuraTime",
             StringComparison.Ordinal)];
+        var sakuraTimeSource = timePairSource[timePairSource.IndexOf(
+            "public class SakuraTime",
+            StringComparison.Ordinal)..];
         RegressionTestHarness.Require(
             time.TargetType == TargetType.Self
             && time.CanonicalKeywords.Contains(SakuraKeywords.Fire)
@@ -1707,12 +1712,15 @@ public sealed class CardMechanicsSuite
             && upgradedClowTime.Keywords.Contains(CardKeyword.Retain)
             && upgradedClowTime.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
             && !clowTimeSource.Contains("AddVoid", StringComparison.Ordinal)
+            && transparentTimeSource.Contains("PlayerCmd.EndTurn", StringComparison.Ordinal)
+            && !clowTimeSource.Contains("PlayerCmd.EndTurn", StringComparison.Ordinal)
+            && !sakuraTimeSource.Contains("PlayerCmd.EndTurn", StringComparison.Ordinal)
             && RegressionTestHarness.DeclaresMethod<TimeStopPower>("PreserveCurrentTurnState")
             && RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldFlush")
             && RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldClearBlock")
             && RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldPlayerResetEnergy")
             && RegressionTestHarness.DeclaresMethod<SakuraElementStatePower>("PreserveForNextTurn"),
-            "Expected Transparent Time Extra to preserve turn resources, and Clow Time to cost 1, preserve hand/resources without adding Void, gain Retain when upgraded, and avoid Exhaust on Extra.");
+            "Expected only Transparent Time to end the turn; Clow Time should preserve hand/resources without ending it, add no Void, gain Retain when upgraded, and avoid Exhaust on Extra.");
     }
 
     [Fact]

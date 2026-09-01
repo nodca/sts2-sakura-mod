@@ -18,9 +18,6 @@ internal static class SakuraTelemetryCoverage
 
     private static bool _sessionStartedSent;
 
-    internal static bool IsCoverageEvent(string? eventName) =>
-        eventName is SessionStartedEventName or CoverageEventName;
-
     internal static void ResetSessionMarkerForTests() =>
         _sessionStartedSent = false;
 
@@ -88,19 +85,6 @@ internal static class SakuraTelemetryCoverage
             exception => SakuraTelemetry.LogCaptureFailure("session started", exception));
     }
 
-    internal static bool TryCaptureRunCoverage(
-        ITelemetryClient client,
-        string runKey,
-        string stage,
-        int playerCount,
-        int sakuraPlayerCount,
-        SakuraTelemetryCoverageAccumulator accumulator)
-    {
-        return CaptureIfEnabled(
-            client,
-            CoverageEventName,
-            BuildCoveragePayload(runKey, stage, playerCount, sakuraPlayerCount, accumulator));
-    }
 }
 
 internal enum CoverageFailureKind

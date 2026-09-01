@@ -42,7 +42,6 @@ public class ClowTime() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Rare
             await PowerCmd.Apply<EnergyNextTurnPower>(choiceContext, Owner.Creature, energy, Owner.Creature, this, false);
 
         SakuraElementStatePower.PreserveAllForNextTurn(Owner.Creature);
-        PlayerCmd.EndTurn(Owner, canBackOut: false);
     }
 
     protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -78,4 +77,3 @@ public class SakuraTime() : SakuraFormCard(1, CardType.Skill, TargetType.AllEnem
         await SakuraMagicCharge.AddVoidToDiscardPile(choiceContext, Owner);
     }
 }
-
