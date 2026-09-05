@@ -16,8 +16,7 @@ internal enum FourthActAudioCue
     DarkTransition,
     FlyLanding,
     SleepCast,
-    WindWallBlock,
-    DarkVeilBreak
+    WindWallBlock
 }
 
 internal static class FourthActEnemyAudio
@@ -39,7 +38,6 @@ internal static class FourthActEnemyAudio
     private const string FlyLandingSfx = $"{MainFile.ResPath}/sfx/fourth_act/fly_landing.ogg";
     private const string SleepCastSfx = $"{MainFile.ResPath}/sfx/fourth_act/sleep_cast.ogg";
     private const string WindWallBlockSfx = $"{MainFile.ResPath}/sfx/fourth_act/wind_wall_block.ogg";
-    private const string DarkVeilBreakSfx = $"{MainFile.ResPath}/sfx/fourth_act/dark_veil_break.ogg";
 
     internal static string PathFor(FourthActAudioCue cue) => cue switch
     {
@@ -54,7 +52,6 @@ internal static class FourthActEnemyAudio
         FourthActAudioCue.FlyLanding => FlyLandingSfx,
         FourthActAudioCue.SleepCast => SleepCastSfx,
         FourthActAudioCue.WindWallBlock => WindWallBlockSfx,
-        FourthActAudioCue.DarkVeilBreak => DarkVeilBreakSfx,
         _ => throw new ArgumentOutOfRangeException(nameof(cue), cue, null)
     };
 
@@ -92,6 +89,5 @@ internal static class FourthActEnemyAudio
     private static bool IsResourceCue(FourthActAudioCue cue) => cue is
         FourthActAudioCue.FlyLanding or
         FourthActAudioCue.SleepCast or
-        FourthActAudioCue.WindWallBlock or
-        FourthActAudioCue.DarkVeilBreak;
+        FourthActAudioCue.WindWallBlock;
 }

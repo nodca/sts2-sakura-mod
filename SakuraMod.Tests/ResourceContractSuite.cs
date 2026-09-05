@@ -251,7 +251,7 @@ public sealed class ResourceContractSuite
             "IconFileName",
             BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Could not inspect Sakura Power icon ownership.");
-        var fourthActPowers = typeof(DarkLightPower).Assembly.GetTypes()
+        var fourthActPowers = typeof(DarknessPower).Assembly.GetTypes()
             .Where(type => !type.IsAbstract
                 && typeof(SakuraPowerModel).IsAssignableFrom(type)
                 && type.FullName?.Contains(fourthActNamespaceSegment, StringComparison.Ordinal) == true)
@@ -266,7 +266,7 @@ public sealed class ResourceContractSuite
                 .Select(static power => power.GetType().Name));
 
         var visiblePowers = fourthActPowers.Where(static power => power.IsVisible).ToList();
-        Assert.Equal(14, visiblePowers.Count);
+        Assert.Equal(25, visiblePowers.Count);
 
         var svg = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "tools/fourth-act-power-icons/fourth_act_power_icons.svg"));

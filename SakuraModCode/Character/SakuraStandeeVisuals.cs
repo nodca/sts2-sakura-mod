@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Rooms;
@@ -9,6 +10,28 @@ namespace SakuraMod.SakuraModCode.Character;
 
 public static class SakuraStandeeVisuals
 {
+    internal static void SetFacing(NCreature? creatureNode, bool faceLeft)
+    {
+        if (creatureNode?.Visuals.GetNodeOrNull<Sprite2D>("%Visuals") is not { } sprite)
+            return;
+
+        sprite.FlipH = faceLeft;
+        if (sprite.Scale.X < 0f)
+            sprite.Scale = new Vector2(Mathf.Abs(sprite.Scale.X), sprite.Scale.Y);
+
+        if (SakuraStandeeIdleController.TryGet(creatureNode) is { } standard)
+            standard.ForceSyncFlip();
+        if (SakuraChibiStandeeIdleController.TryGet(creatureNode) is { } chibi)
+            chibi.ForceSyncFlip();
+    }
+
+    internal static void SetFacing(Creature? creature, bool faceLeft)
+    {
+        if (creature is null) return;
+        if (NCombatRoom.Instance?.GetCreatureNode(creature) is { } node)
+            SetFacing(node, faceLeft);
+    }
+
     private const float CombatVisualScale = 0.28f;
     private static readonly Vector2 CombatVisualSize = new(264f, 468f);
     private static readonly Vector2 CombatVisualTopLeft = new(-132f, -468f);

@@ -45,8 +45,13 @@ public sealed class FourthActStandeeActionSuite
         var bridgedAttackCount = modelSources.Sum(static source =>
             CountOccurrences(source, "FourthActEnemyActionCmd.AttackAsync("));
 
-        Assert.Equal(12, nativeAttackCount);
-        Assert.Equal(nativeAttackCount, bridgedAttackCount);
+        Assert.Equal(32, nativeAttackCount);
+        Assert.Equal(28, bridgedAttackCount);
+        var watery = modelSources.Single(static source =>
+            source.Contains("class WateryMonster", StringComparison.Ordinal));
+        Assert.Equal(2, CountOccurrences(watery, "DamageCmd.Attack(")
+            - CountOccurrences(watery, "FourthActEnemyActionCmd.AttackAsync("));
+        Assert.Contains("FourthActEnemyActionCmd.PerformAsync(", watery, StringComparison.Ordinal);
         Assert.All(modelSources, static source =>
             Assert.DoesNotContain("CreatureCmd.Damage(", source, StringComparison.Ordinal));
 
@@ -81,9 +86,7 @@ public sealed class FourthActStandeeActionSuite
             [FourthActAudioCue.SleepCast] =
                 "res://SakuraMod/sfx/fourth_act/sleep_cast.ogg",
             [FourthActAudioCue.WindWallBlock] =
-                "res://SakuraMod/sfx/fourth_act/wind_wall_block.ogg",
-            [FourthActAudioCue.DarkVeilBreak] =
-                "res://SakuraMod/sfx/fourth_act/dark_veil_break.ogg"
+                "res://SakuraMod/sfx/fourth_act/wind_wall_block.ogg"
         };
 
         Assert.Equal(expected.Count, Enum.GetValues<FourthActAudioCue>().Length);
@@ -102,8 +105,7 @@ public sealed class FourthActStandeeActionSuite
                  {
                      FourthActAudioCue.FlyLanding,
                      FourthActAudioCue.SleepCast,
-                     FourthActAudioCue.WindWallBlock,
-                     FourthActAudioCue.DarkVeilBreak
+                     FourthActAudioCue.WindWallBlock
                  })
         {
             var file = RegressionTestHarness.FindRepoFile(
@@ -117,10 +119,12 @@ public sealed class FourthActStandeeActionSuite
             "SakuraModCode/FourthAct/Wind/Models/WindAttendants.cs"));
         var feedback = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/FourthAct/Visuals/FourthActCombatFeedbackVisuals.cs"));
+        var dark = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Dark/Models/DarkMonster.cs"));
         Assert.Contains("FourthActAudioCue.FlyLanding", fly, StringComparison.Ordinal);
         Assert.Contains("FourthActAudioCue.SleepCast", sleep, StringComparison.Ordinal);
         Assert.Contains("FourthActAudioCue.WindWallBlock", feedback, StringComparison.Ordinal);
-        Assert.Contains("FourthActAudioCue.DarkVeilBreak", feedback, StringComparison.Ordinal);
+        Assert.Contains("FourthActAudioCue.DarkTransition", dark, StringComparison.Ordinal);
     }
 
     [Fact]

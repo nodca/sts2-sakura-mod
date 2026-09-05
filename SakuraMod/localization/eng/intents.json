@@ -8,5 +8,8 @@
   "SAKURA_MOD_SUMMON_FLOAT.title": "Summon Float",
   "SAKURA_MOD_SUMMON_FLOAT.description": "Windy will summon Float into the attendant slot.",
   "SAKURA_MOD_SUMMON_SLEEP.title": "Summon Sleep",
-  "SAKURA_MOD_SUMMON_SLEEP.description": "Windy will summon Sleep into the attendant slot."
+  "SAKURA_MOD_SUMMON_SLEEP.description": "Windy will summon Sleep into the attendant slot.",
+  "SAKURA_MOD_FORMAT_DAMAGE_RANGE": "{Min}-{Max}",
+  "SAKURA_MOD_STEAL_BLOCK.title": "Tidal Draw",
+  "SAKURA_MOD_STEAL_BLOCK.description": "After attacking, this enemy removes all remaining Block and stores the amount."
 }

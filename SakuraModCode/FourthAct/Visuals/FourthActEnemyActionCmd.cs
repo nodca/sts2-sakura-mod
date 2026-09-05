@@ -1,5 +1,6 @@
 using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Visuals;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Visuals;
 
@@ -43,6 +44,12 @@ internal static class FourthActEnemyActionCmd
         SakuraStandeeClip clip,
         Func<Task> resolveAtContact)
     {
+        if (LibraVisualController.TryGet(actor) is { } libra)
+        {
+            await libra.PlayAttackAsync(actor, resolveAtContact);
+            return;
+        }
+
         if (SakuraStandeeActionController.TryGet(actor) is not { } controller)
         {
             await resolveAtContact();

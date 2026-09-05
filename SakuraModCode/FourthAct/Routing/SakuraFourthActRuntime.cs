@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using MegaCrit.Sts2.Core.Rooms;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Encounters;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Encounters;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Routing;
 
@@ -27,6 +28,44 @@ internal static class SakuraFourthActMapFactory
             fourthAct.ConfigureRouteBosses();
         map = new SakuraFourthActMap(FourthActRouteCatalog.Resolve());
         return true;
+    }
+}
+
+internal static class SakuraFourthActEncounterDispatch
+{
+    internal static EncounterModel? Resolve(IRunState runState, RoomType roomType)
+    {
+        if (runState.Act is not SakuraFourthAct
+            || roomType is not (RoomType.Elite or RoomType.Boss)
+            || runState.CurrentMapCoord is not { } coord)
+        {
+            return null;
+        }
+
+        var encounter = SakuraFourthActMap.EncounterAt(
+            FourthActRouteCatalog.Resolve().CompleteRoutes,
+            coord,
+            runState.Rng.Seed);
+        if (encounter is null)
+            return null;
+
+        var canonical = ModelDb.GetById<EncounterModel>(ModelDb.GetId(encounter.EncounterType));
+        return canonical.RoomType == roomType ? canonical.ToMutable() : null;
+    }
+}
+
+[HarmonyPatch(typeof(RunManager), "CreateRoom")]
+internal static class SakuraFourthActEncounterDispatchPatch
+{
+    [HarmonyPrefix]
+    private static void Prefix(
+        RunManager __instance,
+        RoomType roomType,
+        ref AbstractModel? model)
+    {
+        var runState = __instance.DebugOnlyGetState();
+        if (model is null && runState is not null)
+            model = SakuraFourthActEncounterDispatch.Resolve(runState, roomType);
     }
 }
 
@@ -125,7 +164,7 @@ internal static class SakuraFourthActTerminalTransition
         MapCoord? currentMapCoord,
         MapCoord bossMapCoord) =>
         act is SakuraFourthAct
-        && encounter is DarkEncounter
+        && encounter is DarkEncounter or LightEncounter
         && !shouldGiveRewards
         && roomType == RoomType.Boss
         && currentActIndex == actCount - 1
@@ -201,7 +240,7 @@ internal static class SakuraFourthActRestoredTerminalTransitionPatch
         if (preFinishedRoom is not CombatRoom
             {
                 IsPreFinished: true,
-                Encounter: DarkEncounter
+                Encounter: DarkEncounter or LightEncounter
             })
         {
             return;

@@ -1,5 +1,12 @@
 using Godot;
+using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Hooks;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Runs;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -216,8 +223,15 @@ internal sealed partial class SakuraStandeeIdleController : Node2D
         return textureTopLeft - layers.GetNode<Marker2D>("CanvasOrigin").Position;
     }
 
+    internal void ForceSyncFlip() => SyncFlip();
+
     private void SyncFlip()
     {
+        if (GodotObject.IsInstanceValid(_body) && _body.Scale.X < 0f)
+        {
+            _body.Scale = new Vector2(Mathf.Abs(_body.Scale.X), _body.Scale.Y);
+            _body.FlipH = true;
+        }
         var flip = new Vector2(_body.FlipH ? -1f : 1f, _body.FlipV ? -1f : 1f);
         Scale = flip;
         Position = _alignmentPosition * flip;
@@ -250,5 +264,47 @@ internal static class SakuraStaticDeathStandeePatch
 
         SakuraStandeeIdleController.ShowStaticStandeeForDeath(body);
         SakuraChibiStandeeIdleController.ShowStaticStandeeForDeath(body);
+    }
+}
+
+[HarmonyLib.HarmonyPatch(typeof(Hook), nameof(Hook.BeforeCardPlayed))]
+internal static class SakuraCombatFacingCardPatch
+{
+    private static void Prefix(ICombatState combatState, CardPlay cardPlay)
+    {
+        if (cardPlay.Target is null || cardPlay.Card.Owner?.Creature is not { } player)
+            return;
+        if (!SakuraStarterCompatibility.IsKinomotoSakura(cardPlay.Card.Owner))
+            return;
+        if (cardPlay.Card.Type != CardType.Attack && cardPlay.Card.TargetType != TargetType.AnyEnemy)
+            return;
+
+        if (NCombatRoom.Instance is { } room
+            && room.GetCreatureNode(player) is { } playerNode
+            && room.GetCreatureNode(cardPlay.Target) is { } targetNode)
+        {
+            var faceLeft = targetNode.GlobalPosition.X < playerNode.GlobalPosition.X;
+            SakuraStandeeVisuals.SetFacing(playerNode, faceLeft);
+        }
+    }
+}
+
+[HarmonyLib.HarmonyPatch(typeof(Hook), nameof(Hook.BeforePotionUsed))]
+internal static class SakuraCombatFacingPotionPatch
+{
+    private static void Prefix(IRunState runState, ICombatState? combatState, PotionModel potion, Creature? target)
+    {
+        if (target is null || potion.Owner?.Creature is not { } player)
+            return;
+        if (!SakuraStarterCompatibility.IsKinomotoSakura(potion.Owner))
+            return;
+
+        if (NCombatRoom.Instance is { } room
+            && room.GetCreatureNode(player) is { } playerNode
+            && room.GetCreatureNode(target) is { } targetNode)
+        {
+            var faceLeft = targetNode.GlobalPosition.X < playerNode.GlobalPosition.X;
+            SakuraStandeeVisuals.SetFacing(playerNode, faceLeft);
+        }
     }
 }

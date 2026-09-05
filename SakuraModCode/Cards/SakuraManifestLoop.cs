@@ -85,11 +85,18 @@ public static class SakuraManifestLoop
     public static async Task<CardModel?> AddTemporaryTransparentCopyToHand(
         SakuraCardModel source,
         PlayerChoiceContext context,
-        bool freeThisTurn)
+        bool freeThisTurn,
+        bool upgraded = false)
     {
         var owner = source.Owner;
         var choices = TransparentCardChoices(owner, source.GetType())
-            .Select(card => SakuraGeneratedCardLifecycle.CreateCombatCardFromTemplate(owner, card))
+            .Select(card =>
+            {
+                var choice = SakuraGeneratedCardLifecycle.CreateCombatCardFromTemplate(owner, card);
+                if (upgraded)
+                    SakuraGeneratedCardLifecycle.UpgradeToLevel(choice, 1);
+                return choice;
+            })
             .ToList();
         if (choices.Count == 0)
             return null;

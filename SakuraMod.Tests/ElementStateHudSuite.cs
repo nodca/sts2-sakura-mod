@@ -73,6 +73,15 @@ public sealed class ElementStateHudSuite
         Assert.Equal(
             SakuraElementSet.Wind | SakuraElementSet.Water,
             SakuraElementState.LocksFromSovereignty(true, true));
+        Assert.Equal(
+            SakuraElementSet.Water,
+            SakuraElementState.LocksFromSovereignty(false, false, true));
+        Assert.Equal(
+            SakuraElementSet.Fire,
+            SakuraElementState.LocksFromSovereignty(false, false, false, true));
+        Assert.Equal(
+            SakuraElementSet.Fire | SakuraElementSet.Earth,
+            SakuraElementState.LocksFromSovereignty(false, false, false, false, true));
     }
 
     [Fact]

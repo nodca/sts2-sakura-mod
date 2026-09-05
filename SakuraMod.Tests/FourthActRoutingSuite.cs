@@ -9,6 +9,11 @@ using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.FourthAct.Routing;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Encounters;
+using SakuraMod.SakuraModCode.FourthAct.Water.Encounters;
+using SakuraMod.SakuraModCode.FourthAct.Fire;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Encounters;
+using SakuraMod.SakuraModCode.FourthAct.Earth;
+using SakuraMod.SakuraModCode.FourthAct.Earth.Encounters;
 using SakuraMod.SakuraModCode.FourthAct.Wind;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Encounters;
 using STS2RitsuLib.Settings;
@@ -17,16 +22,76 @@ using STS2RitsuLib.Scaffolding.Content;
 public sealed class FourthActRoutingSuite
 {
     [Fact]
-    public void ProductionCatalogEmitsTheCompleteWindToDarkRoute()
+    public void ProductionCatalogEmitsTheCompleteWindWaterAndFireRoutes()
     {
         var resolution = FourthActRouteCatalog.Resolve();
-        var route = Assert.Single(resolution.CompleteRoutes);
-        Assert.Equal(SakuraElement.Wind, route.Element);
-        Assert.Equal(typeof(DarkEncounter), route.Endpoint.EncounterType);
+        Assert.Equal(
+            [SakuraElement.Wind, SakuraElement.Water, SakuraElement.Fire],
+            resolution.CompleteRoutes.Select(static route => route.Element));
+        Assert.Equal(FourthActEndpoint.Dark, resolution.CompleteRoutes[0].Endpoint.Endpoint);
+        Assert.Equal(typeof(DarkEncounter), resolution.CompleteRoutes[0].Endpoint.EncounterType);
+        Assert.Equal(FourthActEndpoint.Dark, resolution.CompleteRoutes[1].Endpoint.Endpoint);
+        Assert.Equal(typeof(DarkEncounter), resolution.CompleteRoutes[1].Endpoint.EncounterType);
+        Assert.Equal(FourthActEndpoint.Dark, resolution.CompleteRoutes[2].Endpoint.Endpoint);
+        Assert.Equal(typeof(DarkEncounter), resolution.CompleteRoutes[2].Endpoint.EncounterType);
         Assert.True(FourthActEntryRegistration.CanRegister(resolution));
         Assert.Equal(
-            [typeof(FlyEncounter), typeof(IllusionEncounter), typeof(WindyEncounter), typeof(DarkEncounter)],
+            [
+                typeof(FlyEncounter), typeof(IllusionEncounter), typeof(WindyEncounter), typeof(DarkEncounter),
+                typeof(FreezeEncounter), typeof(RainEncounter), typeof(WateryEncounter),
+                typeof(SwordEncounter), typeof(LibraEncounter), typeof(FireyEncounter)
+            ],
             resolution.CompleteEncounterTypes);
+    }
+
+    [Fact]
+    public void ProductionMapDispatchesDeterministicRouteEncounters()
+    {
+        var routes = FourthActRouteCatalog.Resolve().CompleteRoutes;
+        var windElite = new MapCoord { col = 0, row = 2 };
+        var waterElite = new MapCoord { col = 2, row = 2 };
+        var waterBoss = new MapCoord { col = 2, row = 3 };
+
+        Assert.Equal(
+            SakuraFourthActMap.EncounterAt(routes, waterElite, 123)?.EncounterType,
+            SakuraFourthActMap.EncounterAt(routes, waterElite, 123)?.EncounterType);
+        Assert.Contains(
+            SakuraFourthActMap.EncounterAt(routes, windElite, 123)?.EncounterType,
+            new[] { typeof(FlyEncounter), typeof(IllusionEncounter) });
+        Assert.Contains(
+            SakuraFourthActMap.EncounterAt(routes, waterElite, 123)?.EncounterType,
+            new[] { typeof(FreezeEncounter), typeof(RainEncounter) });
+        Assert.Equal(
+            typeof(WateryEncounter),
+            SakuraFourthActMap.EncounterAt(routes, waterBoss, 123)?.EncounterType);
+        Assert.Equal(
+            [typeof(FreezeEncounter), typeof(RainEncounter)],
+            Enumerable.Range(0, 128)
+                .Select(seed => SakuraFourthActMap.EncounterAt(routes, waterElite, (uint)seed)!.EncounterType)
+                .Distinct()
+                .OrderBy(static type => type.Name));
+    }
+
+    [Fact]
+    public void RouteRewardIdentityComesFromTheActualEncounter()
+    {
+        Assert.Equal(SourceCardIdentity.Fly,
+            FourthActRouteCatalog.RewardEncounterFor(typeof(FlyEncounter))?.RewardIdentity);
+        Assert.Equal(SourceCardIdentity.Freeze,
+            FourthActRouteCatalog.RewardEncounterFor(typeof(FreezeEncounter))?.RewardIdentity);
+        Assert.Equal(SourceCardIdentity.Watery,
+            FourthActRouteCatalog.RewardEncounterFor(typeof(WateryEncounter))?.RewardIdentity);
+        Assert.Equal(SourceCardIdentity.Sword,
+            FourthActRouteCatalog.RewardEncounterFor(typeof(SwordEncounter))?.RewardIdentity);
+        Assert.Equal(SourceCardIdentity.Libra,
+            FourthActRouteCatalog.RewardEncounterFor(typeof(LibraEncounter))?.RewardIdentity);
+        Assert.Equal(SourceCardIdentity.Firey,
+            FourthActRouteCatalog.RewardEncounterFor(typeof(FireyEncounter))?.RewardIdentity);
+        // Earth is deliberately unwired from the playable act, so its encounters grant no rewards.
+        Assert.Null(FourthActRouteCatalog.RewardEncounterFor(typeof(ShadowEncounter)));
+        Assert.Null(FourthActRouteCatalog.RewardEncounterFor(typeof(WoodEncounter)));
+        Assert.Null(FourthActRouteCatalog.RewardEncounterFor(typeof(EarthyEncounter)));
+        Assert.Null(FourthActRouteCatalog.RewardEncounterFor(typeof(DarkEncounter)));
     }
 
     [Theory]
@@ -50,7 +115,9 @@ public sealed class FourthActRoutingSuite
 
         Assert.All(new ModEncounterTemplate[]
         {
-            new FlyEncounter(), new IllusionEncounter(), new WindyEncounter(), new DarkEncounter()
+            new FlyEncounter(), new IllusionEncounter(), new WindyEncounter(),
+            new FreezeEncounter(), new RainEncounter(), new WateryEncounter(),
+            new SwordEncounter(), new LibraEncounter(), new FireyEncounter(), new DarkEncounter(), new LightEncounter()
         }, encounter =>
         {
             Assert.True(encounter.IsValidForAct(act));
@@ -97,7 +164,7 @@ public sealed class FourthActRoutingSuite
     [InlineData(true, false, true, 2, 3, false)]
     [InlineData(false, true, true, 2, 3, false)]
     [InlineData(true, true, true, 1, 3, false)]
-    public void TerminalDarkOnlyRoutesTheFinalFourthActToTheArchitect(
+    public void TerminalEndpointsRouteTheFinalFourthActToTheArchitect(
         bool isSakuraFourthAct,
         bool isDarkEncounter,
         bool isBossRoom,
@@ -121,6 +188,19 @@ public sealed class FourthActRoutingSuite
                 actCount,
                 current,
                 boss));
+
+        if (expected)
+        {
+            Assert.True(SakuraFourthActTerminalTransition.ShouldRouteToArchitect(
+                new SakuraFourthAct(),
+                new LightEncounter(),
+                shouldGiveRewards: false,
+                RoomType.Boss,
+                currentActIndex: 2,
+                actCount: 3,
+                current,
+                boss));
+        }
     }
 
     [Fact]

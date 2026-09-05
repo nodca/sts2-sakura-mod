@@ -18,21 +18,14 @@ public sealed class MicroLight() :
     public CardType DescriptionShapeCardType => CardType.Skill;
     public override CardPoolModel Pool => ModelDb.CardPool<ClassicSakuraCardPool>();
     public override bool CanBeGeneratedInCombat => false;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fade, CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain, CardKeyword.Exhaust];
     public override string CustomPortraitPath => CardModel.MissingPortraitPath;
     public override string PortraitPath => CardModel.MissingPortraitPath;
     public override string BetaPortraitPath => CardModel.MissingPortraitPath;
     public override Material? CustomFrameMaterial => SakuraCardFrameVisuals.PlainFrameMaterial;
-    protected override IEnumerable<DynamicVar> CanonicalVars =>
-    [
-        new PowerVar<DarkVeilPower>(1),
-        new PowerVar<DarkLightPower>(1)
-    ];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<DarknessPower>(-1)];
     protected override IEnumerable<string> ExtraRunAssetPaths => SakuraCardFrameVisuals.RunAssetPaths(this);
 
     protected override Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play) =>
-        DarkMicroLightCoordinator.ApplyMicroLight(
-            choiceContext,
-            Owner,
-            DynamicVars["DarkVeilPower"].IntValue);
+        DarkMicroLightCoordinator.ApplyMicroLight(choiceContext, Owner, 1);
 }

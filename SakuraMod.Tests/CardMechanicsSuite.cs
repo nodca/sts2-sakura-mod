@@ -945,11 +945,11 @@ public sealed class CardMechanicsSuite
             System.Text.RegularExpressions.Regex.Matches(
                 powerSources,
                 "CreatureCmd\\.GainBlock\\([^;]*SakuraPowerValueProps\\.Block",
-                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 6
+                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 7
             && System.Text.RegularExpressions.Regex.Matches(
                 powerSources,
                 "CreatureCmd\\.GainBlock\\(",
-                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 6,
+                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 7,
             "Expected every SakuraMod power-generated Block call to use the shared unpowered Block contract without a card source.");
         RegressionTestHarness.Require(
             transparentPowersSource.Contains("SakuraPowerValueProps.Damage", StringComparison.Ordinal)
@@ -1611,9 +1611,9 @@ public sealed class CardMechanicsSuite
             && SakuraTransparentCardCatalog.TransparentCardTypes.Contains(typeof(Appear))
             && appear.EnergyCost.Canonical == 0
             && upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0
-            && appear.DynamicVars["Copies"].IntValue == 1
-            && upgradedAppear.DynamicVars["Copies"].IntValue == 2,
-            "Expected Appear to cost 0, choose a Temporary Clear Card copy once, and repeat the effect after upgrading.");
+            && !appear.IsUpgraded
+            && upgradedAppear.IsUpgraded,
+            "Expected Appear to cost 0, choose a Temporary Clear Card copy, upgrade the copy when upgraded, and keep Extra Effect.");
 
         RegressionTestHarness.Require(
             new SakuraDream().EnergyCost.Canonical == 0,
@@ -2048,6 +2048,7 @@ public sealed class CardMechanicsSuite
             && choiceSource.Contains("Draw(choiceContext", StringComparison.Ordinal)
             && choiceSource.Contains("SetThisCombat", StringComparison.Ordinal)
             && appearSource.Contains("SetThisCombat(0, reduceOnly: true)", StringComparison.Ordinal)
+            && appearSource.Contains("upgraded: IsUpgraded", StringComparison.Ordinal)
             && chineseCards.Contains("所显现的牌本场战斗内能耗减少 1", StringComparison.Ordinal)
             && chineseCards.Contains("执行上述两项", StringComparison.Ordinal)
             && chineseCards.Contains("本场战斗内能耗变为 0", StringComparison.Ordinal)

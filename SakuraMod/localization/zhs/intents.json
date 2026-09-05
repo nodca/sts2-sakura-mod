@@ -8,5 +8,8 @@
   "SAKURA_MOD_SUMMON_FLOAT.title": "召唤浮",
   "SAKURA_MOD_SUMMON_FLOAT.description": "风将在随从位置召唤浮。",
   "SAKURA_MOD_SUMMON_SLEEP.title": "召唤眠",
-  "SAKURA_MOD_SUMMON_SLEEP.description": "风将在随从位置召唤眠。"
+  "SAKURA_MOD_SUMMON_SLEEP.description": "风将在随从位置召唤眠。",
+  "SAKURA_MOD_FORMAT_DAMAGE_RANGE": "{Min}-{Max}",
+  "SAKURA_MOD_STEAL_BLOCK.title": "潮汐夺盾",
+  "SAKURA_MOD_STEAL_BLOCK.description": "攻击后，移除所有剩余格挡并储存等量的水。"
 }

@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.FourthAct;
 using SakuraMod.SakuraModCode.FourthAct.Wind.CardState;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using SakuraMod.SakuraModCode.Powers;
@@ -234,7 +235,8 @@ public sealed class WindyBattlePower : SakuraPowerModel
 
     public override async Task BeforeSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (side != CombatSide.Player || Owner.IsDead)
+        if (side != CombatSide.Player || Owner.IsDead
+            || !FourthActCombatRules.IsCompletePlayerSide(CombatState, participants))
             return;
 
         var activePlayers = CombatState.Players.Where(static player => player.Creature.IsAlive).ToList();

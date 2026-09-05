@@ -14,6 +14,8 @@ using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.FourthAct.Water.Models;
+using SakuraMod.SakuraModCode.FourthAct.Water.Powers;
 using STS2RitsuLib.Combat.HandSize;
 using STS2RitsuLib.Scaffolding.Content;
 using STS2RitsuLib.Scaffolding.Content.Patches;
@@ -56,7 +58,7 @@ public class SakuraFrostbitePower : SakuraPowerModel
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (!Owner.IsMonster || side != Owner.Side || !participants.Contains(Owner))
+        if (side != Owner.Side || !participants.Contains(Owner))
             return;
 
         if (Amount <= 1)
@@ -80,13 +82,12 @@ public class SakuraFrostbitePower : SakuraPowerModel
         else
             await PowerCmd.ModifyAmount(choiceContext, this, remainingFrostbite - Amount, freezeApplier, cardSource, false);
 
-        await PowerCmd.Apply<ClassicFreezePower>(
-            choiceContext,
-            Owner,
-            freezeStacks,
-            freezeApplier,
-            cardSource,
-            false);
+        if (Owner.IsMonster)
+            await PowerCmd.Apply<ClassicFreezePower>(choiceContext, Owner, freezeStacks, freezeApplier, cardSource, false);
+        else
+        {
+            await PowerCmd.Apply<WaterFrozenPower>(choiceContext, Owner, freezeStacks, freezeApplier, cardSource, false);
+            await CreatureCmd.GainBlock(Owner, ClassicFreezePower.BlockGain, SakuraPowerValueProps.Block, null, false);
+        }
     }
 }
-

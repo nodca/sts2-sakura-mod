@@ -3,11 +3,14 @@ using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Relics;
-using SakuraMod.SakuraModCode.FourthAct.Dark.Afflictions;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Dark;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
+using SakuraMod.SakuraModCode.FourthAct.Fire;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Wind;
+using SakuraMod.SakuraModCode.FourthAct.Water;
+using SakuraMod.SakuraModCode.FourthAct.Earth;
 using SakuraMod.SakuraModCode.FourthAct.Wind.CardState;
 using SakuraMod.SakuraModCode.FourthAct.Routing;
 using STS2RitsuLib.Content;
@@ -22,18 +25,19 @@ internal static class SakuraContentRegistration
         var registry = ModContentRegistry.For(MainFile.ModId);
 
         SakuraMemoryPile.Register();
-        SakuraForgotten.AddStabilizeObserver(DarkMicroLightCoordinator.OnTemporaryStabilized);
-        SakuraForgotten.AddClearedObserver(DarkMicroLightCoordinator.ClearSourceMarker);
         SakuraCardTextCapabilities.Register();
         SakuraSourceCardTextCapabilities.Register();
         ConfigureDefaultCardTextCapabilities(registry);
         registry.RegisterSingleton<GrowingMagicDamageHook>();
         registry.RegisterCharacter<ClassicSakura>();
         RegisterCards(registry, typeof(ClassicSakuraCardPool), AllCardTypesForRegistration());
-        registry.RegisterAffliction<DarkConfinementAffliction>();
         registry.RegisterAffliction<SleepingAffliction>();
         RegisterFourthAct(registry);
-        foreach (var monsterType in WindEnemyCatalog.MonsterTypes.Concat(DarkEnemyCatalog.MonsterTypes))
+        foreach (var monsterType in WindEnemyCatalog.MonsterTypes
+                     .Concat(WaterEnemyCatalog.MonsterTypes)
+                     .Concat(DarkEnemyCatalog.MonsterTypes)
+                     .Concat(FireEnemyCatalog.MonsterTypes)
+                     .Concat(EarthEnemyCatalog.MonsterTypes))
             registry.RegisterMonster(monsterType);
         RegisterPowers(registry, AllPowerTypesForRegistration());
         RegisterRelics(registry, typeof(ClassicSakuraRelicPool), SakuraRelicCatalog.AllRelicTypes());
@@ -108,6 +112,7 @@ internal static class SakuraContentRegistration
         ClassicSakuraCardPool.AllCardTypesForPool()
             .Concat(SakuraOptionCardCatalog.CardTypes)
             .Append(typeof(MicroLight))
+            .Append(typeof(Balance))
             .Distinct();
 
     internal static IEnumerable<Type> ClearLayoutOnlyCardTypes =>

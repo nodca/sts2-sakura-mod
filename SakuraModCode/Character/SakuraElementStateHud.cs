@@ -16,6 +16,9 @@ using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Powers;
+using SakuraMod.SakuraModCode.FourthAct.Water.Powers;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Powers;
+using SakuraMod.SakuraModCode.FourthAct.Earth.Powers;
 using STS2RitsuLib;
 using STS2RitsuLib.Patching.Core;
 using STS2RitsuLib.Patching.Models;
@@ -222,7 +225,7 @@ internal static class SakuraElementStateHud
 
         private void RefreshForSovereignty(PowerModel power)
         {
-            if (power is WindSovereigntyPower or DarkSovereigntyPower)
+            if (power is WindSovereigntyPower or DarkSovereigntyPower or WaterSovereigntyPower or FireSovereigntyPower or LightBattlePower or EarthSovereigntyPower)
                 Refresh(animateNewlyActive: false);
         }
 
@@ -303,6 +306,20 @@ internal static class SakuraElementStateHud
                 }
                 if (_combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<DarkSovereigntyPower>()))
                     tips.Add(HoverTipFactory.FromPower<DarkSovereigntyPower>());
+                if (slot.Element == SakuraElement.Water
+                    && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<WaterSovereigntyPower>()))
+                {
+                    tips.Add(HoverTipFactory.FromPower<WaterSovereigntyPower>());
+                }
+                if (slot.Element == SakuraElement.Fire
+                    && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<FireSovereigntyPower>()))
+                    tips.Add(HoverTipFactory.FromPower<FireSovereigntyPower>());
+                if (slot.Element is SakuraElement.Fire or SakuraElement.Earth
+                    && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<LightBattlePower>()))
+                    tips.Add(HoverTipFactory.FromPower<LightBattlePower>());
+                if (slot.Element == SakuraElement.Earth
+                    && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<EarthSovereigntyPower>()))
+                    tips.Add(HoverTipFactory.FromPower<EarthSovereigntyPower>());
             }
             NHoverTipSet.CreateAndShow(Root, tips, HoverTipAlignment.Right);
         }

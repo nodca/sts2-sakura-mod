@@ -204,6 +204,22 @@ public sealed class WindEnemyContractSuite
     }
 
     [Fact]
+    public void FullPlayerSideEffectsIgnorePartialExtraTurns()
+    {
+        var sharedRules = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/FourthActCombatRules.cs"));
+        var windPowers = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Wind/Powers/WindCombatPowers.cs"));
+        var darkPowers = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Dark/Powers/DarkCombatPowers.cs"));
+
+        Assert.Contains("Where(static player => player.Creature.IsAlive)", sharedRules);
+        Assert.Contains(".All(player => participantSet.Contains(player.Creature))", sharedRules);
+        Assert.Contains("FourthActCombatRules.IsCompletePlayerSide(CombatState, participants)", windPowers);
+        Assert.Contains("FourthActCombatRules.IsCompletePlayerSide(CombatState, participants)", darkPowers);
+    }
+
+    [Fact]
     public void WindWallFeedbackRunsOnlyForActualCappedDamage()
     {
         var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -278,7 +294,9 @@ public sealed class WindEnemyContractSuite
         var registration = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Character/SakuraContentRegistration.cs"));
         Assert.Contains("registry.RegisterActEncounter(typeof(SakuraFourthAct), encounterType);", registration);
-        Assert.Contains("WindEnemyCatalog.MonsterTypes.Concat(DarkEnemyCatalog.MonsterTypes)", registration);
+        Assert.Contains("WindEnemyCatalog.MonsterTypes", registration);
+        Assert.Contains(".Concat(WaterEnemyCatalog.MonsterTypes)", registration);
+        Assert.Contains(".Concat(DarkEnemyCatalog.MonsterTypes)", registration);
         Assert.DoesNotContain("RegisterGlobalEncounter<WindyEncounter>", registration);
     }
 

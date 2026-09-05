@@ -173,8 +173,15 @@ internal sealed partial class SakuraChibiStandeeIdleController : Node2D
         return textureTopLeft - layers.GetNode<Marker2D>("CanvasOrigin").Position;
     }
 
+    internal void ForceSyncFlip() => SyncFlip();
+
     private void SyncFlip()
     {
+        if (GodotObject.IsInstanceValid(_body) && _body.Scale.X < 0f)
+        {
+            _body.Scale = new Vector2(Mathf.Abs(_body.Scale.X), _body.Scale.Y);
+            _body.FlipH = true;
+        }
         var flip = new Vector2(_body.FlipH ? -1f : 1f, _body.FlipV ? -1f : 1f);
         Scale = flip;
         Position = _alignmentPosition * flip;

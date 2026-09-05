@@ -12,7 +12,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.FourthAct.Dark.Afflictions;
+using SakuraMod.SakuraModCode.FourthAct;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Models;
 using SakuraMod.SakuraModCode.Powers;
@@ -20,23 +20,7 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
 
-public sealed class DarkLightPower : SakuraPowerModel
-{
-    protected override string IconFileName => "fourth_act/micro_light.png";
-    public override PowerType Type => PowerType.Debuff;
-    public override PowerStackType StackType => PowerStackType.Counter;
-
-    internal void SetMicroLight(int amount, bool silent = true) => SetAmount(Math.Max(0, amount), silent);
-}
-
-public sealed class DarkNightPower : SakuraPowerModel
-{
-    protected override string IconFileName => "fourth_act/eternal_night.png";
-    public override PowerType Type => PowerType.Buff;
-    public override PowerStackType StackType => PowerStackType.Counter;
-}
-
-public sealed class DarkVeilPower : SakuraPowerModel
+public sealed class DarknessPower : SakuraPowerModel
 {
     protected override string IconFileName => "fourth_act/dark_veil.png";
     public override PowerType Type => PowerType.Buff;
@@ -46,8 +30,7 @@ public sealed class DarkVeilPower : SakuraPowerModel
     {
         if (target != Owner || dealer?.IsPlayer != true && cardSource?.Owner?.Creature.IsPlayer != true)
             return 1m;
-
-        return DarkEnemyRules.VeilDamageMultiplier(Amount);
+        return DarkEnemyRules.DarknessDamageMultiplier(Amount);
     }
 }
 
@@ -64,12 +47,9 @@ public sealed class DarkSovereigntyPower : SakuraPowerModel
         {
             modifiedAmount = 0;
             Flash();
-            SakuraElementStateHud.NotifyPrevented(
-                target.Player,
-                SakuraElementState.LocksForPower(canonicalPower));
+            SakuraElementStateHud.NotifyPrevented(target.Player, SakuraElementState.LocksForPower(canonicalPower));
             return true;
         }
-
         modifiedAmount = amount;
         return false;
     }
@@ -86,12 +66,8 @@ public sealed class DarkBattlePower : SakuraPowerModel, IMaxHandSizeModifier
     {
         if (combatState != CombatState || !Owner.IsAlive || !player.Creature.IsAlive)
             return;
-
         for (var index = 0; index < DarkEnemyRules.MicroLightsPerDraw; index++)
-        {
-            var light = combatState.CreateCard<MicroLight>(player);
-            await SakuraGeneratedCardLifecycle.AddGeneratedCardToHand(light, choiceContext);
-        }
+            await SakuraGeneratedCardLifecycle.AddGeneratedCardToHand(combatState.CreateCard<MicroLight>(player), choiceContext);
     }
 
     public int ModifyMaxHandSize(Player player, int currentMaxHandSize) =>
@@ -105,31 +81,31 @@ public sealed class DarkBattlePower : SakuraPowerModel, IMaxHandSizeModifier
     {
         if (side != CombatSide.Player || !Owner.IsAlive || CombatState is not { } combatState)
             return;
-
         var participantSet = participants.ToHashSet();
         foreach (var player in combatState.Players.Where(player => player.Creature.IsAlive && participantSet.Contains(player.Creature)))
             await SakuraFadeCardLifecycle.RemoveEligibleCardsFromHand(player, combatState);
     }
 
+    public override Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
+    {
+        if (side == CombatSide.Player && FourthActCombatRules.IsCompletePlayerSide(CombatState, participants))
+            return Task.CompletedTask;
+        return Task.CompletedTask;
+    }
+
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature target, DamageResult result, ValueProp props, Creature? dealer, CardModel? cardSource)
     {
         if (target == Owner && result.UnblockedDamage > 0 && Owner.IsAlive
-            && Owner.Monster is DarkMonster { Phase: DarkPhase.Veiled } dark
-            && Owner.CurrentHp < Owner.MaxHp * DarkEnemyRules.TransitionHpRatio)
+            && Owner.Monster is DarkMonster dark
+            && !dark.TransitionTriggered
+            && Owner.CurrentHp <= Owner.MaxHp * DarkEnemyRules.TransitionHpRatio)
             await dark.BeginTransition();
-    }
-
-    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
-    {
-        if (side == CombatSide.Player && Owner.Monster is DarkMonster dark)
-            await dark.AdvanceVeilWindow(choiceContext);
     }
 }
 
 public sealed class DarkConfinementSelectionPower : SakuraPowerModel
 {
     private static readonly LocString SelectionPrompt = new("powers", "SAKURA_MOD_POWER_DARK_CONFINEMENT_SELECTION_POWER.selectionPrompt");
-
     protected override string IconFileName => "fourth_act/confinement.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
@@ -138,43 +114,26 @@ public sealed class DarkConfinementSelectionPower : SakuraPowerModel
     {
         if (player.Creature != Owner || Amount <= 0 || !Owner.IsAlive)
             return;
-
         var eligible = CardPile.GetCards(player, PileType.Hand).Where(IsEligible).ToList();
         if (eligible.Count == 0)
-        {
             Flash();
-        }
         else
         {
-            var selected = (await CardSelectCmd.FromHand(
-                    choiceContext,
-                    player,
-                    new CardSelectorPrefs(SelectionPrompt, 1) { Cancelable = false, RequireManualConfirmation = false },
-                    IsEligible,
-                    this)).FirstOrDefault();
+            var selected = (await CardSelectCmd.FromHand(choiceContext, player,
+                new CardSelectorPrefs(SelectionPrompt, 1) { Cancelable = false, RequireManualConfirmation = false },
+                IsEligible, this)).FirstOrDefault();
             if (selected is not null)
                 await ApplyConfinement(choiceContext, selected);
         }
-
         await PowerCmd.ModifyAmount(choiceContext, this, -1, Applier, null, true);
     }
 
-    internal static bool IsEligible(CardModel card) => card is not MicroLight && !card.IsTemporary() && card.Affliction is null;
+    internal static bool IsEligible(CardModel card) => card is not MicroLight && !card.IsTemporary();
 
     internal static async Task ApplyConfinement(PlayerChoiceContext choiceContext, CardModel card)
     {
-        if (!IsEligible(card))
-            return;
-
-        if (await CardCmd.Afflict<DarkConfinementAffliction>(card, 1) is null)
-            return;
-        if (!await SakuraForgotten.GrantTemporary(choiceContext, card))
-        {
-            CardCmd.ClearAffliction(card);
-            return;
-        }
-
-        CardCmd.Preview(card);
+        if (IsEligible(card) && await SakuraForgotten.GrantTemporary(choiceContext, card))
+            CardCmd.Preview(card);
     }
 }
 
@@ -185,58 +144,14 @@ public static class DarkMicroLightCoordinator
         var dark = FindDark(owner.Creature.CombatState);
         if (dark is null || amount <= 0)
             return;
-
-        if (dark.Phase == DarkPhase.Veiled)
-        {
-            if (dark.IsVeilActive)
-                await dark.ReduceVeil(choiceContext, amount, owner.Creature);
-            return;
-        }
-
-        if (dark.Phase != DarkPhase.EternalNight)
-            return;
-
-        var microLight = dark.Creature.GetPower<DarkLightPower>()
-            ?? throw new InvalidOperationException("The Dark has no Micro Light power during Eternal Night.");
-        await PowerCmd.ModifyAmount(choiceContext, microLight, amount, owner.Creature, null, false);
-        await ResolveEternalNightThresholds(choiceContext, dark);
-    }
-
-    public static async Task ResolveEternalNightThresholds(PlayerChoiceContext choiceContext, DarkMonster dark)
-    {
-        if (dark.Phase != DarkPhase.EternalNight)
-            return;
-
-        var microLight = dark.Creature.GetPower<DarkLightPower>()
-            ?? throw new InvalidOperationException("The Dark has no Micro Light power during Eternal Night.");
-        while (microLight.Amount >= DarkEnemyRules.MicroLightThreshold && dark.Night > 1)
-        {
-            microLight.SetMicroLight(DarkEnemyRules.ConsumeMicroLight(
-                microLight.Amount,
-                DarkEnemyRules.MicroLightThreshold));
-            var night = dark.Creature.GetPower<DarkNightPower>()
-                ?? throw new InvalidOperationException("The Dark has no Night power during Eternal Night.");
-            await PowerCmd.ModifyAmount(choiceContext, night, -1, dark.Creature, null, true);
-            dark.RefreshPhaseTwoIntent();
-        }
-    }
-
-    public static async Task OnTemporaryStabilized(PlayerChoiceContext choiceContext, CardModel card)
-    {
-        if (card.Affliction is not DarkConfinementAffliction || card.Owner is not { } owner)
-            return;
-
-        CardCmd.ClearAffliction(card);
-        await ApplyMicroLight(choiceContext, owner, 1);
-    }
-
-    public static void ClearSourceMarker(CardModel card)
-    {
-        if (card.Affliction is DarkConfinementAffliction)
-            CardCmd.ClearAffliction(card);
+        var darkness = dark.Creature.GetPower<DarknessPower>()
+            ?? throw new InvalidOperationException("The Dark has no Darkness power.");
+        await PowerCmd.ModifyAmount(choiceContext, darkness,
+            DarkEnemyRules.ChangeDarkness(darkness.Amount, -amount) - darkness.Amount,
+            owner.Creature, null, false);
     }
 
     private static DarkMonster? FindDark(ICombatState? combatState) =>
-        combatState?.Enemies.Select(static enemy => enemy.Monster).OfType<DarkMonster>().FirstOrDefault(static dark => dark.Creature.IsAlive);
-
+        combatState?.Enemies.Select(static enemy => enemy.Monster).OfType<DarkMonster>()
+            .FirstOrDefault(static dark => dark.Creature.IsAlive);
 }

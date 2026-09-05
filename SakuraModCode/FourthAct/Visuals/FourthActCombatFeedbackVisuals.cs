@@ -17,30 +17,10 @@ using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Visuals;
 
-internal enum DarkVeilVisualMode
-{
-    None,
-    Membrane,
-    Remnants,
-    RetainCurrent
-}
-
-internal static class DarkVeilVisualProjection
-{
-    internal static DarkVeilVisualMode Resolve(DarkPhase phase, int veilLayers, int breakSidesRemaining) =>
-        phase != DarkPhase.Veiled
-            ? DarkVeilVisualMode.None
-            : veilLayers > 0
-                ? DarkVeilVisualMode.Membrane
-                : breakSidesRemaining > 0
-                    ? DarkVeilVisualMode.Remnants
-                    : DarkVeilVisualMode.RetainCurrent;
-}
-
 internal static class FourthActCombatFeedbackVisuals
 {
     internal const float TransferDuration = 0.28f;
-    internal const float VeilBreakDuration = 0.24f;
+    internal const float DarknessPulseDuration = 0.24f;
     internal const float NightRegionTransitionDuration = 0.35f;
     private static readonly ConditionalWeakTable<Creature, PersistentSession> Sessions = new();
 
@@ -76,20 +56,6 @@ internal static class FourthActCombatFeedbackVisuals
         FourthActEnemyAudio.Play(FourthActAudioCue.WindWallBlock);
         if (Sessions.TryGetValue(owner, out var session))
             session.PlayWindWallImpact();
-    }
-
-    public static async Task PlayDarkVeilBreakAsync(Creature owner)
-    {
-        FourthActEnemyAudio.Play(FourthActAudioCue.DarkVeilBreak);
-        if (!Sessions.TryGetValue(owner, out var session))
-            return;
-        await session.PlayVeilBreakAsync();
-    }
-
-    public static void RefreshDarkVeilWindow(Creature owner)
-    {
-        if (Sessions.TryGetValue(owner, out var session))
-            session.RefreshPersistent();
     }
 
     public static async Task PlayTransferAsync(Creature source, Creature target, Color color)
@@ -219,14 +185,9 @@ internal static class FourthActCombatFeedbackVisuals
 
         private void RefreshFor(PowerModel power, bool animateLoss = false)
         {
-            if (power is DarkNightPower)
-            {
-                RefreshEternalNight(animate: true);
+            if (power is not WindWallPower and not DarknessPower)
                 return;
-            }
-            if (power is not WindWallPower and not DarkVeilPower)
-                return;
-            if (animateLoss && power is DarkVeilPower)
+            if (animateLoss && power is DarknessPower)
                 PlayVeilThinning();
             RefreshPersistent();
         }
@@ -244,40 +205,15 @@ internal static class FourthActCombatFeedbackVisuals
 
             if (_creature.Monster is not DarkMonster dark)
                 return;
-            var veilAmount = _creature.GetPower<DarkVeilPower>()?.Amount ?? 0;
-            switch (DarkVeilVisualProjection.Resolve(
-                        dark.Phase,
-                        veilAmount,
-                        dark.VeilBreakSidesRemaining))
-            {
-                case DarkVeilVisualMode.Membrane:
-                    EnsureDarkVeil(veilAmount);
-                    if (_veilRemnants is not null)
-                    {
-                        PlaySeal();
-                        FreeNode(ref _veilRemnants);
-                    }
-                    break;
-                case DarkVeilVisualMode.Remnants:
-                    FreeNode(ref _darkVeil);
-                    EnsureVeilRemnants(dark.VeilBreakSidesRemaining);
-                    break;
-                case DarkVeilVisualMode.None:
-                    FreeNode(ref _darkVeil);
-                    FreeNode(ref _veilRemnants);
-                    break;
-                case DarkVeilVisualMode.RetainCurrent:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            var darkness = _creature.GetPower<DarknessPower>()?.Amount ?? 1;
+            EnsureDarkVeil(darkness);
             RefreshEternalNight(animateNight);
         }
 
         private void RefreshEternalNight(bool animate)
         {
-            var target = DarkEnemyRules.VisibleNightRegions(
-                _creature.GetPower<DarkNightPower>()?.Amount ?? 0);
+            var target = DarkEnemyRules.ClampDarkness(
+                _creature.GetPower<DarknessPower>()?.Amount ?? 1);
             if (!TryBindEternalNightOverlay())
                 return;
 
@@ -285,7 +221,7 @@ internal static class FourthActCombatFeedbackVisuals
             var current = _eternalNightMaterial!
                 .GetShaderParameter(FourthActCombatBackgrounds.EternalNightProgressParameterName)
                 .AsSingle();
-            if (target == DarkEnemyRules.MaximumNight || current > DarkEnemyRules.MaximumNight - 1f)
+            if (target == DarkEnemyRules.DarknessMaximum || current > DarkEnemyRules.DarknessMaximum - 1f)
                 EnsureDarkContour();
 
             _eternalNightOverlay!.Visible = target > 0 || current > 0.001f;
@@ -342,7 +278,7 @@ internal static class FourthActCombatFeedbackVisuals
                     1f,
                     1f,
                     1f,
-                    Mathf.Clamp(progress - (DarkEnemyRules.MaximumNight - 1f), 0f, 1f));
+                    Mathf.Clamp(progress - (DarkEnemyRules.DarknessMaximum - 1f), 0f, 1f));
             }
         }
 
@@ -353,7 +289,7 @@ internal static class FourthActCombatFeedbackVisuals
             {
                 _eternalNightOverlay.Visible = false;
             }
-            if (target < DarkEnemyRules.MaximumNight)
+            if (target < DarkEnemyRules.DarknessMaximum)
                 FreeNode(ref _darkContour);
         }
 
@@ -428,31 +364,6 @@ internal static class FourthActCombatFeedbackVisuals
             _impactTween.Chain().TweenCallback(Callable.From(_wallImpact.QueueFreeSafely));
         }
 
-        public async Task PlayVeilBreakAsync()
-        {
-            if (_darkVeil is null || !_darkVeil.IsInsideTree())
-                return;
-            var cut = new Line2D
-            {
-                Name = "VeilBreakCut",
-                Width = 8f,
-                DefaultColor = new Color(0.7f, 1f, 1f, 0.96f),
-                Antialiased = true,
-                Points = [new(-18f, -120f), new(10f, -42f), new(-8f, 35f), new(20f, 118f)],
-                Scale = new Vector2(1f, 0.08f)
-            };
-            _darkVeil.AddChild(cut);
-            var tween = cut.CreateTween().SetParallel();
-            tween.TweenProperty(cut, "scale:y", 1f, VeilBreakDuration * 0.5f)
-                .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
-            tween.TweenProperty(_darkVeil, "modulate:a", 0.16f, VeilBreakDuration)
-                .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
-            tween.TweenProperty(cut, "modulate:a", 0f, VeilBreakDuration * 0.38f)
-                .SetDelay(VeilBreakDuration * 0.62f);
-            await cut.ToSignal(tween, Tween.SignalName.Finished);
-            cut.QueueFreeSafely();
-        }
-
         private void EnsureWindWall(int amount)
         {
             if (_windWall is null)
@@ -510,8 +421,8 @@ internal static class FourthActCombatFeedbackVisuals
                 });
                 _root.AddChild(_darkVeil);
             }
-            var ratio = Math.Clamp(amount, 1, DarkEnemyRules.InitialVeilLayers)
-                / (float)DarkEnemyRules.InitialVeilLayers;
+            var ratio = Math.Clamp(amount, 1, DarkEnemyRules.DarknessMaximum)
+                / (float)DarkEnemyRules.DarknessMaximum;
             _darkVeil.Modulate = new Color(1f, 1f, 1f, 0.42f + ratio * 0.48f);
             _darkVeil.Scale = Vector2.One * (0.96f + ratio * 0.04f);
         }

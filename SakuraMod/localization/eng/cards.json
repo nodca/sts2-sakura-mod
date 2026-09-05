@@ -15,7 +15,7 @@
   "SAKURA_MOD_CARD_ACTION.title": "Action",
   "SAKURA_MOD_CARD_ACTION.description": "[gold]Windy[/gold]\nChoose 1 card in your hand and Exhaust it.\n[gold]Manifest[/gold] {Cards:diff()}. Manifested cards cost 0 this turn.\n[gold]Extra:[/gold] Draw {ExtraDraw:diff()} card(s).",
   "SAKURA_MOD_CARD_APPEAR.title": "Appear",
-  "SAKURA_MOD_CARD_APPEAR.description": "[gold]Windy[/gold]\n[gold]Manifest[/gold] {Copies:diff()}.\n[gold]Extra:[/gold] Manifested cards cost 0 for the rest of combat.",
+  "SAKURA_MOD_CARD_APPEAR.description": "[gold]Windy[/gold]\n[gold]Manifest[/gold] 1.{IfUpgraded:show: It is Upgraded.|}\n[gold]Extra:[/gold] Manifested cards cost 0 for the rest of combat.",
   "SAKURA_MOD_CARD_AQUA.title": "Aqua",
   "SAKURA_MOD_CARD_AQUA.description": "[gold]Watery[/gold]\nDeal {Damage:diff()} damage to ALL enemies.\nFor each enemy with [gold]Frostbite[/gold], draw 1 card.\n[gold]Extra:[/gold] For each enemy with [gold]Frostbite[/gold], gain {Energy:diff()} [gold]Energy[/gold].",
   "SAKURA_MOD_CARD_BLADE.title": "Blade",
@@ -372,5 +372,7 @@
   "SAKURA_MOD_CARD_SPELL_SHUI_LONG.title": "Shui Long",
   "SAKURA_MOD_CARD_SPELL_SHUI_LONG.description": "[gold]Spell[/gold] [gold]Watery[/gold].\nDeal {Damage:diff()} damage to all enemies.",
   "SAKURA_MOD_CARD_MICRO_LIGHT.title": "Micro Light",
-  "SAKURA_MOD_CARD_MICRO_LIGHT.description": "The Dark loses {DarkVeilPower:diff()} [gold]Dark Veil[/gold].\nDuring Eternal Night, the Dark gains {DarkLightPower:diff()} [gold]Micro Light[/gold] instead.\nCannot gain [red]Forgotten[/red]."
+  "SAKURA_MOD_CARD_MICRO_LIGHT.description": "Reduce the Dark's [gold]Darkness[/gold] by {DarknessPower:diff()} (minimum 1).\nCannot gain [red]Forgotten[/red].",
+  "SAKURA_MOD_CARD_BALANCE.title": "Balance",
+  "SAKURA_MOD_CARD_BALANCE.description": "Move both Libra pans 1 point toward 5.\n[gold]Exhaust[/gold]."
 }

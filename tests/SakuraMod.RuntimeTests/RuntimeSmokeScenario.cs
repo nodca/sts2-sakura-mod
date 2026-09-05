@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Localization;
+using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Models.Acts;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Characters;
@@ -37,11 +38,15 @@ using SakuraMod.SakuraModCode.FourthAct.Wind.Models;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Powers;
 using SakuraMod.SakuraModCode.FourthAct.Wind.CardState;
 using SakuraMod.SakuraModCode.FourthAct.Dark;
-using SakuraMod.SakuraModCode.FourthAct.Dark.Afflictions;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Encounters;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Models;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
+using SakuraMod.SakuraModCode.FourthAct.Fire;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Encounters;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Models;
+using SakuraMod.SakuraModCode.FourthAct.Water;
+using SakuraMod.SakuraModCode.FourthAct.Water.Encounters;
 using SakuraMod.SakuraModCode.FourthAct.Routing;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using SakuraMod.SakuraModCode.Events;
@@ -89,6 +94,12 @@ internal static class RuntimeSmokeScenario
         assertions.True(
             "fourth_act_map_factory_patch_owned_by_sakura",
             mapFactoryPatch?.Prefixes.Any(static patch => patch.owner == SakuraHarmonyOwner) == true);
+        var encounterDispatchPatch = Harmony.GetPatchInfo(AccessTools.Method(
+            typeof(RunManager),
+            "CreateRoom"));
+        assertions.True(
+            "fourth_act_encounter_dispatch_patch_owned_by_sakura",
+            encounterDispatchPatch?.Prefixes.Any(static patch => patch.owner == SakuraHarmonyOwner) == true);
         var saveCompatibilityPatch = Harmony.GetPatchInfo(AccessTools.Method(
             typeof(ActModel),
             nameof(ActModel.FromSave),
@@ -166,16 +177,15 @@ internal static class RuntimeSmokeScenario
             ["wind_sleep_selection"] = RequireModel(ModelDb.Power<WindSleepSelectionPower>()),
             ["wind_sleep_wake"] = RequireModel(ModelDb.Power<WindSleepWakePower>()),
             ["dark_micro_light"] = RequireModel(ModelDb.Card<MicroLight>()),
-            ["dark_confinement_affliction"] = RequireModel(ModelDb.Affliction<DarkConfinementAffliction>()),
             ["wind_sleeping_affliction"] = RequireModel(ModelDb.Affliction<SleepingAffliction>()),
             ["dark_encounter"] = RequireModel(ModelDb.Encounter<DarkEncounter>()),
             ["dark_monster"] = RequireModel(ModelDb.Monster<DarkMonster>()),
-            ["dark_micro_light"] = RequireModel(ModelDb.Power<DarkLightPower>()),
-            ["dark_night"] = RequireModel(ModelDb.Power<DarkNightPower>()),
-            ["dark_veil"] = RequireModel(ModelDb.Power<DarkVeilPower>()),
+            ["darkness"] = RequireModel(ModelDb.Power<DarknessPower>()),
             ["dark_sovereignty"] = RequireModel(ModelDb.Power<DarkSovereigntyPower>()),
             ["dark_battle"] = RequireModel(ModelDb.Power<DarkBattlePower>()),
-            ["dark_confinement_selection"] = RequireModel(ModelDb.Power<DarkConfinementSelectionPower>())
+            ["dark_confinement_selection"] = RequireModel(ModelDb.Power<DarkConfinementSelectionPower>()),
+            ["fire_libra_encounter"] = RequireModel(ModelDb.Encounter<LibraEncounter>()),
+            ["fire_libra_pan"] = RequireModel(ModelDb.Monster<LibraPanMonster>())
         };
         foreach (var (name, id) in modelIds)
         {
@@ -184,6 +194,7 @@ internal static class RuntimeSmokeScenario
         RuntimeTestHost.WriteCheckpoint(request, "models_verified", "Representative ModelDb identities were resolved.");
         var fourthActMap = InspectFourthActMapCreation(assertions);
         RuntimeTestHost.WriteCheckpoint(request, "fourth_act_map_verified", "Fourth-act map creation bypassed StandardActMap.");
+        var fourthActReward = InspectFourthActReward(assertions);
         var fourthActSaveCompatibility = InspectFourthActSaveCompatibility(assertions);
         RuntimeTestHost.WriteCheckpoint(
             request,
@@ -196,8 +207,15 @@ internal static class RuntimeSmokeScenario
             request,
             "wind_encounter_backgrounds_verified",
             "Every Wind encounter prepared and consumed the rooftop background through RitsuLib.");
+        var waterEncounterBackgrounds = InspectWaterEncounterBackgrounds(assertions);
+        RuntimeTestHost.WriteCheckpoint(
+            request,
+            "water_encounter_backgrounds_verified",
+            "Every Water encounter prepared and consumed the aquarium background through RitsuLib.");
         var darkEncounterScene = InspectDarkEncounterScene(assertions);
         RuntimeTestHost.WriteCheckpoint(request, "dark_encounter_scene_verified", "The programmatic Dark encounter slot was instantiated.");
+        var libraEncounterScene = InspectLibraEncounterScene(assertions);
+        RuntimeTestHost.WriteCheckpoint(request, "libra_encounter_scene_verified", "The Libra slots and presentation controller were instantiated.");
 
         var localization = InspectLocalization(assertions);
         RuntimeTestHost.WriteCheckpoint(request, "localization_verified", "English and Simplified Chinese localization was inspected.");
@@ -220,10 +238,13 @@ internal static class RuntimeSmokeScenario
         {
             ["models"] = modelIds,
             ["fourth_act_map"] = fourthActMap,
+            ["fourth_act_reward"] = fourthActReward,
             ["fourth_act_save_compatibility"] = fourthActSaveCompatibility,
             ["wind_encounter_scenes"] = windEncounterScenes,
             ["wind_encounter_backgrounds"] = windEncounterBackgrounds,
+            ["water_encounter_backgrounds"] = waterEncounterBackgrounds,
             ["dark_encounter_scene"] = darkEncounterScene,
+            ["libra_encounter_scene"] = libraEncounterScene,
             ["fourth_act_multiplayer_scaling"] = multiplayerScaling,
             ["settings"] = settings,
             ["sakura_combat_art"] = combatArt,
@@ -300,13 +321,58 @@ internal static class RuntimeSmokeScenario
     private static object InspectFourthActMapCreation(RuntimeAssertionCollector assertions)
     {
         var runState = MegaCrit.Sts2.Core.Runs.RunState.CreateForTest(
-            acts: [ModelDb.Act<SakuraFourthAct>()]);
+            acts: [ModelDb.Act<SakuraFourthAct>()],
+            seed: "SAKURA_WATER_ROUTE_RUNTIME");
         var map = runState.Act.CreateMap(runState, replaceTreasureWithElites: false);
         assertions.True("fourth_act_create_map_returns_custom_map", map is SakuraFourthActMap);
+        var fourthActMap = (SakuraFourthActMap)map;
+        assertions.Equal("fourth_act_complete_route_count", 2, fourthActMap.Routes.Count);
+
+        var waterEliteCoord = fourthActMap.MerchantMapPoint.Children
+            .Single(static point => point.coord.col == 2)
+            .coord;
+        runState.Map = new SavedActMap(SerializableActMap.FromActMap(map));
+        assertions.True("fourth_act_water_coord_visited", runState.AddVisitedMapCoord(waterEliteCoord));
+        var waterElite = SakuraFourthActEncounterDispatch.Resolve(runState, RoomType.Elite);
+        assertions.True(
+            "fourth_act_saved_map_dispatches_water_elite",
+            waterElite is FreezeEncounter or RainEncounter,
+            waterElite?.GetType().FullName ?? "No Water elite encounter resolved.");
+        assertions.True(
+            "fourth_act_dispatch_rejects_wrong_room_type",
+            SakuraFourthActEncounterDispatch.Resolve(runState, RoomType.Boss) is null);
         return new
         {
             type = map.GetType().FullName,
-            routes = (map as SakuraFourthActMap)?.Routes.Count
+            routes = fourthActMap.Routes.Count,
+            water_elite = waterElite?.GetType().Name
+        };
+    }
+
+    private static object InspectFourthActReward(RuntimeAssertionCollector assertions)
+    {
+        var player = Player.CreateForNewRun<ClassicSakura>(UnlockState.all, 303UL);
+        var runState = RunState.CreateForTest(
+            players: [player],
+            acts: [ModelDb.Act<SakuraFourthAct>()],
+            seed: "SAKURA_FOURTH_ACT_REWARD_RUNTIME");
+        var before = player.Deck.Cards.OfType<SakuraFreeze>().Count();
+
+        assertions.True(
+            "fourth_act_freeze_reward_granted",
+            SakuraRunHooks.TryGrantFourthActReward(runState, typeof(FreezeEncounter), player));
+        assertions.Equal(
+            "fourth_act_freeze_reward_added_to_deck",
+            before + 1,
+            player.Deck.Cards.OfType<SakuraFreeze>().Count());
+        assertions.True(
+            "fourth_act_dark_reward_omitted",
+            !SakuraRunHooks.TryGrantFourthActReward(runState, typeof(DarkEncounter), player));
+
+        return new
+        {
+            identity = SourceCardIdentity.Freeze.ToString(),
+            added = player.Deck.Cards.OfType<SakuraFreeze>().Count() - before
         };
     }
 
@@ -474,6 +540,42 @@ internal static class RuntimeSmokeScenario
         }
     }
 
+    private static Dictionary<string, string[]> InspectWaterEncounterBackgrounds(
+        RuntimeAssertionCollector assertions)
+    {
+        var prepare = AccessTools.Method(
+            typeof(ModEncounterTemplate),
+            "PrepareProgrammaticCombatBackground");
+        var consume = AccessTools.Method(
+            typeof(ModEncounterTemplate),
+            "ConsumeProgrammaticCombatBackgroundSlot");
+        assertions.True("water_background_prepare_method_resolved", prepare is not null);
+        assertions.True("water_background_consume_method_resolved", consume is not null);
+
+        var snapshots = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        Inspect(ModelDb.Encounter<FreezeEncounter>(), "freeze");
+        Inspect(ModelDb.Encounter<RainEncounter>(), "rain");
+        Inspect(ModelDb.Encounter<WateryEncounter>(), "watery");
+        return snapshots;
+
+        void Inspect(ModEncounterTemplate encounter, string name)
+        {
+            prepare!.Invoke(encounter, [ModelDb.Act<SakuraFourthAct>(), new Rng(0x57415452u)]);
+            var assets = consume!.Invoke(encounter, null) as BackgroundAssets;
+            assertions.True($"water_{name}_background_prepared", assets is not null);
+            assertions.Equal(
+                $"water_{name}_background_scene",
+                FourthActCombatBackgrounds.MainScenePath,
+                assets?.BackgroundScenePath);
+            assertions.True(
+                $"water_{name}_background_layers",
+                assets?.BgLayers.SequenceEqual(FourthActCombatBackgrounds.WaterAquariumLayers) == true,
+                assets is null ? "No background assets." : string.Join(", ", assets.BgLayers));
+            assertions.Equal<string?>($"water_{name}_background_foreground", null, assets?.FgLayer);
+            snapshots[name] = assets?.AssetPaths.ToArray() ?? [];
+        }
+    }
+
     private static string[] InspectDarkEncounterScene(RuntimeAssertionCollector assertions)
     {
         var encounter = ModelDb.Encounter<DarkEncounter>();
@@ -516,6 +618,34 @@ internal static class RuntimeSmokeScenario
                 "dark_runtime_slots",
                 actualSlots.SequenceEqual(["BOSS"]),
                 $"Expected [BOSS], found [{string.Join(", ", actualSlots)}].");
+            return actualSlots;
+        }
+        finally
+        {
+            scene?.Dispose();
+        }
+    }
+
+    private static string[] InspectLibraEncounterScene(RuntimeAssertionCollector assertions)
+    {
+        var encounter = ModelDb.Encounter<LibraEncounter>();
+        assertions.True("libra_has_scene", encounter.HasScene);
+        assertions.True("libra_declared_slots", encounter.Slots.SequenceEqual(["LEFT", "RIGHT"]));
+
+        Control? scene = null;
+        try
+        {
+            scene = encounter.CreateScene();
+            var actualSlots = scene.GetChildren()
+                .OfType<Marker2D>()
+                .Select(static marker => marker.Name.ToString())
+                .ToArray();
+            assertions.True("libra_runtime_slots", actualSlots.SequenceEqual(["LEFT", "RIGHT"]));
+            assertions.True(
+                "libra_visual_controller_present",
+                scene.GetNodeOrNull("SakuraLibraVisualController") is not null);
+            assertions.Equal("libra_scene_width", 1920f, scene.CustomMinimumSize.X);
+            assertions.Equal("libra_scene_height", 1080f, scene.CustomMinimumSize.Y);
             return actualSlots;
         }
         finally
@@ -634,7 +764,7 @@ internal static class RuntimeSmokeScenario
                              ("powers", "SAKURA_MOD_POWER_WIND_WALL_POWER.title"),
                              ("cards", "SAKURA_MOD_CARD_MICRO_LIGHT.title"),
                              ("monsters", "SAKURA_MOD_MONSTER_DARK_MONSTER.name"),
-                             ("powers", "SAKURA_MOD_POWER_DARK_LIGHT_POWER.title"),
+                             ("powers", "SAKURA_MOD_POWER_DARKNESS_POWER.title"),
                              ("afflictions", "SAKURA_MOD_AFFLICTION_DARK_CONFINEMENT_AFFLICTION.title"),
                              ("afflictions", "SAKURA_MOD_AFFLICTION_SLEEPING_AFFLICTION.title")
                 };
@@ -705,6 +835,8 @@ internal static class RuntimeSmokeScenario
         };
         for (var index = 0; index < WindEnemyAssets.All.Count; index++)
             resources[$"wind_enemy_{index}"] = WindEnemyAssets.All[index];
+        for (var index = 0; index < LibraEnemyAssets.All.Count; index++)
+            resources[$"libra_enemy_{index}"] = LibraEnemyAssets.All[index];
 
         var windyAssets = ModelDb.Encounter<WindyEncounter>().AssetProfile;
         for (var index = 0; index < windyAssets.MapNodeAssetPaths!.Length; index++)

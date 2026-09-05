@@ -1,17 +1,6 @@
 namespace SakuraMod.SakuraModCode.FourthAct.Dark;
 
-public enum DarkPhase
-{
-    Veiled,
-    TransitionPending,
-    EternalNight
-}
-
-public enum DarkRegularAction
-{
-    Confinement,
-    NonConfinement
-}
+public enum DarkRegularAction { Confinement, NonConfinement }
 
 public static class DarkEnemyRules
 {
@@ -23,57 +12,27 @@ public static class DarkEnemyRules
     public const int DeadlyNonConfinementDamage = 27;
     public const int BaseUltimateDamage = 50;
     public const int DeadlyUltimateDamage = 55;
-    public const int MicroLightsPerDraw = 3;
+    public const int MicroLightsPerDraw = 2;
     public const int MaxHandSizeReduction = 2;
-    public const int InitialVeilLayers = 3;
-    public const int MicroLightThreshold = 3;
-    public const decimal InitialVeilDamageReduction = 0.75m;
-    public const decimal VeilDamageReductionPerLayer = InitialVeilDamageReduction / InitialVeilLayers;
+    public const int DarknessMaximum = 5;
+    public const int DarknessReset = 3;
+    public const decimal DarknessDamageReductionPerLayer = 0.2m;
+    public const int DarknessAttackBonusPerLayer = 5;
     public const decimal TransitionHpRatio = 0.6m;
-    public const int VeilBreakPlayerSides = 2;
-    public const int MaximumNight = 5;
+    public const int NightBlock = 12;
 
-    public static int VisibleNightRegions(int nightAmount) =>
-        Math.Clamp(nightAmount, 0, MaximumNight);
-
-    public static decimal VeilDamageMultiplier(int veilLayers) =>
-        1m - VeilDamageReductionPerLayer * Math.Clamp(veilLayers, 0, InitialVeilLayers);
-
-    public static int ModifyMaxHandSize(int currentMaxHandSize) =>
-        Math.Max(0, currentMaxHandSize - MaxHandSizeReduction);
-
-    public static int AttackDamage(DarkRegularAction action, int night, bool deadly) =>
+    public static int ClampDarkness(int value) => Math.Clamp(value, 1, DarknessMaximum);
+    public static int ChangeDarkness(int current, int delta) => ClampDarkness(current + delta);
+    public static decimal DarknessDamageMultiplier(int darkness) =>
+        1m - DarknessDamageReductionPerLayer * ClampDarkness(darkness);
+    public static int ModifyMaxHandSize(int currentMaxHandSize) => Math.Max(0, currentMaxHandSize - MaxHandSizeReduction);
+    public static int AttackDamage(DarkRegularAction action, int darkness, bool deadly) =>
         (action == DarkRegularAction.Confinement
             ? deadly ? DeadlyConfinementDamage : BaseConfinementDamage
             : deadly ? DeadlyNonConfinementDamage : BaseNonConfinementDamage)
-        + 5 * Math.Max(0, night - 1);
-
-    public static int Block(int night) => 12 + 3 * Math.Max(0, night - 1);
-
-    public static (int Weak, int Frail) ConfinementDebuffs(int night) => night switch
-    {
-        >= 4 => (1, 1),
-        >= 2 => (1, 0),
-        _ => (0, 0)
-    };
-
-    public static int ConsumeMicroLight(int currentMicroLight, int amount) =>
-        Math.Max(0, currentMicroLight - Math.Max(0, amount));
-
-    public static int MicroLightsFromAction(DarkRegularAction action) => action switch
-    {
-        DarkRegularAction.Confinement or DarkRegularAction.NonConfinement => 0,
-        _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
-    };
-
-    public static bool AdvertisesStatusIntent(DarkRegularAction action) => action switch
-    {
-        DarkRegularAction.Confinement or DarkRegularAction.NonConfinement => false,
-        _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
-    };
-
+        + DarknessAttackBonusPerLayer * Math.Max(0, ClampDarkness(darkness) - 1);
+    public static int UltimateDamage(bool deadly) => deadly ? DeadlyUltimateDamage : BaseUltimateDamage;
+    public static bool ShouldUseUltimate(int darkness) => ClampDarkness(darkness) >= DarknessMaximum;
     public static DarkRegularAction Toggle(DarkRegularAction action) =>
-        action == DarkRegularAction.Confinement
-            ? DarkRegularAction.NonConfinement
-            : DarkRegularAction.Confinement;
+        action == DarkRegularAction.Confinement ? DarkRegularAction.NonConfinement : DarkRegularAction.Confinement;
 }

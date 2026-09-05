@@ -7,6 +7,9 @@ using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Powers;
+using SakuraMod.SakuraModCode.FourthAct.Water.Powers;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Powers;
+using SakuraMod.SakuraModCode.FourthAct.Earth.Powers;
 using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.Character;
@@ -42,25 +45,35 @@ internal static class SakuraElementState
     public static SakuraElementSet NewlyActive(SakuraElementSet previous, SakuraElementSet current) =>
         current & ~previous;
 
-    public static SakuraElementSet LocksFromSovereignty(bool wind, bool dark)
+    public static SakuraElementSet LocksFromSovereignty(bool wind, bool dark, bool water = false, bool fire = false, bool light = false, bool earth = false)
     {
         var locks = SakuraElementSet.None;
         if (wind || dark)
             locks |= SakuraElementSet.Wind;
-        if (dark)
+        if (dark || water)
             locks |= SakuraElementSet.Water;
+        if (fire || light)
+            locks |= SakuraElementSet.Fire;
+        if (light || earth)
+            locks |= SakuraElementSet.Earth;
         return locks;
     }
 
     public static SakuraElementSet ReadLocks(ICombatState combatState) =>
         LocksFromSovereignty(
             combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<WindSovereigntyPower>()),
-            combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<DarkSovereigntyPower>()));
+            combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<DarkSovereigntyPower>()),
+            combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<WaterSovereigntyPower>()),
+            combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<FireSovereigntyPower>()),
+            combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<LightBattlePower>()),
+            combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<EarthSovereigntyPower>()));
 
     public static SakuraElementSet LocksForPower(PowerModel power) => power switch
     {
         ClassicWindyPower or ClassicWindyPermanentPower => SakuraElementSet.Wind,
         ClassicWateryPower or ClassicWateryPermanentPower => SakuraElementSet.Water,
+        ClassicFireyPower or ClassicFireyPermanentPower => SakuraElementSet.Fire,
+        ClassicEarthyPower or ClassicEarthyPermanentPower => SakuraElementSet.Earth,
         _ => SakuraElementSet.None
     };
 

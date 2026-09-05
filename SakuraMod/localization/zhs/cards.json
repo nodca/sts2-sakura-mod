@@ -15,7 +15,7 @@
   "SAKURA_MOD_CARD_ACTION.title": "行动",
   "SAKURA_MOD_CARD_ACTION.description": "[gold]风[/gold]\n选择手牌中的 1 张牌消耗。\n[gold]显现[/gold] {Cards:diff()}，其本回合能耗变为 0。\n[gold]额外效果：[/gold]抽 {ExtraDraw:diff()} 张牌。",
   "SAKURA_MOD_CARD_APPEAR.title": "显现",
-  "SAKURA_MOD_CARD_APPEAR.description": "[gold]风[/gold]\n[gold]显现[/gold] {Copies:diff()}。\n[gold]额外效果：[/gold]所显现的牌本场战斗内能耗变为 0。",
+  "SAKURA_MOD_CARD_APPEAR.description": "[gold]风[/gold]\n[gold]显现[/gold] 1。{IfUpgraded:show:其获得升级。|}\n[gold]额外效果：[/gold]所显现的牌本场战斗内能耗变为 0。",
   "SAKURA_MOD_CARD_AQUA.title": "水源",
   "SAKURA_MOD_CARD_AQUA.description": "[gold]水[/gold]\n对所有敌人造成 {Damage:diff()} 点伤害。\n每有 1 名敌人拥有[gold]冻伤[/gold]，抽 1 张牌。\n[gold]额外效果：[/gold]每有 1 名敌人拥有[gold]冻伤[/gold]，获得 {Energy:diff()} 点能量。",
   "SAKURA_MOD_CARD_BLADE.title": "双剑",
@@ -372,5 +372,7 @@
   "SAKURA_MOD_CARD_SPELL_SHUI_LONG.title": "水龙",
   "SAKURA_MOD_CARD_SPELL_SHUI_LONG.description": "[gold]符咒[/gold] [gold]水[/gold]\n对所有敌人造成 {Damage:diff()} 点伤害。",
   "SAKURA_MOD_CARD_MICRO_LIGHT.title": "微光",
-  "SAKURA_MOD_CARD_MICRO_LIGHT.description": "使「暗」失去 {DarkVeilPower:diff()} 层[gold]暗幕[/gold]。\n永夜期间，改为使「暗」获得 {DarkLightPower:diff()} 层[gold]微光[/gold]。\n无法获得[red]遗忘[/red]。"
+  "SAKURA_MOD_CARD_MICRO_LIGHT.description": "使「暗」的[gold]暗度[/gold]降低 {DarknessPower:diff()}（最低为 1）。\n无法获得[red]遗忘[/red]。",
+  "SAKURA_MOD_CARD_BALANCE.title": "平衡",
+  "SAKURA_MOD_CARD_BALANCE.description": "使秤的两盘各向 5 点移动 1 点。\n[gold]消耗[/gold]。"
 }
