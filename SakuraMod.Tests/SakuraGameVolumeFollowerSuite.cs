@@ -119,7 +119,7 @@ public sealed class SakuraGameVolumeFollowerSuite
     public void PlaybackVolumesRouteThroughTheGameVolumeFollower()
     {
         var bgm = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/AnotherMeBgmPlayback.cs"));
+            "SakuraModCode/Cards/CardBgmPlayback.cs"));
         var voice = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/SakuraVoicePlayback.cs"));
 

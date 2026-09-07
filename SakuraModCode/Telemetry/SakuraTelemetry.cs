@@ -29,7 +29,6 @@ internal static class SakuraTelemetry
     internal const string RunHistoryRequestId = "run_history";
     internal const string BalanceRunContributionId = "balance_run";
     internal const string EndpointUrl = "https://telemetry.cyb1.org/v1/ritsulib/batch";
-    internal const string AuthorizationHeaderName = "Authorization";
     internal const string PublicWriteCredential = "sakuramod-balance-v2";
 
     private const string DisplayName = "SakuraMod";
@@ -95,12 +94,12 @@ internal static class SakuraTelemetry
 
     internal static ITelemetryAdapter CreateAdapter() =>
         new SizeBoundedTelemetryAdapter(
-            new HttpJsonTelemetryAdapter(
+            new InstallTokenHttpTelemetryAdapter(
                 EndpointUrl,
-                new Dictionary<string, string>
-                {
-                    [AuthorizationHeaderName] = $"Bearer {PublicWriteCredential}"
-                }));
+                PublicWriteCredential,
+                ApplicantId,
+                new GodotInstallTokenStore(),
+                HttpClientTelemetryTransport.Shared));
 
     internal static bool ShouldCaptureBalanceTelemetry(TelemetryCaptureContext context) =>
         context.SourceData is RunEndedEvent runEndedEvent

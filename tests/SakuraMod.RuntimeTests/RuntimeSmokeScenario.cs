@@ -821,6 +821,7 @@ internal static class RuntimeSmokeScenario
             ["another_me_portrait"] = "res://SakuraMod/images/card_portraits/ancient/another_me.png",
             ["another_me_power_icon"] = "res://SakuraMod/images/powers/another_me.png",
             ["another_me_bgm"] = AnotherMeBgmPlayback.ResourcePath,
+            ["spell_turn_bgm"] = SpellTurnBgmPlayback.ResourcePath,
             ["release_voice"] = SakuraVoicePlayback.ReleaseVoicePath,
             ["seal_voice"] = SakuraVoicePlayback.SealVoicePath,
             ["spell_turn_audio"] = SpellTurnTransformationVfx.TurnAudioPath,

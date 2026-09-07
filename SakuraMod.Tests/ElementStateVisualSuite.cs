@@ -348,11 +348,12 @@ public sealed class ElementStateVisualSuite
             "SakuraModCode/Character/SakuraElementStateVisuals.cs"));
 
         RegressionTestHarness.Require(
-            power.Contains("_counter", StringComparison.Ordinal)
+            power.Contains("TriggerCounter", StringComparison.Ordinal)
+            && power.Contains("SavedAttachedState", StringComparison.Ordinal)
             && power.IndexOf("NotifyWaterTriggered(Owner);", StringComparison.Ordinal)
                 < power.IndexOf("await PlayerCmd.GainEnergy(1, Owner.Player!);", StringComparison.Ordinal)
             && cards.Contains("NotifyIconicWateryPlayed", StringComparison.Ordinal),
-            "Expected gameplay to own the counter and the energy gain while notifying visuals in place.");
+            "Expected gameplay to own the synced trigger counter and the energy gain while notifying visuals in place.");
 
         RegressionTestHarness.Require(
             !visuals.Contains("PlayerCmd", StringComparison.Ordinal)
@@ -378,16 +379,17 @@ public sealed class ElementStateVisualSuite
             "SakuraModCode/Character/SakuraElementStateVisuals.cs"));
 
         RegressionTestHarness.Require(
-            power.Contains("_counter", StringComparison.Ordinal)
+            power.Contains("TriggerCounter", StringComparison.Ordinal)
+            && power.Contains("SavedAttachedState", StringComparison.Ordinal)
             && power.IndexOf("NotifyWindTriggered(Owner);", StringComparison.Ordinal)
                 < power.IndexOf("await CardPileCmd.Draw(choiceContext, 1, Owner.Player!, false);", StringComparison.Ordinal)
             && cards.Contains("NotifyIconicWindyPlayed", StringComparison.Ordinal),
-            "Expected gameplay to own the counter and draw while notifying visuals in place.");
+            "Expected gameplay to own the synced trigger counter and draw while notifying visuals in place.");
 
         RegressionTestHarness.Require(
             !visuals.Contains("CardPileCmd", StringComparison.Ordinal)
             && !visuals.Contains("DrawTrigger", StringComparison.Ordinal)
-            && !visuals.Contains("_counter", StringComparison.Ordinal),
+            && !visuals.Contains("TriggerCounter", StringComparison.Ordinal),
             "Expected wind visuals to never draw, read the counter, or restate the trigger rule.");
 
         RegressionTestHarness.Require(
@@ -396,6 +398,35 @@ public sealed class ElementStateVisualSuite
             && visuals.Contains("RefreshFire", StringComparison.Ordinal)
             && visuals.Contains("RefreshWind", StringComparison.Ordinal),
             "Expected wind to own separate tweens so fire and wind never cancel each other.");
+    }
+
+    [Fact]
+    public void ElementStateTriggerEvaluationStaysSynchronized()
+    {
+        var power = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/SourceCards/SakuraElementStatePower.cs"));
+
+        // A Before/After flag pair desyncs silently when a play is cancelled or
+        // nested (AutoPlay), and a one-sided TriggerElement is a multiplayer
+        // checksum divergence: triggers must evaluate directly from the play.
+        RegressionTestHarness.Require(
+            !power.Contains("_wasActiveForCardPlayed", StringComparison.Ordinal)
+            && !power.Contains("BeforeCardPlayed", StringComparison.Ordinal)
+            && power.Contains("play.Card?.Owner?.Creature != Owner", StringComparison.Ordinal),
+            "Expected element triggers to evaluate directly from the synced play instead of a Before/After flag pair.");
+
+        // Trigger counters gate synced commands (Draw / GainEnergy), so they must
+        // live in the synced SavedAttachedState, not plain fields.
+        var wind = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/SourceCards/ClassicWindyPower.cs"));
+        var watery = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/SourceCards/ClassicWateryPower.cs"));
+        RegressionTestHarness.Require(
+            wind.Contains("SavedAttachedState", StringComparison.Ordinal)
+            && !wind.Contains("private int _counter", StringComparison.Ordinal)
+            && watery.Contains("SavedAttachedState", StringComparison.Ordinal)
+            && !watery.Contains("private int _counter", StringComparison.Ordinal),
+            "Expected Windy/Watery trigger counters to be synced via SavedAttachedState instead of plain fields.");
     }
 
     [Fact]

@@ -30,7 +30,12 @@ namespace SakuraMod.SakuraModCode.Powers;
 public class ClassicWateryPower : SakuraElementStatePower
 {
     private const int EnergyTrigger = 2;
-    private int _counter;
+
+    // The trigger count gates PlayerCmd.GainEnergy, so it must be part of the
+    // synced model state; a plain field desyncs silently and one machine gains
+    // energy while the other does not (multiplayer checksum divergence).
+    private static readonly SavedAttachedState<ClassicWateryPower, int> TriggerCounter =
+        new("SakuraMod_ClassicWateryTriggerCounter", () => 0);
 
     protected override string IconFileName => "watery_power.png";
     protected override SakuraElement Element => SakuraElement.Water;
@@ -38,11 +43,14 @@ public class ClassicWateryPower : SakuraElementStatePower
 
     protected override async Task TriggerElement(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        _counter++;
-        if (_counter < EnergyTrigger)
+        var counter = TriggerCounter[this] + 1;
+        if (counter < EnergyTrigger)
+        {
+            TriggerCounter[this] = counter;
             return;
+        }
 
-        _counter -= EnergyTrigger;
+        TriggerCounter[this] = counter - EnergyTrigger;
         SakuraElementStateVisuals.NotifyWaterTriggered(Owner);
         await PlayerCmd.GainEnergy(1, Owner.Player!);
     }

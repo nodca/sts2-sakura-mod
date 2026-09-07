@@ -33,7 +33,7 @@ internal static class SakuraFourthActMapFactory
 
 internal static class SakuraFourthActEncounterDispatch
 {
-    internal static EncounterModel? Resolve(IRunState runState, RoomType roomType)
+    internal static EncounterModel? Resolve(RunState runState, RoomType roomType)
     {
         if (runState.Act is not SakuraFourthAct
             || roomType is not (RoomType.Elite or RoomType.Boss)
@@ -42,14 +42,13 @@ internal static class SakuraFourthActEncounterDispatch
             return null;
         }
 
-        var encounter = SakuraFourthActMap.EncounterAt(
-            FourthActRouteCatalog.Resolve().CompleteRoutes,
-            coord,
-            runState.Rng.Seed);
-        if (encounter is null)
+        var routes = FourthActRouteCatalog.Resolve().CompleteRoutes;
+        var encounterType = SakuraFourthActMap.EncounterAt(routes, coord, runState.Rng.Seed)?.EncounterType
+            ?? SakuraFourthActMap.EndpointEncounterAt(routes, coord, runState.VisitedMapCoords);
+        if (encounterType is null)
             return null;
 
-        var canonical = ModelDb.GetById<EncounterModel>(ModelDb.GetId(encounter.EncounterType));
+        var canonical = ModelDb.GetById<EncounterModel>(ModelDb.GetId(encounterType));
         return canonical.RoomType == roomType ? canonical.ToMutable() : null;
     }
 }

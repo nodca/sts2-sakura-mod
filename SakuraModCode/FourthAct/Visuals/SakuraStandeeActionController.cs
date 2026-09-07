@@ -8,6 +8,8 @@ using SakuraMod.SakuraModCode.FourthAct.Dark;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Models;
 using SakuraMod.SakuraModCode.FourthAct.Wind;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Models;
+using SakuraMod.SakuraModCode.FourthAct.Water;
+using SakuraMod.SakuraModCode.FourthAct.Water.Models;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Visuals;
 
@@ -176,7 +178,8 @@ internal sealed partial class SakuraStandeeActionController : Node
             ?.GetNodeOrNull<SakuraStandeeActionController>(NodeName);
 
     internal static bool IsFourthActStandee(NCreature node) =>
-        node.Entity.Monster is WindMonsterTemplate or DarkMonster;
+        node.Entity.Monster is WindMonsterTemplate or DarkMonster
+            or RainMonster or FreezeMonster or WateryMonster;
 
     public override void _Ready()
     {

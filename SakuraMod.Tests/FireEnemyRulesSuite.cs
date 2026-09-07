@@ -13,7 +13,7 @@ public sealed class FireEnemyRulesSuite
     {
         Assert.Equal([SourceCardIdentity.Sword, SourceCardIdentity.Libra], FireEnemyCatalog.EliteEncounters.Select(e => e.RewardIdentity));
         Assert.Equal(SourceCardIdentity.Firey, FireEnemyCatalog.BossEncounter.RewardIdentity);
-        Assert.Equal(typeof(DarkEncounter), FireEnemyCatalog.EndpointEncounterType);
+        Assert.Equal(typeof(LightEncounter), FireEnemyCatalog.EndpointEncounterType);
     }
 
     [Theory]

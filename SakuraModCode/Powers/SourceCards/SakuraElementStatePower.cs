@@ -29,7 +29,9 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public abstract class SakuraElementStatePower : SakuraPowerModel
 {
-    private bool _wasActiveForCardPlayed;
+    // Set only from synced card-play flow (Clow/Transparent Time, TimeStop) and
+    // consumed in the synced AfterSideTurnEnd; both machines see the same
+    // set/consume sequence, so the flag never gates a one-sided command.
     private bool _preserveForNextTurn;
 
     public override PowerType Type => PowerType.Buff;
@@ -48,23 +50,17 @@ public abstract class SakuraElementStatePower : SakuraPowerModel
     public void PreserveForNextTurn() =>
         _preserveForNextTurn = true;
 
-    public override Task BeforeCardPlayed(CardPlay play)
-    {
-        _wasActiveForCardPlayed = Amount > 0
-            && play.Card?.Owner?.Creature == Owner;
-
-        return Task.CompletedTask;
-    }
-
+    // Evaluated directly from the play and the synced power Amount. A
+    // Before/After flag pair would silently desync when a play is cancelled or
+    // nested (AutoPlay), and a one-sided TriggerElement is a multiplayer
+    // checksum divergence.
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (!_wasActiveForCardPlayed || !SakuraActions.HasElement(play.Card, Element))
-        {
-            _wasActiveForCardPlayed = false;
+        if (play.Card?.Owner?.Creature != Owner
+            || Amount <= 0
+            || !SakuraActions.HasElement(play.Card, Element))
             return;
-        }
 
-        _wasActiveForCardPlayed = false;
         await TriggerElement(choiceContext, play);
     }
 

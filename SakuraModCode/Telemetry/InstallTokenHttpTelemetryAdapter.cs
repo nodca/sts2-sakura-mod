@@ -1,0 +1,303 @@
+using System.Globalization;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
+using STS2RitsuLib.Telemetry;
+
+namespace SakuraMod.SakuraModCode.Telemetry;
+
+internal interface ITelemetryHttpTransport
+{
+    Task<TelemetryHttpResult> PostAsync(
+        string url,
+        IReadOnlyDictionary<string, string> headers,
+        string jsonBody,
+        CancellationToken cancellationToken);
+}
+
+internal readonly record struct TelemetryHttpResult(int StatusCode, string? Body, string? TransportError, TimeSpan? RetryAfter = null)
+{
+    public bool IsSuccess => TransportError is null && StatusCode is >= 200 and < 300;
+}
+
+/// <summary>
+/// Failure details recovered from the telemetry failure message. RitsuLib's
+/// TelemetrySendResult only carries a text message, so the install-token
+/// adapter encodes the response status code and Retry-After into that message
+/// and the size-bounded retry layer parses them back out with
+/// <see cref="Parse"/>. The wire format is:
+/// "telemetry endpoint returned &lt;status&gt;[ retry-after=&lt;seconds&gt;s]"
+/// or a transport failure starting with "network error:" / "timeout:".
+/// </summary>
+internal readonly record struct TelemetryFailureInfo(int? StatusCode, TimeSpan? RetryAfter, bool Transport)
+{
+    private static readonly Regex StatusCodePattern =
+        new(@"returned (\d{3})", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex RetryAfterPattern =
+        new(@"retry-after=(\d+)s", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    public static TelemetryFailureInfo Parse(string? message)
+    {
+        if (string.IsNullOrEmpty(message))
+            return default;
+        if (message.StartsWith("network error:", StringComparison.Ordinal)
+            || message.StartsWith("timeout:", StringComparison.Ordinal))
+            return new TelemetryFailureInfo(null, null, true);
+        var statusMatch = StatusCodePattern.Match(message);
+        if (!statusMatch.Success)
+            return default;
+        var statusCode = int.Parse(statusMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+        TimeSpan? retryAfter = null;
+        var retryMatch = RetryAfterPattern.Match(message);
+        if (retryMatch.Success)
+            retryAfter = TimeSpan.FromSeconds(
+                long.Parse(retryMatch.Groups[1].Value, CultureInfo.InvariantCulture));
+        return new TelemetryFailureInfo(statusCode, retryAfter, false);
+    }
+}
+
+/// <summary>
+/// Persists the per-install telemetry token issued by the receiver. The token
+/// is an abuse-containment gate, not a secret: it is stored in the game's
+/// user data directory and can be re-registered while the legacy credential
+/// is accepted.
+/// </summary>
+internal interface IInstallTokenStore
+{
+    string? Load();
+
+    void Save(string token);
+
+    void Clear();
+}
+
+/// <summary>
+/// Sends ritsulib.telemetry.batch.v1 payloads with the server-issued install
+/// token, a request timestamp, and a single-use nonce instead of the shared
+/// public write credential. The wire contract (JSON fields, casing, consent
+/// gating upstream of the adapter) matches the bundled HttpJsonTelemetryAdapter;
+/// only the authentication headers change. Registration and legacy fallback
+/// keep working against pre-rollout receivers and during the legacy window.
+/// </summary>
+internal sealed class InstallTokenHttpTelemetryAdapter(
+    string endpoint,
+    string legacyCredential,
+    string applicantId,
+    IInstallTokenStore tokenStore,
+    ITelemetryHttpTransport transport) : ITelemetryAdapter
+{
+    internal const string BatchSchema = "ritsulib.telemetry.batch.v1";
+    internal const string InstallSchema = "ritsulib.telemetry.install.v1";
+    internal const string AuthorizationHeaderName = "Authorization";
+    internal const string TimestampHeaderName = "X-RitsuLib-Timestamp";
+    internal const string NonceHeaderName = "X-RitsuLib-Nonce";
+    internal const int InstallTokenHexLength = 64;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    private readonly string _batchEndpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
+    private readonly string _installEndpoint = BuildInstallEndpoint(endpoint ?? throw new ArgumentNullException(nameof(endpoint)));
+    private readonly string _legacyCredential = legacyCredential ?? throw new ArgumentNullException(nameof(legacyCredential));
+    private readonly string _applicantId = applicantId ?? throw new ArgumentNullException(nameof(applicantId));
+    private readonly IInstallTokenStore _tokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
+    private readonly ITelemetryHttpTransport _transport = transport ?? throw new ArgumentNullException(nameof(transport));
+
+    public string AdapterId => "install_token_http";
+
+    public string EndpointDescription => _batchEndpoint;
+
+    public async ValueTask<TelemetrySendResult> SendAsync(
+        TelemetryApplicant applicant,
+        IReadOnlyList<TelemetryEnvelope> events,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(applicant);
+        ArgumentNullException.ThrowIfNull(events);
+        if (events.Count == 0)
+            return TelemetrySendResult.Ok();
+
+        var body = SerializeBatch(applicant.ApplicantId, events);
+        TelemetryHttpResult? tokenPathResult = null;
+        var tryLegacy = false;
+
+        var token = _tokenStore.Load();
+        if (token is null)
+        {
+            token = await RegisterAsync(cancellationToken).ConfigureAwait(false);
+            tryLegacy = token is null;
+        }
+        if (!tryLegacy)
+        {
+            var result = await SendWithTokenAsync(token!, body, cancellationToken).ConfigureAwait(false);
+            if (result.IsSuccess)
+                return TelemetrySendResult.Ok();
+            tokenPathResult = result;
+
+            if (result.StatusCode == 401)
+            {
+                // The token was rejected (unknown, revoked, or stale): clear
+                // it, register again while the legacy credential is accepted,
+                // and retry the batch once with the fresh token.
+                _tokenStore.Clear();
+                var refreshed = await RegisterAsync(cancellationToken).ConfigureAwait(false);
+                if (refreshed is null)
+                {
+                    tryLegacy = true;
+                }
+                else
+                {
+                    var retry = await SendWithTokenAsync(refreshed, body, cancellationToken).ConfigureAwait(false);
+                    if (retry.IsSuccess)
+                        return TelemetrySendResult.Ok();
+                    tokenPathResult = retry;
+                    tryLegacy = retry.StatusCode == 401;
+                }
+            }
+        }
+        if (!tryLegacy)
+        {
+            // The receiver answered the token path with a verdict (rate limit,
+            // storage failure, ...). Retry logic belongs to the same path;
+            // switching credentials here would bypass per-install limits.
+            return ToSendResult(tokenPathResult!.Value);
+        }
+
+        var legacy = await _transport
+            .PostAsync(_batchEndpoint, LegacyHeaders(), body, cancellationToken)
+            .ConfigureAwait(false);
+        if (legacy.IsSuccess)
+            return TelemetrySendResult.Ok();
+        // A 401 on the legacy credential means the receiver is past the
+        // legacy window (or the credential changed); the token-path result is
+        // the more informative failure in that case.
+        return ToSendResult(tokenPathResult is not null && legacy.StatusCode == 401 ? tokenPathResult.Value : legacy);
+    }
+
+    internal static string BuildInstallEndpoint(string batchEndpoint)
+    {
+        if (batchEndpoint.EndsWith("/batch", StringComparison.OrdinalIgnoreCase))
+            return batchEndpoint[..^"/batch".Length] + "/install";
+        return batchEndpoint;
+    }
+
+    internal string SerializeBatch(string batchApplicantId, IReadOnlyList<TelemetryEnvelope> events) =>
+        JsonSerializer.Serialize(
+            new { schema = BatchSchema, applicant_id = batchApplicantId, events },
+            JsonOptions);
+
+    private async Task<TelemetryHttpResult> SendWithTokenAsync(string token, string body, CancellationToken cancellationToken)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            [AuthorizationHeaderName] = $"Bearer {token}",
+            [TimestampHeaderName] = DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+            [NonceHeaderName] = Guid.NewGuid().ToString("N")
+        };
+        return await _transport.PostAsync(_batchEndpoint, headers, body, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<string?> RegisterAsync(CancellationToken cancellationToken)
+    {
+        var body = JsonSerializer.Serialize(
+            new { schema = InstallSchema, applicant_id = _applicantId },
+            JsonOptions);
+        var result = await _transport
+            .PostAsync(_installEndpoint, LegacyHeaders(), body, cancellationToken)
+            .ConfigureAwait(false);
+        if (!result.IsSuccess || string.IsNullOrEmpty(result.Body))
+            return null;
+        try
+        {
+            if (JsonNode.Parse(result.Body)?["install_token"] is not JsonNode tokenNode)
+                return null;
+            var token = tokenNode.GetValue<string>();
+            if (!IsWellFormedInstallToken(token))
+                return null;
+            _tokenStore.Save(token);
+            return token;
+        }
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException or FormatException)
+        {
+            return null;
+        }
+    }
+
+    private IReadOnlyDictionary<string, string> LegacyHeaders() =>
+        new Dictionary<string, string>
+        {
+            [AuthorizationHeaderName] = $"Bearer {_legacyCredential}"
+        };
+
+    internal static bool IsWellFormedInstallToken(string? token)
+    {
+        if (string.IsNullOrEmpty(token) || token.Length != InstallTokenHexLength)
+            return false;
+        foreach (var character in token)
+        {
+            if (!Uri.IsHexDigit(character))
+                return false;
+        }
+        return true;
+    }
+
+    // The failure message doubles as the internal contract with the retry
+    // layer: the status code and Retry-After are encoded here and recovered
+    // by TelemetryFailureInfo.Parse. Keep both sides in sync.
+    private static TelemetrySendResult ToSendResult(TelemetryHttpResult result) =>
+        result.TransportError is not null
+            ? TelemetrySendResult.Fail(result.TransportError)
+            : TelemetrySendResult.Fail(result.RetryAfter is { } retryAfter
+                ? $"telemetry endpoint returned {result.StatusCode} retry-after={(long)Math.Round(retryAfter.TotalSeconds)}s"
+                : $"telemetry endpoint returned {result.StatusCode}");
+}
+
+/// <summary>Shared HttpClient transport used in production.</summary>
+internal sealed class HttpClientTelemetryTransport : ITelemetryHttpTransport
+{
+    internal static readonly HttpClientTelemetryTransport Shared = new();
+
+    private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(15) };
+
+    public async Task<TelemetryHttpResult> PostAsync(
+        string url,
+        IReadOnlyDictionary<string, string> headers,
+        string jsonBody,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new StringContent(jsonBody, Encoding.UTF8, "application/json")
+            };
+            foreach (var (name, value) in headers)
+                request.Headers.TryAddWithoutValidation(name, value);
+            using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken)
+                .ConfigureAwait(false);
+            var body = response.Content is null
+                ? null
+                : await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            // The receiver only sends integer-second Retry-After values; the
+            // HTTP-date form leaves Delta null and is ignored.
+            var retryAfter = response.Headers.RetryAfter?.Delta;
+            return new TelemetryHttpResult((int)response.StatusCode, body, null, retryAfter);
+        }
+        catch (HttpRequestException exception)
+        {
+            return new TelemetryHttpResult(0, null, $"network error: {exception.Message}");
+        }
+        catch (TaskCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            return new TelemetryHttpResult(0, null, $"timeout: {exception.Message}");
+        }
+    }
+}

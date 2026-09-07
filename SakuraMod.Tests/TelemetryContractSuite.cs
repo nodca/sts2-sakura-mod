@@ -231,7 +231,15 @@ public sealed class TelemetryContractSuite
             SakuraTelemetry.CreateAdapter() is SizeBoundedTelemetryAdapter
             && SakuraTelemetry.PublicWriteCredential == "sakuramod-balance-v2",
             "Expected the bundled public write credential to enable telemetry without player configuration.");
+        RegressionTestHarness.Require(
+            ResolveInnerAdapter(SakuraTelemetry.CreateAdapter()) is InstallTokenHttpTelemetryAdapter,
+            "Expected the production telemetry adapter to send install-token authenticated batches.");
     }
+
+    private static object? ResolveInnerAdapter(object adapter) =>
+        adapter.GetType()
+            .GetField("_inner", BindingFlags.Instance | BindingFlags.NonPublic)?
+            .GetValue(adapter);
 
     [Fact]
     public void TelemetryAdapterSplitsSerializedBatchesBeforeTransportLimit()

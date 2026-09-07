@@ -77,6 +77,31 @@ public sealed class SakuraFourthActMap : ActMap
         };
     }
 
+    /// <summary>
+    /// The shared boss point sits on the center column, so the route taken can only be
+    /// recovered from the path the run walked to get there. Routes branch at even columns
+    /// between the elite and rest-site rows; the deepest such visit names the route whose
+    /// endpoint encounter waits at the boss point. Returns null off the boss row or when
+    /// no route visit is on record, letting the caller fall back to the act-configured boss.
+    /// </summary>
+    internal static Type? EndpointEncounterAt(
+        IReadOnlyList<FourthActRouteDefinition> routes,
+        MapCoord coord,
+        IReadOnlyList<MapCoord> visitedCoords)
+    {
+        if (coord.row != GridRowCount)
+            return null;
+
+        var routeColumn = visitedCoords
+            .Where(static visited => visited.row is >= EliteRow and <= RestSiteRow)
+            .OrderByDescending(static visited => visited.row)
+            .Select(static visited => (int?)visited.col)
+            .FirstOrDefault();
+        return routeColumn is { } column
+            ? RouteForColumn(routes, column)?.Endpoint.EncounterType
+            : null;
+    }
+
     private MapPoint AddRoutePoint(
         int column,
         int row,

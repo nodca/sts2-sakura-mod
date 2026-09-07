@@ -61,7 +61,11 @@ public class ClowArrow() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Co
 
         var discarded = await SelectHandCards(choiceContext, discard: true);
         var count = discarded + ResolveEnergyXValue();
-        var target = RequiredTarget(play);
+
+        // The play can reach the activated branch without a target when no
+        // enemy is targetable at play time (e.g. mid phase swap); the volley
+        // then falls back to the random targeting PlayCard uses.
+        var target = play.Target;
 
         // Activated is the same volley one tier heavier, on the frequency axis
         // rather than through a second orchestration.

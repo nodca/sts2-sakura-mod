@@ -17,6 +17,10 @@ public static class AttackCommandExtensions
             ?.GetSetMethod(nonPublic: true)
         ?? throw new MissingMemberException(nameof(AttackCommand), nameof(AttackCommand.DamageProps));
 
+    private static readonly FieldInfo CombatStateField =
+        typeof(AttackCommand).GetField("_combatState", BindingFlags.Instance | BindingFlags.NonPublic)
+        ?? throw new MissingMemberException(nameof(AttackCommand), "_combatState");
+
     public static AttackCommand WithValueProp(this AttackCommand command, ValueProp props)
     {
         DamagePropsSetter.Invoke(command, [props]);
@@ -26,10 +30,16 @@ public static class AttackCommandExtensions
     public static AttackCommand TargetingFiltered(this AttackCommand command, IEnumerable<Creature> targets)
     {
         var targetList = targets.Where(static target => target.IsAlive).ToList();
-        var combatState = command.Attacker?.CombatState
+        var attacker = command.Attacker
+            ?? throw new InvalidOperationException("AttackCommand.TargetingFiltered requires an attacker in combat.");
+        var combatState = attacker.CombatState
             ?? throw new InvalidOperationException("AttackCommand.TargetingFiltered requires an attacker in combat.");
 
-        return command.TargetingAllOpponents(new FilteredCombatState(combatState, command.Attacker, targetList));
+        // FromMonster claims TargetingAllOpponents for itself and the builder
+        // rejects any second Targeting* call, so the filter can only swap the
+        // resolved combat state in place.
+        CombatStateField.SetValue(command, new FilteredCombatState(combatState, attacker, targetList));
+        return command;
     }
 
     private sealed class FilteredCombatState(
@@ -41,7 +51,9 @@ public static class AttackCommandExtensions
         public IReadOnlyList<Creature> Allies => inner.Allies;
         public IReadOnlyList<Creature> Enemies => inner.Enemies;
         public IReadOnlyList<Creature> Creatures => inner.Creatures;
-        public IReadOnlyList<Creature> PlayerCreatures => inner.PlayerCreatures;
+        // Monster-source attacks resolve their possible targets through
+        // PlayerCreatures, so this is where the filter must bite.
+        public IReadOnlyList<Creature> PlayerCreatures => targets;
         public IReadOnlyList<Player> Players => inner.Players;
         public IReadOnlyList<ModifierModel> Modifiers => inner.Modifiers;
         public MultiplayerScalingModel? MultiplayerScalingModel => inner.MultiplayerScalingModel;

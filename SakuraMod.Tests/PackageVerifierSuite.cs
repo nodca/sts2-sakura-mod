@@ -11,7 +11,7 @@ public sealed class PackageVerifierSuite
 
         Assert.Equal("PASS", result.Status);
         Assert.Equal("SakuraMod", result.AssemblyName);
-        Assert.Equal(6, result.Files.Count);
+        Assert.Equal(7, result.Files.Count);
         Assert.All(result.Files, file => Assert.Matches("^[0-9a-f]{64}$", file.Sha256));
         Assert.Equal(3, result.PckPathCount);
     }
@@ -30,6 +30,15 @@ public sealed class PackageVerifierSuite
     {
         using var fixture = new PackageFixture();
         File.Delete(fixture.AnotherMeBgmPath);
+
+        await Assert.ThrowsAsync<FileNotFoundException>(fixture.VerifyAsync);
+    }
+
+    [Fact]
+    public async Task MissingSpellTurnBgmFailsVerification()
+    {
+        using var fixture = new PackageFixture();
+        File.Delete(fixture.SpellTurnBgmPath);
 
         await Assert.ThrowsAsync<FileNotFoundException>(fixture.VerifyAsync);
     }
@@ -154,6 +163,7 @@ public sealed class PackageVerifierSuite
             File.WriteAllBytes(PckPath, [1]);
             Directory.CreateDirectory(Path.GetDirectoryName(AnotherMeBgmPath)!);
             File.WriteAllBytes(AnotherMeBgmPath, "OggS"u8.ToArray());
+            File.WriteAllBytes(SpellTurnBgmPath, "OggS"u8.ToArray());
             Directory.CreateDirectory(Path.Combine(_root, "voices"));
             File.WriteAllBytes(Path.Combine(_root, "voices", "dream_wand.ogg"), "OggS"u8.ToArray());
             File.WriteAllBytes(Path.Combine(_root, "voices", "stabilize.ogg"), "OggS"u8.ToArray());
@@ -162,6 +172,7 @@ public sealed class PackageVerifierSuite
         public string ManifestPath => Path.Combine(_root, "SakuraMod.json");
         public string PckPath => Path.Combine(_root, "SakuraMod.pck");
         public string AnotherMeBgmPath => Path.Combine(_root, "music", "another_me.ogg");
+        public string SpellTurnBgmPath => Path.Combine(_root, "music", "platinum.ogg");
         public string PackageDirectory => _root;
 
         public Task<PackageVerificationResult> VerifyAsync()

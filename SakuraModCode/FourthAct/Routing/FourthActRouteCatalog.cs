@@ -25,16 +25,15 @@ public static class FourthActRouteCatalog
         SakuraElement.Fire,
         FireEnemyCatalog.EliteEncounters,
         FireEnemyCatalog.BossEncounter,
-        new(FourthActEndpoint.Dark, DarkEnemyCatalog.EndpointEncounterType));
+        new(FourthActEndpoint.Light, FireEnemyCatalog.EndpointEncounterType));
 
-    // Earth is content-complete but deliberately unwired from the playable act for now.
     internal static FourthActRouteDefinition Earth { get; } = new(
         SakuraElement.Earth,
         EarthEnemyCatalog.EliteEncounters,
         EarthEnemyCatalog.BossEncounter,
-        new(FourthActEndpoint.Dark, EarthEnemyCatalog.EndpointEncounterType));
+        new(FourthActEndpoint.Light, EarthEnemyCatalog.EndpointEncounterType));
 
-    internal static IReadOnlyList<FourthActRouteDefinition> DraftRoutes { get; } = [Wind, Water, Fire];
+    internal static IReadOnlyList<FourthActRouteDefinition> DraftRoutes { get; } = [Wind, Water, Fire, Earth];
 
     public static IReadOnlyList<FourthActRouteDefinition> CompleteRoutes =>
         Resolve().CompleteRoutes;

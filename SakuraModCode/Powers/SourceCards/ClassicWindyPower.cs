@@ -30,7 +30,12 @@ namespace SakuraMod.SakuraModCode.Powers;
 public class ClassicWindyPower : SakuraElementStatePower
 {
     private const int DrawTrigger = 2;
-    private int _counter;
+
+    // The trigger count gates CardPileCmd.Draw, so it must be part of the
+    // synced model state; a plain field desyncs silently and one machine draws
+    // while the other does not (multiplayer checksum divergence).
+    private static readonly SavedAttachedState<ClassicWindyPower, int> TriggerCounter =
+        new("SakuraMod_ClassicWindyTriggerCounter", () => 0);
 
     protected override string IconFileName => "windy_power.png";
     protected override SakuraElement Element => SakuraElement.Wind;
@@ -38,11 +43,14 @@ public class ClassicWindyPower : SakuraElementStatePower
 
     protected override async Task TriggerElement(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        _counter++;
-        if (_counter < DrawTrigger)
+        var counter = TriggerCounter[this] + 1;
+        if (counter < DrawTrigger)
+        {
+            TriggerCounter[this] = counter;
             return;
+        }
 
-        _counter -= DrawTrigger;
+        TriggerCounter[this] = counter - DrawTrigger;
         SakuraElementStateVisuals.NotifyWindTriggered(Owner);
         await CardPileCmd.Draw(choiceContext, 1, Owner.Player!, false);
     }

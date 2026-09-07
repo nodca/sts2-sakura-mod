@@ -135,6 +135,10 @@ public sealed class FireyMonster : FireMonsterBase
 public sealed class LightMonster : FireMonsterBase
 {
     protected override int BaseHp => FireEnemyRules.LightHp; protected override int ToughHp => FireEnemyRules.LightToughHp;
+    public override string? CustomVisualsPath => FireEnemyAssets.Light;
+    public override IEnumerable<string> AssetPaths => [CustomVisualsPath!];
+    protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
+        SakuraStandeeVisuals.Create(CustomVisualsPath!, "Light");
     private bool IsEmpowered => Creature.CurrentHp <= Creature.MaxHp * 0.6m;
     public override async Task AfterAddedToRoom() { await base.AfterAddedToRoom(); await PowerCmd.Apply<LightBattlePower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, true); }
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()

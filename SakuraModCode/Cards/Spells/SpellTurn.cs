@@ -69,6 +69,7 @@ public class SpellTurn() : SpellCard(-2, CardType.Skill, CardRarity.Token, Targe
         if (deckCard is null || deckCard.Pile?.Type != PileType.Deck)
             return;
 
+        SpellTurnBgmPlayback.TryPlay(this);
         var vfx = SpellTurnTransformationVfx.TryCreate(selectedClow);
         try
         {
