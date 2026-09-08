@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.Powers;
 using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Cards;
@@ -383,19 +384,11 @@ internal static class SakuraGeneratedCardLifecycle
     public static Task<CardModel> AddManifestChoiceToCombat(
         CardModel card,
         PlayerChoiceContext context,
-        bool addTemporary) =>
+        bool addTemporary = true,
+        bool freeThisTurn = false) =>
         AddGeneratedCardToCombat(
             card,
-            ManifestChoiceOptions(addTemporary),
-            context,
-            refreshGeneratedTransparentHandVisual: false);
-
-    public static Task<CardModel> AddManifestAtlasTemporaryCardToCombat(
-        CardModel card,
-        PlayerChoiceContext context) =>
-        AddGeneratedCardToCombat(
-            card,
-            ManifestAtlasTemporaryCardOptions(),
+            ManifestChoiceOptions(addTemporary, card.Owner.Creature.GetPower<KindnessPower>() is not null, freeThisTurn),
             context,
             refreshGeneratedTransparentHandVisual: false);
 
@@ -462,10 +455,11 @@ internal static class SakuraGeneratedCardLifecycle
             FreeThisTurn = freeThisTurn
         };
 
-    private static GeneratedCardOptions ManifestChoiceOptions(bool addTemporary) =>
+    internal static GeneratedCardOptions ManifestChoiceOptions(bool addTemporary, bool hasKindness, bool freeThisTurn) =>
         new()
         {
-            AddTemporary = addTemporary
+            AddTemporary = addTemporary && !hasKindness,
+            FreeThisTurn = freeThisTurn
         };
 
     private static GeneratedCardOptions GeneratedCardToHandOptions(CardPilePosition position) =>
@@ -473,12 +467,6 @@ internal static class SakuraGeneratedCardLifecycle
         {
             Pile = PileType.Hand,
             Position = position
-        };
-
-    private static GeneratedCardOptions ManifestAtlasTemporaryCardOptions() =>
-        new()
-        {
-            AddTemporary = true
         };
 
     private static GeneratedCardOptions DiscoveredChoiceOptions(bool freeThisTurn) =>

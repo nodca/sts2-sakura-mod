@@ -1,0 +1,51 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/tsukimine_shrine/eclipse/night_1.png" id="night_1"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/tsukimine_shrine/eclipse/night_2.png" id="night_2"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/tsukimine_shrine/eclipse/night_3.png" id="night_3"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/tsukimine_shrine/eclipse/night_4.png" id="night_4"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/tsukimine_shrine/eclipse/night_5.png" id="night_5"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/tsukimine_shrine/eclipse/sky.png" id="sky"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/tsukimine_shrine/eclipse/moon.png" id="moon"]
+[ext_resource type="Shader" path="res://SakuraMod/shaders/fourth_act/tsukimine_eclipse.gdshader" id="shader"]
+
+[sub_resource type="FastNoiseLite" id="cloud_noise"]
+noise_type = 3
+frequency = 0.012
+fractal_octaves = 3
+
+[sub_resource type="NoiseTexture2D" id="clouds"]
+width = 256
+height = 256
+seamless = true
+normalize = true
+noise = SubResource("cloud_noise")
+
+[sub_resource type="ShaderMaterial" id="eclipse"]
+resource_local_to_scene = true
+shader = ExtResource("shader")
+shader_parameter/night_progress = 0.0
+shader_parameter/moon_center = Vector2(0.5816100443131462, 0.21385542168674698)
+shader_parameter/moon_radius = 16.0
+shader_parameter/cloud_noise = SubResource("clouds")
+shader_parameter/night_2 = ExtResource("night_2")
+shader_parameter/night_3 = ExtResource("night_3")
+shader_parameter/night_4 = ExtResource("night_4")
+shader_parameter/night_5 = ExtResource("night_5")
+shader_parameter/sky = ExtResource("sky")
+shader_parameter/moon = ExtResource("moon")
+
+[node name="TsukimineEclipse" type="Control"]
+mouse_filter = 2
+
+[node name="EternalNightOverlay" type="TextureRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("eclipse")
+offset_left = -1354.0
+offset_top = -664.0
+offset_right = 1354.0
+offset_bottom = 664.0
+mouse_filter = 2
+texture = ExtResource("night_1")
+expand_mode = 1
+stretch_mode = 0

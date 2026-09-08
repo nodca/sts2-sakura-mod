@@ -6,6 +6,23 @@ using System.Text.Json.Nodes;
 
 public sealed class GeneratedCardLifecycleSuite
 {
+    [Theory]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, false)]
+    [InlineData(false, true, false)]
+    public void ManifestControlsForgottenWithoutChangingOtherGeneration(bool addTemporary, bool hasKindness, bool expected)
+    {
+        foreach (var freeThisTurn in new[] { false, true })
+        {
+            var options = SakuraGeneratedCardLifecycle.ManifestChoiceOptions(addTemporary, hasKindness, freeThisTurn);
+            Assert.Equal(expected, options.AddTemporary);
+            Assert.Equal(freeThisTurn, options.FreeThisTurn);
+            Assert.False(options.RemoveTemporary);
+            Assert.True(SakuraGeneratedCardLifecycle.TemporaryCopyOptions(freeThisTurn).AddTemporary);
+        }
+    }
+
     [Fact]
     public void VanillaGenerationEligibilityExcludesConversionAndSpellCards()
     {

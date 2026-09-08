@@ -22,7 +22,7 @@ public sealed class DarkEncounter : ModEncounterTemplate
     protected override bool UseProgrammaticCombatBackground => true;
 
     protected override BackgroundAssets? BuildProgrammaticCombatBackground(ActModel parentAct, Rng rng) =>
-        FourthActCombatBackgrounds.CreateDarkStage();
+        FourthActCombatBackgrounds.CreateDarkShrine();
 
     protected override Control TryCreateEncounterCombatScene()
     {

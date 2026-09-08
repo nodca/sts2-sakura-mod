@@ -146,7 +146,12 @@ internal static class SakuraFourthActRunTransition
             return;
         }
 
-        var acts = runState.Acts.Append(ModelDb.Act<SakuraFourthAct>()).ToList();
+        // Late-added acts missed new-run room initialization. Preloading reads their
+        // boss before CreateMap runs, so prepare this run's instance before insertion.
+        var fourthAct = (SakuraFourthAct)ModelDb.Act<SakuraFourthAct>().ToMutable();
+        fourthAct.GenerateRooms(runState.Rng.UpFront, runState.UnlockState, runState.Players.Count > 1);
+        fourthAct.ConfigureRouteBosses();
+        var acts = runState.Acts.Append(fourthAct).ToList();
         RunStateActsSetter.Invoke(runState, [acts]);
     }
 }

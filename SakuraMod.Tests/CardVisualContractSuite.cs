@@ -18,7 +18,7 @@ public sealed class CardVisualContractSuite
         {
             new VfxCase(
                 new Aqua(),
-                [AquaWaterSphereVfx.ScenePath, AquaWaterSphereVfx.TargetScenePath]),
+                [AquaWaterSphereVfx.ScenePath, AquaWaterSphereVfx.TargetScenePath, .. sharedCelPaths]),
             new VfxCase(
                 new Hail(),
                 [HailIceShardVfx.ScenePath, HailIceShardVfx.TargetScenePath, .. sharedCelPaths]),

@@ -18,6 +18,47 @@ using VanillaStrikeIronclad = MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad;
 public sealed class TelemetryContractSuite
 {
     [Fact]
+    public void MainMenuAbandonReadsAttachedIdentityAndClearsCaptureScopeOnFailure()
+    {
+        var context = FixtureContext();
+        var identity = new BalanceRunIdentity
+        {
+            RunKey = context.RunKey, Context = context,
+            ContextChecksum = SakuraTelemetryContract.ContextChecksum(context)
+        };
+        var entry = new JsonObject
+        {
+            ["schema"] = 1, ["kind"] = "run", ["data"] = JsonSerializer.SerializeToNode(identity)
+        };
+        var assembly = typeof(RitsuLibFramework).Assembly;
+        var documentType = assembly.GetType("STS2RitsuLib.RunData.RunSavedDataDocument", true)!;
+        var document = Activator.CreateInstance(documentType)!;
+        documentType.GetMethod("SetRaw")!.Invoke(document, [MainFile.ModId, SakuraTelemetry.RunSavedDataKey, entry]);
+        var run = new SerializableRun();
+        assembly.GetType("STS2RitsuLib.RunData.RunSavedDataRuntime", true)!
+            .GetMethod("AttachDocument")!.Invoke(null, [run, document]);
+        var restored = SakuraTelemetryTerminalCapture.ReadSavedIdentity(run);
+        Assert.Equal(identity.ContextChecksum, restored?.ContextChecksum);
+        Assert.Null(SakuraTelemetryTerminalCapture.ReadSavedIdentity(new SerializableRun()));
+        var capture = new TelemetryCaptureContext(SakuraTelemetry.RunHistoryEventName,
+            SakuraTelemetry.RunHistoryRequestId, TelemetryDataCategory.RunHistory, "manual", null);
+        Assert.False(SakuraTelemetry.ShouldCaptureBalanceTelemetry(capture));
+        Assert.Throws<JsonException>(() => SakuraTelemetryTerminalCapture.WithAbandonedContribution(restored!, () =>
+        {
+            Assert.True(SakuraTelemetry.ShouldCaptureBalanceTelemetry(capture));
+            Assert.Equal(identity.RunKey,
+                SakuraTelemetryTerminalCapture.BuildAbandonedContribution()!["run_key"]!.GetValue<string>());
+            throw new JsonException("serialization failed");
+        }));
+        Assert.False(SakuraTelemetry.ShouldCaptureBalanceTelemetry(capture));
+        Assert.Null(SakuraTelemetryTerminalCapture.BuildAbandonedContribution());
+        entry["data"]!["context_checksum"] = "sha256:changed";
+        Assert.Null(SakuraTelemetryTerminalCapture.ReadSavedIdentityEntry(entry));
+        entry["schema"] = 2;
+        Assert.Null(SakuraTelemetryTerminalCapture.ReadSavedIdentityEntry(entry));
+    }
+
+    [Fact]
     public void SerializedRunFilterAcceptsOnlyStandardKinomotoSakuraRuns()
     {
         RegressionTestHarness.Require(
@@ -228,38 +269,9 @@ public sealed class TelemetryContractSuite
                 "Expected the English and Simplified Chinese telemetry disclosures to differ.");
         }
         RegressionTestHarness.Require(
-            SakuraTelemetry.CreateAdapter() is SizeBoundedTelemetryAdapter
+            SakuraTelemetry.CreateAdapter() is InstallTokenHttpTelemetryAdapter
             && SakuraTelemetry.PublicWriteCredential == "sakuramod-balance-v2",
             "Expected the bundled public write credential to enable telemetry without player configuration.");
-        RegressionTestHarness.Require(
-            ResolveInnerAdapter(SakuraTelemetry.CreateAdapter()) is InstallTokenHttpTelemetryAdapter,
-            "Expected the production telemetry adapter to send install-token authenticated batches.");
-    }
-
-    private static object? ResolveInnerAdapter(object adapter) =>
-        adapter.GetType()
-            .GetField("_inner", BindingFlags.Instance | BindingFlags.NonPublic)?
-            .GetValue(adapter);
-
-    [Fact]
-    public void TelemetryAdapterSplitsSerializedBatchesBeforeTransportLimit()
-    {
-        var events = Enumerable.Range(0, 3)
-            .Select(index => new TelemetryEnvelope
-            {
-                ApplicantId = "SakuraMod",
-                EventName = "benchmark",
-                RequestId = "run_history",
-                Category = TelemetryDataCategory.RunHistory,
-                Payload = JsonNode.Parse($"{{\"value\":\"{new string('x', 80)}{index}\"}}")
-            })
-            .ToArray();
-
-        var batches = SizeBoundedTelemetryAdapter.SplitBatches("SakuraMod", events, maxBytes: 300);
-
-        RegressionTestHarness.Require(
-            batches.Count == 3 && batches.All(batch => batch.Count == 1),
-            "Expected oversized serialized telemetry events to be sent as separate bounded batches.");
     }
 
     [Fact]

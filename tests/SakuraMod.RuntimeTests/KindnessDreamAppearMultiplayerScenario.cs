@@ -61,12 +61,13 @@ internal static class KindnessDreamAppearMultiplayerScenario
         await context.WaitForActionsAsync();
 
         var kindnessChecksumBaseline = context.ChecksumCount;
+        await context.SignalAndWaitAsync("kindnessChecksumBaseline-ready");
         if (context.LocalPlayer.NetId == host.NetId)
             await context.PlayOwnedCardAsync(hostKindness);
         await MultiplayerScenarioContext.WaitForStateAsync(
-            () => hostKindness.Pile?.Type == PileType.Exhaust
+            () => hostKindness.Pile?.Type is null or PileType.None
                 && host.Creature.GetPower<KindnessPower>()?.Amount == 1,
-            "host Kindness to exhaust and leave pending KindnessPower");
+            "host Kindness to leave combat and apply KindnessPower");
         await context.WaitForActionsAsync();
         await context.WaitForActionChecksumsAsync(
             kindnessChecksumBaseline,
@@ -75,6 +76,7 @@ internal static class KindnessDreamAppearMultiplayerScenario
         await context.SignalAndWaitAsync("kindness-dream-appear-kindness-applied");
 
         var clientShieldChecksumBaseline = context.ChecksumCount;
+        await context.SignalAndWaitAsync("clientShieldChecksumBaseline-ready");
         if (context.LocalPlayer.NetId == client.NetId)
             await context.PlayOwnedCardAsync(clientShield);
         await context.WaitForActionChecksumsAsync(
@@ -102,29 +104,30 @@ internal static class KindnessDreamAppearMultiplayerScenario
                 },
                 PileType.Exhaust,
                 CardPilePosition.Bottom);
-            if (preview != (PileType.Hand, CardPilePosition.Bottom))
-                throw new InvalidOperationException("Kindness preview did not redirect an eligible Exhaust card to Hand.");
+            if (preview != (PileType.Exhaust, CardPilePosition.Bottom))
+                throw new InvalidOperationException("Kindness preview unexpectedly changed the native Exhaust destination.");
         }
 
         await context.SignalAndWaitAsync("kindness-dream-host-only-preview-settled");
 
         var dreamChecksumBaseline = context.ChecksumCount;
+        await context.SignalAndWaitAsync("dreamChecksumBaseline-ready");
         if (context.LocalPlayer.NetId == host.NetId)
             await context.PlayOwnedCardAsync(hostDream);
         await MultiplayerScenarioContext.WaitForStateAsync(
             () => host.Creature.GetPower<ClassicDreamPower>()?.Amount == 1
                 && host.PlayerCombatState!.Hand.Cards.OfType<SakuraSword>().Any()
                 && host.PlayerCombatState!.Hand.Cards.OfType<SakuraShield>().Any()
-                && hostDream.Pile?.Type == PileType.Hand
-                && host.Creature.GetPower<KindnessPower>() is null,
-            "host SakuraDream to return from Kindness, apply ClassicDreamPower, and convert Clow hand");
+                && hostDream.Pile?.Type == PileType.Exhaust
+                && host.Creature.GetPower<KindnessPower>() is not null,
+            "host SakuraDream to exhaust, apply ClassicDreamPower, and convert Clow hand");
         await context.WaitForActionsAsync();
         await context.WaitForActionChecksumsAsync(
             dreamChecksumBaseline,
             "host SakuraDream after client card settled",
             nameof(PlayCardAction));
-        assertions.Equal("host_kindness_power_after_dream", null, host.Creature.GetPower<KindnessPower>()?.Amount);
-        assertions.Equal("host_sakura_dream_returned_to_hand", PileType.Hand, hostDream.Pile?.Type);
+        assertions.Equal("host_kindness_power_after_dream", 1, host.Creature.GetPower<KindnessPower>()?.Amount);
+        assertions.Equal("host_sakura_dream_exhausted", PileType.Exhaust, hostDream.Pile?.Type);
         context.ThrowIfNetworkFailed();
         await context.SignalAndWaitAsync("kindness-dream-appear-verified");
 

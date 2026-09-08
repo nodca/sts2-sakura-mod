@@ -2375,13 +2375,9 @@ public sealed class ResourceContractSuite
             "Expected explicit post-construction clock startup, a frozen visual clock, and a lifetime cap that continues on wall time.");
 
         RegressionTestHarness.Require(
-            presenter.Contains("EnterDuration", StringComparison.Ordinal)
-            && presenter.Contains("FadeOutStart", StringComparison.Ordinal)
-            && presenter.Contains("Lifetime", StringComparison.Ordinal)
-            && presenter.Contains("_triggerAge = 0f;", StringComparison.Ordinal)
-            && presenter.Contains("_entryVisibility = _visibility;", StringComparison.Ordinal)
-            && presenter.Contains("return _triggerAge < Lifetime;", StringComparison.Ordinal),
-            "Expected each trigger to renew one shared circle from its current visibility, then sustain and fade on a fresh 1.15-second envelope.");
+            presenter.Contains("_motion.Refresh();", StringComparison.Ordinal)
+            && presenter.Contains("return _motion.IsAlive;", StringComparison.Ordinal),
+            "Expected renewal and expiry to use the motion clock exercised by MagicCircleMotionSuite.");
 
         RegressionTestHarness.Require(
             session.Contains("_preludeHoldRemaining", StringComparison.Ordinal)
@@ -2501,40 +2497,31 @@ public sealed class ResourceContractSuite
             && presenter.Contains("Name = \"SakuraCelWandPreludeMagicCircle\"", StringComparison.Ordinal)
             && presenter.Contains("Size = Vector2.One * MagicCircleDiameter", StringComparison.Ordinal)
             && presenter.Contains("ZIndex = MagicCircleZIndex", StringComparison.Ordinal)
-            && presenter.Contains("_material.SetShaderParameter(\"speed_lines_enabled\", 0f);", StringComparison.Ordinal)
+            && presenter.Contains("material.SetShaderParameter(\"speed_lines_enabled\", 0f);", StringComparison.Ordinal)
             && session.Contains("_preludeLineMaterial.SetShaderParameter(\"magic_circle_enabled\", 0f);", StringComparison.Ordinal)
             && presenter.Contains("_anchor.GlobalPosition = ResolveMagicCircleCenter(_casterNode);", StringComparison.Ordinal)
             && session.Contains("lines.GlobalPosition = cardCenter - lines.Size * 0.5f;", StringComparison.Ordinal),
             "Expected the completed card-play transaction to trigger one fail-open room presenter while session lines remain independent and anchored to the native played card.");
 
         RegressionTestHarness.Require(
-            presenter.Contains("MagicCircleEnterScale", StringComparison.Ordinal)
-            && presenter.Contains("MagicCirclePulseScale", StringComparison.Ordinal)
-            && presenter.Contains("MagicCircleExitScale", StringComparison.Ordinal)
+            presenter.Contains("_circle.Scale = Vector2.One * _motion.Scale;", StringComparison.Ordinal)
             && presenter.Contains("PivotOffset = Vector2.One * MagicCircleDiameter * 0.5f", StringComparison.Ordinal)
             && presenter.Contains("Position = Vector2.One * MagicCircleDiameter * -0.5f", StringComparison.Ordinal)
-            && presenter.Contains("_isRetrigger = _visibility > 0.001f;", StringComparison.Ordinal),
-            "Expected the shared circle to enter, pulse on renewal, and retire around one stable centre pivot.");
+            && presenter.Contains("\"magic_circle_pulse\", _motion.Pulse", StringComparison.Ordinal),
+            "Expected the shared circle's tested motion state to drive scale and brightness around one stable centre pivot.");
 
         RegressionTestHarness.Require(
             presenter.Contains("new(ReferenceEqualityComparer.Instance);", StringComparison.Ordinal)
             && presenter.Contains("if (_states.TryGetValue(caster, out var existing))", StringComparison.Ordinal)
-            && presenter.Contains("existing.Refresh(ColourFor(era));", StringComparison.Ordinal)
-            && presenter.Contains("_spinAge = 0f;", StringComparison.Ordinal)
-            && presenter.Contains("_phases += SettleLayerSpeeds * delta", StringComparison.Ordinal)
-            && !presenter.Contains("_phases = Vector4.Zero;", StringComparison.Ordinal)
-            && presenter.Contains("ColourTransitionDuration", StringComparison.Ordinal)
-            && presenter.Contains("_colourStart = _colour;", StringComparison.Ordinal)
-            && presenter.Contains("_colour = _colourStart.Lerp(_colourTarget, progress);", StringComparison.Ordinal),
-            "Expected one renewable state per caster to preserve accumulated phase, reapply its spin impulse, and blend to the latest era colour.");
+            && presenter.Contains("existing.Refresh(era, ink, knockout);", StringComparison.Ordinal)
+            && presenter.Contains("_motion.Refresh();", StringComparison.Ordinal)
+            && presenter.Contains("_motion.Era == era", StringComparison.Ordinal)
+            && presenter.Contains("(_circle, _outgoing) = (_outgoing, _circle);", StringComparison.Ordinal)
+            && presenter.Contains("LoadResources(era)", StringComparison.Ordinal),
+            "Expected one renewable state per caster with cached era resources and two bounded transition surfaces.");
 
         RegressionTestHarness.Require(
-            presenter.Contains("SpinDecayDuration", StringComparison.Ordinal)
-            && presenter.Contains("var decayIntegral = SpinDecayDuration", StringComparison.Ordinal)
-            && presenter.Contains("Mathf.Exp(-nextSpinAge / SpinDecayDuration)", StringComparison.Ordinal)
-            && presenter.Contains("InitialLayerSpeeds", StringComparison.Ordinal)
-            && presenter.Contains("SettleLayerSpeeds", StringComparison.Ordinal)
-            && presenter.Contains("_spinAge = nextSpinAge;", StringComparison.Ordinal)
+            presenter.Contains("_motion.Advance(delta);", StringComparison.Ordinal)
             && !presenter.Contains("StepDuration", StringComparison.Ordinal)
             && !presenter.Contains("_stepRemainder", StringComparison.Ordinal)
             && presenter.Contains("CombatManager.Instance.CombatEnded += OnCombatEnded;", StringComparison.Ordinal)

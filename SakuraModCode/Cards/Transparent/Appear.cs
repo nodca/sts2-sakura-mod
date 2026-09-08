@@ -24,7 +24,7 @@ public class Appear() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var copy = await SakuraManifestLoop.AddTemporaryTransparentCopyToHand(
+        var copy = await SakuraManifestLoop.ManifestTransparentCardToHand(
             this,
             choiceContext,
             freeThisTurn: false,

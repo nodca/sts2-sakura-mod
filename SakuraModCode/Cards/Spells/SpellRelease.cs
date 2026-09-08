@@ -80,6 +80,6 @@ public class SpellRelease() : SpellCard(1, CardType.Skill, CardRarity.Basic, Tar
 
     internal static bool CanRelease(CardModel card) =>
         SakuraCardCatalog.TryGetMetadata(card, out var metadata)
-        && metadata.Era is SourceEraClass.Clow or SourceEraClass.Sakura or SourceEraClass.Clear;
+        && metadata.Era is SourceEraClass.Clow or SourceEraClass.Sakura or SourceEraClass.Clear
+        && !SakuraReleaseState.IsReleased(card);
 }
-

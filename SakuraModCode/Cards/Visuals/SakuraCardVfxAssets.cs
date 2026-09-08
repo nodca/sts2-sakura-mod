@@ -1,4 +1,5 @@
 using MegaCrit.Sts2.Core.Models;
+using SakuraMod.SakuraModCode.Character;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -21,7 +22,15 @@ internal static class SakuraCardVfxAssets
     private static readonly IReadOnlyList<string> FreezePaths =
         [.. FreezeCageVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
 
-    public static IEnumerable<string> RunAssetPaths(CardModel card) => card switch
+    public static IEnumerable<string> RunAssetPaths(CardModel card)
+    {
+        var effectPaths = CardEffectPaths(card);
+        return SakuraCardCatalog.TryGetMetadata(card, out var metadata) && metadata.Era.HasValue
+            ? effectPaths.Concat(SakuraMagicCirclePresenter.AssetPaths).Distinct(StringComparer.Ordinal)
+            : effectPaths;
+    }
+
+    private static IEnumerable<string> CardEffectPaths(CardModel card) => card switch
     {
         ClowArrow or SakuraArrow => ArrowPaths,
         Aqua => AquaWaterSphereVfx.AssetPaths,

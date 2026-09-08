@@ -30,6 +30,7 @@ public partial class MainFile : Node
 
         SakuraKeywords.Register();
         SakuraCardStates.Register();
+        SakuraReleaseState.Register();
         SakuraVoicePlayback.Register();
         AnotherMeBgmPlayback.Register();
         SakuraContentRegistration.Register();

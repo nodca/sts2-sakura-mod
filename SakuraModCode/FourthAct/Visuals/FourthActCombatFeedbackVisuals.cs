@@ -151,6 +151,7 @@ internal static class FourthActCombatFeedbackVisuals
         private Node2D? _veilRemnants;
         private TextureRect? _eternalNightOverlay;
         private ShaderMaterial? _eternalNightMaterial;
+        private TsukimineEclipseVisuals? _eclipse;
         private Node2D? _darkContour;
         private Tween? _idleTween;
         private Tween? _impactTween;
@@ -261,6 +262,11 @@ internal static class FourthActCombatFeedbackVisuals
                     recursive: true,
                     owned: false) as TextureRect;
             _eternalNightMaterial = _eternalNightOverlay?.Material as ShaderMaterial;
+            if (_eternalNightMaterial?.Shader?.ResourcePath == FourthActCombatBackgrounds.EclipseShaderPath
+                && NCombatRoom.Instance is { } room)
+            {
+                _eclipse = TsukimineEclipseVisuals.Attach(_eternalNightOverlay!, room);
+            }
             return _eternalNightMaterial is not null;
         }
 
@@ -504,7 +510,9 @@ internal static class FourthActCombatFeedbackVisuals
             if (_eternalNightMaterial is not null && GodotObject.IsInstanceValid(_eternalNightMaterial))
                 SetEternalNightProgress(0f);
             if (_eternalNightOverlay is not null && GodotObject.IsInstanceValid(_eternalNightOverlay))
-                _eternalNightOverlay.Visible = false;
+                _eternalNightOverlay.Visible = _eclipse is not null;
+            if (_eclipse is not null && GodotObject.IsInstanceValid(_eclipse))
+                _eclipse.StopAmbient();
             FreeNode(ref _darkContour);
             FreeNode(ref _wallImpact);
             _eternalNightMaterial = null;

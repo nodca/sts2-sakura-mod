@@ -38,7 +38,7 @@ internal static class SakuraTelemetry
     internal const string CardRewardOfferedEventName = "card_reward.offered";
     internal const string CardRewardTakenEventName = "card_reward.taken";
     internal const string RunHistoryEventName = "run_history.completed";
-    private const string RunSavedDataKey = "balance_run_v1";
+    internal const string RunSavedDataKey = "balance_run_v1";
 
     internal static readonly string SakuraCharacterEntry =
         ModContentRegistry.GetCompoundId(MainFile.ModId, "CHARACTER", SakuraCharacterModel.CharacterId);
@@ -93,23 +93,29 @@ internal static class SakuraTelemetry
         };
 
     internal static ITelemetryAdapter CreateAdapter() =>
-        new SizeBoundedTelemetryAdapter(
-            new InstallTokenHttpTelemetryAdapter(
-                EndpointUrl,
-                PublicWriteCredential,
-                ApplicantId,
-                new GodotInstallTokenStore(),
-                HttpClientTelemetryTransport.Shared));
+        new InstallTokenHttpTelemetryAdapter(
+            EndpointUrl,
+            PublicWriteCredential,
+            ApplicantId,
+            new GodotInstallTokenStore(),
+            HttpClientTelemetryTransport.Shared,
+            new FileTelemetryQuarantineStore(static () => Godot.ProjectSettings.GlobalizePath(FileTelemetryQuarantineStore.UserPath)),
+            static message => MainFile.Logger.Warn(message));
 
-    internal static bool ShouldCaptureBalanceTelemetry(TelemetryCaptureContext context) =>
-        context.SourceData is RunEndedEvent runEndedEvent
-            ? IsSakuraSerializableRun(runEndedEvent.Run)
-            : context.SourceData is null
-              && context.EventName is BalanceContextEventName
-                  or CardRewardOfferedEventName
-                  or CardRewardTakenEventName
-                  or SakuraTelemetryCoverage.SessionStartedEventName
-                  or SakuraTelemetryCoverage.CoverageEventName;
+    internal static bool ShouldCaptureBalanceTelemetry(TelemetryCaptureContext context)
+    {
+        if (context.SourceData is RunEndedEvent runEndedEvent)
+            return IsSakuraSerializableRun(runEndedEvent.Run);
+        if (context.SourceData is not null)
+            return false;
+        return context.EventName == RunHistoryEventName
+            ? SakuraTelemetryTerminalCapture.IsCapturingAbandonment
+            : context.EventName is BalanceContextEventName
+                or CardRewardOfferedEventName
+                or CardRewardTakenEventName
+                or SakuraTelemetryCoverage.SessionStartedEventName
+                or SakuraTelemetryCoverage.CoverageEventName;
+    }
 
     internal static bool IsSakuraSerializableRun(SerializableRun? run) =>
         run is { GameMode: GameMode.Standard, Players.Count: > 0 }
@@ -273,6 +279,12 @@ internal static class SakuraTelemetryRunHooks
     internal static JsonNode? BuildActiveContribution() =>
         _activeHook?.BuildContribution();
 
+    internal static void ObserveTerminal(RunState? runState)
+    {
+        if (runState is not null && Hooks.TryGetValue(runState, out var hook))
+            hook.ObserveTerminal();
+    }
+
     private static IEnumerable<AbstractModel> HooksForRunState(RunState runState)
     {
         Activate(runState);
@@ -319,7 +331,9 @@ internal sealed class SakuraBalanceRunContributionProvider : ITelemetryContribut
 
         try
         {
-            return SakuraTelemetryRunHooks.BuildActiveContribution();
+            return SakuraTelemetryTerminalCapture.IsCapturingAbandonment
+                ? SakuraTelemetryTerminalCapture.BuildAbandonedContribution()
+                : SakuraTelemetryRunHooks.BuildActiveContribution();
         }
         catch (Exception exception)
         {
@@ -499,7 +513,6 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
         if (!_captureBalance || _runData is null || _context is null)
             return null;
 
-        EmitTerminalCoverage();
         _runData.Usage = _usage.Snapshot();
         SakuraTelemetry.PersistRunData(BoundRunState, _runData);
         var contribution = JsonSerializer.SerializeToNode(new SakuraTelemetryBalanceRun(
@@ -647,14 +660,16 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
                 SakuraTelemetry.BuildCardRewardProperties(snapshot)));
     }
 
-    private void EmitTerminalCoverage()
+    internal void ObserveTerminal()
     {
-        if (_terminalCoverageSent || _runData is null)
+        if (_terminalCoverageSent || !_captureBalance || _runData is null)
             return;
 
         _terminalCoverageSent = true;
         _coverage.SetLastOfferSequence(_runData.LastOfferSequence);
         EmitCoverage(SakuraTelemetryCoverage.StageTerminalAttempted);
+        _runData.Usage = _usage.Snapshot();
+        SakuraTelemetry.PersistRunData(BoundRunState, _runData);
     }
 
     private void EmitCoverage(string stage)

@@ -838,6 +838,11 @@ public sealed class CardMechanicsSuite
             "Expected Release to scale every Transparent Card dynamic value using the existing floor rule.");
 
         await gale.AfterCardExhausted(null!, gale, causedByEthereal: true);
+        Assert.Equal(9, gale.DynamicVars.Damage.IntValue);
+        Assert.False(SpellRelease.CanRelease(gale));
+        SakuraReleaseState.Apply(gale, 0.5f);
+        Assert.Equal(9, gale.DynamicVars.Damage.IntValue);
+        SakuraReleaseState.Reset(gale);
         SakuraReleaseState.Reset(reflect);
         SakuraReleaseState.Reset(trueOrFalse);
 
@@ -851,6 +856,40 @@ public sealed class CardMechanicsSuite
             && !gale.Keywords.Contains(CardKeyword.Exhaust)
             && !gale.Keywords.Contains(CardKeyword.Ethereal),
             "Expected Release reset to restore Transparent Card values and temporary keywords.");
+    }
+
+    [Fact]
+    public void ReleaseTracksIndividualCardsAndCopiesWithoutStacking()
+    {
+        var first = RegressionTestHarness.MutableForCostTest(new Gale());
+        var second = RegressionTestHarness.MutableForCostTest(new Gale());
+        first.EnergyCost.SetThisTurnOrUntilPlayed(0, true);
+        SakuraReleaseState.Apply(first, 0.5f);
+
+        Assert.False(SpellRelease.CanRelease(first));
+        Assert.True(SpellRelease.CanRelease(second));
+        first.EnergyCost.AfterCardPlayedCleanup();
+        Assert.Equal(0, first.EnergyCost.GetWithModifiers(CostModifiers.Local));
+        first.EnergyCost.EndOfTurnCleanup();
+        Assert.Equal(first.EnergyCost.Canonical, first.EnergyCost.GetWithModifiers(CostModifiers.Local));
+        Assert.Equal(9, first.DynamicVars.Damage.IntValue);
+        SakuraReleaseState.Apply(second, 0.5f);
+        Assert.Equal(first.DynamicVars.Damage.IntValue, second.DynamicVars.Damage.IntValue);
+
+        // Model cloning copies the numeric fields before the registered state callback.
+        var copy = RegressionTestHarness.MutableForCostTest(new Gale());
+        foreach (var (name, variable) in first.DynamicVars)
+            copy.DynamicVars[name].BaseValue = variable.BaseValue;
+        SakuraReleaseState.CopyState(first, copy);
+        SakuraReleaseState.Apply(copy, 0.5f);
+        Assert.Equal(9, copy.DynamicVars.Damage.IntValue);
+        Assert.False(SpellRelease.CanRelease(copy));
+
+        SakuraReleaseState.Reset(copy);
+        Assert.Equal(6, copy.DynamicVars.Damage.IntValue);
+        Assert.True(SpellRelease.CanRelease(copy));
+        Assert.False(SpellRelease.CanRelease(first));
+        Assert.Equal(9, first.DynamicVars.Damage.IntValue);
     }
 
     [Fact]
@@ -1586,18 +1625,15 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             kindness.Rarity == CardRarity.Rare
             && kindness.CanonicalKeywords.Contains(SakuraKeywords.Earth)
-            && kindness.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && SakuraCardModel.HasMagicChargeExtraEffect(kindness)
+            && kindness.Type == CardType.Power
+            && !kindness.CanonicalKeywords.Contains(CardKeyword.Exhaust)
+            && !SakuraCardModel.HasMagicChargeExtraEffect(kindness)
             && kindness.EnergyCost.Canonical == 1
-            && upgradedKindness.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0
+            && upgradedKindness.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
+            && upgradedKindness.Keywords.Contains(CardKeyword.Innate)
             && new KindnessPower().Type == PowerType.Buff
-            && new KindnessPower().StackType == PowerStackType.Counter
-            && new KindnessPower().InstanceType == PowerInstanceType.Instanced
-            && RegressionTestHarness.DeclaresMethod<KindnessPower>("ModifyCardPlayResultPileTypeAndPosition")
-            && RegressionTestHarness.DeclaresMethod<KindnessPower>("AfterModifyingCardPlayResultPileOrPosition")
-            && RegressionTestHarness.DeclaresMethod<KindnessPower>("AfterCardPlayed")
-            && RegressionTestHarness.DeclaresMethod<KindnessPower>("RegisterPendingEffect"),
-            "Expected Kindness to return the next Exhausted card, set an Extra-returned card to 0 cost for this turn, and upgrade from 1 to 0 cost.");
+            && new KindnessPower().StackType == PowerStackType.Single,
+            "Expected Kindness to be a non-stacking 1-cost Power without Extra that upgrades to Innate.");
 
         var appear = new Appear();
         var upgradedAppear = RegressionTestHarness.MutableForCostTest(new Appear());

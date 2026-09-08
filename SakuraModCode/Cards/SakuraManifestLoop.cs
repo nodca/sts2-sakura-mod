@@ -82,7 +82,7 @@ public static class SakuraManifestLoop
         return manifested;
     }
 
-    public static async Task<CardModel?> AddTemporaryTransparentCopyToHand(
+    public static async Task<CardModel?> ManifestTransparentCardToHand(
         SakuraCardModel source,
         PlayerChoiceContext context,
         bool freeThisTurn,
@@ -107,15 +107,10 @@ public static class SakuraManifestLoop
             if (selected is null)
                 return null;
 
-            return await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
+            return await SakuraGeneratedCardLifecycle.AddManifestChoiceToCombat(
                 selected,
-                new GeneratedCardOptions
-                {
-                    Pile = PileType.Hand,
-                    AddTemporary = true,
-                    FreeThisTurn = freeThisTurn
-                },
-                context);
+                context,
+                freeThisTurn: freeThisTurn);
         }
         finally
         {

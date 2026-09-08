@@ -41,6 +41,12 @@ public static class FourthActCombatBackgrounds
         "res://SakuraMod/shaders/fourth_act/eternal_night.gdshader";
     public const string EternalNightOverlayNodeName = "EternalNightOverlay";
     public const string EternalNightProgressParameterName = "night_progress";
+    public const string DarkShrineLayerPath =
+        "res://SakuraMod/scenes/backgrounds/fourth_act/tsukimine_shrine/eclipse.tscn";
+    public const string EclipsePetalTexturePath =
+        "res://SakuraMod/images/backgrounds/fourth_act/tsukimine_shrine/eclipse/petal.png";
+    public const string EclipseShaderPath = "res://SakuraMod/shaders/fourth_act/tsukimine_eclipse.gdshader";
+    public static IReadOnlyList<string> DarkShrineLayers { get; } = [DarkShrineLayerPath];
 
     public static IReadOnlyList<string> WindRooftopLayers { get; } = [WindRooftopLayerPath];
     public static IReadOnlyList<string> WaterAquariumLayers { get; } = [WaterAquariumLayerPath];
@@ -70,4 +76,7 @@ public static class FourthActCombatBackgrounds
 
     public static BackgroundAssets CreateDarkStage() =>
         CombatBackgroundAssetsFactory.Create(MainScenePath, DarkStageLayers, null);
+
+    public static BackgroundAssets CreateDarkShrine() =>
+        CombatBackgroundAssetsFactory.Create(MainScenePath, DarkShrineLayers, null);
 }

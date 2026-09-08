@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Buffers.Binary;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Entities.Powers;
@@ -14,6 +15,24 @@ using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
 
 public sealed class DarkEndpointSuite
 {
+    [Fact]
+    public void EclipseLightingPlatesHaveAlignedCanvasAndUniqueImports()
+    {
+        const string directory = "SakuraMod/images/backgrounds/fourth_act/tsukimine_shrine/eclipse/";
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var name in new[] { "night_1", "night_2", "night_3", "night_4", "night_5", "sky", "moon" })
+        {
+            var path = RegressionTestHarness.FindRepoFile(directory + name + ".png");
+            var header = File.ReadAllBytes(path).AsSpan(0, 26);
+            Assert.Equal(2708, BinaryPrimitives.ReadInt32BigEndian(header[16..20]));
+            Assert.Equal(1328, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
+            Assert.Equal(6, header[25]);
+            var import = File.ReadAllLines(path + ".import");
+            Assert.Contains("source_file=\"res://" + directory + name + ".png\"", import);
+            Assert.True(ids.Add(import.Single(line => line.StartsWith("uid=", StringComparison.Ordinal))));
+        }
+    }
+
     [Fact]
     public void DarknessRulesMatchFinalValues()
     {

@@ -25,45 +25,30 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
         MainFile.ResPath + "/images/card_vfx/magic_circles/magic_circle_ink.png";
     internal const string MagicCircleKnockoutPath =
         MainFile.ResPath + "/images/card_vfx/magic_circles/magic_circle_knockout.png";
+    internal const string ClowInkPath = MainFile.ResPath + "/images/card_vfx/magic_circles/clow_ink.png";
+    internal const string ClowKnockoutPath = MainFile.ResPath + "/images/card_vfx/magic_circles/clow_knockout.png";
+    internal const string ClearInkPath = MainFile.ResPath + "/images/card_vfx/magic_circles/clear_ink.png";
+    internal const string ClearKnockoutPath = MainFile.ResPath + "/images/card_vfx/magic_circles/clear_knockout.png";
     internal static IReadOnlyList<string> AssetPaths { get; } =
-        [WandPreludeShaderPath, MagicCircleInkPath, MagicCircleKnockoutPath];
+        [WandPreludeShaderPath, MagicCircleInkPath, MagicCircleKnockoutPath,
+            ClowInkPath, ClowKnockoutPath, ClearInkPath, ClearKnockoutPath];
 
-    private const float SpinDecayDuration = 0.28f;
-    private const float EnterDuration = 0.12f;
-    private const float ColourTransitionDuration = 0.15f;
-    private const float FadeOutStart = 0.85f;
-    private const float Lifetime = 1.15f;
     private const float MagicCircleDiameter = 760f;
     private const float MagicCircleRadius = 340f;
-    private const float MagicCircleEnterScale = 0.78f;
-    private const float MagicCirclePulseScale = 1.04f;
-    private const float MagicCircleExitScale = 0.82f;
     private const float MagicCircleFloorBias = 0.62f;
     private const int MagicCircleZIndex = -1;
 
-    private static readonly Vector4 InitialLayerSpeeds = new(1.20f, -0.80f, 0f, 0.32f);
-    private static readonly Vector4 SettleLayerSpeeds = new(0.30f, -0.20f, 0f, 0.08f);
     private static bool _showFailureLogged;
 
     private readonly NCombatRoom _room;
-    private readonly Shader _shader;
-    private readonly Texture2D _ink;
-    private readonly Texture2D _knockout;
     private readonly Dictionary<Creature, CircleState> _states =
         new(ReferenceEqualityComparer.Instance);
     private readonly List<Creature> _expiredCasters = [];
     private bool _disposed;
 
-    private SakuraMagicCirclePresenter(
-        NCombatRoom room,
-        Shader shader,
-        Texture2D ink,
-        Texture2D knockout)
+    private SakuraMagicCirclePresenter(NCombatRoom room)
     {
         _room = room;
-        _shader = shader;
-        _ink = ink;
-        _knockout = knockout;
         Name = NodeName;
     }
 
@@ -73,6 +58,22 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             PreloadManager.Cache.GetAsset<Texture2D>(MagicCircleInkPath),
             PreloadManager.Cache.GetAsset<Texture2D>(MagicCircleKnockoutPath)
         );
+
+    internal static (string Ink, string Knockout) MaskPathsFor(SourceEraClass era) => era switch
+    {
+        SourceEraClass.Clow => (ClowInkPath, ClowKnockoutPath),
+        SourceEraClass.Clear => (ClearInkPath, ClearKnockoutPath),
+        SourceEraClass.Sakura => (MagicCircleInkPath, MagicCircleKnockoutPath),
+        _ => throw new ArgumentOutOfRangeException(nameof(era), era, "Unknown magic-circle era.")
+    };
+
+    internal static (Shader Shader, Texture2D Ink, Texture2D Knockout) LoadResources(SourceEraClass era)
+    {
+        var paths = MaskPathsFor(era);
+        return (PreloadManager.Cache.GetAsset<Shader>(WandPreludeShaderPath),
+            PreloadManager.Cache.GetAsset<Texture2D>(paths.Ink),
+            PreloadManager.Cache.GetAsset<Texture2D>(paths.Knockout));
+    }
 
     internal static bool TryShowOrRefresh(Creature? caster, SourceEraClass era)
     {
@@ -88,7 +89,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
                 return false;
             }
 
-            var (shader, ink, knockout) = LoadResources();
+            var (shader, ink, knockout) = LoadResources(era);
             ShowOrRefresh(room, casterNode, era, shader, ink, knockout);
             return true;
         }
@@ -126,11 +127,11 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             || !GodotObject.IsInstanceValid(presenter)
             || presenter.IsQueuedForDeletion())
         {
-            presenter = new SakuraMagicCirclePresenter(room, shader, ink, knockout);
+            presenter = new SakuraMagicCirclePresenter(room);
             container.AddChildSafely(presenter);
         }
 
-        presenter.Refresh(casterNode, era);
+        presenter.Refresh(casterNode, era, shader, ink, knockout);
     }
 
     internal static Color ColourFor(SourceEraClass era) => era switch
@@ -167,7 +168,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
         Cleanup(queueFreeChildren: false);
     }
 
-    private void Refresh(NCreature casterNode, SourceEraClass era)
+    private void Refresh(NCreature casterNode, SourceEraClass era, Shader shader, Texture2D ink, Texture2D knockout)
     {
         if (_disposed
             || !GodotObject.IsInstanceValid(casterNode)
@@ -181,7 +182,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
         {
             if (existing.Matches(casterNode))
             {
-                existing.Refresh(ColourFor(era));
+                existing.Refresh(era, ink, knockout);
                 return;
             }
 
@@ -192,10 +193,10 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             this,
             caster,
             casterNode,
-            _shader,
-            _ink,
-            _knockout,
-            ColourFor(era));
+            shader,
+            ink,
+            knockout,
+            era);
         _states.Add(caster, state);
     }
 
@@ -236,28 +237,18 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             Mathf.Lerp(anchor.BodyCenter.Y, anchor.Floor.Y, MagicCircleFloorBias));
     }
 
-    private static float EaseInOutSine(float progress) =>
-        -(Mathf.Cos(Mathf.Pi * Mathf.Clamp(progress, 0f, 1f)) - 1f) * 0.5f;
-
     private sealed class CircleState
     {
         private readonly Creature _caster;
         private readonly NCreature _casterNode;
         private readonly Node2D _anchor;
-        private readonly ColorRect _circle;
-        private readonly ShaderMaterial _material;
-        private Vector4 _phases;
-        private float _spinAge;
-        private float _triggerAge;
-        private float _visibility;
-        private float _entryVisibility;
-        private float _scale = MagicCircleEnterScale;
-        private float _entryScale = MagicCircleEnterScale;
-        private Color _colour;
-        private Color _colourStart;
-        private Color _colourTarget;
-        private float _colourAge;
-        private bool _isRetrigger;
+        private ColorRect _circle;
+        private ShaderMaterial _material;
+        private ColorRect _outgoing;
+        private ShaderMaterial _outgoingMaterial;
+        private SakuraMagicCircleMotion _motion;
+        private float _transitionAge = SakuraMagicCircleMotion.TransitionDuration;
+        private float _outgoingVisibility;
         private bool _disposed;
 
         public CircleState(
@@ -267,13 +258,11 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             Shader shader,
             Texture2D ink,
             Texture2D knockout,
-            Color colour)
+            SourceEraClass era)
         {
             _caster = caster;
             _casterNode = casterNode;
-            _colour = colour;
-            _colourStart = colour;
-            _colourTarget = colour;
+            _motion = new SakuraMagicCircleMotion(era);
 
             _anchor = new Node2D
             {
@@ -284,30 +273,12 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             try
             {
                 parent.AddChildSafely(_anchor);
-                _circle = new ColorRect
-                {
-                    Name = "SakuraCelWandPreludeMagicCircle",
-                    Size = Vector2.One * MagicCircleDiameter,
-                    Position = Vector2.One * MagicCircleDiameter * -0.5f,
-                    PivotOffset = Vector2.One * MagicCircleDiameter * 0.5f,
-                    Scale = Vector2.One * MagicCircleEnterScale,
-                    MouseFilter = Control.MouseFilterEnum.Ignore,
-                    Material = new ShaderMaterial { Shader = shader }
-                };
-                _anchor.AddChildSafely(_circle);
-
-                _material = CelVfxGeometry.DuplicateMaterial(_circle, "shared wand prelude magic circle");
-                _material.SetShaderParameter("region_size", _circle.Size);
-                _material.SetShaderParameter("magic_circle_ink", ink);
-                _material.SetShaderParameter("magic_circle_knockout", knockout);
-                _material.SetShaderParameter("magic_circle_colour", colour);
-                _material.SetShaderParameter("magic_circle_enabled", 1f);
-                _material.SetShaderParameter("magic_circle_visibility", 0f);
-                _material.SetShaderParameter("magic_circle_radius", MagicCircleRadius);
-                _material.SetShaderParameter("magic_circle_layer_phases", Vector4.Zero);
-                _material.SetShaderParameter("speed_lines_enabled", 0f);
+                (_circle, _material) = CreateSurface(shader);
+                (_outgoing, _outgoingMaterial) = CreateSurface(shader);
+                _outgoing.Visible = false;
+                Configure(era, ink, knockout);
+                ApplyMotion();
                 _anchor.GlobalPosition = ResolveMagicCircleCenter(casterNode);
-                Refresh(colour);
             }
             catch
             {
@@ -322,19 +293,64 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             && ReferenceEquals(_casterNode, casterNode)
             && ReferenceEquals(casterNode.Entity, _caster);
 
-        public void Refresh(Color colour)
+        private (ColorRect, ShaderMaterial) CreateSurface(Shader shader)
+        {
+            var circle = new ColorRect
+            {
+                Name = "SakuraCelWandPreludeMagicCircle",
+                Size = Vector2.One * MagicCircleDiameter,
+                Position = Vector2.One * MagicCircleDiameter * -0.5f,
+                PivotOffset = Vector2.One * MagicCircleDiameter * 0.5f,
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                Material = new ShaderMaterial { Shader = shader }
+            };
+            _anchor.AddChildSafely(circle);
+            var material = CelVfxGeometry.DuplicateMaterial(circle, "shared magic circle");
+            material.SetShaderParameter("region_size", circle.Size);
+            material.SetShaderParameter("magic_circle_enabled", 1f);
+            material.SetShaderParameter("magic_circle_visibility", 0f);
+            material.SetShaderParameter("magic_circle_radius", MagicCircleRadius);
+            material.SetShaderParameter("speed_lines_enabled", 0f);
+            return (circle, material);
+        }
+
+        private void Configure(SourceEraClass era, Texture2D ink, Texture2D knockout)
+        {
+            _material.SetShaderParameter("magic_circle_ink", ink);
+            _material.SetShaderParameter("magic_circle_knockout", knockout);
+            _material.SetShaderParameter("magic_circle_colour", ColourFor(era));
+            _material.SetShaderParameter("magic_circle_polish", era == SourceEraClass.Sakura ? 0f : 1f);
+        }
+
+        public void Refresh(SourceEraClass era, Texture2D ink, Texture2D knockout)
         {
             if (_disposed)
                 return;
 
-            _isRetrigger = _visibility > 0.001f;
-            _entryVisibility = _visibility;
-            _entryScale = _scale;
-            _triggerAge = 0f;
-            _spinAge = 0f;
-            _colourAge = 0f;
-            _colourStart = _colour;
-            _colourTarget = colour;
+            if (_motion.Era == era)
+            {
+                _motion.Refresh();
+                return;
+            }
+
+            // Two reusable surfaces bound rapid cross-era plays. Keep the last visible
+            // outgoing pose if another play arrives before the new rings are visible.
+            if (_motion.Visibility * _motion.Gates.X > 0.001f)
+            {
+                (_circle, _outgoing) = (_outgoing, _circle);
+                (_material, _outgoingMaterial) = (_outgoingMaterial, _material);
+                _outgoingVisibility = _motion.Visibility;
+            }
+            else
+                _outgoingVisibility *= 1f - SakuraMagicCircleMotion.Ease(
+                    _transitionAge / SakuraMagicCircleMotion.TransitionDuration);
+            _transitionAge = 0f;
+            _motion = new SakuraMagicCircleMotion(era, transition: true);
+            Configure(era, ink, knockout);
+            ApplyMotion();
+            _outgoing.Visible = _outgoingVisibility > 0f;
+            _circle.Visible = true;
+            _anchor.MoveChild(_outgoing, 0);
         }
 
         public bool Update(float delta)
@@ -342,19 +358,25 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             if (!IsActive())
                 return false;
 
-            delta = Math.Max(0f, delta);
-            _triggerAge += delta;
-            _colourAge += delta;
-            UpdateMotion(delta);
-            UpdateEnvelope();
-            UpdateColour();
+            if (!float.IsFinite(delta) || delta < 0f)
+                delta = 0f;
+            _motion.Advance(delta);
+            _transitionAge += delta;
+            _outgoingMaterial.SetShaderParameter("magic_circle_visibility", _outgoingVisibility
+                * (1f - SakuraMagicCircleMotion.Ease(_transitionAge / SakuraMagicCircleMotion.TransitionDuration)));
+            _outgoing.Visible = _transitionAge < SakuraMagicCircleMotion.TransitionDuration;
             _anchor.GlobalPosition = ResolveMagicCircleCenter(_casterNode);
+            ApplyMotion();
+            return _motion.IsAlive;
+        }
 
-            _material.SetShaderParameter("magic_circle_layer_phases", _phases);
-            _material.SetShaderParameter("magic_circle_visibility", _visibility);
-            _material.SetShaderParameter("magic_circle_colour", _colour);
-            _circle.Scale = Vector2.One * _scale;
-            return _triggerAge < Lifetime;
+        private void ApplyMotion()
+        {
+            _material.SetShaderParameter("magic_circle_layer_phases", _motion.Phases);
+            _material.SetShaderParameter("magic_circle_visibility", _motion.Visibility);
+            _material.SetShaderParameter("magic_circle_layer_visibility", _motion.Gates);
+            _material.SetShaderParameter("magic_circle_pulse", _motion.Pulse);
+            _circle.Scale = Vector2.One * _motion.Scale;
         }
 
         public void Dispose(bool queueFree)
@@ -380,56 +402,8 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             && _anchor.IsInsideTree()
             && !_anchor.IsQueuedForDeletion()
             && GodotObject.IsInstanceValid(_circle)
-            && GodotObject.IsInstanceValid(_material);
-
-        private void UpdateMotion(float delta)
-        {
-            var nextSpinAge = _spinAge + delta;
-            var decayIntegral = SpinDecayDuration
-                * (Mathf.Exp(-_spinAge / SpinDecayDuration)
-                    - Mathf.Exp(-nextSpinAge / SpinDecayDuration));
-            _phases += SettleLayerSpeeds * delta
-                + (InitialLayerSpeeds - SettleLayerSpeeds) * decayIntegral;
-            _spinAge = nextSpinAge;
-        }
-
-        private void UpdateEnvelope()
-        {
-            if (_triggerAge < EnterDuration)
-            {
-                var progress = EaseInOutSine(_triggerAge / EnterDuration);
-                _visibility = Mathf.Lerp(_entryVisibility, 1f, progress);
-                if (_isRetrigger)
-                {
-                    var pulseProgress = progress * 2f;
-                    _scale = pulseProgress < 1f
-                        ? Mathf.Lerp(_entryScale, MagicCirclePulseScale, EaseInOutSine(pulseProgress))
-                        : Mathf.Lerp(MagicCirclePulseScale, 1f, EaseInOutSine(pulseProgress - 1f));
-                }
-                else
-                {
-                    _scale = Mathf.Lerp(_entryScale, 1f, progress);
-                }
-                return;
-            }
-
-            if (_triggerAge < FadeOutStart)
-            {
-                _visibility = 1f;
-                _scale = 1f;
-                return;
-            }
-
-            var fadeProgress = EaseInOutSine(
-                (_triggerAge - FadeOutStart) / (Lifetime - FadeOutStart));
-            _visibility = 1f - fadeProgress;
-            _scale = Mathf.Lerp(1f, MagicCircleExitScale, fadeProgress);
-        }
-
-        private void UpdateColour()
-        {
-            var progress = EaseInOutSine(_colourAge / ColourTransitionDuration);
-            _colour = _colourStart.Lerp(_colourTarget, progress);
-        }
+            && GodotObject.IsInstanceValid(_material)
+            && GodotObject.IsInstanceValid(_outgoing)
+            && GodotObject.IsInstanceValid(_outgoingMaterial);
     }
 }

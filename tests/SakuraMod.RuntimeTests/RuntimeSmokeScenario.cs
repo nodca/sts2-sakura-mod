@@ -326,7 +326,7 @@ internal static class RuntimeSmokeScenario
         var map = runState.Act.CreateMap(runState, replaceTreasureWithElites: false);
         assertions.True("fourth_act_create_map_returns_custom_map", map is SakuraFourthActMap);
         var fourthActMap = (SakuraFourthActMap)map;
-        assertions.Equal("fourth_act_complete_route_count", 2, fourthActMap.Routes.Count);
+        assertions.Equal("fourth_act_complete_route_count", 4, fourthActMap.Routes.Count);
 
         var waterEliteCoord = fourthActMap.MerchantMapPoint.Children
             .Single(static point => point.coord.col == 2)
@@ -602,7 +602,7 @@ internal static class RuntimeSmokeScenario
             assets?.BackgroundScenePath);
         assertions.True(
             "dark_background_layers",
-            assets?.BgLayers.SequenceEqual(FourthActCombatBackgrounds.DarkStageLayers) == true,
+            assets?.BgLayers.SequenceEqual(FourthActCombatBackgrounds.DarkShrineLayers) == true,
             assets is null ? "No background assets." : string.Join(", ", assets.BgLayers));
         assertions.Equal<string?>("dark_background_foreground", null, assets?.FgLayer);
 
@@ -830,9 +830,9 @@ internal static class RuntimeSmokeScenario
             ["dark_confinement_overlay"] = DarkEnemyAssets.ConfinementOverlay,
             ["sleeping_affliction_overlay"] = SleepingAffliction.OverlayScenePath,
             ["micro_light_portrait"] = "res://SakuraMod/images/cards/clear_cards/MICRO_LIGHT.png",
-            ["dark_stage_layer"] = FourthActCombatBackgrounds.DarkStageLayerPath,
-            ["eternal_night_region_mask"] = FourthActCombatBackgrounds.EternalNightRegionMaskPath,
-            ["eternal_night_shader"] = FourthActCombatBackgrounds.EternalNightShaderPath
+            ["dark_shrine_layer"] = FourthActCombatBackgrounds.DarkShrineLayerPath,
+            ["eclipse_petal"] = FourthActCombatBackgrounds.EclipsePetalTexturePath,
+            ["eclipse_shader"] = FourthActCombatBackgrounds.EclipseShaderPath
         };
         for (var index = 0; index < WindEnemyAssets.All.Count; index++)
             resources[$"wind_enemy_{index}"] = WindEnemyAssets.All[index];
@@ -976,7 +976,7 @@ internal static class RuntimeSmokeScenario
             magicChargeScene?.Dispose();
         }
 
-        var darkStageScene = ResourceLoader.Load<PackedScene>(FourthActCombatBackgrounds.DarkStageLayerPath);
+        var darkStageScene = ResourceLoader.Load<PackedScene>(FourthActCombatBackgrounds.DarkShrineLayerPath);
         Control? darkStageRoot = null;
         Control? secondDarkStageRoot = null;
         try
@@ -990,10 +990,15 @@ internal static class RuntimeSmokeScenario
             assertions.True("dark_night_scene_instantiates", darkStageRoot is not null);
             assertions.True("dark_night_overlay_node", overlay is not null);
             assertions.True("dark_night_overlay_material", material is not null);
-            assertions.True("dark_night_overlay_starts_hidden", overlay?.Visible == false);
-            var regionMask = ResourceLoader.Load<Texture2D>(FourthActCombatBackgrounds.EternalNightRegionMaskPath);
-            assertions.Equal("dark_night_mask_width", 2048, regionMask?.GetWidth() ?? -1);
-            assertions.Equal("dark_night_mask_height", 960, regionMask?.GetHeight() ?? -1);
+            assertions.True("dark_shrine_starts_visible", overlay?.Visible == true);
+            assertions.Equal("dark_shrine_width", 2708, overlay?.Texture?.GetWidth() ?? -1);
+            assertions.Equal("dark_shrine_height", 1328, overlay?.Texture?.GetHeight() ?? -1);
+            foreach (var parameter in new[] { "night_2", "night_3", "night_4", "night_5", "sky", "moon" })
+            {
+                var texture = material?.GetShaderParameter(parameter).AsGodotObject() as Texture2D;
+                assertions.Equal("dark_shrine_" + parameter + "_width", 2708, texture?.GetWidth() ?? -1);
+                assertions.Equal("dark_shrine_" + parameter + "_height", 1328, texture?.GetHeight() ?? -1);
+            }
             assertions.Equal(
                 "dark_night_default_progress",
                 0f,

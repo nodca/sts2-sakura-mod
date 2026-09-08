@@ -33,7 +33,7 @@ public sealed class TelemetryInstallTokenSuite
         transport.Respond["batch"] = new TelemetryHttpResult(202, null, null);
         var store = new MemoryTokenStore();
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport);
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
 
         var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
 
@@ -66,7 +66,7 @@ public sealed class TelemetryInstallTokenSuite
         transport.Respond["batch"] = new TelemetryHttpResult(202, null, null);
         var store = new MemoryTokenStore { Saved = ValidToken("11") };
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport);
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
 
         await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
         await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
@@ -88,7 +88,7 @@ public sealed class TelemetryInstallTokenSuite
         transport.BatchStatuses.Enqueue(401);
         var store = new MemoryTokenStore { Saved = ValidToken("42") };
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport);
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
 
         var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
 
@@ -109,7 +109,7 @@ public sealed class TelemetryInstallTokenSuite
         transport.Respond["batch"] = new TelemetryHttpResult(202, null, null);
         var store = new MemoryTokenStore();
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport);
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
 
         var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
 
@@ -132,26 +132,27 @@ public sealed class TelemetryInstallTokenSuite
         transport.Respond["batch"] = new TelemetryHttpResult(429, null, null);
         var store = new MemoryTokenStore { Saved = ValidToken("55") };
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport);
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
 
         var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
 
         RegressionTestHarness.Require(
             !result.Success && result.ErrorMessage!.Contains("429", StringComparison.OrdinalIgnoreCase),
             "Expected a rate-limited send to surface a retryable failure carrying the status code.");
-        RegressionTestHarness.Require(transport.Requests.Count == 1,
+        RegressionTestHarness.Require(transport.Requests.Count == 3,
             $"Expected the rate-limited token path not to fall back to the legacy credential, got {transport.Requests.Count} requests.");
     }
 
     [Fact]
-    public void BatchBodyMatchesServerContract()
+    public async Task BatchBodyMatchesServerContract()
     {
         var transport = new FakeTransport();
         transport.Respond["batch"] = new TelemetryHttpResult(202, null, null);
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", new MemoryTokenStore(), transport);
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", new MemoryTokenStore(), transport, new MemoryQuarantine(), _ => { });
 
-        var body = adapter.SerializeBatch("SakuraMod", [SampleEnvelope()]);
+        await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
+        var body = transport.Requests.Last().JsonBody;
 
         RegressionTestHarness.Require(
             JsonNode.DeepEquals(
@@ -179,32 +180,16 @@ public sealed class TelemetryInstallTokenSuite
     }
 
     [Fact]
-    public void TransientClassificationIsBasedOnParsedStatusCode()
+    public void TransientClassificationUsesStructuredHttpResult()
     {
-        var cases = new (string? Message, bool Transient)[]
+        var cases = new (int Status, bool Transient)[]
         {
-            ("telemetry endpoint returned 429", true),
-            ("telemetry endpoint returned 429 retry-after=30s", true),
-            ("telemetry endpoint returned 500", true),
-            ("telemetry endpoint returned 502", true),
-            ("telemetry endpoint returned 503", true),
-            ("telemetry endpoint returned 504", true),
-            ("timeout: the request timed out after 15s", true),
-            ("network error: connection refused", true),
-            ("telemetry endpoint returned 400", false),
-            ("telemetry endpoint returned 401", false),
-            ("telemetry endpoint returned 403", false),
-            ("telemetry endpoint returned 400 after 1500 ms", false),
-            ("telemetry endpoint returned 413", false),
-            (null, false),
-            ("", false),
-            ("telemetry endpoint unavailable", false),
+            (429, true), (500, true), (502, true), (503, true), (504, true),
+            (400, false), (401, false), (403, false), (413, false), (0, false)
         };
-        foreach (var (message, transient) in cases)
+        foreach (var (status, transient) in cases)
         {
-            RegressionTestHarness.Require(
-                SizeBoundedTelemetryAdapter.IsTransient(message) == transient,
-                $"Expected IsTransient({message ?? "null"}) to be {transient}.");
+            Assert.Equal(transient, InstallTokenHttpTelemetryAdapter.IsTransient(new(status, "unrelated 500", null)));
         }
     }
 
@@ -218,53 +203,39 @@ public sealed class TelemetryInstallTokenSuite
             (null, 3, TimeSpan.FromSeconds(1)),
             (TimeSpan.FromSeconds(45), 1, TimeSpan.FromSeconds(45)),
             (TimeSpan.FromSeconds(1), 2, TimeSpan.FromSeconds(1)),
-            (TimeSpan.FromSeconds(300), 1, TimeSpan.FromSeconds(SizeBoundedTelemetryAdapter.MaxRetryAfterSeconds)),
-            (TimeSpan.FromSeconds(500), 3, TimeSpan.FromSeconds(SizeBoundedTelemetryAdapter.MaxRetryAfterSeconds)),
+            (TimeSpan.FromSeconds(300), 1, TimeSpan.FromSeconds(InstallTokenHttpTelemetryAdapter.MaxRetryAfterSeconds)),
+            (TimeSpan.FromSeconds(500), 3, TimeSpan.FromSeconds(InstallTokenHttpTelemetryAdapter.MaxRetryAfterSeconds)),
+            (TimeSpan.FromSeconds(-1), 1, TimeSpan.Zero),
         };
         foreach (var (retryAfter, attempt, expected) in cases)
         {
-            var failure = new TelemetryFailureInfo(429, retryAfter, false);
-            var delay = SizeBoundedTelemetryAdapter.RetryDelay(failure, attempt);
+            var failure = new TelemetryHttpResult(429, null, null, retryAfter);
+            var delay = InstallTokenHttpTelemetryAdapter.RetryDelay(failure, attempt);
             RegressionTestHarness.Require(delay == expected,
                 $"Expected retry delay {expected} for attempt {attempt} with retry-after {retryAfter}, got {delay}.");
         }
     }
 
     [Fact]
-    public void FailureParserDetectsTransportAndUnknownMessages()
+    public void TransportFailureDoesNotDependOnMessageFormat()
     {
-        foreach (var message in new[] { "network error: socket closed", "timeout: the send timed out" })
-        {
-            var failure = TelemetryFailureInfo.Parse(message);
-            RegressionTestHarness.Require(
-                failure.Transport && failure.StatusCode is null && failure.RetryAfter is null,
-                $"Expected {message} to parse as a transport failure without a status code.");
-        }
-        var unknown = TelemetryFailureInfo.Parse("receiver exploded");
-        RegressionTestHarness.Require(
-            !unknown.Transport && unknown.StatusCode is null && unknown.RetryAfter is null,
-            "Expected an unrecognized message to parse without a status code or retry-after.");
+        Assert.True(InstallTokenHttpTelemetryAdapter.IsTransient(new(0, null, "arbitrary transport failure")));
     }
 
     [Fact]
-    public async Task AdapterEmbedsRetryAfterInFailureMessage()
+    public async Task CancellationDuringRetryStopsTheSendWithoutAcknowledgement()
     {
         var transport = new FakeTransport();
         transport.Respond["batch"] = new TelemetryHttpResult(429, null, null, TimeSpan.FromSeconds(60));
         var store = new MemoryTokenStore { Saved = ValidToken("66") };
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport);
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
 
-        var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
-
-        RegressionTestHarness.Require(!result.Success, "Expected the rate-limited send to fail.");
-        RegressionTestHarness.Require(
-            result.ErrorMessage == "telemetry endpoint returned 429 retry-after=60s",
-            $"Expected the failure message to carry the Retry-After contract, got {result.ErrorMessage}.");
-        var failure = TelemetryFailureInfo.Parse(result.ErrorMessage);
-        RegressionTestHarness.Require(
-            failure.StatusCode == 429 && failure.RetryAfter == TimeSpan.FromSeconds(60) && !failure.Transport,
-            "Expected the parser to recover the status code and Retry-After from the failure message.");
+        using var cancellation = new CancellationTokenSource();
+        var sending = adapter.SendAsync(Applicant, [SampleEnvelope()], cancellation.Token);
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await sending);
+        Assert.Single(transport.Requests);
     }
 
     [Fact]
@@ -274,7 +245,7 @@ public sealed class TelemetryInstallTokenSuite
         transport.Respond["batch"] = new TelemetryHttpResult(429, null, null, TimeSpan.FromSeconds(1));
         var store = new MemoryTokenStore();
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport);
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
 
         var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
 
@@ -286,6 +257,12 @@ public sealed class TelemetryInstallTokenSuite
 
     private static string ValidToken(string seed) =>
         new string(seed[0], 32) + new string(seed[1], 32);
+
+    private sealed class MemoryQuarantine : ITelemetryQuarantineStore
+    {
+        public bool Contains(string batchJson) => false;
+        public void Save(string batchJson, string reason) => throw new IOException("Unexpected quarantine in authentication test.");
+    }
 
     private sealed class FakeTransport : ITelemetryHttpTransport
     {

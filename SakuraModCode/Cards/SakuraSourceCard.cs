@@ -23,6 +23,7 @@ using SakuraMod.SakuraModCode.Relics;
 using SakuraMod.SakuraModCode.Extensions;
 using STS2RitsuLib.Cards.FreePlay;
 using STS2RitsuLib.Models.Capabilities;
+using STS2RitsuLib.Models;
 using STS2RitsuLib.Scaffolding.Content;
 using System.Runtime.CompilerServices;
 
@@ -81,14 +82,6 @@ public abstract class SakuraSourceCard(
 
         await SakuraMagicCharge.AfterCardPlayed(choiceContext, this);
         await SakuraFormVoid.AfterCardPlayed(choiceContext, this);
-    }
-
-    public override Task AfterCardExhausted(PlayerChoiceContext choiceContext, CardModel card, bool causedByEthereal)
-    {
-        if (card == this)
-            SakuraReleaseState.Reset(this);
-
-        return Task.CompletedTask;
     }
 
     protected int ReleasedValue(string varName) => DynamicVars[varName].IntValue;
@@ -726,6 +719,22 @@ internal static class SakuraReleaseState
 {
     private static readonly ConditionalWeakTable<CardModel, ReleaseMarker> ReleasedCards = new();
 
+    public static void Register() =>
+        ModelCloneRegistry.For(MainFile.ModId).Register<CardModel>("release-state", CopyState);
+
+    internal static void CopyState(CardModel source, CardModel clone)
+    {
+        if (!ReleasedCards.TryGetValue(source, out var marker))
+            return;
+
+        // Native cloning already copies values and keywords; copy only their provenance.
+        var copy = new ReleaseMarker(marker.Rate);
+        foreach (var (name, delta) in marker.DynamicVarDeltas)
+            copy.DynamicVarDeltas.Add(name, delta);
+        copy.AddedKeywords.AddRange(marker.AddedKeywords);
+        ReleasedCards.Add(clone, copy);
+    }
+
     public static bool IsReleased(CardModel card) =>
         ReleasedCards.TryGetValue(card, out _);
 
@@ -736,17 +745,13 @@ internal static class SakuraReleaseState
 
         var marker = new ReleaseMarker(releaseRate);
 
-        if (card.EnergyCost.GetWithModifiers(CostModifiers.Local) > 0)
-            card.EnergyCost.SetThisTurnOrUntilPlayed(0, true);
+        card.EnergyCost.SetThisTurn(0, true);
 
-        if (card.Type == CardType.Power)
+        if (card.Owner?.Creature.GetPower<KindnessPower>() is null)
         {
-            AddReleaseKeyword(card, CardKeyword.Ethereal, marker);
-        }
-        else
-        {
-            AddReleaseKeyword(card, CardKeyword.Exhaust, marker);
-            if (!card.Keywords.Contains(CardKeyword.Retain))
+            if (card.Type != CardType.Power)
+                AddReleaseKeyword(card, CardKeyword.Exhaust, marker);
+            if (card.Type == CardType.Power || !card.Keywords.Contains(CardKeyword.Retain))
                 AddReleaseKeyword(card, CardKeyword.Ethereal, marker);
         }
 

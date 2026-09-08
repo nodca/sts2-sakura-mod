@@ -22,22 +22,24 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Kindness() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Kindness() : TransparentCard(1, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
+    internal override IEnumerable<CardKeyword> ReferencedKeywords =>
+        [SakuraKeywords.Manifest, CardKeyword.Exhaust, CardKeyword.Ethereal];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [SakuraCardHoverTips.TemporaryTipKey];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var power = await PowerCmd.Apply<KindnessPower>(
+        await PowerCmd.Apply<KindnessPower>(
             choiceContext,
             Owner.Creature,
             1,
             Owner.Creature,
             this,
             false);
-        power?.RegisterPendingEffect(activation.IsActive);
     }
 
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+    protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Innate);
 }
-

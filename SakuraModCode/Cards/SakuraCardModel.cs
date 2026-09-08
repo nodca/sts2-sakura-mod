@@ -63,17 +63,6 @@ public abstract class SakuraCardModel : ModCardTemplate
     {
         if (play.Card == this)
             await SakuraMagicCharge.AfterCardPlayed(choiceContext, this);
-
-        if (play.Card == this && play.IsLastInSeries)
-            SakuraReleaseState.Reset(this);
-    }
-
-    public override Task AfterCardExhausted(PlayerChoiceContext choiceContext, CardModel card, bool causedByEthereal)
-    {
-        if (card == this)
-            SakuraReleaseState.Reset(this);
-
-        return Task.CompletedTask;
     }
 
     protected static Creature RequiredTarget(CardPlay play) =>
