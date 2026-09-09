@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -8,6 +9,7 @@ using MegaCrit.Sts2.Core.Models.Afflictions;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Pooling;
+using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.TestSupport;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.TestProtocol;
@@ -39,7 +41,7 @@ internal static class AfflictionVisualLayoutScenario
         {
             var vanilla = combat.CreateCard<DefendIronclad>(player);
             var classic = combat.CreateCard<ClowShield>(player);
-            var clear = combat.CreateCard<Kindness>(player);
+            var clear = combat.CreateCard<Repair>(player);
             vanillaNode = CreateAttachedCard(vanilla);
             classicNode = CreateAttachedCard(classic);
             clearNode = CreateAttachedCard(clear);
@@ -47,6 +49,24 @@ internal static class AfflictionVisualLayoutScenario
             var vanillaGeometry = await InspectAllAfflictions(player, vanilla, vanillaNode, "vanilla", assertions);
             var classicGeometry = await InspectAllAfflictions(player, classic, classicNode, "classic", assertions);
             var clearGeometry = await InspectAllAfflictions(player, clear, clearNode, "clear", assertions);
+            var swing = combat.CreateCard<Swing>(player);
+            swing.UpgradeInternal();
+            clearNode.Model = swing;
+            await ApplyAffliction<Bound>(player, swing);
+            clearNode.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
+            await clearNode.AwaitProcessFrame();
+            await clearNode.AwaitProcessFrame();
+            var description = clearNode.GetNode<MegaRichTextLabel>("%DescriptionLabel");
+            assertions.True("bound_swing_description_fits",
+                description.GetContentHeight() <= description.Size.Y + GeometryTolerance,
+                $"Swing text height {description.GetContentHeight()} exceeds {description.Size.Y}.");
+            assertions.True("bound_swing_description_above_footer",
+                description.Position.Y + description.Size.Y <= 430f,
+                $"Swing text ends at {description.Position.Y + description.Size.Y}.");
+            classicNode.Model = vanilla;
+            classicNode.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
+            await ApplyAffliction<Bound>(player, vanilla);
+            InspectGeometry("vanilla", "pooled_bound", classicNode, assertions);
             var brokenContract = combat.CreateCard<ClowShield>(player);
             brokenContractNode = CreateAttachedCard(brokenContract);
             var compatibilityGeometry = await InspectMissingNodeFallback(
@@ -191,7 +211,7 @@ internal static class AfflictionVisualLayoutScenario
 
             if (affliction == "entangled")
                 AssertEntangled(layout, effectRoot, mask.Size, assertions);
-            else if (affliction == "bound")
+            else if (affliction is "bound" or "bound_refresh")
                 AssertBound(layout, effectRoot, mask.Size, assertions);
             else if (affliction == "galvanized")
                 AssertGalvanized(layout, effectRoot, mask.Size, assertions);
@@ -222,11 +242,22 @@ internal static class AfflictionVisualLayoutScenario
         RuntimeAssertionCollector assertions)
     {
         var main = root.GetNode<Control>("vfx_container/main");
-        var squareCenter = new Vector2(size.Y * 0.5f, size.Y * 0.5f);
+        var width = SakuraCardGeometry.VanillaLayoutSize.Y * size.X / SakuraCardGeometry.VanillaLayoutSize.X;
+        var squareCenter = new Vector2(width, width + (size.Y - width) / main.Scale.Y) * 0.5f;
         assertions.True(
             $"affliction_{layout}_bound_center_pivot",
             Near(main.Position, -squareCenter) && Near(main.PivotOffset, squareCenter),
             $"Bound main geometry was {main.Position}/{main.PivotOffset}.");
+        var chains = main.GetNode<NinePatchRect>("SakuraBoundChains");
+        assertions.True(
+            $"affliction_{layout}_bound_uniform_corner_scale",
+            Mathf.IsEqualApprox(chains.Scale.X, chains.Scale.Y)
+            && Near(chains.Size * chains.Scale, main.Size)
+            && chains.PatchMarginTop + chains.PatchMarginBottom < chains.Size.Y,
+            $"Bound corner scale/size was {chains.Scale}/{chains.Size}.");
+        assertions.True(
+            $"affliction_{layout}_bound_native_draw_replaced",
+            ((TextureRect)main).Texture is null && chains.Visible && chains.Texture is not null);
     }
 
     private static void AssertEntangled(

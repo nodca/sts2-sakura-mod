@@ -13,6 +13,23 @@ using System.Buffers.Binary;
 public sealed class WaterEnemyContractSuite
 {
     [Fact]
+    public void AquariumMountsAfterBackgroundSetupInsteadOfCreatureReady()
+    {
+        var patch = Assert.Single(typeof(WaterAquariumBackgroundPatch)
+            .GetCustomAttributes(typeof(HarmonyLib.HarmonyPatch), false)
+            .Cast<HarmonyLib.HarmonyPatch>());
+        Assert.Equal(typeof(MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom), patch.info.declaringType);
+        Assert.Equal(nameof(MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.SetUpBackground), patch.info.methodName);
+        var postfix = typeof(WaterAquariumBackgroundPatch).GetMethod("Postfix",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        Assert.NotNull(postfix);
+        Assert.True(postfix.IsDefined(typeof(HarmonyLib.HarmonyPostfix), false));
+        var creatureFeedback = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Visuals/FourthActCombatFeedbackVisuals.cs"));
+        Assert.DoesNotContain("WaterAquariumVisuals.Attach", creatureFeedback);
+    }
+
+    [Fact]
     public void UsesApprovedA9Values()
     {
         Assert.Equal((250, 265, 7, 8, 4, 14, 16, 8, 18, 20),
@@ -105,7 +122,7 @@ public sealed class WaterEnemyContractSuite
     }
 
     [Fact]
-    public void WaterEncountersUseOneStaticAquariumBackgroundLayer()
+    public void WaterEncountersUseOneAlignedVideoAquariumBackgroundLayer()
     {
         var layerScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/backgrounds/fourth_act/aquarium/aquarium_base.tscn"));
@@ -116,22 +133,51 @@ public sealed class WaterEnemyContractSuite
 
         Assert.Contains(FourthActCombatBackgrounds.WaterAquariumTexturePath, layerScene);
         Assert.DoesNotContain("AnimationPlayer", layerScene);
-        Assert.DoesNotContain("ShaderMaterial", layerScene);
-        Assert.DoesNotContain("VideoStream", layerScene);
-        Assert.Equal(2048, BinaryPrimitives.ReadInt32BigEndian(header[16..20]));
-        Assert.Equal(960, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
+        Assert.Contains(FourthActCombatBackgrounds.WaterAquariumVideoPath, layerScene);
+        Assert.Contains(FourthActCombatBackgrounds.WaterAquariumMaskPath, layerScene);
+        Assert.Contains(FourthActCombatBackgrounds.WaterAquariumShaderPath, layerScene);
+        Assert.Contains("type=\"VideoStreamPlayer\" parent=\"AquariumPainting\"", layerScene);
+        Assert.Contains("autoplay = true", layerScene);
+        Assert.Contains("loop = true", layerScene);
+        Assert.Contains("expand = true", layerScene);
+        Assert.Contains("anchor_left = 0.3", layerScene);
+        Assert.Contains("anchor_right = 0.7", layerScene);
+        Assert.DoesNotContain(".cs\"", layerScene);
+        Assert.Equal(2240, BinaryPrimitives.ReadInt32BigEndian(header[16..20]));
+        Assert.Equal(1120, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
         Assert.Equal(8, header[24]);
         Assert.Equal(2, header[25]);
         Assert.Contains(
             "source_file=\"res://SakuraMod/images/backgrounds/fourth_act/aquarium/aquarium_base.png\"",
             textureImport);
         Assert.Contains("mipmaps/generate=false", textureImport);
+        var mask = RegressionTestHarness.FindRepoFile(
+            "SakuraMod/images/backgrounds/fourth_act/aquarium/aquarium_tank_mask.png");
+        var maskHeader = File.ReadAllBytes(mask).AsSpan(0, 26);
+        Assert.Equal(896, BinaryPrimitives.ReadInt32BigEndian(maskHeader[16..20]));
+        Assert.Equal(448, BinaryPrimitives.ReadInt32BigEndian(maskHeader[20..24]));
+        Assert.Contains("mipmaps/generate=false", File.ReadAllText($"{mask}.import"));
+        var video = File.ReadAllBytes(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/videos/fourth_act/aquarium_tank.ogv"));
+        Assert.Equal("OggS", System.Text.Encoding.ASCII.GetString(video, 0, 4));
 
         var encounterSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/FourthAct/Water/WaterMonsterTemplate.cs"));
         Assert.Contains("UseProgrammaticCombatBackground => true", encounterSource);
         Assert.Contains("FourthActCombatBackgrounds.CreateWaterAquarium()", encounterSource);
         Assert.DoesNotContain("FourthActCombatBackgrounds.CreateWindRooftop()", encounterSource);
+    }
+
+    [Theory]
+    [InlineData(1920, 1080)]
+    [InlineData(2520, 1080)]
+    [InlineData(1920, 1200)]
+    public void AquariumOverscanCoversSupportedRatiosWithShakeMargin(float width, float height)
+    {
+        var scale = WaterAquariumVisuals.ImageScale(width, height);
+        Assert.True(2240 * scale >= width + 96);
+        Assert.True(1120 * scale >= height + 96);
+        Assert.Equal(1.2f, scale, 5);
     }
 
     [Fact]

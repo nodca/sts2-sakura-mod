@@ -34,32 +34,18 @@ public class ClowJump() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Unco
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await RemovePlayerDebuffs(choiceContext, 1);
+        await SakuraActions.CleanseDebuffs(Owner, 1);
         await GainBlock(play, ReleasedBlock());
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await RemovePlayerDebuffs(choiceContext, int.MaxValue);
+        await SakuraActions.CleanseDebuffs(Owner);
         await GainBlock(play, ReleasedBlock());
     }
 
     protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(4);
 
-    private async Task RemovePlayerDebuffs(PlayerChoiceContext choiceContext, int maxCount)
-    {
-        var debuffs = Owner.Creature.Powers.Where(static power => power.TypeForCurrentAmount == PowerType.Debuff).ToList();
-        for (var removed = 0; removed < maxCount && debuffs.Count > 0; removed++)
-        {
-            var power = maxCount == int.MaxValue
-                ? debuffs[0]
-                : Owner.RunState.Rng.CombatCardSelection.NextItem(debuffs);
-            if (power is null)
-                return;
-            await PowerCmd.Remove(power);
-            debuffs.Remove(power);
-        }
-    }
 }
 
 public class SakuraJump() : SakuraFormCard(1, CardType.Power, TargetType.None)

@@ -32,21 +32,14 @@ public class ClassicJumpPower : SakuraPowerModel
     protected override string IconFileName => "jump_power_sakuracard.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
+    protected override IEnumerable<MegaCrit.Sts2.Core.HoverTips.IHoverTip> AdditionalHoverTips =>
+        [SakuraCardHoverTips.StaticTip(SakuraCardHoverTips.DebuffTipKey)];
 
     public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
         if (Owner.Player != player || Amount <= 0)
             return;
 
-        for (var i = 0; i < Amount; i++)
-        {
-            var debuffs = Owner.Powers.Where(static power => power.TypeForCurrentAmount == PowerType.Debuff).ToList();
-            var debuff = Owner.Player.RunState.Rng.CombatCardSelection.NextItem(debuffs);
-            if (debuff is null)
-                return;
-
-            await PowerCmd.Remove(debuff);
-        }
+        await SakuraActions.CleanseDebuffs(player, Amount);
     }
 }
-

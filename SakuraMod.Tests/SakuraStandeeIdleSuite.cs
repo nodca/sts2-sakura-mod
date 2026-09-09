@@ -286,6 +286,23 @@ public sealed class SakuraStandeeIdleSuite
         Assert.Equal(1, CountOccurrences(previewTestScene, "libraries = {"));
     }
 
+    [Fact]
+    public void SurroundedPowerFacingPatchTargetsValidFaceDirectionMethod()
+    {
+        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraStandeeIdleController.cs"));
+
+        Assert.Contains("SakuraSurroundedPowerFacingPatch", source, StringComparison.Ordinal);
+        Assert.Contains("typeof(SurroundedPower), \"FaceDirection\"", source, StringComparison.Ordinal);
+
+        var faceDirectionMethod = typeof(MegaCrit.Sts2.Core.Models.Powers.SurroundedPower).GetMethod(
+            "FaceDirection",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            [typeof(MegaCrit.Sts2.Core.Models.Powers.SurroundedPower.Direction)]);
+
+        Assert.NotNull(faceDirectionMethod);
+    }
+
     private static int CountOccurrences(string source, string value)
     {
         var count = 0;

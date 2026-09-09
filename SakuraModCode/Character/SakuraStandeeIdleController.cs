@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Runs;
@@ -305,6 +306,18 @@ internal static class SakuraCombatFacingPotionPatch
         {
             var faceLeft = targetNode.GlobalPosition.X < playerNode.GlobalPosition.X;
             SakuraStandeeVisuals.SetFacing(playerNode, faceLeft);
+        }
+    }
+}
+
+[HarmonyLib.HarmonyPatch(typeof(SurroundedPower), "FaceDirection", [typeof(SurroundedPower.Direction)])]
+internal static class SakuraSurroundedPowerFacingPatch
+{
+    private static void Postfix(SurroundedPower __instance, SurroundedPower.Direction direction)
+    {
+        if (__instance.Owner?.Player is { } player && SakuraStarterCompatibility.IsKinomotoSakura(player))
+        {
+            SakuraStandeeVisuals.SetFacing(__instance.Owner, direction == SurroundedPower.Direction.Left);
         }
     }
 }

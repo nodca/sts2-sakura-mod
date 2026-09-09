@@ -21,7 +21,7 @@ public class Blank() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.
 
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
-        [SakuraCardHoverTips.TemporaryTipKey];
+        [SakuraCardHoverTips.TemporaryTipKey, SakuraCardHoverTips.DebuffTipKey];
     internal static IReadOnlyList<PileType> TargetPileTypes => ForgottenTargetPileTypes;
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
@@ -57,8 +57,7 @@ public class Blank() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.
 
     private async Task ApplyExtraEffect()
     {
-        foreach (var power in Owner.Creature.Powers.Where(IsOwnNegativePower).ToList())
-            await PowerCmd.Remove(power);
+        await SakuraActions.CleanseDebuffs(Owner);
 
         foreach (var enemy in CombatState!.Enemies)
         {
@@ -69,16 +68,9 @@ public class Blank() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.
         }
     }
 
-    private static bool IsOwnNegativePower(PowerModel power) =>
-        power.Type == PowerType.Debuff
-        || IsNegativeStatPower(power);
-
     private static bool IsEnemyPositivePower(PowerModel power) =>
         IsPositiveStatPower(power)
         || power is ArtifactPower { Amount: > 0 };
-
-    private static bool IsNegativeStatPower(PowerModel power) =>
-        power.Amount < 0 && power is StrengthPower or DexterityPower;
 
     private static bool IsPositiveStatPower(PowerModel power) =>
         power.Amount > 0 && power is StrengthPower or DexterityPower;

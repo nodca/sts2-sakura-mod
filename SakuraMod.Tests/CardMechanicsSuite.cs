@@ -18,6 +18,18 @@ using STS2RitsuLib.RunData;
 public sealed class CardMechanicsSuite
 {
     [Fact]
+    public void CleansingUsesExplicitNativeWhitelistAndSharedHoverTips()
+    {
+        foreach (var power in new PowerModel[] { new WeakPower(), new VulnerablePower(), new FrailPower(), new PoisonPower() })
+            Assert.True(SakuraActions.IsCleansableDebuff(power));
+        foreach (var power in new PowerModel[] { new TenderPower(), new ChainsOfBindingPower(), new ClassicMagicChargePower() })
+            Assert.False(SakuraActions.IsCleansableDebuff(power));
+        Assert.Contains(SakuraCardHoverTips.DebuffTipKey, SakuraSourceCardText.StaticTipKeys(new ClowJump()));
+        Assert.Contains(SakuraCardHoverTips.DebuffTipKey, SakuraSourceCardText.StaticTipKeys(new SakuraJump()));
+        Assert.Contains(SakuraCardHoverTips.DebuffTipKey, SakuraCardHoverTips.StaticTipKeys(new Blank()));
+    }
+
+    [Fact]
     public void BurningSticksExcludesSpellTurnOnly()
     {
         RegressionTestHarness.Require(
@@ -81,6 +93,25 @@ public sealed class CardMechanicsSuite
             && !transferSource.Contains("CanEnchant(", StringComparison.Ordinal)
             && !transferSource.Contains("CardCmd.Enchant(", StringComparison.Ordinal),
             "Expected enchantment transfer to copy existing state through EnchantInternal only.");
+    }
+
+    [Fact]
+    public void SpellTurnExcludesClowCardsNotInDeckFromSelection()
+    {
+        var sourceCardSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraSourceCard.cs"));
+        var spellTurnSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Spells/SpellTurn.cs"));
+
+        RegressionTestHarness.Require(
+            sourceCardSource.Contains("HasDeckClowForTurn(card.Owner, card, identity)", StringComparison.Ordinal)
+            && sourceCardSource.Contains("card.DeckVersion?.Pile?.Type == PileType.Deck", StringComparison.Ordinal)
+            && sourceCardSource.Contains("owner?.Deck.Cards.OfType<ClowCard>().Any(c => c.Identity == identity)", StringComparison.Ordinal),
+            "Expected IsEligibleClowForTurn to gate eligibility on having a deck instance of the Clow card.");
+
+        RegressionTestHarness.Require(
+            spellTurnSource.Contains("Owner.Deck.Cards.OfType<ClowCard>().FirstOrDefault(card => card.Identity == identity)", StringComparison.Ordinal),
+            "Expected SpellTurn to resolve a matching Clow card from the deck when the hand copy has no direct DeckVersion.");
     }
 
     [Fact]

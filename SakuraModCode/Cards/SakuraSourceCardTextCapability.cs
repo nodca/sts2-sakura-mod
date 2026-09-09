@@ -131,6 +131,7 @@ internal static class SakuraSourceCardText
         switch (card)
         {
             case ClowJump:
+            case SakuraJump:
                 yield return SakuraCardHoverTips.DebuffTipKey;
                 break;
             case ClowBubbles:

@@ -39,6 +39,8 @@ internal static class CombatScenarioDispatcher
             "through-piercing" => await ThroughPiercingScenario.ExecuteAsync(request, assertions),
             "sakura-erase" => await SakuraEraseScenario.ExecuteAsync(request, assertions),
             "affliction-visual-layout" => await AfflictionVisualLayoutScenario.ExecuteAsync(request, assertions),
+            "queen-bound-cleanup" => await QueenBoundCleanupScenario.ExecuteAsync(request, assertions),
+            "cleansing-stats" => await CleansingStatsScenario.ExecuteAsync(request, assertions),
             "dark-endpoint" => await DarkEndpointScenario.ExecuteAsync(request, assertions),
             "windy-bind-draw" => await WindyBindDrawScenario.ExecuteAsync(request, assertions),
             "repair-jump-regeneration" => await RepairJumpRegenerationScenario.ExecuteAsync(request, assertions),

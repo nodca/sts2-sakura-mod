@@ -65,7 +65,8 @@ public class SpellTurn() : SpellCard(-2, CardType.Skill, CardRarity.Token, Targe
         if (canonicalSakura is null || SakuraSourceCardRules.HasSakuraIdentity(Owner, identity))
             return;
 
-        var deckCard = selectedClow.DeckVersion;
+        var deckCard = selectedClow.DeckVersion
+            ?? Owner.Deck.Cards.OfType<ClowCard>().FirstOrDefault(card => card.Identity == identity);
         if (deckCard is null || deckCard.Pile?.Type != PileType.Deck)
             return;
 

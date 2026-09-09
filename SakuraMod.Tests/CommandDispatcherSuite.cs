@@ -49,6 +49,7 @@ public sealed class CommandDispatcherSuite
                      "dark-selection-combat-reentry",
                      "exchange-four-pile-selection",
                      "generated-pile-memory",
+                     "queen-bound-cleanup",
                      "windy-bind-draw"
                  })
         {

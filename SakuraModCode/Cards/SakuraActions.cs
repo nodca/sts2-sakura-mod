@@ -10,12 +10,14 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Afflictions;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
+using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -26,6 +28,41 @@ public static class SakuraActions
 
     public static int ExtraEffectTriggerCountThisTurn(Player owner) =>
         owner.Creature.GetPower<SakuraExtraEffectCountThisTurnPower>()?.Amount ?? 0;
+
+    internal static bool IsCleansableDebuff(PowerModel power) =>
+        power is WeakPower or VulnerablePower or FrailPower or PoisonPower
+        || power is StrengthPower or DexterityPower && power.Amount < 0;
+
+    internal static async Task CleanseDebuffs(Player player, int maxCount = int.MaxValue)
+    {
+        for (var removed = 0; removed < maxCount; removed++)
+        {
+            var candidates = player.Creature.Powers.Where(IsCleansableDebuff).ToList();
+            if (candidates.Count == 0)
+                return;
+            var power = maxCount == int.MaxValue
+                ? candidates[0]
+                : player.RunState.Rng.CombatCardSelection.NextItem(candidates);
+            // Leave native temporary-stat and Tender settlement listeners intact.
+            await PowerCmd.Remove(power);
+        }
+    }
+
+    internal static async Task RemovePowerWithCardCleanup(PowerModel power)
+    {
+        var owner = power.Owner;
+        await PowerCmd.Remove(power);
+        if (power is not ChainsOfBindingPower
+            || owner.HasPower<ChainsOfBindingPower>()
+            || owner.Player?.PlayerCombatState is not { } combat)
+        {
+            return;
+        }
+
+        // Native Bound delegates both play limits and turn-end cleanup to the removed power.
+        foreach (var card in combat.AllCards.Where(card => card.Affliction is Bound).ToArray())
+            CardCmd.ClearAffliction(card);
+    }
 
     internal static async Task RecordExtraEffectTriggeredThisTurn(PlayerChoiceContext choiceContext, CardPlay play)
     {

@@ -15,6 +15,12 @@ public static class FourthActCombatBackgrounds
         "res://SakuraMod/scenes/backgrounds/fourth_act/aquarium/aquarium_base.tscn";
     public const string WaterAquariumTexturePath =
         "res://SakuraMod/images/backgrounds/fourth_act/aquarium/aquarium_base.png";
+    public const string WaterAquariumVideoPath =
+        "res://SakuraMod/videos/fourth_act/aquarium_tank.ogv";
+    public const string WaterAquariumMaskPath =
+        "res://SakuraMod/images/backgrounds/fourth_act/aquarium/aquarium_tank_mask.png";
+    public const string WaterAquariumShaderPath =
+        "res://SakuraMod/shaders/fourth_act/aquarium_video_mask.gdshader";
     public const string FireAmusementParkLayerPath =
         "res://SakuraMod/scenes/backgrounds/fourth_act/amusement_park/amusement_park_base.tscn";
     public const string FireAmusementParkTexturePath =

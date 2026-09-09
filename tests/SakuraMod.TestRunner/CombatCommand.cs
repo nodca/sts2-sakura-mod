@@ -32,6 +32,8 @@ public static class CombatCommand
         "through-piercing",
         "sakura-erase",
         "affliction-visual-layout",
+        "queen-bound-cleanup",
+        "cleansing-stats",
         "dark-endpoint",
         "windy-bind-draw",
         "repair-jump-regeneration"

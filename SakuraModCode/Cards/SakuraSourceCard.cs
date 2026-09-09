@@ -474,7 +474,12 @@ internal static class SakuraSourceCardRules
         card is ClowCard { Identity: { } identity }
         && card.Pile?.Type == PileType.Hand
         && SakuraTypeFor(identity) is not null
-        && !HasSakuraIdentity(card.Owner, identity);
+        && !HasSakuraIdentity(card.Owner, identity)
+        && HasDeckClowForTurn(card.Owner, card, identity);
+
+    internal static bool HasDeckClowForTurn(Player? owner, CardModel card, SourceCardIdentity identity) =>
+        card.DeckVersion?.Pile?.Type == PileType.Deck
+        || owner?.Deck.Cards.OfType<ClowCard>().Any(c => c.Identity == identity) == true;
 
     // Clear effects must not replay or recover Turn, otherwise one generated
     // Turn can repeatedly convert Clow Cards into Sakura Cards.

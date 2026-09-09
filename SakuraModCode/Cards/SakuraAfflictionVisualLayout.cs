@@ -105,17 +105,43 @@ internal static class SakuraAfflictionVisualLayout
         var border = nodes.Control("card_mask/border");
         var specks = nodes.Node2D("card_mask/vfx_common_specks");
         var container = nodes.Control("vfx_container");
-        var main = nodes.Control("vfx_container/main");
+        var main = (TextureRect)nodes.Control("vfx_container/main");
         BorrowBoxes(ledger, border, container, main);
         ledger.Borrow(specks, SakuraNode2DProperty.Position);
 
         SetCenteredSquare(border, targetSize);
         SetCenteredContainer(container, targetSize);
-        SetScaledCenteredSquare(
-            main,
-            targetSize,
-            0.5f,
-            new Vector2(targetSize.Y * 0.5f, targetSize.Y * 0.5f));
+        var chains = main.GetNodeOrNull<NinePatchRect>("SakuraBoundChains");
+        if (chains is null)
+        {
+            chains = new NinePatchRect
+            {
+                Name = "SakuraBoundChains",
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                DrawCenter = false
+            };
+            main.AddChild(chains);
+        }
+
+        ledger.BorrowTexture(main);
+        ledger.Own(chains);
+        chains.Texture = main.Texture ?? chains.Texture;
+        chains.Material = main.Material;
+        chains.SelfModulate = main.SelfModulate;
+        chains.Visible = true;
+        main.Texture = null;
+
+        // Keep the four native chain segments uniform; the empty center absorbs the extra height.
+        var width = NativeSize.Y * targetSize.X / NativeSize.X;
+        var boxSize = new Vector2(width, width + (targetSize.Y - width) / main.Scale.Y);
+        SetBox(main, new Rect2(boxSize * -0.5f, boxSize), boxSize * 0.5f);
+        var textureSize = chains.Texture.GetSize();
+        var textureScale = width / textureSize.X;
+        chains.PatchMarginLeft = chains.PatchMarginRight = (int)(textureSize.X * 0.5f);
+        chains.PatchMarginTop = chains.PatchMarginBottom = (int)(textureSize.Y * 0.5f);
+        chains.Size = boxSize / textureScale;
+        chains.Scale = Vector2.One * textureScale;
+        chains.Position = Vector2.Zero;
         specks.Position = targetSize * 0.5f;
     }
 
@@ -265,7 +291,10 @@ internal static class SakuraAfflictionVisualLayout
         nodes = new ResolvedAfflictionNodes(overlay, effectRoot, mask, vignette, glow);
         return visual switch
         {
-            NativeAfflictionVisual.Bound => nodes.HasControls(
+            NativeAfflictionVisual.Bound => effectRoot.GetNodeOrNull<TextureRect>("vfx_container/main") is { } boundMain
+                && (boundMain.Texture is not null
+                    || boundMain.GetNodeOrNull<NinePatchRect>("SakuraBoundChains") is { Texture: not null })
+                && nodes.HasControls(
                 "card_mask/border", "vfx_container", "vfx_container/main")
                 && nodes.HasNode2Ds("card_mask/vfx_common_specks"),
             NativeAfflictionVisual.Entangled => nodes.HasControls(

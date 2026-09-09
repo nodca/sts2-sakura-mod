@@ -79,7 +79,7 @@ public class ClassicReturnPower : SakuraPowerModel
     private async Task RemovePowersAddedAfterSnapshot(Creature creature)
     {
         while (creature.Powers.FirstOrDefault(power => !_recordedPowers.ContainsKey(power)) is { } power)
-            await PowerCmd.Remove(power);
+            await SakuraActions.RemovePowerWithCardCleanup(power);
     }
 
     private void RestoreRecordedPowerAmounts(Creature creature)
@@ -93,4 +93,3 @@ public class ClassicReturnPower : SakuraPowerModel
     }
 
 }
-

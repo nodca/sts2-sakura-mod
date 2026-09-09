@@ -1,30 +1,37 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=6 format=3]
 
-[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/aquarium/aquarium_base.png" id="1_aquarium"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/aquarium/aquarium_base.png" id="base"]
+[ext_resource type="VideoStream" path="res://SakuraMod/videos/fourth_act/aquarium_tank.ogv" id="video"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/aquarium/aquarium_tank_mask.png" id="mask"]
+[ext_resource type="Shader" path="res://SakuraMod/shaders/fourth_act/aquarium_video_mask.gdshader" id="shader"]
+
+[sub_resource type="ShaderMaterial" id="video_mask"]
+shader = ExtResource("shader")
+shader_parameter/edge_mask = ExtResource("mask")
 
 [node name="WaterAquariumBase" type="Control"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 mouse_filter = 2
 
-[node name="Painting" type="TextureRect" parent="."]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -1382.4
-offset_top = -648.0
-offset_right = 1382.4
-offset_bottom = 648.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="AquariumPainting" type="TextureRect" parent="."]
+offset_left = -1120.0
+offset_top = -560.0
+offset_right = 1120.0
+offset_bottom = 560.0
 mouse_filter = 2
-texture = ExtResource("1_aquarium")
+texture = ExtResource("base")
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 0
+
+[node name="TankMotion" type="VideoStreamPlayer" parent="AquariumPainting"]
+material = SubResource("video_mask")
+layout_mode = 1
+anchor_left = 0.3
+anchor_top = 0.226785714285714
+anchor_right = 0.7
+anchor_bottom = 0.626785714285714
+mouse_filter = 2
+stream = ExtResource("video")
+volume = 0.0
+autoplay = true
+expand = true
+loop = true
