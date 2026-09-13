@@ -1,0 +1,51 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/light_eternal_day/light_eternal_day_base.png" id="1_light"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/light_eternal_day/empowered.png" id="2_empowered"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/light_eternal_day/foreground_mask.png" id="3_mask"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/fourth_act/light_eternal_day/sun.png" id="4_sun"]
+[ext_resource type="Shader" path="res://SakuraMod/shaders/fourth_act/light_eternal_day.gdshader" id="5_plate_shader"]
+[ext_resource type="Shader" path="res://SakuraMod/shaders/fourth_act/light_eternal_day_sun.gdshader" id="6_sun_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_plate"]
+resource_local_to_scene = true
+shader = ExtResource("5_plate_shader")
+shader_parameter/empowered_plate = ExtResource("2_empowered")
+shader_parameter/foreground_mask = ExtResource("3_mask")
+shader_parameter/empowered = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_sun"]
+resource_local_to_scene = true
+shader = ExtResource("6_sun_shader")
+shader_parameter/foreground_mask = ExtResource("3_mask")
+shader_parameter/ambient_time = 0.0
+shader_parameter/empowered = 0.0
+shader_parameter/judgment_charge = 0.0
+shader_parameter/judgment_release = -1.0
+
+[node name="LightEternalDayBase" type="Control"]
+mouse_filter = 2
+
+[node name="LightEternalDayPainting" type="TextureRect" parent="."]
+material = SubResource("ShaderMaterial_plate")
+offset_left = -1360.0
+offset_top = -680.0
+offset_right = 1360.0
+offset_bottom = 680.0
+mouse_filter = 2
+texture = ExtResource("1_light")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Sun" type="TextureRect" parent="LightEternalDayPainting"]
+material = SubResource("ShaderMaterial_sun")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_sun")
+expand_mode = 1
+stretch_mode = 0

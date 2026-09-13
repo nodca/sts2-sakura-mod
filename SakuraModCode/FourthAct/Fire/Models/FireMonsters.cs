@@ -139,7 +139,7 @@ public sealed class LightMonster : FireMonsterBase
     public override IEnumerable<string> AssetPaths => [CustomVisualsPath!];
     protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
         SakuraStandeeVisuals.Create(CustomVisualsPath!, "Light");
-    private bool IsEmpowered => Creature.CurrentHp <= Creature.MaxHp * 0.6m;
+    private bool IsEmpowered => FireEnemyRules.IsLightEmpowered(Creature.CurrentHp, Creature.MaxHp);
     public override async Task AfterAddedToRoom() { await base.AfterAddedToRoom(); await PowerCmd.Apply<LightBattlePower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, true); }
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
@@ -150,6 +150,32 @@ public sealed class LightMonster : FireMonsterBase
         return new MonsterMoveStateMachine([radiance, blessing, judgment], radiance);
     }
     private Task Hit(IReadOnlyList<Creature> _) => FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(FireEnemyRules.Radiance).FromMonster(this));
-    private async Task Bless(IReadOnlyList<Creature> _) { await FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(FireEnemyRules.Benediction).FromMonster(this)); foreach (var power in Creature.Powers.Where(p => p.TypeForCurrentAmount == PowerType.Debuff).ToList()) await PowerCmd.Remove(power); await CreatureCmd.Heal(Creature, Creature.CurrentHp <= Creature.MaxHp * 0.6m ? 25 : 15); }
-    private async Task Judge(IReadOnlyList<Creature> _) { foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive)) { var hand = CardPile.GetCards(player, PileType.Hand).Count(); await DamageCmd.Attack(FireEnemyRules.JudgmentDamage(hand, IsEmpowered)).FromMonster(this).TargetingFiltered([player.Creature]).Execute(null); } }
+    private async Task Bless(IReadOnlyList<Creature> _) { await FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(FireEnemyRules.Benediction).FromMonster(this)); foreach (var power in Creature.Powers.Where(p => p.TypeForCurrentAmount == PowerType.Debuff).ToList()) await PowerCmd.Remove(power); await CreatureCmd.Heal(Creature, IsEmpowered ? 25 : 15); }
+    private async Task Judge(IReadOnlyList<Creature> _)
+    {
+        LightEternalDayVisuals.For(Creature)?.BeginJudgment();
+        var firstTarget = true;
+        try
+        {
+            foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive))
+            {
+                var hand = CardPile.GetCards(player, PileType.Hand).Count();
+                await DamageCmd.Attack(FireEnemyRules.JudgmentDamage(hand, IsEmpowered))
+                    .FromMonster(this)
+                    .WithAttackerAnim("Attack", firstTarget ? 0.3f : 0f)
+                    .TargetingFiltered([player.Creature])
+                    .BeforeDamage(() =>
+                    {
+                        LightEternalDayVisuals.For(Creature)?.ReleaseJudgment();
+                        return Task.CompletedTask;
+                    })
+                    .Execute(null);
+                firstTarget = false;
+            }
+        }
+        finally
+        {
+            LightEternalDayVisuals.For(Creature)?.CancelJudgmentCharge();
+        }
+    }
 }

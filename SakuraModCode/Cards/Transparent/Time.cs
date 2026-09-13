@@ -28,7 +28,7 @@ public class Time() : TransparentExtraEffectCard(3, CardType.Skill, CardRarity.R
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        SakuraCardPlayVfx.PlayTime(Owner.Creature);
+        SakuraCardPlayVfx.PlayTime();
         var power = await PowerCmd.Apply<TimeStopPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, true);
         if (activation.IsActive)
             power?.PreserveCurrentTurnState();
@@ -47,4 +47,3 @@ public class Time() : TransparentExtraEffectCard(3, CardType.Skill, CardRarity.R
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
-

@@ -8,18 +8,8 @@ using MegaCrit.Sts2.Core.Nodes.Rooms;
 namespace SakuraMod.SakuraModCode.Cards;
 
 /// <summary>
-/// Blaze's fire column: one shader-driven plume rising from the target's feet.
+/// Blaze gathers at the target's feet, erupts, then lifts away as curling fire.
 /// </summary>
-/// <remarks>
-/// A single class deriving from <see cref="CelVfxSession"/>, like Hail and unlike
-/// Aqua's outer-static-plus-nested-session pair. <c>TryPrepare</c> is protected, so
-/// an outer static class cannot reach it and would have to restate the guard logic.
-/// <para>
-/// One scene, not Aqua's root-plus-target split. That split exists so a single
-/// <c>BackBufferCopy</c> can serve N target copies; Blaze hits one enemy, so N is
-/// always one and splitting would only add boilerplate.
-/// </para>
-/// </remarks>
 internal sealed class BlazeFireColumnVfx : CelVfxSession
 {
     internal const string ScenePath =
@@ -28,31 +18,13 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
         MainFile.ResPath + "/shaders/card_vfx/blaze_fire_column.gdshader";
     internal static IReadOnlyList<string> AssetPaths { get; } = [ScenePath];
 
-    // Beats, in seconds. Longer than Hail's single-target 0.87 s, which is the
-    // point: this is a rare burst card and reads as one.
-    private const float IgniteDuration = 0.20f;
-    private const float RiseDuration = 0.36f;
+    private const float IgniteDuration = 0.15f;
+    private const float RiseDuration = 0.20f;
+    private const float PeakDuration = 0.05f;
     private const float BurnoutDuration = 0.44f;
-    private const float FadeDuration = 0.18f;
-
-    /// <summary>
-    /// A hold lasts this long, matching <see cref="CelVfxSession.BeginHold"/> at two
-    /// stepped frames. Motion tweens wait it out: <c>BeginHold</c> freezes shader
-    /// time, not Godot's tween clock, so embers launched during the hold would leave
-    /// a motionless column.
-    /// </summary>
-    private const float HoldDuration = 2f / 12f;
-
-    private const int EmberCount = 9;
-
-    /// <summary>
-    /// Embers fall slower than debris. They are light and drag-dominated, so the
-    /// arc is lazy rather than rock-like — a parameter of the shared integrator, not
-    /// a second integrator.
-    /// </summary>
-    private const float EmberGravity = 420f;
-
-    private const int VfxZIndex = 3000;
+    private const float FadeDuration = 0.06f;
+    private const int EmberCount = 7;
+    private const float EmberGravity = 90f;
 
     private static bool _loadFailureLogged;
 
@@ -62,6 +34,7 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
     private readonly Vector2 _size;
     private bool _impacted;
     private bool _faded;
+    private float _impactAt;
 
     private BlazeFireColumnVfx(Node2D root, NCombatRoom room, CelVfxGeometry.TargetGeometry geometry)
         : base(root, room)
@@ -77,8 +50,7 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
         var body = root.GetNode<ColorRect>("%ColumnBody");
         _material = CelVfxGeometry.DuplicateMaterial(body, "fire column");
 
-        // The root never scales. Sizing travels to the shader as region_size, which
-        // is what holds ink weight constant in screen pixels across every enemy size.
+        // Size the draw region directly, preserving the screen-pixel heat budget.
         root.Scale = Vector2.One;
         body.Size = geometry.Size;
         body.Position = new Vector2(-geometry.Size.X * 0.5f, -geometry.Size.Y);
@@ -87,6 +59,7 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
         _material.SetShaderParameter("ignite", 0f);
         _material.SetShaderParameter("rise", 0f);
         _material.SetShaderParameter("burnout", 0f);
+        _material.SetShaderParameter("impact_at", -10f);
     }
 
     /// <summary>
@@ -109,12 +82,16 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
 
     protected override IEnumerable<ShaderMaterial> Materials => [_material];
 
-    /// <summary>
-    /// Safety net, not a timer. One target, no hit loop: the worst case is the beat
-    /// chain running end to end at about 1.95 s including the shared prelude. Sized
-    /// well clear of that, because a cap set tight becomes a truncation bug.
-    /// </summary>
+    // The cap also covers gameplay taking longer than the visual beat chain.
     protected override float MaximumLifetime => 6.0f;
+
+    private float Elapsed => _material.GetShaderParameter("elapsed").AsSingle();
+
+    /// <summary>Only the unplayed part of the hit's tail survives gameplay resolution.</summary>
+    internal static float ReleaseSeconds(float elapsed, float impactAt) => Math.Clamp(
+        PeakDuration + BurnoutDuration + FadeDuration - Math.Max(0f, elapsed - impactAt),
+        0f,
+        PeakDuration + BurnoutDuration + FadeDuration);
 
     internal static Task PlayOrResolveAsync(
         CardModel card,
@@ -151,8 +128,8 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
         {
             root = scene.Instantiate<Node2D>();
             root.Name = "SakuraBlazeFireColumnVfx";
-            root.ZAsRelative = false;
-            root.ZIndex = VfxZIndex;
+            root.ZAsRelative = true;
+            root.ZIndex = 0;
             room.CombatVfxContainer.AddChildSafely(root);
 
             var geometry = CelVfxGeometry.Resolve(room, target, 0, Budget);
@@ -202,16 +179,14 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
                 0f,
                 1f,
                 RiseDuration)
-            // Buoyant acceleration: the plume starts slow and gains speed as it
-            // climbs, which quadratic In is the constant-acceleration curve for.
-            .SetEase(Tween.EaseType.In)
-            .SetTrans(Tween.TransitionType.Quad);
+            // The shader opens the core faster than the outer tongues from this
+            // continuous phase. One linear input keeps those two curves aligned.
+            .SetTrans(Tween.TransitionType.Linear);
         return await WaitActive(RiseDuration);
     }
 
     /// <summary>
-    /// The hit beat: hold two stepped frames while the speed lines burst, then throw
-    /// embers and let the column burn out.
+    /// Damage and the local brightness accent start together; live fire keeps moving.
     /// </summary>
     /// <remarks>
     /// No <c>Creature</c> parameter. Blaze targets one enemy, so an argument could
@@ -220,14 +195,14 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
     /// </remarks>
     private void Impact()
     {
-        if (_impacted || !IsActive())
+        if (_impacted || _faded || !IsActive())
             return;
 
         _impacted = true;
-
-        // The hold is the shared signature element: drawn detail freezes for two
-        // stepped frames, then motion continues from where it stopped.
-        BeginHold();
+        _impactAt = Elapsed;
+        _material.SetShaderParameter("impact_at", _impactAt);
+        _material.SetShaderParameter("ignite", 1f);
+        _material.SetShaderParameter("rise", 1f);
 
         var tween = Track(Root.CreateTween().SetParallel());
         tween.TweenMethod(
@@ -235,32 +210,32 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
                 0f,
                 1f,
                 BurnoutDuration)
-            .SetDelay(HoldDuration)
-            .SetEase(Tween.EaseType.In)
-            .SetTrans(Tween.TransitionType.Quad);
+            .SetDelay(PeakDuration)
+            .SetTrans(Tween.TransitionType.Linear);
 
         for (var i = 0; i < EmberCount; i++)
         {
             var spread = -0.5f + 1f * i / Math.Max(1, EmberCount - 1);
-            // Upward initial velocity against positive gravity: the ember rises,
-            // slows, turns over, and falls. Rock-like straight throws are what a
-            // downward-only initial velocity would give.
-            var velocity = new Vector2(spread * 170f, -300f - i % 3 * 70f);
+            // These expire while still rising. The shared integrator handles the
+            // small deceleration without adding a second particle system.
+            var velocity = new Vector2(spread * 150f, -125f - i % 3 * 35f);
             var origin = new Vector2(
                 _origin.X + spread * _size.X * 0.30f,
                 _origin.Y - _size.Y * (0.20f + i % 4 * 0.14f));
-            CelVfxGeometry.AddBallisticDebris(
+            var ember = CelVfxGeometry.AddBallisticDebris(
                 tween,
                 _embers,
-                EmberPoints(3.4f + i % 3 * 1.1f),
-                i % 3 == 0 ? new Color(1f, 0.94f, 0.60f) : new Color(0.97f, 0.53f, 0.15f),
+                EmberPoints(2.1f + i % 3 * 0.65f),
+                i % 3 == 0 ? new Color(1f, 0.95f, 0.69f) : new Color(1f, 0.48f, 0.12f),
                 origin,
                 velocity,
                 BurnoutDuration,
-                HoldDuration,
+                PeakDuration,
                 EmberGravity,
-                2.6f + i * 0.2f,
-                "BlazeEmber");
+                -0.6f + i * 0.2f,
+                "BlazeEmber",
+                zIndex: 1);
+            ember.ZAsRelative = true;
         }
     }
 
@@ -278,12 +253,18 @@ internal sealed class BlazeFireColumnVfx : CelVfxSession
         }
 
         _faded = true;
-        // Wait out the burnout the impact beat started, so the column dies by
-        // collapsing rather than by being cut off mid-rise.
-        var settle = _impacted ? HoldDuration + BurnoutDuration : 0f;
+        var remaining = _impacted ? ReleaseSeconds(Elapsed, _impactAt) : FadeDuration;
+        if (remaining <= 0f)
+        {
+            Dispose();
+            return;
+        }
+
+        var fadeSeconds = Math.Min(FadeDuration, remaining);
         var fade = Track(Root.CreateTween());
-        fade.TweenInterval(settle);
-        fade.TweenProperty(Root, "modulate:a", 0f, FadeDuration);
+        if (remaining > fadeSeconds)
+            fade.TweenInterval(remaining - fadeSeconds);
+        fade.TweenProperty(Root, "modulate:a", 0f, fadeSeconds);
         fade.TweenCallback(Callable.From(Dispose));
     }
 

@@ -24,6 +24,16 @@ public sealed class FireEnemyRulesSuite
         Assert.Equal(expected, FireEnemyRules.JudgmentDamage(handSize, empowered));
 
     [Theory]
+    [InlineData(312, 520, true)]
+    [InlineData(313, 520, false)]
+    [InlineData(327, 545, true)]
+    [InlineData(328, 545, false)]
+    [InlineData(600, 1001, true)]
+    [InlineData(601, 1001, false)]
+    public void LightEmpowermentIncludesSixtyPercentWithoutRoundingUp(int hp, int maxHp, bool expected) =>
+        Assert.Equal(expected, FireEnemyRules.IsLightEmpowered(hp, maxHp));
+
+    [Theory]
     [InlineData(5, 5, 4, 1, 9)]
     [InlineData(5, 5, -4, 9, 1)]
     [InlineData(1, 9, 4, 0, 10)]
@@ -148,7 +158,7 @@ public sealed class FireEnemyRulesSuite
     }
 
     [Fact]
-    public void FireEncountersUseTokyoTowerBackgroundLayer()
+    public void FireRouteEncountersKeepTokyoTowerAndLightUsesItsOwnAnimatedBackground()
     {
         var layerScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/backgrounds/fourth_act/tokyo_tower/tokyo_tower_base.tscn"));
@@ -174,6 +184,45 @@ public sealed class FireEnemyRulesSuite
             "SakuraModCode/FourthAct/Fire/Encounters/FireEncounters.cs"));
         Assert.Contains("UseProgrammaticCombatBackground => true", encounterSource);
         Assert.Contains("FourthActCombatBackgrounds.CreateFireTokyoTower()", encounterSource);
+
+        const string backgroundMethod = "BuildProgrammaticCombatBackground";
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance
+            | System.Reflection.BindingFlags.NonPublic;
+        foreach (var type in new[] { typeof(SwordEncounter), typeof(LibraEncounter), typeof(FireyEncounter) })
+            Assert.Equal(typeof(FireEncounterTemplate), type.GetMethod(backgroundMethod, flags)!.DeclaringType);
+        Assert.Equal(typeof(LightEncounter), typeof(LightEncounter).GetMethod(backgroundMethod, flags)!.DeclaringType);
+        Assert.Equal(typeof(LightEncounter), SakuraMod.SakuraModCode.FourthAct.Earth.EarthEnemyCatalog.EndpointEncounterType);
+        var lightDeclaration = encounterSource[encounterSource.IndexOf("public sealed class LightEncounter", StringComparison.Ordinal)..];
+        Assert.Contains("FourthActCombatBackgrounds.CreateLightEternalDay()", lightDeclaration);
+        Assert.DoesNotContain("CreateFireTokyoTower", lightDeclaration);
+
+        var lightLayer = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            FourthActCombatBackgrounds.LightEternalDayLayerPath["res://".Length..]));
+        var lightTexture = RegressionTestHarness.FindRepoFile(
+            FourthActCombatBackgrounds.LightEternalDayTexturePath["res://".Length..]);
+        var lightImport = File.ReadAllText($"{lightTexture}.import");
+        var lightHeader = File.ReadAllBytes(lightTexture).AsSpan(0, 26);
+        Assert.Contains(FourthActCombatBackgrounds.LightEternalDayTexturePath, lightLayer);
+        Assert.Contains(StaticCombatBackgroundVisuals.LightPaintingNodeName, lightLayer);
+        Assert.Equal(2 * BinaryPrimitives.ReadInt32BigEndian(lightHeader[20..24]),
+            BinaryPrimitives.ReadInt32BigEndian(lightHeader[16..20]));
+        Assert.Contains($"source_file=\"{FourthActCombatBackgrounds.LightEternalDayTexturePath}\"", lightImport);
+        Assert.Contains("mipmaps/generate=false", lightImport);
+        Assert.Contains("resource_local_to_scene = true", lightLayer);
+        Assert.Contains(FourthActCombatBackgrounds.LightEternalDayShaderPath, lightLayer);
+        Assert.Contains(FourthActCombatBackgrounds.LightEternalDaySunShaderPath, lightLayer);
+        foreach (var path in new[] { FourthActCombatBackgrounds.LightEternalDayTexturePath,
+                     FourthActCombatBackgrounds.LightEternalDayEmpoweredPath,
+                     FourthActCombatBackgrounds.LightEternalDayForegroundMaskPath,
+                     FourthActCombatBackgrounds.LightEternalDaySunPath })
+        {
+            Assert.Contains(path, lightLayer);
+            var file = RegressionTestHarness.FindRepoFile(path["res://".Length..]);
+            var png = File.ReadAllBytes(file).AsSpan(0, 26);
+            Assert.Equal(2720, BinaryPrimitives.ReadInt32BigEndian(png[16..20]));
+            Assert.Equal(1360, BinaryPrimitives.ReadInt32BigEndian(png[20..24]));
+            Assert.Contains($"source_file=\"{path}\"", File.ReadAllText(file + ".import"));
+        }
     }
 
     [Fact]
@@ -187,11 +236,16 @@ public sealed class FireEnemyRulesSuite
         var header = File.ReadAllBytes(texture).AsSpan(0, 26);
 
         Assert.Contains(FourthActCombatBackgrounds.EarthPenguinParkTexturePath, layerScene);
-        Assert.Equal(2048, BinaryPrimitives.ReadInt32BigEndian(header[16..20]));
-        Assert.Equal(960, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
+        Assert.Contains(StaticCombatBackgroundVisuals.EarthPenguinParkPaintingNodeName, layerScene);
+        Assert.Equal((int)StaticCombatBackgroundVisuals.CanvasWidth, BinaryPrimitives.ReadInt32BigEndian(header[16..20]));
+        Assert.Equal((int)StaticCombatBackgroundVisuals.CanvasHeight, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
+        Assert.Equal(2 * BinaryPrimitives.ReadInt32BigEndian(header[20..24]),
+            BinaryPrimitives.ReadInt32BigEndian(header[16..20]));
         Assert.Contains(
             "source_file=\"res://SakuraMod/images/backgrounds/fourth_act/penguin_park/penguin_park_base.png\"",
             textureImport);
+        foreach (var animatedNode in new[] { "AnimationPlayer", "ShaderMaterial", "VideoStream" })
+            Assert.DoesNotContain(animatedNode, layerScene);
 
         var encounterSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/FourthAct/Earth/Encounters/EarthEncounters.cs"));

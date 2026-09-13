@@ -17,40 +17,41 @@ internal static class AquaWaterSphereVfx
     internal const string ShaderPath = MainFile.ResPath + "/shaders/card_vfx/aqua_water_sphere.gdshader";
     internal static IReadOnlyList<string> AssetPaths { get; } = [ScenePath, TargetScenePath];
 
-    // Timings are tuned for readability over brevity: the first pass was fast
-    // enough that the crest, the band structure, and the freeze all blurred past.
-    internal const float CrestDuration = 0.52f;
-    internal const float FormationDuration = 0.46f;
-    internal const float TargetStagger = 0.07f;
-    internal const float ImpactRiseDuration = 0.07f;
-    internal const float ImpactRecoverDuration = 0.30f;
-    internal const float FreezeDuration = 0.26f;
+    // A frequently played zero-cost attack: sweep and enclosure overlap, with a
+    // bounded lead even when the enemy group grows.
+    internal const float CrestDuration = 0.24f;
+    internal const float FormationDuration = 0.22f;
+    internal const float TargetStagger = 0.025f;
+    internal const float ImpactRiseDuration = 0.045f;
+    internal const float ImpactRecoverDuration = 0.16f;
+    internal const float FreezeDuration = 0.15f;
 
     /// <summary>
     /// Beat where the fully frozen shell is held still so it reads before it
     /// breaks. Release() is invoked immediately after PlayFreeze(), so without
     /// this hold the shatter would start mid-transition.
     /// </summary>
-    internal const float FreezeHold = 0.20f;
+    internal const float FreezeHold = 0.07f;
 
-    internal const float ReleaseDuration = 0.42f;
-    internal const float ShatterDuration = 0.46f;
+    internal const float ReleaseDuration = 0.25f;
+    internal const float ShatterDuration = 0.30f;
 
     /// <summary>Full frozen release: transition, readable hold, then shatter.</summary>
     internal const float FrozenReleaseDuration = FreezeDuration + FreezeHold + ShatterDuration;
 
-    // Safety net for stranded nodes, not a timing device. Five enemies with a
-    // freeze beat already run about 3.5s at these slower timings, so the cap has
-    // to sit well clear of the real envelope or it becomes a truncation bug.
+    // Separate safety net for a visual left alive during gameplay resolution.
     internal const float MaximumLifetime = 8.00f;
 
     internal const int DropletCount = 8;
     internal const int ShardCount = 7;
 
-    // The enclosure starts before the crest finishes so the opening reads as one
-    // event rather than two. Scaled with the slower crest: the water should begin
-    // climbing while the wave is still passing over the target.
-    private const float FormationLead = 0.16f;
+    private const float FormationLead = 0.15f;
+
+    internal static float FormationDelay(int index) =>
+        Math.Max(0f, CrestDuration - FormationLead) + Math.Clamp(index, 0, 4) * TargetStagger;
+
+    internal static float PreludeDuration(int targetCount) =>
+        FormationDelay(Math.Max(0, targetCount - 1)) + FormationDuration;
 
     private const int VfxZIndex = 3000;
     private const float HorizontalPadding = 42f;
@@ -63,19 +64,10 @@ internal static class AquaWaterSphereVfx
     private const float FallbackHeight = 260f;
     private const float FloorClearance = 10f;
 
-    /// <summary>
-    /// Crest height as a fraction of the tallest target. Generous on purpose: the
-    /// wave has to stand up over the enemies and still leave room for the lip and
-    /// the barrel carved under it.
-    /// </summary>
-    /// <summary>
-    /// Crest draw height as a multiple of the tallest target. Above 1 on purpose:
-    /// the shader's swell peaks at 0.90 of the region, so the wave has to be
-    /// taller than the enemies to break over them rather than lap at their knees.
-    /// </summary>
-    private const float CrestHeightFraction = 1.45f;
+    // The crest reaches the target's head briefly, then hands off to the enclosure.
+    private const float CrestHeightFraction = 1.10f;
 
-    private const float CrestPadding = 120f;
+    private const float CrestPadding = 60f;
 
     /// <summary>Region the target scene's floor ripple polyline is authored for.</summary>
     private const float AuthoredDiameter = 256f;
@@ -199,6 +191,7 @@ internal static class AquaWaterSphereVfx
             }
 
             _crestMaterial = DuplicateMaterial(_crestBody, "crest");
+            _crestMaterial.SetShaderParameter("opacity", 0.72f);
             LayOutCrest(geometries.Select(static item => item.Geometry).ToList(), ResolveCasterX(room, caster));
 
             CombatManager.Instance.CombatEnded += OnCombatEnded;
@@ -228,7 +221,6 @@ internal static class AquaWaterSphereVfx
 
             // Each enclosure forms on its own delay so several enemies read as one
             // sweep instead of a simultaneous pop.
-            var formationStart = Math.Max(0f, CrestDuration - FormationLead);
             var index = 0;
             foreach (var visual in _targets.Values)
             {
@@ -238,14 +230,13 @@ internal static class AquaWaterSphereVfx
                         0f,
                         1f,
                         FormationDuration)
-                    .SetDelay(formationStart + index * TargetStagger)
+                    .SetDelay(FormationDelay(index))
                     .SetEase(Tween.EaseType.Out)
                     .SetTrans(Tween.TransitionType.Cubic);
                 index++;
             }
 
-            var total = formationStart + Math.Max(0, _targets.Count - 1) * TargetStagger + FormationDuration;
-            await WaitActive(total);
+            await WaitActive(PreludeDuration(_targets.Count));
         }
 
         public void Impact(Creature target)
@@ -465,9 +456,12 @@ internal static class AquaWaterSphereVfx
             // shader as region_size, which is what keeps ink weight constant in
             // screen pixels across every enemy size.
             Root.Scale = Vector2.One;
-            _body.Size = geometry.Size;
-            _body.Position = -geometry.Size * 0.5f;
+            // The satellites can extend beyond the logical enclosure width. A
+            // wider canvas prevents vertical clipping while preserving its field.
+            _body.Size = geometry.Size + new Vector2(geometry.Size.Y * 0.55f, 0f);
+            _body.Position = -_body.Size * 0.5f;
             _material.SetShaderParameter("region_size", geometry.Size);
+            _material.SetShaderParameter("draw_width", _body.Size.X);
             _material.SetShaderParameter("shape_mode", 0f);
             _material.SetShaderParameter("seed", index * 0.271f + 0.13f);
 
@@ -516,11 +510,17 @@ internal static class AquaWaterSphereVfx
                     ReleaseDuration)
                 .SetEase(Tween.EaseType.In)
                 .SetTrans(Tween.TransitionType.Cubic);
+            // A normal enclosure finishes on its own beat even when another
+            // target's frozen shell keeps the shared root alive longer.
+            tween.TweenProperty(_body, "modulate:a", 0f, ReleaseDuration * 0.32f)
+                .SetDelay(ReleaseDuration * 0.68f);
             tween.TweenProperty(_ripple, "modulate:a", 0.72f, ReleaseDuration * 0.22f);
             tween.TweenProperty(_ripple, "scale", new Vector2(1.38f, 1.22f) * _rippleScale, ReleaseDuration)
                 .From(new Vector2(0.72f, 0.72f) * _rippleScale)
                 .SetEase(Tween.EaseType.Out)
                 .SetTrans(Tween.TransitionType.Cubic);
+            tween.TweenProperty(_ripple, "modulate:a", 0f, ReleaseDuration * 0.32f)
+                .SetDelay(ReleaseDuration * 0.68f);
 
             for (var i = 0; i < DropletCount; i++)
             {

@@ -15,6 +15,7 @@ using MegaCrit.Sts2.Core.Saves;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Encounters;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Encounters;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Encounters;
 using SakuraMod.TestProtocol;
 using System.Diagnostics;
@@ -87,6 +88,12 @@ internal sealed record CombatScenarioContext(
         EnterCombatAsync(
             ModelDb.Encounter<DarkEncounter>().ToMutable(),
             "The Dark endpoint encounter reached player Play phase.",
+            RoomType.Boss);
+
+    public Task<CombatState> EnterLightCombatAsync() =>
+        EnterCombatAsync(
+            ModelDb.Encounter<LightEncounter>().ToMutable(),
+            "The Light endpoint encounter reached player Play phase.",
             RoomType.Boss);
 
     public Task<CombatState> EnterWindyCombatAsync() =>

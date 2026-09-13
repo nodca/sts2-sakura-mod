@@ -7,116 +7,65 @@ using MegaCrit.Sts2.Core.Nodes.Rooms;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-/// <summary>
-/// Hail's ice crystals: one shader-driven crystal per target, driven in two
-/// distinguishable hits.
-/// </summary>
-/// <remarks>
-/// A single class deriving from <see cref="CelVfxSession"/> rather than Aqua's
-/// outer-static-plus-nested-session pair. <c>TryPrepare</c> is protected, so an
-/// outer static class cannot reach it and would have to restate the guard logic —
-/// exactly the duplication the shared skeleton exists to prevent.
-/// </remarks>
+/// <summary>One heavy ice block per target; its first hit cracks and breaks it.</summary>
 internal sealed class HailIceShardVfx : CelVfxSession
 {
-    internal const string ScenePath =
-        MainFile.ResPath + "/scenes/combat/card_vfx/hail_ice_shard_vfx.tscn";
-    internal const string TargetScenePath =
-        MainFile.ResPath + "/scenes/combat/card_vfx/hail_ice_shard_target.tscn";
-    internal const string ShaderPath =
-        MainFile.ResPath + "/shaders/card_vfx/hail_ice_shard.gdshader";
+    internal const string ScenePath = MainFile.ResPath + "/scenes/combat/card_vfx/hail_ice_shard_vfx.tscn";
+    internal const string TargetScenePath = MainFile.ResPath + "/scenes/combat/card_vfx/hail_ice_shard_target.tscn";
+    internal const string ShaderPath = MainFile.ResPath + "/shaders/card_vfx/hail_ice_shard.gdshader";
     internal static IReadOnlyList<string> AssetPaths { get; } = [ScenePath, TargetScenePath];
 
-    // Beats, in seconds. The crystal drives in, then the second hit splits it.
-    private const float FallDuration = 0.18f;
-    private const float CrackDuration = 0.10f;
-    private const float ShatterDuration = 0.42f;
-    private const float FadeDuration = 0.30f;
-
-    /// <summary>
-    /// A hold lasts this long, matching <see cref="CelVfxSession.BeginHold"/> at two
-    /// stepped frames. Fracture tweens wait it out: <c>BeginHold</c> freezes shader
-    /// time, not Godot's tween clock, so starting them during the hold would show a
-    /// motionless crystal throwing moving fragments.
-    /// </summary>
-    private const float HoldDuration = 2f / 12f;
-
-    // Height the crystal falls from, as a fraction of its own region.
-    private const float FallHeightFraction = 1.35f;
-    private const int FragmentCount = 6;
-    private const float FragmentGravity = 980f;
-    private const int VfxZIndex = 3000;
-
+    private const float FallDuration = 0.17f;
+    private const float ContactDuration = 0.035f;
+    private const float ShatterDuration = 0.40f;
+    private const float FadeDuration = 0.08f;
+    private const float FallHeightFraction = 1.10f;
+    private const float FragmentGravity = 1600f;
+    private const int GrainCount = 8;
     private static bool _loadFailureLogged;
 
     private readonly Node2D _debris;
     private readonly Dictionary<Creature, ShardVisual> _shards = [];
     private bool _faded;
+    private float _lastHitAt = -10f;
 
-    private HailIceShardVfx(
-        Node2D root,
-        NCombatRoom room,
-        PackedScene targetScene,
-        IReadOnlyList<Creature> creatures)
+    private HailIceShardVfx(Node2D root, NCombatRoom room, PackedScene targetScene, IReadOnlyList<Creature> creatures)
         : base(root, room)
     {
         _debris = root.GetNode<Node2D>("%Debris");
         var shards = root.GetNode<Node2D>("%Shards");
-
         for (var index = 0; index < creatures.Count; index++)
         {
             var creature = creatures[index];
-            if (_shards.ContainsKey(creature))
-                continue;
-            var geometry = CelVfxGeometry.Resolve(room, creature, index, Budget);
-            _shards.Add(creature, new ShardVisual(targetScene, shards, geometry, index));
+            if (!_shards.ContainsKey(creature))
+                _shards.Add(creature, new ShardVisual(targetScene, shards,
+                    CelVfxGeometry.Resolve(room, creature, index, Budget), index));
         }
     }
 
-    /// <summary>
-    /// Ice occupies a narrower, taller region than Aqua's water body: a falling
-    /// shard reads as a shard because it is not as wide as the enemy it hits.
-    /// </summary>
     private static CelVfxGeometry.GeometryBudget Budget => new(
-        HorizontalPadding: 10f,
-        VerticalPadding: 18f,
-        MinWidth: 120f,
-        MinHeight: 150f,
-        MaxWidth: 300f,
-        MaxHeight: 380f,
-        FallbackWidth: 170f,
-        FallbackHeight: 200f,
-        FloorClearance: 8f,
-        MaxViewportWidthFraction: 0.22f,
-        MaxViewportHeightFraction: 0.46f);
+        HorizontalPadding: 10f, VerticalPadding: 18f,
+        MinWidth: 120f, MinHeight: 150f, MaxWidth: 300f, MaxHeight: 380f,
+        FallbackWidth: 170f, FallbackHeight: 200f, FloorClearance: 8f,
+        MaxViewportWidthFraction: 0.22f, MaxViewportHeightFraction: 0.46f);
 
-    protected override IEnumerable<ShaderMaterial> Materials =>
-        _shards.Values.Select(static shard => shard.Material);
+    protected override IEnumerable<ShaderMaterial> Materials => _shards.Values.Select(static shard => shard.Material);
+    protected override float MaximumLifetime => 9f;
+    private float Elapsed => _shards.Values.First().Material.GetShaderParameter("elapsed").AsSingle();
 
-    /// <summary>
-    /// Safety net, not a timer. Worst case is five enemies at two hits each: about
-    /// 0.87 s per target serially, plus the shared prelude and the fade. Sized well
-    /// clear of that envelope, because a cap set tight becomes a truncation bug.
-    /// </summary>
-    protected override float MaximumLifetime => 9.0f;
+    internal static float ReleaseSeconds(float elapsed, float lastHitAt) =>
+        Math.Clamp(ContactDuration + ShatterDuration - Math.Max(0f, elapsed - lastHitAt),
+            0f, ContactDuration + ShatterDuration) + FadeDuration;
 
-    internal static Task PlayOrResolveAsync(
-        CardModel card,
-        Creature? caster,
-        IReadOnlyList<Creature> targets,
+    internal static Task PlayOrResolveAsync(CardModel card, Creature? caster, IReadOnlyList<Creature> targets,
         Func<Cues, Task> resolveGameplay)
     {
         ArgumentNullException.ThrowIfNull(card);
         ArgumentNullException.ThrowIfNull(targets);
         ArgumentNullException.ThrowIfNull(resolveGameplay);
-
         return CelVfxSession.PlayOrResolveAsync(
-            "Hail ice",
-            () => TryCreate(targets, caster),
-            session => session.PlayPrelude(card, caster),
-            scope => resolveGameplay(new Cues(scope)),
-            session => session.FadeAndDispose(),
-            session => session.Dispose());
+            "Hail ice", () => TryCreate(targets), session => session.PlayPrelude(card, caster),
+            scope => resolveGameplay(new Cues(scope)), session => session.FadeAndDispose(), session => session.Dispose());
     }
 
     internal sealed class Cues(CueScope<HailIceShardVfx> scope)
@@ -128,110 +77,63 @@ internal sealed class HailIceShardVfx : CelVfxSession
         }
     }
 
-    private static HailIceShardVfx? TryCreate(IReadOnlyList<Creature> targets, Creature? caster = null)
+    private static HailIceShardVfx? TryCreate(IReadOnlyList<Creature> targets)
     {
-        ArgumentNullException.ThrowIfNull(targets);
-        if (targets.Count == 0)
+        if (targets.Count == 0 || !TryPrepare("Hail ice", LoadScenes, out var room, out _, out var scenes))
             return null;
-        if (!TryPrepare(
-                "Hail ice",
-                LoadScenes,
-                out var room,
-                out _,
-                out var scenes))
-        {
-            return null;
-        }
-
         Node2D? root = null;
         try
         {
             root = scenes.Root.Instantiate<Node2D>();
             root.Name = "SakuraHailIceShardVfx";
-            root.ZAsRelative = false;
-            root.ZIndex = VfxZIndex;
+            root.ZAsRelative = true;
+            root.ZIndex = 0;
             room.CombatVfxContainer.AddChildSafely(root);
-
             var session = new HailIceShardVfx(root, room, scenes.Target, targets);
-            // Started after construction, never inside it: the base clock pulls
-            // Materials, and during a base constructor the subclass field backing
-            // it is still empty.
             session.StartClock();
             return session;
         }
         catch (Exception exception)
         {
-            LogLoadFailure(exception);
+            if (!_loadFailureLogged)
+            {
+                _loadFailureLogged = true;
+                MainFile.Logger.Error($"Could not create Hail ice VFX from {ScenePath}: {exception}");
+            }
             root?.QueueFreeSafely();
             return null;
         }
     }
 
-    /// <summary>Shared wand tap, magic circle, and speed lines, then the ice.</summary>
     private async Task<bool> PlayPrelude(CardModel card, Creature? caster)
     {
         if (!await PlayCelPrelude(card, caster))
             return false;
-
         var tween = Track(Root.CreateTween().SetParallel());
         var index = 0;
         foreach (var shard in _shards.Values)
         {
             var target = shard;
-            tween.TweenMethod(
-                    Callable.From<float>(value => target.SetFall(value)),
-                    0f,
-                    1f,
-                    FallDuration)
-                .SetDelay(index * 0.04f)
-                // Gravity, not a slide: quadratic In is the constant-acceleration
-                // curve, so the crystal accelerates into the target.
-                .SetEase(Tween.EaseType.In)
-                .SetTrans(Tween.TransitionType.Quad);
-            index++;
+            // The shared parabola already supplies acceleration; a quadratic
+            // tween here would apply it twice and turn the descent into t^4.
+            tween.TweenMethod(Callable.From<float>(target.SetFall), 0f, 1f, FallDuration)
+                .SetDelay(Math.Min(index++, 4) * 0.025f)
+                .SetTrans(Tween.TransitionType.Linear);
         }
-
-        return await WaitActive(FallDuration + Math.Max(0, _shards.Count - 1) * 0.04f);
+        return await WaitActive(FallDuration + Math.Min(_shards.Count - 1, 4) * 0.025f);
     }
 
-    /// <summary>
-    /// One hit against one target. The first drives the crystal in and leaves a
-    /// fracture network; the second holds a beat, then splits the body along those
-    /// same fractures into fragments that fall under gravity.
-    /// </summary>
-    /// <remarks>
-    /// Hit counting is the session's own state. Reading the card's hit loop would
-    /// put gameplay state behind a presentation decision.
-    /// </remarks>
     private void Impact(Creature target)
     {
-        ArgumentNullException.ThrowIfNull(target);
-        if (!IsActive() || !_shards.TryGetValue(target, out var shard))
+        if (_faded || !IsActive() || !_shards.TryGetValue(target, out var shard) || shard.HasShattered)
             return;
-
-        shard.Hits++;
-        if (shard.Hits == 1)
-        {
-            Track(shard.CreateCrackTween());
-            return;
-        }
-
-        if (shard.Hits > 2 || shard.HasShattered)
-            return;
-
-        // The hold is the shared signature element: drawn detail freezes for two
-        // stepped frames while the speed lines burst, then motion continues from
-        // where it stopped rather than jumping forward.
-        BeginHold();
+        _lastHitAt = Elapsed;
         shard.HasShattered = true;
-        Track(shard.CreateShatterTween(_debris, HoldDuration));
+        shard.SetFall(1f);
+        shard.Material.SetShaderParameter("crack", 1f);
+        Track(shard.CreateShatterTween(_debris));
     }
 
-    /// <summary>
-    /// Fades the ice out, then releases. This is the Release beat of the session
-    /// contract; the base <c>Dispose</c> it ends in is idempotent and also covers
-    /// combat end, tree exit, exceptions, and the lifetime cap.
-    /// </summary>
     private void FadeAndDispose()
     {
         if (_faded || !IsActive())
@@ -239,29 +141,17 @@ internal sealed class HailIceShardVfx : CelVfxSession
             Dispose();
             return;
         }
-
         _faded = true;
-        var longest = _shards.Values.Any(static shard => shard.HasShattered)
-            ? HoldDuration + ShatterDuration
-            : FadeDuration;
+        var settle = ReleaseSeconds(Elapsed, _lastHitAt) - FadeDuration;
         var fade = Track(Root.CreateTween());
-        fade.TweenInterval(longest * 0.62f);
-        fade.TweenProperty(Root, "modulate:a", 0f, longest * 0.38f);
+        if (settle > 0f)
+            fade.TweenInterval(settle);
+        fade.TweenProperty(Root, "modulate:a", 0f, FadeDuration);
         fade.TweenCallback(Callable.From(Dispose));
     }
 
-    private static (PackedScene Root, PackedScene Target) LoadScenes()
-        => (PreloadManager.Cache.GetScene(ScenePath), PreloadManager.Cache.GetScene(TargetScenePath));
-
-    private static void LogLoadFailure(Exception exception)
-    {
-        if (_loadFailureLogged)
-            return;
-
-        _loadFailureLogged = true;
-        MainFile.Logger.Error(
-            $"Could not create Hail ice VFX from {ScenePath}, {TargetScenePath}, and {ShaderPath}: {exception}");
-    }
+    private static (PackedScene Root, PackedScene Target) LoadScenes() =>
+        (PreloadManager.Cache.GetScene(ScenePath), PreloadManager.Cache.GetScene(TargetScenePath));
 
     private sealed class ShardVisual
     {
@@ -276,104 +166,75 @@ internal sealed class HailIceShardVfx : CelVfxSession
             _root = scene.Instantiate<Node2D>();
             _root.Name = $"HailIce{index + 1}";
             parent.AddChildSafely(_root);
-
             _center = geometry.Center;
             _size = geometry.Size;
             _fallHeight = geometry.Size.Y * FallHeightFraction;
             _index = index;
-
             var body = _root.GetNode<ColorRect>("%ShardBody");
             Material = CelVfxGeometry.DuplicateMaterial(body, $"target {index}");
-            Fragments = _root.GetNode<Node2D>("%Fragments");
-
-            // The root never scales. Sizing travels to the shader as region_size,
-            // which is what holds ink weight constant in screen pixels across every
-            // enemy size.
-            _root.Scale = Vector2.One;
-            body.Size = geometry.Size;
-            body.Position = -geometry.Size * 0.5f;
+            // Extra canvas admits separated pieces while region_size keeps the
+            // original block's size. All four pieces retain that same ice field.
+            var drawSize = geometry.Size + new Vector2(200f, 240f);
+            body.Size = drawSize;
+            body.Position = -drawSize * 0.5f;
             Material.SetShaderParameter("region_size", geometry.Size);
+            Material.SetShaderParameter("draw_size", drawSize);
+            Material.SetShaderParameter("ground_y", geometry.Size.Y * 0.5f);
             Material.SetShaderParameter("seed", index * 0.317f + 0.19f);
             SetFall(0f);
         }
 
         internal ShaderMaterial Material { get; }
-        internal Node2D Fragments { get; }
-        internal int Hits { get; set; }
         internal bool HasShattered { get; set; }
 
-        /// <summary>Descent under gravity, reusing the shared parabola.</summary>
         internal void SetFall(float progress)
         {
             progress = Mathf.Clamp(progress, 0f, 1f);
-            Material.SetShaderParameter("formation", Mathf.Min(1f, progress * 2.4f));
-            // Solved so the crystal covers exactly _fallHeight over the beat: the
-            // shape of the arc is the shared integrator's, the scale is this card's.
+            Material.SetShaderParameter("formation", Mathf.Min(1f, progress * 3f));
             var gravity = 2f * _fallHeight / (FallDuration * FallDuration);
-            var offset = CelVfxGeometry.BallisticOffset(Vector2.Zero, gravity, progress * FallDuration);
-            _root.GlobalPosition = _center + Vector2.Up * _fallHeight + offset;
+            _root.GlobalPosition = _center + Vector2.Up * _fallHeight
+                + CelVfxGeometry.BallisticOffset(Vector2.Zero, gravity, progress * FallDuration);
         }
 
-        internal Tween CreateCrackTween()
-        {
-            var tween = _root.CreateTween();
-            tween.TweenMethod(
-                    Callable.From<float>(value => Material.SetShaderParameter("crack", value)),
-                    0f,
-                    1f,
-                    CrackDuration)
-                .SetEase(Tween.EaseType.Out)
-                .SetTrans(Tween.TransitionType.Quad);
-            return tween;
-        }
-
-        internal Tween CreateShatterTween(Node2D debrisParent, float holdDuration)
+        internal Tween CreateShatterTween(Node2D debrisParent)
         {
             var tween = _root.CreateTween().SetParallel();
-            // Widening the same fracture slabs is what separates the body; the
-            // fragments below are the pieces it split into. Delayed past the hold so
-            // the crystal is moving again before they leave it.
-            tween.TweenMethod(
-                    Callable.From<float>(value => Material.SetShaderParameter("shatter", value)),
-                    0f,
-                    1f,
-                    ShatterDuration)
-                .SetDelay(holdDuration)
-                .SetEase(Tween.EaseType.In)
-                .SetTrans(Tween.TransitionType.Expo);
-
-            for (var i = 0; i < FragmentCount; i++)
+            // Crack on the contact frame, then move the actual four fracture
+            // regions after the brief local compression. No second hit is needed.
+            tween.TweenMethod(Callable.From<float>(time =>
             {
-                var spread = -0.62f + 1.24f * i / Math.Max(1, FragmentCount - 1);
-                var velocity = new Vector2(spread * 210f, -140f - i % 3 * 46f);
-                var origin = _center + new Vector2(spread * _size.X * 0.22f, -_size.Y * 0.08f);
-                CelVfxGeometry.AddBallisticDebris(
-                    tween,
-                    debrisParent,
-                    FragmentPoints(5.0f + i % 3 * 1.5f, 12f + i % 2 * 4f),
-                    i % 2 == 0 ? new Color(0.88f, 0.98f, 1f) : new Color(0.58f, 0.84f, 0.97f),
-                    origin,
-                    velocity,
-                    ShatterDuration,
-                    holdDuration,
-                    FragmentGravity,
-                    1.9f + _index * 0.3f,
-                    "HailFragment");
+                Material.SetShaderParameter("shatter", time / ShatterDuration);
+                Material.SetShaderParameter("split", 1f);
+                for (var i = 0; i < 4; i++)
+                {
+                    var velocity = i switch
+                    {
+                        0 => new Vector2(-150f, -115f),
+                        1 => new Vector2(135f, -140f),
+                        2 => new Vector2(-90f, 20f),
+                        _ => new Vector2(150f, 35f)
+                    };
+                    var offset = CelVfxGeometry.BallisticOffset(velocity, FragmentGravity, time);
+                    var angle = time * ((i % 2 == 0 ? -1f : 1f) * (1.1f + i * 0.2f));
+                    Material.SetShaderParameter($"fragment_{i}", new Vector3(offset.X, offset.Y, angle));
+                }
+            }), 0f, ShatterDuration, ShatterDuration)
+                .SetDelay(ContactDuration).SetTrans(Tween.TransitionType.Linear);
+
+            for (var i = 0; i < GrainCount; i++)
+            {
+                var spread = -0.7f + 1.4f * i / (GrainCount - 1);
+                var radius = 1.8f + i % 3 * 0.7f;
+                var grain = CelVfxGeometry.AddBallisticDebris(
+                    tween, debrisParent,
+                    [new Vector2(-radius, -radius * 0.6f), new Vector2(radius * 0.8f, -radius),
+                        new Vector2(radius, radius * 0.55f), new Vector2(-radius * 0.5f, radius)],
+                    new Color(0.83f, 0.94f, 0.96f), _center + new Vector2(spread * _size.X * 0.18f, 0f),
+                    new Vector2(spread * 230f, -100f - i % 3 * 36f), 0.27f,
+                    ContactDuration, FragmentGravity, 2.4f + _index * 0.3f, "HailGrain", zIndex: 1);
+                grain.ZAsRelative = true;
             }
             return tween;
         }
-
-        /// <summary>
-        /// Angular fragment outline. Straight edges meeting at sharp corners, so a
-        /// piece of ice still reads as ice at far-field size.
-        /// </summary>
-        private static Vector2[] FragmentPoints(float radius, float height) =>
-        [
-            new(0f, -height),
-            new(radius * 0.92f, -height * 0.22f),
-            new(radius * 0.40f, height * 0.78f),
-            new(-radius * 0.58f, height * 0.50f),
-            new(-radius * 0.84f, -height * 0.34f)
-        ];
     }
 }

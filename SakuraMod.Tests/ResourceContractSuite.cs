@@ -518,19 +518,14 @@ public sealed class ResourceContractSuite
             && !legacyVfx.Contains("FlameColor", StringComparison.Ordinal)
             && !legacyVfx.Contains("FlameGoldColor", StringComparison.Ordinal),
             "Expected the legacy polygon-flame Blaze owner to be fully retired.");
-        // CreateDiamond served only the legacy Hail and Blaze builders. Hail left it
-        // for Blaze, the later of the two, so it goes out with this rebuild; the
-        // remaining helpers still have callers and stay.
-        // QuadraticPoints followed the same rule one card later: Gale was its only
-        // remaining caller, so rebuilding Gale on the shared cel layer orphaned it.
-        // AddEllipse still serves Time, so it stays — the pair is
-        // asserted together to keep "orphaned" meaning "has no caller" rather than
-        // "belongs to a retired card".
+        // The final procedural clock builder moved into a native animation scene;
+        // its old ellipse helper is now unused too.
         RegressionTestHarness.Require(
             !legacyVfx.Contains("CreateDiamond", StringComparison.Ordinal)
             && !legacyVfx.Contains("QuadraticPoints(", StringComparison.Ordinal)
-            && legacyVfx.Contains("AddEllipse(", StringComparison.Ordinal),
-            "Expected the orphaned diamond and quadratic helpers to be removed while helpers with live callers remain.");
+            && !legacyVfx.Contains("AddEllipse(", StringComparison.Ordinal)
+            && legacyVfx.Contains("TimeScenePath", StringComparison.Ordinal),
+            "Expected retired geometry builders to be replaced by the cached Time scene.");
         RegressionTestHarness.Require(
             !legacyVfx.Contains("CreateGaleWindBlade", StringComparison.Ordinal)
             && !legacyVfx.Contains("BuildGaleWindBlade", StringComparison.Ordinal)
@@ -543,7 +538,7 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
-    public void HailIceShardConsumesSharedCelLayerWithIntersectionSilhouette()
+    public void HailIceShardKeepsLocalFractureResourcesAndGameplayRouting()
     {
         var rootScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/combat/card_vfx/hail_ice_shard_vfx.tscn"));
@@ -551,103 +546,57 @@ public sealed class ResourceContractSuite
             "SakuraMod/scenes/combat/card_vfx/hail_ice_shard_target.tscn"));
         var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/shaders/card_vfx/hail_ice_shard.gdshader"));
-        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Visuals/Transparent/HailIceShardVfx.cs"));
         var hail = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Hail.cs"));
-
-        var backBufferIndex = rootScene.IndexOf(
-            "[node name=\"StableCombatFrame\" type=\"BackBufferCopy\"", StringComparison.Ordinal);
-        var shardsIndex = rootScene.IndexOf("[node name=\"Shards\" type=\"Node2D\"", StringComparison.Ordinal);
-        RegressionTestHarness.Require(
-            backBufferIndex >= 0
-            && shardsIndex > backBufferIndex
-            && rootScene.Contains("[node name=\"Debris\" type=\"Node2D\"", StringComparison.Ordinal)
-            && rootScene.Contains("mouse_filter = 2", StringComparison.Ordinal),
-            "Expected one stable combat-frame copy before the crystal and debris layers with ignored input.");
-        RegressionTestHarness.Require(
-            targetScene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
-            && targetScene.Contains("[node name=\"ShardBody\" type=\"ColorRect\"", StringComparison.Ordinal)
-            && targetScene.Contains("[node name=\"Fragments\" type=\"Node2D\"", StringComparison.Ordinal)
-            && targetScene.Contains("mouse_filter = 2", StringComparison.Ordinal),
-            "Expected each target scene to own a local ice material plus a fragment anchor.");
-
-        foreach (var uniform in new[] { "elapsed", "held", "held_at", "seed", "formation", "crack", "shatter", "opacity" })
+        var backBufferIndex = rootScene.IndexOf("type=\"BackBufferCopy\"", StringComparison.Ordinal);
+        var shardsIndex = rootScene.IndexOf("[node name=\"Shards\"", StringComparison.Ordinal);
+        RegressionTestHarness.Require(backBufferIndex >= 0 && shardsIndex > backBufferIndex
+            && rootScene.Contains("mouse_filter = 2", StringComparison.Ordinal)
+            && targetScene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
+            && targetScene.Contains("shader_parameter/formation = 0.0", StringComparison.Ordinal)
+            && targetScene.Contains("shader_parameter/split = 0.0", StringComparison.Ordinal),
+            "Expected a hidden, local ice field behind one stable frame copy.");
+        foreach (var uniform in new[] { "elapsed", "seed", "formation", "crack", "split", "shatter", "opacity" })
             Assert.Contains($"uniform float {uniform}", shader, StringComparison.Ordinal);
-        Assert.Contains("uniform vec2 region_size", shader, StringComparison.Ordinal);
-
-        // Ice is an intersection of half-planes; water is a smooth union. Calling
-        // cel_smin here would round every corner and collapse the two cards onto one
-        // silhouette, so its absence is the executable form of that art decision.
-        var shaderCode = shader
-            .Split('\n')
-            .Select(static line => line.Trim())
-            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
-            .ToList();
         RegressionTestHarness.Require(
-            !shaderCode.Any(static line => line.Contains("cel_smin(", StringComparison.Ordinal)),
-            "Expected Hail's ice to stay an intersection: no smooth-union call may build the crystal.");
-        RegressionTestHarness.Require(
-            shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_vfx.gdshaderinc\"", StringComparison.Ordinal)
-            && shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_signature.gdshaderinc\"", StringComparison.Ordinal)
-            && shader.Contains("cel_bands3(", StringComparison.Ordinal)
-            && shader.Contains("cel_ink(d, aa, CEL_INK_WIDTH)", StringComparison.Ordinal)
-            && shader.Contains("cel_step_clock_held(elapsed, held, held_at)", StringComparison.Ordinal)
-            && shader.Contains("CEL_REFRACT_MAX_PX", StringComparison.Ordinal),
-            "Expected Hail to consume shared bands, ink, refraction budget, and the held stepped clock.");
-        RegressionTestHarness.Require(
-            !shaderCode.Any(static line => line.Contains("const float CEL_", StringComparison.Ordinal))
+            shader.Contains("uniform vec2 draw_size", StringComparison.Ordinal)
+            && shader.Contains("uniform vec2 region_size", StringComparison.Ordinal)
+            && shader.Contains("cel_vfx.gdshaderinc", StringComparison.Ordinal)
+            && shader.Contains("SCREEN_PIXEL_SIZE", StringComparison.Ordinal)
             && !shader.Contains("TIME", StringComparison.Ordinal),
-            "Expected no card-local art-language constant and no shader-owned clock.");
-        RegressionTestHarness.Require(
-            shader.Contains("float aa = max(fwidth(d), 0.0001);", StringComparison.Ordinal)
-            && shader.IndexOf("float aa = max(fwidth(d)", StringComparison.Ordinal)
-                < shader.IndexOf("cel_ink(d, aa, CEL_INK_WIDTH)", StringComparison.Ordinal),
-            "Expected derivatives to be taken once in uniform control flow before any ink call.");
-
-        // The clock pulls Materials, so the subclass field backing it is still empty
-        // during the base constructor. Starting the clock there would read nothing.
-        RegressionTestHarness.Require(
-            session.Contains("session.StartClock();", StringComparison.Ordinal)
-            && session.Contains(": CelVfxSession", StringComparison.Ordinal)
-            && session.Contains("BeginHold();", StringComparison.Ordinal)
-            && session.Contains("CelVfxGeometry.AddBallisticDebris(", StringComparison.Ordinal)
-            && session.Contains("CelVfxGeometry.BallisticOffset(", StringComparison.Ordinal),
-            "Expected the session to derive from the shared skeleton, start its clock explicitly, hold a frame, and fall under the shared parabola.");
-
-        // Fragments must wait out the hold: BeginHold freezes shader time, not the
-        // tween clock, so launching them inside it shows a still crystal shedding
-        // moving debris.
-        RegressionTestHarness.Require(
-            session.Contains("HoldDuration", StringComparison.Ordinal)
-            && session.Contains("CreateShatterTween(_debris, HoldDuration)", StringComparison.Ordinal),
-            "Expected the shatter beat to be delayed by the hold rather than overlapping it.");
-
-        Assert.Contains(
-            "HailIceShardVfx.PlayOrResolveAsync(this, Owner.Creature, targets",
-            hail,
-            StringComparison.Ordinal);
+            "Expected the fragment canvas to retain the block's own geometry and shared screen-pixel budget.");
+        Assert.Contains("HailIceShardVfx.PlayOrResolveAsync(this, Owner.Creature, targets", hail, StringComparison.Ordinal);
         var loopIndex = hail.IndexOf("foreach (var target in targets)", StringComparison.Ordinal);
-        // Session creation, prelude, fail-open, and cleanup are behavioral contracts
-        // of CelVfxSession.PlayOrResolveAsync and are covered through its in-memory
-        // playback interface in CelVfxOrchestrationSuite.
-        // Impact must land on the same beat as the attack, so its ordering is asserted
-        // against the gameplay call it must precede inside the hit loop.
         var impactIndex = hail.IndexOf("cues.Impact(target)", loopIndex, StringComparison.Ordinal);
         var attackIndex = hail.IndexOf("SakuraActions.Attack(", loopIndex, StringComparison.Ordinal);
-        RegressionTestHarness.Require(
-            loopIndex >= 0 && impactIndex > loopIndex && attackIndex > impactIndex,
-            "Expected each hit to show its ice impact before the attack resolves.");
-        // The VFX session and the hit loop must walk the same snapshot, taken before
-        // any damage resolves.
-        RegressionTestHarness.Require(
-            hail.Contains("var targets = CombatState!.HittableEnemies.ToList();", StringComparison.Ordinal)
-            && loopIndex > hail.IndexOf("var targets = CombatState!.HittableEnemies.ToList();", StringComparison.Ordinal),
-            "Expected one hittable-enemy snapshot shared by the hit loop and its visual cues.");
+        RegressionTestHarness.Require(loopIndex >= 0 && impactIndex > loopIndex && attackIndex > impactIndex
+            && hail.Contains("var targets = CombatState!.HittableEnemies.ToList();", StringComparison.Ordinal),
+            "Expected each single authoritative hit and its VFX to share the same enemy snapshot.");
     }
 
     [Fact]
-    public void BlazeFireColumnConsumesSharedCelLayerWithTurbulentSilhouette()
+    public void HailOutroPreservesTheLastHitWithoutRestartingFinishedFractures()
+    {
+        var full = HailIceShardVfx.ReleaseSeconds(2f, 2f);
+        var partial = HailIceShardVfx.ReleaseSeconds(2.2f, 2f);
+        var finished = HailIceShardVfx.ReleaseSeconds(3f, 2f);
+        Assert.InRange(full, 0.45f, 0.60f);
+        Assert.True(Math.Abs(full - partial - 0.2f) < 1e-5f);
+        Assert.InRange(finished, 0f, 0.10f);
+        Assert.Equal(finished, HailIceShardVfx.ReleaseSeconds(0f, -10f));
+    }
+
+    [Fact]
+    public void AquaKeepsItsFrequentPlayLeadBoundedAcrossEnemyCounts()
+    {
+        Assert.InRange(AquaWaterSphereVfx.PreludeDuration(1), 0.25f, 0.35f);
+        for (var targets = 2; targets <= 30; targets++)
+            Assert.InRange(AquaWaterSphereVfx.PreludeDuration(targets), 0.25f, 0.45f);
+        Assert.InRange(AquaWaterSphereVfx.FrozenReleaseDuration, 0.40f, 0.60f);
+    }
+
+    [Fact]
+    public void BlazeFireColumnKeepsLocalPresentationAndGameplayContracts()
     {
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/combat/card_vfx/blaze_fire_column_vfx.tscn"));
@@ -658,95 +607,41 @@ public sealed class ResourceContractSuite
         var blaze = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Blaze.cs"));
 
-        // One scene, not Aqua's root-plus-target split: that split lets a single
-        // BackBufferCopy serve N target copies, and Blaze's N is always one.
         var backBufferIndex = scene.IndexOf(
             "[node name=\"StableCombatFrame\" type=\"BackBufferCopy\"", StringComparison.Ordinal);
         var columnIndex = scene.IndexOf("[node name=\"ColumnBody\" type=\"ColorRect\"", StringComparison.Ordinal);
         RegressionTestHarness.Require(
-            backBufferIndex >= 0
-            && columnIndex > backBufferIndex
+            backBufferIndex >= 0 && columnIndex > backBufferIndex
             && scene.Contains("[node name=\"Embers\" type=\"Node2D\"", StringComparison.Ordinal)
             && scene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
             && scene.Contains("mouse_filter = 2", StringComparison.Ordinal),
-            "Expected one stable combat-frame copy before the column and ember layers with a local material and ignored input.");
+            "Expected a stable combat-frame copy before local, input-transparent fire and embers.");
+        RegressionTestHarness.Require(
+            scene.Contains("shader_parameter/ignite = 0.0", StringComparison.Ordinal)
+            && scene.Contains("shader_parameter/rise = 0.0", StringComparison.Ordinal)
+            && scene.Contains("shader_parameter/impact_at = -10.0", StringComparison.Ordinal),
+            "Expected the mounted scene to wait for ignition and its first real impact.");
 
-        foreach (var uniform in new[] { "elapsed", "held", "held_at", "seed", "ignite", "rise", "burnout", "opacity" })
+        foreach (var uniform in new[] { "elapsed", "seed", "ignite", "rise", "burnout", "impact_at", "opacity" })
             Assert.Contains($"uniform float {uniform}", shader, StringComparison.Ordinal);
         Assert.Contains("uniform vec2 region_size", shader, StringComparison.Ordinal);
-
-        var shaderCode = shader
-            .Split('\n')
-            .Select(static line => line.Trim())
-            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
-            .ToList();
-
-        // Three cards, three field operators: water unions with cel_smin, ice
-        // intersects with max, fire warps its coordinate domain with turbulence. A
-        // smooth union here would pull the silhouette back toward water, so its
-        // absence is the executable form of that art decision — and the guard that
-        // keeps a later fire card from quietly reverting to the fluid look.
         RegressionTestHarness.Require(
-            !shaderCode.Any(static line => line.Contains("cel_smin(", StringComparison.Ordinal)),
-            "Expected Blaze's fire to stay a turbulence warp: no smooth-union call may build the column.");
-        RegressionTestHarness.Require(
-            shaderCode.Any(static line => line.Contains("cel_fbm(", StringComparison.Ordinal)),
-            "Expected the fire field to be built from the shared turbulence primitive.");
-        // Fire is a reaction front, not an incompressible body. Aqua's reciprocal
-        // squash pairing conserves volume, which would make fire behave like a fluid
-        // balloon.
-        RegressionTestHarness.Require(
-            !shaderCode.Any(static line => line.Contains("squash", StringComparison.Ordinal)),
-            "Expected no volume-conservation pairing on a card whose body is a reaction front.");
-        RegressionTestHarness.Require(
-            shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_vfx.gdshaderinc\"", StringComparison.Ordinal)
-            && shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_signature.gdshaderinc\"", StringComparison.Ordinal)
+            shader.Contains("cel_vfx.gdshaderinc", StringComparison.Ordinal)
             && shader.Contains("cel_bands3(", StringComparison.Ordinal)
-            && shader.Contains("cel_ink(d, aa, CEL_INK_WIDTH)", StringComparison.Ordinal)
-            && shader.Contains("cel_step_clock_held(elapsed, held, held_at)", StringComparison.Ordinal)
-            && shader.Contains("CEL_REFRACT_MAX_PX", StringComparison.Ordinal),
-            "Expected Blaze to consume shared bands, ink, refraction budget, and the held stepped clock.");
-        RegressionTestHarness.Require(
-            !shaderCode.Any(static line => line.Contains("const float CEL_", StringComparison.Ordinal))
+            && shader.Contains("CEL_REFRACT_MAX_PX", StringComparison.Ordinal)
+            && shader.Contains("SCREEN_PIXEL_SIZE", StringComparison.Ordinal)
             && !shader.Contains("TIME", StringComparison.Ordinal),
-            "Expected no card-local art-language constant and no shader-owned clock.");
-        RegressionTestHarness.Require(
-            shader.Contains("float aa = max(fwidth(d), 0.0001);", StringComparison.Ordinal)
-            && shader.IndexOf("float aa = max(fwidth(d)", StringComparison.Ordinal)
-                < shader.IndexOf("cel_ink(d, aa, CEL_INK_WIDTH)", StringComparison.Ordinal),
-            "Expected derivatives to be taken once in uniform control flow before any ink call.");
-        // Screen-pixel budgets convert through SCREEN_PIXEL_SIZE. Dividing a pixel
-        // count by region_size yields region UV, so adding it to SCREEN_UV both
-        // overshoots the budget and grows as the region shrinks.
-        RegressionTestHarness.Require(
-            shaderCode.Any(static line => line.Contains("SCREEN_PIXEL_SIZE", StringComparison.Ordinal)),
-            "Expected the heat shimmer to convert its pixel budget through SCREEN_PIXEL_SIZE.");
-
+            "Expected shared colour bands, session-owned time, and heat bounded in screen pixels.");
         RegressionTestHarness.Require(
             session.Contains("session.StartClock();", StringComparison.Ordinal)
             && session.Contains(": CelVfxSession", StringComparison.Ordinal)
-            && session.Contains("BeginHold();", StringComparison.Ordinal)
-            && session.Contains("CelVfxGeometry.AddBallisticDebris(", StringComparison.Ordinal),
-            "Expected the session to derive from the shared skeleton, start its clock explicitly, and hold a frame.");
-        // Embers must wait out the hold: BeginHold freezes shader time, not the tween
-        // clock, so launching them inside it shows a still column shedding movement.
-        RegressionTestHarness.Require(
-            session.Contains("HoldDuration", StringComparison.Ordinal)
-            && session.Contains("SetDelay(HoldDuration)", StringComparison.Ordinal),
-            "Expected the burnout beat and the embers to be delayed by the hold rather than overlapping it.");
-        // Light embers, not rock. Gravity is a parameter of the shared integrator, so
-        // a slower fall must not become a second integration.
-        RegressionTestHarness.Require(
-            session.Contains("EmberGravity", StringComparison.Ordinal),
-            "Expected embers to fall under a card-tuned gravity parameter rather than the default.");
-        // Blaze's damage scales with the exhaust pile; its fire must not. Reading a
-        // gameplay value here would open a channel from mechanics into presentation
-        // for no gain beyond "bigger number, taller flame".
+            && session.Contains("ReleaseSeconds(Elapsed, _impactAt)", StringComparison.Ordinal),
+            "Expected the shared lifecycle and an outro bounded by time since the actual hit.");
         RegressionTestHarness.Require(
             !session.Contains("PileType", StringComparison.Ordinal)
             && !session.Contains("ExhaustedCardMultiplier", StringComparison.Ordinal)
             && !session.Contains("CalculatedDamage", StringComparison.Ordinal),
-            "Expected the fire column to stay at fixed strength rather than reading a gameplay value.");
+            "Expected fixed visual strength without reading the damage or exhaust pile.");
 
         Assert.Contains(
             "BlazeFireColumnVfx.PlayOrResolveAsync(this, Owner.Creature, target",
@@ -756,16 +651,32 @@ public sealed class ResourceContractSuite
         var attackIndex = blaze.IndexOf("SakuraActions.Attack(", StringComparison.Ordinal);
         RegressionTestHarness.Require(
             impactIndex >= 0 && attackIndex > impactIndex,
-            "Expected Blaze to show its family cue before the attack resolves.");
-        // Single target: RequiredTarget is a pure read, so unlike Hail there is no
-        // snapshot-timing question. The gameplay call must stay untouched.
+            "Expected the visual impact on the same beat as the authoritative attack.");
         RegressionTestHarness.Require(
             blaze.Contains("var target = RequiredTarget(play);", StringComparison.Ordinal)
             && blaze.Contains(
                 "SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage)",
                 StringComparison.Ordinal)
             && blaze.Contains("BlazeRules.ExhaustedCardMultiplier", StringComparison.Ordinal),
-            "Expected Blaze's gameplay path to stay verbatim behind the visual rebuild.");
+            "Expected Blaze's gameplay path to remain behind the presentation wrapper.");
+    }
+
+    [Fact]
+    public void BlazeOutroEndsAtTheSameTimeForFastAndSlowGameplay()
+    {
+        const float hitAt = 2f;
+        var fullTail = BlazeFireColumnVfx.ReleaseSeconds(hitAt, hitAt);
+        Assert.InRange(fullTail, 0.45f, 0.60f);
+        foreach (var gameplaySeconds in new[] { 0f, 0.10f, 0.25f, 0.44f, 0.50f })
+        {
+            var finishedAt = hitAt + gameplaySeconds;
+            var remaining = BlazeFireColumnVfx.ReleaseSeconds(finishedAt, hitAt);
+            Assert.InRange(remaining, 0f, fullTail);
+            Assert.True(Math.Abs(finishedAt + remaining - (hitAt + fullTail)) < 1e-5f,
+                "Resolving gameplay must consume, rather than restart, the visual tail.");
+        }
+        Assert.Equal(0f, BlazeFireColumnVfx.ReleaseSeconds(hitAt + 1f, hitAt));
+        Assert.Equal(fullTail, BlazeFireColumnVfx.ReleaseSeconds(hitAt - 0.1f, hitAt));
     }
 
     [Fact]
@@ -1136,176 +1047,86 @@ public sealed class ResourceContractSuite
     {
         var curtainScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/combat/card_vfx/snow_blizzard_vfx.tscn"));
-        var crystalScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+        var contactScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/combat/card_vfx/snow_crystal_target.tscn"));
 
-        // One curtain root, one crystal root: pure ColorRect regions with a local
-        // material and no screen capture — the enemy side never refracts, so the
-        // whole budget stays on the drawn shapes. The body names are load-bearing
-        // (the session fetches them as %SnowfallBody / %CrystalBody), which is
-        // what unique_name_in_owner records.
-        RegressionTestHarness.Require(
-            curtainScene.Contains("[node name=\"SnowfallBody\" type=\"ColorRect\" parent=\".\"]", StringComparison.Ordinal)
-            && curtainScene.Contains("unique_name_in_owner = true", StringComparison.Ordinal)
-            && curtainScene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
-            && curtainScene.Split("mouse_filter = 2", StringSplitOptions.None).Length - 1 == 2
-            && !curtainScene.Contains("BackBufferCopy", StringComparison.Ordinal),
-            "Expected one local ColorRect curtain region whose every control ignores input and never copies the screen.");
-        RegressionTestHarness.Require(
-            crystalScene.Contains("[node name=\"CrystalBody\" type=\"ColorRect\" parent=\".\"]", StringComparison.Ordinal)
-            && crystalScene.Contains("unique_name_in_owner = true", StringComparison.Ordinal)
-            && crystalScene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
-            && crystalScene.Contains("mouse_filter = 2", StringComparison.Ordinal)
-            && !crystalScene.Contains("BackBufferCopy", StringComparison.Ordinal),
-            "Expected one local ColorRect crystal region that ignores input and never copies the screen.");
-
-        // Both scenes ship the shader's start state: no beat has begun and the
-        // curtain would draw nothing as delivered. A scene shipped at its finished
-        // state would flash a completed blizzard on spawn, so the parameters are
-        // asserted including the zero values the forensic scripts must scan.
-        foreach (var (scene, layerParameter, name) in new[]
+        foreach (var (scene, bodyName, layer) in new[]
                  {
-                     (curtainScene, "shader_parameter/layer = 0", "curtain"),
-                     (crystalScene, "shader_parameter/layer = 1", "crystal")
+                     (curtainScene, "SnowfallBody", 0),
+                     (contactScene, "CrystalBody", 1)
                  })
         {
             RegressionTestHarness.Require(
-                scene.Contains(layerParameter, StringComparison.Ordinal)
+                scene.Contains($"[node name=\"{bodyName}\" type=\"ColorRect\" parent=\".\"]", StringComparison.Ordinal)
+                && scene.Contains("unique_name_in_owner = true", StringComparison.Ordinal)
+                && scene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
+                && scene.Contains("mouse_filter = 2", StringComparison.Ordinal)
+                && !scene.Contains("BackBufferCopy", StringComparison.Ordinal),
+                "Expected independently animated, input-transparent Snow materials without screen capture.");
+
+            // Both hit slots must be inactive before the first cue. A zero
+            // timestamp would flash frost immediately as the scene is mounted.
+            RegressionTestHarness.Require(
+                scene.Contains($"shader_parameter/layer = {layer}", StringComparison.Ordinal)
                 && scene.Contains("shader_parameter/curtain = 0.0", StringComparison.Ordinal)
-                && scene.Contains("shader_parameter/dart = 0.0", StringComparison.Ordinal)
-                && scene.Contains("shader_parameter/dart_spin = 0.0", StringComparison.Ordinal)
-                && scene.Contains("shader_parameter/bloom = 0.0", StringComparison.Ordinal)
-                && scene.Contains("shader_parameter/frost = 0.0", StringComparison.Ordinal)
+                && scene.Contains("shader_parameter/hit_at = -10.0", StringComparison.Ordinal)
+                && scene.Contains("shader_parameter/previous_hit_at = -10.0", StringComparison.Ordinal)
+                && scene.Contains("shader_parameter/gust_at = -10.0", StringComparison.Ordinal)
+                && scene.Contains("shader_parameter/impact_life = 0.42", StringComparison.Ordinal)
                 && scene.Contains("shader_parameter/opacity = 1.0", StringComparison.Ordinal),
-                $"Expected the {name} scene to ship its ShaderMaterial in the start state with {layerParameter}.");
+                "Expected weather and both contact slots to ship hidden until their own cues.");
         }
     }
 
     [Fact]
-    public void SnowBlizzardFoldsTheCelWheelWithoutNeighbouringCardSilhouettes()
+    public void SnowBlizzardKeepsTheLastContactTailWithoutQueuingHitHistory()
     {
-        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/shaders/card_vfx/snow_blizzard.gdshader"));
-        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Visuals/Classic/SnowBlizzardVfx.cs"));
-
-        var shaderCode = shader
-            .Split('\n')
-            .Select(static line => line.Trim())
-            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
-            .ToList();
-        var snowfallField = ExtractGlslFunction(shader, "float snowfall_field(");
-        var snowfallShade = ExtractGlslFunction(shader, "vec4 shade_snowfall(");
-        var beatSteps = ExtractGlslFunction(shader, "float snow_beat_steps(");
-        var fragmentBody = ExtractGlslFunction(shader, "void fragment()");
-
-        // Shared includes first: the fold, bands, ink, and stepped clock live in
-        // cel_vfx.gdshaderinc, and a card-local copy of any of them could not stay
-        // in step with every other card.
         RegressionTestHarness.Require(
-            shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_vfx.gdshaderinc\"", StringComparison.Ordinal)
-            && shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_signature.gdshaderinc\"", StringComparison.Ordinal),
-            "Expected Snow to consume the shared cel mathematics and signature includes.");
+            Math.Abs(SnowBlizzardVfx.ReleaseSeconds(0f, SnowBlizzardVfx.InactiveHitAt)
+                - SnowBlizzardVfx.FadeDuration) < 1e-5f,
+            "Expected a no-hit play to spend only the short weather fade in its outro.");
 
-        // Snow's silhouette operator is the polar fold, so every neighbouring
-        // card's operator stays absent: cel_smin is Aqua's union, cel_fbm is
-        // Blaze's turbulence, cel_scalloped_mass is the weather canopy, and Hail's
-        // crystal is a half-plane facet loop. Screen sampling and a shader-owned
-        // clock are forbidden card-wide. Checked against the comment-stripped
-        // source, because the shader's own commentary names hint_screen_texture
-        // while explaining why it is forbidden here.
-        RegressionTestHarness.Require(
-            !shaderCode.Any(static line =>
-                line.Contains("cel_smin(", StringComparison.Ordinal)
-                || line.Contains("cel_fbm(", StringComparison.Ordinal)
-                || line.Contains("cel_scalloped_mass(", StringComparison.Ordinal)
-                || line.Contains("cel_facet(", StringComparison.Ordinal)
-                || line.Contains("FACE_BUDGET", StringComparison.Ordinal)
-                || line.Contains("TIME", StringComparison.Ordinal)
-                || line.Contains("hint_screen_texture", StringComparison.Ordinal)),
-            "Expected no water union, fire turbulence, cloud canopy, Hail facet loop, shader clock, or screen sample in the snow field.");
-        RegressionTestHarness.Require(
-            !shaderCode.Any(static line => line.Contains("const float CEL_", StringComparison.Ordinal)),
-            "Expected no card-local restatement of the locked band, ink, or step constants.");
+        // These are contact timestamps, not queued formation/flight beats.
+        // Even twelve fast hits preserve only the latest remaining visual tail.
+        for (var count = 1; count <= 24; count++)
+        {
+            var lastHitAt = count * 0.05f;
+            var finishAt = lastHitAt + 0.02f;
+            var release = SnowBlizzardVfx.ReleaseSeconds(finishAt, lastHitAt);
+            RegressionTestHarness.Require(
+                finishAt + release >= lastHitAt + SnowBlizzardVfx.ImpactDuration - 1e-5f
+                && release <= SnowBlizzardVfx.ImpactDuration,
+                "Expected the last contact to complete without growing the outro with hit count.");
+        }
 
-        // The crystal path is the fold's consumer: the frost lace and the dart
-        // wheel each fold into one fundamental sector, and both shade with the
-        // shared bands and ink on the stepped clock.
         RegressionTestHarness.Require(
-            fragmentBody.Contains("cel_radial_fold(", StringComparison.Ordinal)
-            && fragmentBody.Split("cel_radial_fold(", StringSplitOptions.None).Length - 1 == 2
-            && fragmentBody.Contains("cel_bands3(", StringComparison.Ordinal)
-            && fragmentBody.Contains("cel_ink(d_dart, aa_dart, CEL_INK_WIDTH)", StringComparison.Ordinal)
-            && fragmentBody.Contains("cel_ink(d_frost, aa_frost, CEL_INK_WIDTH)", StringComparison.Ordinal)
-            && beatSteps.Contains("cel_step_clock(", StringComparison.Ordinal),
-            "Expected the frost lace and the dart wheel to share the polar fold and shade through the shared bands, ink, and stepped clock.");
-
-        // Curtain grains are traces, not drawn bodies — the cloud/rain ruling on
-        // precipitation gives them a bright core and foam rim on continuous time,
-        // never ink, bands, or a stepped clock. Their fall is terminal drift:
-        // driven by the session-pushed elapsed, with a shared noise gust and a
-        // per-grain sway, so the field cannot collapse into Rain's straight
-        // streaks or Hail's accelerating shards.
-        RegressionTestHarness.Require(
-            !snowfallShade.Contains("cel_ink", StringComparison.Ordinal)
-            && !snowfallShade.Contains("cel_bands3", StringComparison.Ordinal)
-            && !snowfallShade.Contains("cel_step_clock", StringComparison.Ordinal)
-            && !snowfallField.Contains("cel_ink", StringComparison.Ordinal)
-            && !snowfallField.Contains("cel_bands3", StringComparison.Ordinal)
-            && !snowfallField.Contains("cel_step_clock", StringComparison.Ordinal)
-            && shader.Contains("snowfall_field(p, elapsed, half_size)", StringComparison.Ordinal)
-            && snowfallField.Contains("t * fall", StringComparison.Ordinal)
-            && snowfallField.Contains("cel_noise2(", StringComparison.Ordinal)
-            && snowfallField.Contains("* SWAY_AMP", StringComparison.Ordinal),
-            "Expected curtain grains to shade as bright-core traces whose fall runs on the pushed clock with noise gusts and per-grain sway.");
-
-        // The bloom's sparkle stays in the shader's bright rim. Hail's ballistic
-        // debris reads as shattered shards, which is exactly what a snowflake
-        // must not do — it settles and sublimates.
-        RegressionTestHarness.Require(
-            !session.Contains("AddBallisticDebris", StringComparison.Ordinal),
-            "Expected no ballistic debris path in the snow session: snowflake bloom is a shader rim, never thrown fragments.");
+            Math.Abs(SnowBlizzardVfx.ReleaseSeconds(5f, 1f) - SnowBlizzardVfx.FadeDuration) < 1e-5f,
+            "Expected a completed contact to introduce no additional wait.");
     }
 
     [Fact]
-    public void SnowBlizzardBeatCurveCompressesOntoItsFloorInsideTheLifetimeCap()
+    public void SnowBlizzardOwnsBothNativeDepthLayersAndPreservesIndependentContactOpacity()
     {
-        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Visuals/Classic/SnowBlizzardVfx.cs"));
+        var fadeStart = source.IndexOf("private void FadeAndDispose()", StringComparison.Ordinal);
+        var layoutStart = source.IndexOf("private static CelVfxGeometry.TargetGeometry LayoutField(", StringComparison.Ordinal);
+        RegressionTestHarness.Require(fadeStart >= 0 && layoutStart > fadeStart, "Expected the Snow outro and field layout.");
+        var outro = source[fadeStart..layoutStart];
 
-        // The floor is three stepped formation frames plus the 0.12 s terminal
-        // fall plus one bloom frame at the shared 12 Hz stepped clock. The curve
-        // must actually reach it as beats accumulate — a bound that is never
-        // attained would let every beat stay uncompressed.
-        var floor = 3f / 12f + 0.12f + 1f / 12f;
-        var beats = Enumerable.Range(0, SnowBlizzardVfx.WorstCaseBeats * 2)
-            .Select(SnowBlizzardVfx.BeatSeconds)
-            .ToList();
         RegressionTestHarness.Require(
-            beats.All(beat => beat >= floor - 1e-3f)
-            && beats[0] > floor + 1e-3f
-            && beats.Zip(beats.Skip(1), (current, next) => next <= current + 1e-6f)
-                .All(static compressed => compressed)
-            && Math.Abs(beats[^1] - floor) < 1e-3f,
-            "Expected beat durations to compress monotonically onto the three-frame, 0.12 s, one-bloom-frame floor as beats accumulate.");
-
-        // MaximumLifetime is a wall-clock safety net, not a beat timer: it is
-        // sized for the worst case (prelude, curtain, twelve floor beats, the
-        // held finale volley, and the fade), so the whole envelope at the worst
-        // beat count must clear it with room to spare.
+            source.Contains("room.BackCombatVfxContainer.AddChildSafely(backRoot)", StringComparison.Ordinal)
+            && source.Contains("root.TreeExiting += ReleaseBackRoot", StringComparison.Ordinal)
+            && source.Contains("CombatManager.Instance.CombatEnded += OnSnowCombatEnded", StringComparison.Ordinal)
+            && source.Contains("backRoot.TreeExiting += OnBackTreeExiting", StringComparison.Ordinal)
+            && source.Contains("session => session.DisposePresentation()", StringComparison.Ordinal)
+            && source.Contains("_backRoot.QueueFreeSafely()", StringComparison.Ordinal),
+            "Expected the room-owned far snow to be cleaned up on failure, either tree exit, and combat end.");
         RegressionTestHarness.Require(
-            session.Contains("MaximumLifetime", StringComparison.Ordinal)
-            && float.IsFinite(SnowBlizzardVfx.TotalEnvelopeSeconds(SnowBlizzardVfx.WorstCaseBeats))
-            && SnowBlizzardVfx.TotalEnvelopeSeconds(SnowBlizzardVfx.WorstCaseBeats) < 15f,
-            "Expected the worst-case envelope to stay finite and under the session's 15 s lifetime cap.");
-
-        // A zero-count play still lowers the curtain once, but must not idle: with
-        // no beats the envelope is its shortest and stays a short show.
-        RegressionTestHarness.Require(
-            float.IsFinite(SnowBlizzardVfx.TotalEnvelopeSeconds(0))
-            && SnowBlizzardVfx.TotalEnvelopeSeconds(0) < SnowBlizzardVfx.TotalEnvelopeSeconds(1)
-            && SnowBlizzardVfx.TotalEnvelopeSeconds(0) < 2.5f,
-            "Expected a zero-beat play to run the shortest envelope: the snow falls once, no dart is thrown, nothing idles.");
+            outro.Contains("ReleaseSeconds(Elapsed, _lastHitAt)", StringComparison.Ordinal)
+            && !outro.Contains("_targets", StringComparison.Ordinal)
+            && !outro.Contains("TweenProperty(Root", StringComparison.Ordinal),
+            "Expected the outro to fade weather independently while the last target contact completes.");
     }
 
     [Fact]
@@ -3193,7 +3014,7 @@ public sealed class ResourceContractSuite
             && !simpleVfx.Contains("PlayGravitation", StringComparison.Ordinal)
             && !simpleVfx.Contains("EnemyArea", StringComparison.Ordinal)
             && simpleVfx.Contains("PlayTime", StringComparison.Ordinal)
-            && simpleVfx.Contains("AddEllipse", StringComparison.Ordinal)
+            && simpleVfx.Contains("TimeScenePath", StringComparison.Ordinal)
             && power.Contains("GravitationHoldVisual.Mount(Owner)", StringComparison.Ordinal)
             && power.Contains("NotifyRemoved(oldOwner)", StringComparison.Ordinal)
             && applyIndex >= 0

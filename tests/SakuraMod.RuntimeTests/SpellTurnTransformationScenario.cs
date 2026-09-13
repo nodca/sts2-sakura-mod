@@ -2,7 +2,9 @@ using Godot;
 using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.TestSupport;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.TestProtocol;
@@ -22,6 +24,8 @@ internal static class SpellTurnTransformationScenario
         var player = context.Player;
         var playerCombat = player.PlayerCombatState
             ?? throw new InvalidOperationException("Player combat state is unavailable.");
+
+        await VerifyTransientCardVfxAsync(combat.HittableEnemies.First(), assertions);
 
         var selectedClow = playerCombat.AllCards.OfType<ClowSword>().FirstOrDefault()
             ?? throw new InvalidOperationException("Starter combat did not contain ClowSword.");
@@ -107,6 +111,64 @@ internal static class SpellTurnTransformationScenario
         };
     }
 
+    private static async Task VerifyTransientCardVfxAsync(
+        Creature target, RuntimeAssertionCollector assertions)
+    {
+        var room = NCombatRoom.Instance ?? throw new InvalidOperationException("Card VFX needs a live room.");
+        Node2D? Find(string name) => room.CombatVfxContainer.GetChildren().OfType<Node2D>()
+            .SingleOrDefault(node => node.Name == name);
+        ShaderMaterial? ice = null;
+        var gameplayCalls = 0;
+        await HailIceShardVfx.PlayOrResolveAsync(ModelDb.Card<Hail>(), null, [target], cues =>
+        {
+            gameplayCalls++;
+            var root = Find("SakuraHailIceShardVfx")
+                ?? throw new InvalidOperationException("Hail presentation failed to mount.");
+            ice = (ShaderMaterial)root.GetNode<ColorRect>("Shards/HailIce1/ShardBody").Material;
+            cues.Impact(target);
+            assertions.Equal("hail_first_hit_cracks_immediately", 1f, ice.GetShaderParameter("crack").AsSingle());
+            var grains = root.GetNode<Node2D>("Debris").GetChildCount();
+            assertions.True("hail_first_hit_schedules_grains", grains > 0);
+            cues.Impact(target);
+            assertions.Equal("hail_duplicate_cue_does_not_duplicate_debris", grains,
+                root.GetNode<Node2D>("Debris").GetChildCount());
+            return Task.CompletedTask;
+        });
+        await CombatScenarioContext.WaitUntilAsync(
+            () => ice is not null && ice.GetShaderParameter("split").AsSingle() > 0f,
+            "Hail first-hit fracture movement");
+        assertions.Equal("hail_one_hit_reaches_complete_fracture_path", 1f, ice!.GetShaderParameter("split").AsSingle());
+        await CombatScenarioContext.WaitUntilAsync(() => Find("SakuraHailIceShardVfx") is null, "Hail cleanup");
+        assertions.Equal("hail_gameplay_resolves_once", 1, gameplayCalls);
+
+        foreach (var frozen in new[] { false, true })
+        {
+            var water = AquaWaterSphereVfx.TryCreate([target])
+                ?? throw new InvalidOperationException("Aqua presentation failed to mount.");
+            await water.PlayPrelude();
+            var waterRoot = Find("SakuraAquaWaterSphereVfx")
+                ?? throw new InvalidOperationException("Aqua ended before impact.");
+            var body = waterRoot.GetNode<ColorRect>("Spheres/AquaWater1/WaterBody");
+            var material = (ShaderMaterial)body.Material;
+            assertions.Equal($"aqua_{frozen}_enclosure_completes_before_gameplay", 1f,
+                material.GetShaderParameter("formation").AsSingle());
+            water.Impact(target);
+            if (frozen)
+                water.PlayFreeze(target);
+            water.Release();
+            await CombatScenarioContext.WaitUntilAsync(() => Find("SakuraAquaWaterSphereVfx") is null,
+                $"Aqua {(frozen ? "frozen" : "normal")} cleanup");
+            assertions.True($"aqua_{frozen}_outro_cleans_up", Find("SakuraAquaWaterSphereVfx") is null);
+        }
+
+        SakuraCardPlayVfx.PlayTime();
+        var clock = Find("SakuraTimeVfx") ?? throw new InvalidOperationException("Time presentation failed to mount.");
+        assertions.Equal("time_is_centered_on_the_battlefield", room.SceneContainer.GetGlobalRect().GetCenter(), clock.GlobalPosition);
+        assertions.True("time_native_animation_started", clock.GetNode<AnimationPlayer>("AnimationPlayer").IsPlaying());
+        await CombatScenarioContext.WaitUntilAsync(() => Find("SakuraTimeVfx") is null, "Time animation cleanup");
+        assertions.True("time_animation_releases_root", Find("SakuraTimeVfx") is null);
+    }
+
     private static int InspectRunAssetCache(RuntimeAssertionCollector assertions)
     {
         CardModel[] vfxCards =
@@ -114,6 +176,7 @@ internal static class SpellTurnTransformationScenario
             ModelDb.Card<Aqua>(),
             ModelDb.Card<Hail>(),
             ModelDb.Card<Blaze>(),
+            ModelDb.Card<SakuraMod.SakuraModCode.Cards.Time>(),
             ModelDb.Card<ClowShield>(),
             ModelDb.Card<SakuraShield>(),
             ModelDb.Card<ClowSword>(),
@@ -153,6 +216,7 @@ internal static class SpellTurnTransformationScenario
             HailIceShardVfx.ScenePath,
             HailIceShardVfx.TargetScenePath,
             BlazeFireColumnVfx.ScenePath,
+            SakuraCardPlayVfx.TimeScenePath,
             SakuraSwordBladeVfx.ScenePath,
             SakuraSwordBladeVfx.TargetScenePath,
             SpellTurnTransformationVfx.ScenePath

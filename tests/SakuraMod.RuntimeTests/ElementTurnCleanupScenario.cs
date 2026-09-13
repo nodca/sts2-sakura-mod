@@ -1,6 +1,10 @@
+using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
@@ -86,6 +90,7 @@ internal static class ElementTurnCleanupScenario
         assertions.True("temporary_before_turn_end", temporary.IsTemporary());
 
         var snow = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraSnow>(combat, player);
+        await VerifySnowVisualCleanupAsync(snow, player.Creature, enemy, assertions);
         await CombatScenarioContext.PlayCardAsync(snow);
         assertions.Equal("snow_count_after_first_play", 1, SakuraSnowRules.PlayedWateryCards(snow));
         var replaySnow = new RuntimeFixtureAction(
@@ -145,5 +150,47 @@ internal static class ElementTurnCleanupScenario
                 enemy_earthy = enemy.GetPower<ClassicEarthyPower>()?.Amount ?? 0
             }
         };
+    }
+
+    private static async Task VerifySnowVisualCleanupAsync(
+        CardModel card,
+        Creature caster,
+        Creature target,
+        RuntimeAssertionCollector assertions)
+    {
+        var room = NCombatRoom.Instance ?? throw new InvalidOperationException("Snow needs a live combat room.");
+        int FrontCount() => room.CombatVfxContainer.GetChildren()
+            .OfType<Node2D>().Count(node => node.Name == "SakuraSnowBlizzardVfx");
+        int BackCount() => room.BackCombatVfxContainer.GetChildren()
+            .OfType<Node2D>().Count(node => node.Name == "SakuraSnowBlizzardBackVfx");
+
+        await SnowBlizzardVfx.PlayOrResolveAsync(card, caster, [target], cues =>
+        {
+            assertions.Equal("snow_front_layer_created", 1, FrontCount());
+            assertions.Equal("snow_back_layer_created", 1, BackCount());
+            for (var hit = 0; hit < 12; hit++)
+                cues.Impact(target);
+            cues.Finale();
+            assertions.Equal("snow_repeated_hits_keep_one_front_root", 1, FrontCount());
+            assertions.Equal("snow_repeated_hits_keep_one_back_root", 1, BackCount());
+            return Task.CompletedTask;
+        });
+        await CombatScenarioContext.WaitUntilAsync(() => FrontCount() == 0 && BackCount() == 0, "Snow outro cleanup");
+        assertions.Equal("snow_outro_front_cleared", 0, FrontCount());
+        assertions.Equal("snow_outro_back_cleared", 0, BackCount());
+
+        var gameplayFailure = new InvalidOperationException("Snow visual cleanup fixture");
+        try
+        {
+            await SnowBlizzardVfx.PlayOrResolveAsync(card, caster, [target], _ => throw gameplayFailure);
+            throw new InvalidOperationException("Snow swallowed the fixture gameplay failure.");
+        }
+        catch (InvalidOperationException exception) when (ReferenceEquals(exception, gameplayFailure))
+        {
+            assertions.True("snow_gameplay_exception_preserved", true);
+        }
+        await CombatScenarioContext.WaitUntilAsync(() => FrontCount() == 0 && BackCount() == 0, "Snow failure cleanup");
+        assertions.Equal("snow_failure_front_cleared", 0, FrontCount());
+        assertions.Equal("snow_failure_back_cleared", 0, BackCount());
     }
 }

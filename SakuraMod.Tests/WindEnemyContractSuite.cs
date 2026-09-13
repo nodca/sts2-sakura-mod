@@ -108,7 +108,7 @@ public sealed class WindEnemyContractSuite
     }
 
     [Fact]
-    public void WindGroundingKeepsTheEncounterCameraAndRooftopUnchanged()
+    public void WindGroundingKeepsTheEncounterCameraAndOffsetsUnchanged()
     {
         WindEncounterTemplate[] encounters =
         [
@@ -132,13 +132,6 @@ public sealed class WindEnemyContractSuite
         Assert.Equal(110f, WindCombatGrounding.AllyOffset.Y);
         Assert.Equal(80f, WindCombatGrounding.EnemyOffset.X);
         Assert.Equal(110f, WindCombatGrounding.EnemyOffset.Y);
-
-        var layerScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/backgrounds/fourth_act/rooftop/rooftop_base.tscn"));
-        Assert.Contains("offset_left = -1382.4", layerScene);
-        Assert.Contains("offset_top = -648.0", layerScene);
-        Assert.Contains("offset_right = 1382.4", layerScene);
-        Assert.Contains("offset_bottom = 648.0", layerScene);
 
         var encounterSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/FourthAct/Wind/Encounters/WindEncounters.cs"));
@@ -301,7 +294,7 @@ public sealed class WindEnemyContractSuite
     }
 
     [Fact]
-    public void EveryWindEncounterUsesOneStaticRooftopBackgroundLayer()
+    public void EveryWindEncounterUsesOneStaticRooftopLayerWithoutCloudResources()
     {
         var layerScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/backgrounds/fourth_act/rooftop/rooftop_base.tscn"));
@@ -315,16 +308,23 @@ public sealed class WindEnemyContractSuite
             FourthActCombatBackgrounds.MainScenePath);
         Assert.Contains(FourthActCombatBackgrounds.WindRooftopTexturePath, layerScene);
         Assert.DoesNotContain("AnimationPlayer", layerScene);
-        Assert.DoesNotContain("ShaderMaterial", layerScene);
         Assert.DoesNotContain("VideoStream", layerScene);
-        Assert.Equal(2048, BinaryPrimitives.ReadInt32BigEndian(header[16..20]));
-        Assert.Equal(960, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
+        Assert.DoesNotContain("ShaderMaterial", layerScene);
+        Assert.DoesNotContain("CloudMotion", layerScene);
+        Assert.DoesNotContain(".cs\"", layerScene);
+        Assert.Equal((int)StaticCombatBackgroundVisuals.CanvasWidth, BinaryPrimitives.ReadInt32BigEndian(header[16..20]));
+        Assert.Equal((int)StaticCombatBackgroundVisuals.CanvasHeight, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
         Assert.Equal(8, header[24]);
         Assert.Equal(2, header[25]);
         Assert.Contains(
             "source_file=\"res://SakuraMod/images/backgrounds/fourth_act/rooftop/rooftop_base.png\"",
             textureImport);
         Assert.Contains("mipmaps/generate=false", textureImport);
+        var rooftopDirectory = Path.GetDirectoryName(texture)!;
+        Assert.False(File.Exists(Path.Combine(rooftopDirectory, "rooftop_sky_mask.png")));
+        var resourceRoot = Path.GetFullPath(Path.Combine(rooftopDirectory, "../../../.."));
+        Assert.False(File.Exists(Path.Combine(resourceRoot, "videos/fourth_act/rooftop_clouds.ogv")));
+        Assert.False(File.Exists(Path.Combine(resourceRoot, "shaders/fourth_act/rooftop_clouds.gdshader")));
 
         var encounterSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/FourthAct/Wind/Encounters/WindEncounters.cs"));
@@ -340,6 +340,18 @@ public sealed class WindEnemyContractSuite
             "public sealed class WindyEncounter", StringComparison.Ordinal)..];
         Assert.DoesNotContain("UseProgrammaticCombatBackground", windyDeclaration);
         Assert.DoesNotContain("FourthActCombatBackgrounds.CreateWindRooftop()", windyDeclaration);
+    }
+
+    [Theory]
+    [InlineData(1920, 1080)]
+    [InlineData(2520, 1080)]
+    [InlineData(1920, 1200)]
+    public void RooftopOverscanPreservesTheCentralCompositionWithShakeMargin(float width, float height)
+    {
+        var scale = StaticCombatBackgroundVisuals.ImageScale(width, height);
+        Assert.True(StaticCombatBackgroundVisuals.CanvasWidth * scale >= width + 96);
+        Assert.True(StaticCombatBackgroundVisuals.CanvasHeight * scale >= height + 96);
+        Assert.Equal(1f, scale, 5);
     }
 
 

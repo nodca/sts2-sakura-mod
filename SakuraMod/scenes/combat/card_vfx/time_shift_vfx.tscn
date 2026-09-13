@@ -1,0 +1,418 @@
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Animation" id="Animation_qflei"]
+resource_name = "time_shift"
+length = 0.72
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.06, 0.37, 0.72),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1), Color(1, 1, 1, 1), Color(1, 1, 1, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath(".:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.08, 0.3, 0.72),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [Vector2(0.92, 0.92), Vector2(1, 1), Vector2(1, 1), Vector2(1.035, 1.035)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Face/Minute:rotation")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.13, 0.29, 0.72),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [-0.5235987755982988, 4.014257279586958, 4.014257279586958, 4.014257279586958]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Face/Hour:rotation")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0, 0.13, 0.29, 0.72),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [0.7330382858376184, 1.7802358370342162, 1.7802358370342162, 1.7802358370342162]
+}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Face/Rings:rotation")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {
+"times": PackedFloat32Array(0, 0.13, 0.29, 0.72),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [-0.24434609527920614, 0.0, 0.0, 0.12217304763960307]
+}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Face/Ticks0:rotation")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {
+"times": PackedFloat32Array(0, 0.13, 0.16, 0.29, 0.44),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.0, 0.0, 0.13962634015954636, 0.13962634015954636, 0.0]
+}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Face/Ticks1:rotation")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {
+"times": PackedFloat32Array(0, 0.13, 0.16, 0.29, 0.44),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.0, 0.0, -0.10471975511965978, -0.10471975511965978, 0.0]
+}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Face/Ticks2:rotation")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {
+"times": PackedFloat32Array(0, 0.13, 0.16, 0.29, 0.44),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.0, 0.0, 0.19198621771937624, 0.19198621771937624, 0.0]
+}
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Echo0:modulate")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {
+"times": PackedFloat32Array(0, 0.12, 0.15, 0.27, 0.57),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 0), Color(1, 1, 1, 0.5), Color(1, 1, 1, 0.35), Color(1, 1, 1, 0)]
+}
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Echo0:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.52),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.0, 0.0, -0.15707963267948966]
+}
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Echo1:modulate")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {
+"times": PackedFloat32Array(0, 0.12, 0.15, 0.27, 0.57),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 0), Color(1, 1, 1, 0.38), Color(1, 1, 1, 0.35), Color(1, 1, 1, 0)]
+}
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Echo1:rotation")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.52),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.0, 0.0, 0.19198621771937624]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_u4oqm"]
+_data = {
+&"time_shift": SubResource("Animation_qflei")
+}
+
+[node name="TimeShiftVfx" type="Node2D"]
+modulate = Color(1, 1, 1, 0)
+
+[node name="Face" type="Node2D" parent="."]
+
+[node name="Rings" type="Node2D" parent="Face"]
+
+[node name="OuterArc0" type="Line2D" parent="Face/Rings"]
+points = PackedVector2Array(118, 0, 117.864105, 5.6614194, 117.45675, 11.309798, 116.77886, 16.932129, 115.83201, 22.515461, 114.61836, 28.046934, 113.14073, 33.513813, 111.402504, 38.9035, 109.4077, 44.20358, 107.1609, 49.40185, 104.667274, 54.486336, 101.932594, 59.44533, 98.96313, 64.26741, 95.76573, 68.94146, 92.34776, 73.45673, 88.7171, 77.8028, 84.882095, 81.96969, 80.85159, 85.94778, 76.634865, 89.727905, 72.24164, 93.30137, 67.68202, 96.65994, 62.966515, 99.79588, 58.10598, 102.701965, 53.11162, 105.37151, 47.99492, 107.79837, 42.76769, 109.97693, 37.441956, 111.90219, 32.02997, 113.569725, 26.544224, 114.97567, 20.99734, 116.1168, 15.402097, 116.990486, 9.771364, 117.594734, 4.1181407, 117.928116, -1.5445688, 117.98989, -7.203734, 117.77991, -12.846294, 117.298645, -18.459265, 116.547226)
+width = 2.5
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="OuterArc1" type="Line2D" parent="Face/Rings"]
+points = PackedVector2Array(-59.000008, 102.190994, -63.83499, 99.2426, -68.52295, 96.06563, -73.05308, 92.6674, -77.414955, 89.05573, -81.59853, 85.23895, -85.594185, 81.22583, -89.39267, 77.02565, -92.985275, 72.64805, -96.36371, 68.103134, -99.52019, 63.401356, -102.44746, 58.553555, -105.13876, 53.57089, -107.58792, 48.464813, -109.789276, 43.247135, -111.73776, 37.929855, -113.42888, 32.525208, -114.85875, 27.04565, -116.02408, 21.503801, -116.92217, 15.912421, -117.55098, 10.284366, -117.90903, 4.63265, -117.99551, -1.0297357, -117.81022, -6.6897497, -117.353584, -12.334355, -116.62666, -17.950554, -115.63112, -23.525404, -114.36925, -29.0461, -112.843956, -34.49987, -111.05877, -39.874176, -109.017784, -45.156643, -106.72571, -50.33511, -104.18782, -55.39764, -101.409966, -60.332573, -98.39852, -65.12858, -95.16046, -69.77455, -91.70322, -74.25981)
+width = 2.5
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="OuterArc2" type="Line2D" parent="Face/Rings"]
+points = PackedVector2Array(-58.99999, -102.191, -54.029114, -104.90402, -48.9338, -107.375435, -43.725777, -109.59953, -38.417046, -111.57119, -33.01983, -113.28588, -27.546564, -114.73965, -22.00985, -115.929146, -16.422443, -116.85163, -10.797213, -117.50498, -5.147114, -117.887695, 0.5148971, -117.99887, 6.1756654, -117.83828, 11.822209, -117.40628, 17.441525, -116.703865, 23.020668, -115.73266, 28.54679, -114.494896, 34.007164, -112.993416, 39.389206, -111.2317, 44.68053, -109.21378, 49.868946, -106.94432, 54.9425, -104.42855, 59.889515, -101.67225, 64.69858, -98.68178, 69.358635, -95.46402, 73.858986, -92.02635, 78.18918, -88.37676, 82.33929, -84.52361, 86.29975, -80.47579, 90.06144, -76.242615, 93.6157, -71.83384, 96.95434, -67.25961, 100.06967, -62.53047, 102.95453, -57.65731, 105.60226, -52.65135, 108.00675, -47.52412, 110.16249, -42.287434)
+width = 2.5
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="InnerArc" type="Line2D" parent="Face/Rings"]
+points = PackedVector2Array(45.999996, -79.67434, 57.061665, -72.166245, 66.91837, -63.13423, 75.36199, -52.769035, 82.2142, -41.289524, 87.33032, -28.938116, 90.60231, -15.975633, 91.961075, -2.6757941, 91.37793, 10.680548, 88.86517, 23.811352, 84.47588, 36.43934, 78.302734, 48.297844, 70.47609, 59.136456, 61.16122, 68.7263, 50.55482, 76.86488, 38.88088, 83.38032, 26.3859, 88.13503, 13.333732, 91.02863, -4.0214477e-06, 92, -13.333729, 91.02863, -26.385899, 88.13503, -38.880886, 83.38031, -50.554817, 76.86488, -61.161217, 68.72631, -70.47609, 59.136463, -78.302734, 48.297844, -84.47589, 36.43933, -88.86517, 23.81136, -91.37793, 10.6805525, -91.961075, -2.6757944, -90.60231, -15.9756365, -87.33032, -28.938128, -82.2142, -41.289516, -75.36199, -52.769028, -66.91837, -63.13423, -57.061676, -72.16623, -45.999992, -79.67434)
+width = 1.4
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Ticks0" type="Node2D" parent="Face"]
+
+[node name="Tick0" type="Line2D" parent="Face/Ticks0"]
+points = PackedVector2Array(-4.41485e-06, -101, -5.1579436e-06, -118)
+width = 2.8
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Tick3" type="Line2D" parent="Face/Ticks0"]
+points = PackedVector2Array(76.36753, -76.36753, 83.4386, -83.4386)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Tick6" type="Line2D" parent="Face/Ticks0"]
+points = PackedVector2Array(101, 0, 118, 0)
+width = 2.8
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Tick9" type="Line2D" parent="Face/Ticks0"]
+points = PackedVector2Array(76.36753, 76.36753, 83.4386, 83.4386)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Tick12" type="Line2D" parent="Face/Ticks0"]
+points = PackedVector2Array(-4.41485e-06, 101, -5.1579436e-06, 118)
+width = 2.8
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Tick15" type="Line2D" parent="Face/Ticks0"]
+points = PackedVector2Array(-76.36753, 76.36753, -83.4386, 83.4386)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Tick18" type="Line2D" parent="Face/Ticks0"]
+points = PackedVector2Array(-101, -8.8297e-06, -118, -1.0315887e-05)
+width = 2.8
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Tick21" type="Line2D" parent="Face/Ticks0"]
+points = PackedVector2Array(-76.36754, -76.36752, -83.43861, -83.43859)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Ticks1" type="Node2D" parent="Face"]
+
+[node name="Tick1" type="Line2D" parent="Face/Ticks1"]
+points = PackedVector2Array(27.95246, -104.319984, 30.540651, -113.97925)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Tick4" type="Line2D" parent="Face/Ticks1"]
+points = PackedVector2Array(93.53074, -54, 102.190994, -59)
+width = 1.5
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Tick7" type="Line2D" parent="Face/Ticks1"]
+points = PackedVector2Array(104.319984, 27.952457, 113.97925, 30.540648)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Tick10" type="Line2D" parent="Face/Ticks1"]
+points = PackedVector2Array(53.999996, 93.53075, 58.999996, 102.191)
+width = 1.5
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Tick13" type="Line2D" parent="Face/Ticks1"]
+points = PackedVector2Array(-27.952457, 104.319984, -30.540648, 113.97925)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Tick16" type="Line2D" parent="Face/Ticks1"]
+points = PackedVector2Array(-93.53074, 54.000008, -102.190994, 59.000008)
+width = 1.5
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Tick19" type="Line2D" parent="Face/Ticks1"]
+points = PackedVector2Array(-104.319984, -27.95246, -113.97925, -30.540651)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Tick22" type="Line2D" parent="Face/Ticks1"]
+points = PackedVector2Array(-53.99999, -93.53075, -58.99999, -102.191)
+width = 1.5
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Ticks2" type="Node2D" parent="Face"]
+
+[node name="Tick2" type="Line2D" parent="Face/Ticks2"]
+points = PackedVector2Array(53.999996, -93.53075, 58.999996, -102.191)
+width = 1.5
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Tick5" type="Line2D" parent="Face/Ticks2"]
+points = PackedVector2Array(104.319984, -27.952457, 113.97925, -30.540648)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Tick8" type="Line2D" parent="Face/Ticks2"]
+points = PackedVector2Array(93.53074, 54, 102.190994, 59)
+width = 1.5
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Tick11" type="Line2D" parent="Face/Ticks2"]
+points = PackedVector2Array(27.95246, 104.319984, 30.540651, 113.97925)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Tick14" type="Line2D" parent="Face/Ticks2"]
+points = PackedVector2Array(-54.000008, 93.53074, -59.000008, 102.190994)
+width = 1.5
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Tick17" type="Line2D" parent="Face/Ticks2"]
+points = PackedVector2Array(-104.319984, 27.952467, -113.97925, 30.540657)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Tick20" type="Line2D" parent="Face/Ticks2"]
+points = PackedVector2Array(-93.53074, -53.999996, -102.190994, -58.999996)
+width = 1.5
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Tick23" type="Line2D" parent="Face/Ticks2"]
+points = PackedVector2Array(-27.95245, -104.31999, -30.54064, -113.979256)
+width = 1.5
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Minute" type="Line2D" parent="Face"]
+points = PackedVector2Array(0, 13, 0, -88)
+width = 3.0
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Contrast" type="Line2D" parent="Face/Minute"]
+show_behind_parent = true
+points = PackedVector2Array(0, 13, 0, -88)
+width = 6.0
+default_color = Color(0.24, 0.15, 0.04, 0.74)
+antialiased = true
+
+[node name="Hour" type="Line2D" parent="Face"]
+points = PackedVector2Array(0, 7, 0, -56)
+width = 4.0
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Contrast" type="Line2D" parent="Face/Hour"]
+show_behind_parent = true
+points = PackedVector2Array(0, 7, 0, -56)
+width = 7.0
+default_color = Color(0.08, 0.18, 0.26, 0.72)
+antialiased = true
+
+[node name="Hub" type="Line2D" parent="Face"]
+points = PackedVector2Array(4.5, 0, 4.431635, 0.7814168, 4.2286167, 1.5390905, 3.8971143, 2.25, 3.4472, 2.892544, 2.8925443, 3.4472, 2.2499998, 3.8971145, 1.5390906, 4.2286167, 0.781417, 4.431635, -1.9670125e-07, 4.5, -0.7814169, 4.431635, -1.5390905, 4.2286167, -2.2500002, 3.8971143, -2.8925443, 3.4472, -3.4472, 2.8925443, -3.8971143, 2.2500002, -4.2286167, 1.539091, -4.431635, 0.78141737, -4.5, -3.934025e-07, -4.431635, -0.781417, -4.2286167, -1.5390906, -3.8971143, -2.2499998, -3.4472003, -2.892544, -2.8925438, -3.4472005, -2.2499995, -3.8971145, -1.5390903, -4.228617, -0.7814166, -4.431635, 5.3661964e-08, -4.5, 0.78141665, -4.431635, 1.5390904, -4.2286167, 2.2499995, -3.8971145, 2.8925438, -3.4472003, 3.4471993, -2.892545, 3.897114, -2.2500007, 4.2286167, -1.5390916, 4.431635, -0.7814159, 4.5, 7.86805e-07)
+width = 2.0
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Echo0" type="Node2D" parent="."]
+modulate = Color(1, 1, 1, 0)
+
+[node name="Arc" type="Line2D" parent="Echo0"]
+points = PackedVector2Array(-90.39324, -75.84894, -80.350204, -86.41669, -69.08069, -95.66535, -56.756668, -103.453766, -43.566326, -109.66301, -29.710962, -114.198326, -15.402093, -116.99049, -0.8581082, -117.99688, 13.698961, -117.20213, 28.046938, -114.61836, 41.966785, -110.285034, 55.24605, -104.26827, 67.68202, -96.65994, 79.08487, -87.57616, 89.28055, -77.15558, 98.11341, -65.55729, 105.448654, -52.958305, 111.17429, -39.55095, 115.20293, -25.539875, 117.473076, -11.138952, 117.95008, 3.4319968, 116.62666, 17.95056, 113.52301, 32.195118, 108.686516, 45.948242, 102.190994, 59, 94.135605, 71.15116, 84.643295, 82.216255, 73.85897, 92.02637, 61.94724, 100.43176, 49.089916, 107.304146, 35.483288, 112.5386, 21.335014, 116.05523, 6.8610926, 117.80037, -7.717573, 117.74735, -22.178421, 115.89702, -36.300743, 112.27758, -49.86896, 106.94431)
+width = 1.2
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Minute" type="Line2D" parent="Echo0"]
+rotation = 3.5953782
+points = PackedVector2Array(0, 0, 0, -88)
+width = 2.0
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Hour" type="Line2D" parent="Echo0"]
+rotation = 1.5707964
+points = PackedVector2Array(0, 0, 0, -56)
+width = 2.2
+default_color = Color(0.62, 0.88, 1, 0.7)
+antialiased = true
+
+[node name="Echo1" type="Node2D" parent="."]
+modulate = Color(1, 1, 1, 0)
+
+[node name="Arc" type="Line2D" parent="Echo1"]
+points = PackedVector2Array(-93.45742, -78.42009, -83.073944, -89.34607, -71.4224, -98.90824, -58.680622, -106.96067, -45.04315, -113.380394, -30.718113, -118.06946, -15.924198, -120.956276, -0.88719666, -121.99677, 14.163333, -121.17509, 28.997683, -118.50374, 43.38939, -114.02351, 57.1188, -107.802795, 69.976326, -99.936554, 81.76572, -90.54484, 92.30701, -79.77103, 101.43929, -67.77957, 109.023186, -54.7535, 114.94291, -40.89166, 119.108116, -26.405634, 121.455215, -11.516544, 121.94839, 3.5483358, 120.58011, 18.559053, 117.371254, 33.28648, 112.370804, 47.505814, 105.6551, 61, 97.326645, 73.563065, 87.512566, 85.00324, 76.36266, 95.145905, 64.04715, 103.836235, 50.753983, 110.941574, 36.68611, 116.35346, 22.058235, 119.9893, 7.093672, 121.793594, -7.979186, 121.73879, -22.930233, 119.82573, -37.531277, 116.0836, -51.559437, 110.56955)
+width = 1.2
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Minute" type="Line2D" parent="Echo1"]
+rotation = 4.363323
+points = PackedVector2Array(0, 0, 0, -88)
+width = 2.0
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="Hour" type="Line2D" parent="Echo1"]
+rotation = 1.9896754
+points = PackedVector2Array(0, 0, 0, -56)
+width = 2.2
+default_color = Color(1, 0.88, 0.55, 0.9)
+antialiased = true
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("AnimationLibrary_u4oqm")
+}

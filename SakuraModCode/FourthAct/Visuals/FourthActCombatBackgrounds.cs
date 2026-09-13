@@ -29,6 +29,20 @@ public static class FourthActCombatBackgrounds
         "res://SakuraMod/scenes/backgrounds/fourth_act/tokyo_tower/tokyo_tower_base.tscn";
     public const string FireTokyoTowerTexturePath =
         "res://SakuraMod/images/backgrounds/fourth_act/tokyo_tower/tokyo_tower_base.png";
+    public const string LightEternalDayLayerPath =
+        "res://SakuraMod/scenes/backgrounds/fourth_act/light_eternal_day/light_eternal_day_base.tscn";
+    public const string LightEternalDayTexturePath =
+        "res://SakuraMod/images/backgrounds/fourth_act/light_eternal_day/light_eternal_day_base.png";
+    public const string LightEternalDayEmpoweredPath =
+        "res://SakuraMod/images/backgrounds/fourth_act/light_eternal_day/empowered.png";
+    public const string LightEternalDayForegroundMaskPath =
+        "res://SakuraMod/images/backgrounds/fourth_act/light_eternal_day/foreground_mask.png";
+    public const string LightEternalDaySunPath =
+        "res://SakuraMod/images/backgrounds/fourth_act/light_eternal_day/sun.png";
+    public const string LightEternalDayShaderPath =
+        "res://SakuraMod/shaders/fourth_act/light_eternal_day.gdshader";
+    public const string LightEternalDaySunShaderPath =
+        "res://SakuraMod/shaders/fourth_act/light_eternal_day_sun.gdshader";
     public const string EarthPenguinParkLayerPath =
         "res://SakuraMod/scenes/backgrounds/fourth_act/penguin_park/penguin_park_base.tscn";
     public const string EarthPenguinParkTexturePath =
@@ -58,6 +72,7 @@ public static class FourthActCombatBackgrounds
     public static IReadOnlyList<string> WaterAquariumLayers { get; } = [WaterAquariumLayerPath];
     public static IReadOnlyList<string> FireAmusementParkLayers { get; } = [FireAmusementParkLayerPath];
     public static IReadOnlyList<string> FireTokyoTowerLayers { get; } = [FireTokyoTowerLayerPath];
+    public static IReadOnlyList<string> LightEternalDayLayers { get; } = [LightEternalDayLayerPath];
     public static IReadOnlyList<string> EarthPenguinParkLayers { get; } = [EarthPenguinParkLayerPath];
     public static IReadOnlyList<string> TsukimineShrineLayers { get; } = [TsukimineShrineLayerPath];
     public static IReadOnlyList<string> DarkStageLayers { get; } = [DarkStageLayerPath];
@@ -73,6 +88,9 @@ public static class FourthActCombatBackgrounds
 
     public static BackgroundAssets CreateFireTokyoTower() =>
         CombatBackgroundAssetsFactory.Create(MainScenePath, FireTokyoTowerLayers, null);
+
+    public static BackgroundAssets CreateLightEternalDay() =>
+        CombatBackgroundAssetsFactory.Create(MainScenePath, LightEternalDayLayers, null);
 
     public static BackgroundAssets CreateEarthPenguinPark() =>
         CombatBackgroundAssetsFactory.Create(MainScenePath, EarthPenguinParkLayers, null);

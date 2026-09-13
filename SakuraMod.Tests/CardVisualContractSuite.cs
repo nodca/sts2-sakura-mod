@@ -26,6 +26,9 @@ public sealed class CardVisualContractSuite
                 new Blaze(),
                 [BlazeFireColumnVfx.ScenePath, .. sharedCelPaths]),
             new VfxCase(
+                new SakuraMod.SakuraModCode.Cards.Time(),
+                [SakuraCardPlayVfx.TimeScenePath, .. sharedCelPaths]),
+            new VfxCase(
                 new ClowSword(),
                 [SakuraSwordBladeVfx.ScenePath, SakuraSwordBladeVfx.TargetScenePath, .. sharedCelPaths]),
             new VfxCase(
@@ -87,6 +90,7 @@ public sealed class CardVisualContractSuite
                  {
                      "SakuraModCode/Cards/Visuals/Transparent/HailIceShardVfx.cs",
                      "SakuraModCode/Cards/Visuals/Transparent/BlazeFireColumnVfx.cs",
+                     "SakuraModCode/Cards/SakuraCardPlayVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/SakuraSwordBladeVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/CloudRainWeatherVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/ArrowBowProjectileVfx.cs",

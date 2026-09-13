@@ -11,11 +11,17 @@ shader_parameter/elapsed = 0.0
 shader_parameter/held = 0.0
 shader_parameter/held_at = 0.0
 shader_parameter/seed = 0.0
+shader_parameter/wind_sign = 1.0
+shader_parameter/depth_layer = 0.0
+shader_parameter/gust_at = -10.0
+shader_parameter/hit_at = -10.0
+shader_parameter/hit_seed = 0.0
+shader_parameter/hit_strength = 1.0
+shader_parameter/previous_hit_at = -10.0
+shader_parameter/previous_hit_seed = 0.0
+shader_parameter/previous_hit_strength = 1.0
+shader_parameter/impact_life = 0.42
 shader_parameter/curtain = 0.0
-shader_parameter/dart = 0.0
-shader_parameter/dart_spin = 0.0
-shader_parameter/bloom = 0.0
-shader_parameter/frost = 0.0
 shader_parameter/opacity = 1.0
 
 [node name="SnowBlizzardVfx" type="Node2D"]

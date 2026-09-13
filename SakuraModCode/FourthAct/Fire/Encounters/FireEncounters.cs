@@ -21,7 +21,7 @@ public abstract class FireEncounterTemplate(RoomType roomType) : ModEncounterTem
     protected abstract IReadOnlyList<(MonsterModel, string?)> Monsters { get; }
     protected sealed override bool SuppliesEncounterCombatSceneFromFactory => true;
     protected sealed override bool UseProgrammaticCombatBackground => true;
-    protected sealed override BackgroundAssets? BuildProgrammaticCombatBackground(ActModel parentAct, Rng rng) =>
+    protected override BackgroundAssets? BuildProgrammaticCombatBackground(ActModel parentAct, Rng rng) =>
         FourthActCombatBackgrounds.CreateFireTokyoTower();
     protected sealed override Control TryCreateEncounterCombatScene()
     {
@@ -66,6 +66,9 @@ public sealed class FireyEncounter() : FireEncounterTemplate(RoomType.Boss)
 
 public sealed class LightEncounter() : FireEncounterTemplate(RoomType.Boss)
 {
+    protected override BackgroundAssets? BuildProgrammaticCombatBackground(ActModel parentAct, Rng rng) =>
+        FourthActCombatBackgrounds.CreateLightEternalDay();
+
     public override IReadOnlyList<string> Slots => ["BOSS"];
     public override IEnumerable<MonsterModel> AllPossibleMonsters => [ModelDb.Monster<LightMonster>()];
     protected override IReadOnlyList<(MonsterModel, string?)> Monsters => [(ModelDb.Monster<LightMonster>().ToMutable(), "BOSS")];

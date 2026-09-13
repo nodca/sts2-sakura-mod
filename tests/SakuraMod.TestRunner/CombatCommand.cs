@@ -35,11 +35,13 @@ public static class CombatCommand
         "queen-bound-cleanup",
         "cleansing-stats",
         "dark-endpoint",
+        "light-eternal-day",
         "windy-bind-draw",
         "repair-jump-regeneration"
     ];
     private static readonly HashSet<string> SaveLoadScenarioIds =
     [
+        "light-eternal-day",
         "save-load-restoration",
         "fourth-act-save-load"
     ];

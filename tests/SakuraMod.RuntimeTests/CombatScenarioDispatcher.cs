@@ -42,6 +42,7 @@ internal static class CombatScenarioDispatcher
             "queen-bound-cleanup" => await QueenBoundCleanupScenario.ExecuteAsync(request, assertions),
             "cleansing-stats" => await CleansingStatsScenario.ExecuteAsync(request, assertions),
             "dark-endpoint" => await DarkEndpointScenario.ExecuteAsync(request, assertions),
+            "light-eternal-day" => await LightEternalDayScenario.ExecuteAsync(request, assertions),
             "windy-bind-draw" => await WindyBindDrawScenario.ExecuteAsync(request, assertions),
             "repair-jump-regeneration" => await RepairJumpRegenerationScenario.ExecuteAsync(request, assertions),
             "save-load-restoration" => await SaveLoadRestorationScenario.ExecuteAsync(request, assertions),

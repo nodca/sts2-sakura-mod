@@ -40,6 +40,9 @@
         <Compile Remove="images/**" />
         <Compile Remove="SakuraMod.Tests/**" />
         <Compile Remove="tests/**" />
+        <Compile Remove="output/**" />
+        <Compile Remove="tmp/**" />
+        <Compile Remove=".cs" />
         <EmbeddedResource Remove="SakuraMod/**" />
         <EmbeddedResource Remove="materials/**" />
         <EmbeddedResource Remove="shaders/**" />
