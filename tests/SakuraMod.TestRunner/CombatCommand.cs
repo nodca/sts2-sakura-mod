@@ -19,6 +19,7 @@ public static class CombatCommand
         "element-turn-cleanup",
         "dream-turn-restoration",
         "spell-turn-transformation",
+        "wand-turn-persistence",
         "labyrinth-attack-immunity",
         "magic-charge-thresholds",
         "sakura-ancient-cards",

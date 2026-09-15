@@ -53,13 +53,5 @@ public class ClassicStarWandRelic : ClassicSealedWandRelic
 
         await SakuraUltimateWandRecipe.TryCreateUltimateWand(Owner);
     }
-
-    protected override async Task AddGeneratedTurnCard()
-    {
-        await base.AddGeneratedTurnCard();
-
-        var deckCard = Owner.RunState.CreateCard<SpellTurn>(Owner);
-        await CardPileCmd.Add(deckCard, PileType.Deck, CardPilePosition.Bottom, this, skipVisuals: true);
-    }
 }
 

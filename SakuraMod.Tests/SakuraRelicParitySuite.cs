@@ -152,6 +152,80 @@ public sealed class SakuraRelicParitySuite
     }
 
     [Fact]
+    public void EveryTurnGrantingRelicUsesTheOneSharedPersistentGrant()
+    {
+        var spellTurn = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Spells/SpellTurn.cs"));
+        var moonBell = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Relics/Models/ClassicMoonBellRelic.cs"));
+        var wand = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Relics/Models/ClassicSealedWandRelic.cs"));
+
+        RegressionTestHarness.Require(
+            spellTurn.Contains("internal static async Task GrantPersistentTurn(", StringComparison.Ordinal)
+            && spellTurn.Contains("RunState.CreateCard<SpellTurn>(owner)", StringComparison.Ordinal)
+            && spellTurn.Contains("CardPileCmd.Add(deckCard, PileType.Deck", StringComparison.Ordinal)
+            && spellTurn.Contains("handCard.DeckVersion = deckCard", StringComparison.Ordinal),
+            "Expected SpellTurn to own the one grant that creates a deck body plus a hand copy linked through DeckVersion.");
+
+        RegressionTestHarness.Require(
+            moonBell.Contains("SpellTurn.GrantPersistentTurn(", StringComparison.Ordinal)
+            && !moonBell.Contains("CreateCard<SpellTurn>", StringComparison.Ordinal)
+            && wand.Contains("SpellTurn.GrantPersistentTurn(", StringComparison.Ordinal)
+            && !wand.Contains("CreateCard<SpellTurn>", StringComparison.Ordinal),
+            "Expected Moon Bell and the wands to delegate to the shared grant instead of creating their own Turn copies.");
+
+        Type[] wandTypes =
+        [
+            typeof(ClassicSealedWandRelic),
+            typeof(ClassicStarWandRelic),
+            typeof(ClassicUltimateWandRelic)
+        ];
+        const System.Reflection.BindingFlags DeclaredGrant =
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+
+        RegressionTestHarness.Require(
+            wandTypes.All(type =>
+                type.GetMethod("AddGeneratedTurnCard", DeclaredGrant)?.DeclaringType
+                    == typeof(ClassicSealedWandRelic)),
+            "Expected every wand to inherit the single grant path instead of adding a second Turn of its own.");
+    }
+
+    [Fact]
+    public void EveryTurnGrantingRelicTextStatesTheUnplayedTurnIsKept()
+    {
+        static string LineFor(IEnumerable<string> lines, string key) =>
+            lines.FirstOrDefault(line => line.Contains($"\"{key}\"", StringComparison.Ordinal))
+            ?? throw new InvalidOperationException($"Missing localization key {key}.");
+
+        var zhsLines = File.ReadAllLines(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/zhs/relics.json"));
+        var engLines = File.ReadAllLines(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/eng/relics.json"));
+
+        var keys = new[]
+        {
+            "SAKURA_MOD_RELIC_CLASSIC_SEALED_WAND_RELIC.description",
+            "SAKURA_MOD_RELIC_CLASSIC_STAR_WAND_RELIC.description",
+            "SAKURA_MOD_RELIC_CLASSIC_ULTIMATE_WAND_RELIC.description",
+            "SAKURA_MOD_RELIC_CLASSIC_MOON_BELL_RELIC.description"
+        };
+
+        const string PersistenceClause = "未打出的转牌可以保留到之后的战斗";
+        const string EngPersistenceClause = "an unplayed Turn is kept for later battles";
+
+        RegressionTestHarness.Require(
+            keys.All(key => LineFor(zhsLines, key).Contains(PersistenceClause, StringComparison.Ordinal))
+            && keys.All(key => LineFor(engLines, key).Contains(EngPersistenceClause, StringComparison.Ordinal)),
+            "Expected every Turn-granting relic to state that an unplayed Turn is kept for later battles.");
+
+        RegressionTestHarness.Require(
+            keys.All(key => !LineFor(zhsLines, key).Contains("加入手牌和牌组", StringComparison.Ordinal))
+            && keys.All(key => !LineFor(engLines, key).Contains("to your hand and deck", StringComparison.Ordinal)),
+            "Expected no Turn-granting relic to describe its Turn as entering the hand and deck at once.");
+    }
+
+    [Fact]
     public void SakuraReturnRefundsSeventyFivePercentOfThePreviousConversionCost()
     {
         var returnCard = new SakuraReturn();

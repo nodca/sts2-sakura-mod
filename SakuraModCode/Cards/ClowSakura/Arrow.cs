@@ -28,8 +28,11 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class ClowArrow() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Common, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
+    // Targeting has to follow the same predicate as the Extra Effect highlight
+    // and the activation itself, or the arrow is missing on exactly the plays
+    // where the effect fires.
     public override TargetType TargetType =>
-        IsMutable && SakuraMagicCharge.CanSpendMagic(Owner)
+        SakuraExtraEffectTransaction.ShouldShowAsActive(this)
             ? TargetType.AnyEnemy
             : base.TargetType;
     protected override bool HasEnergyCostX => true;

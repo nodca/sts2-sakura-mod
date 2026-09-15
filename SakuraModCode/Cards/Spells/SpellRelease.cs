@@ -36,6 +36,7 @@ public class SpellRelease() : SpellCard(1, CardType.Skill, CardRarity.Basic, Tar
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         SakuraVoicePlayback.TryPlay(this);
+        SpellReleaseBgmPlayback.TryPlay(this);
         var choices = CardPile.GetCards(Owner, PileType.Hand)
             .Where(CanRelease)
             .ToList();

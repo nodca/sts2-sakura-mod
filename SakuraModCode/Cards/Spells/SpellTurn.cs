@@ -33,6 +33,26 @@ public class SpellTurn() : SpellCard(-2, CardType.Skill, CardRarity.Token, Targe
     public override int MaxUpgradeLevel => 0;
     protected override bool IsPlayable => CardPile.GetCards(Owner, PileType.Hand).Any(SakuraSourceCardRules.IsEligibleClowForTurn);
 
+    /// <summary>
+    /// Grants one Turn as a deck body plus the hand copy linked to it, so an
+    /// unplayed Turn stays available in later battles and playing it consumes
+    /// both halves at once.
+    /// </summary>
+    internal static async Task GrantPersistentTurn(Player owner, string sourceName, AbstractModel? creator)
+    {
+        var combatState = owner.Creature.CombatState
+            ?? throw new InvalidOperationException($"{sourceName} generated Turn requires an active combat.");
+
+        var deckCard = owner.RunState.CreateCard<SpellTurn>(owner);
+        await CardPileCmd.Add(deckCard, PileType.Deck, CardPilePosition.Bottom, creator, skipVisuals: true);
+
+        // SpellTurn removes its own DeckVersion from the deck when played, so the
+        // hand copy and this body are one Turn that survives until it is used.
+        var handCard = combatState.CreateCard<SpellTurn>(owner);
+        handCard.DeckVersion = deckCard;
+        await CardPileCmd.AddGeneratedCardToCombat(handCard, PileType.Hand, owner, CardPilePosition.Random);
+    }
+
     protected override PileType GetResultPileTypeForCardPlay() =>
         ResultPileFor(base.GetResultPileTypeForCardPlay());
 

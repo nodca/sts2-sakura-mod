@@ -33,24 +33,21 @@ public class ClassicLoopPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
+    public override decimal ModifyHandDraw(Player player, decimal count) =>
+        player == Owner.Player
+            ? count + Amount
+            : count;
+
     public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
         if (Owner.Player != player || Amount <= 0)
             return;
 
-        await CardPileCmd.Draw(choiceContext, Amount, player, false);
-        var hand = CardPile.GetCards(player, PileType.Hand).ToList();
-        if (hand.Count == 0)
-            return;
-
-        var selected = (await CardSelectCmd.FromHand(
+        var selected = (await CardSelectCmd.FromHandForDiscard(
             choiceContext,
             player,
-            new CardSelectorPrefs(CardSelectorPrefs.DiscardSelectionPrompt, 0, Math.Min(Amount, hand.Count))
-            {
-                Cancelable = true
-            },
-            hand.Contains,
+            new CardSelectorPrefs(CardSelectorPrefs.DiscardSelectionPrompt, 0, Amount),
+            null,
             this)).ToList();
         if (selected.Count > 0)
             await CardCmd.Discard(choiceContext, selected);

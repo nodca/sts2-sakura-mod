@@ -49,7 +49,7 @@ public class ClowTime() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Rare
 
     protected override PileType GetResultPileTypeForCardPlay()
     {
-        var usesExtra = IsMutable && SakuraExtraEffectTransaction.CanActivate(Owner);
+        var usesExtra = SakuraExtraEffectTransaction.ShouldShowAsActive(this);
         return usesExtra ? PileType.Discard : base.GetResultPileTypeForCardPlay();
     }
 

@@ -2517,6 +2517,23 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
+    public void SpellReleaseBgmResourceRemainsComplete()
+    {
+        const string relativePath = "SakuraMod/music/release.ogg";
+        var audioPath = RegressionTestHarness.FindRepoFile(relativePath);
+        var bytes = File.ReadAllBytes(audioPath);
+        var import = File.ReadAllText($"{audioPath}.import");
+
+        RegressionTestHarness.Require(
+            bytes.Length > 4 && bytes.AsSpan(0, 4).SequenceEqual("OggS"u8),
+            "Expected Spell Release BGM to remain a non-empty OGG stream.");
+        RegressionTestHarness.Require(
+            import.Contains($"source_file=\"res://{relativePath}\"", StringComparison.Ordinal)
+            && import.Contains("loop=false", StringComparison.Ordinal),
+            "Expected the Spell Release BGM import to remain tracked and non-looping as a Godot resource.");
+    }
+
+    [Fact]
     public void OptionCardClearArtAndImportsRemainComplete()
     {
         foreach (var cardType in SakuraOptionCardCatalog.CardTypes)

@@ -44,6 +44,7 @@ public sealed class PackageVerifier(IPckInspector pckInspector)
         "SakuraMod.pck",
         "music/another_me.ogg",
         "music/platinum.ogg",
+        "music/release.ogg",
         "voices/dream_wand.ogg",
         "voices/stabilize.ogg"
     ];

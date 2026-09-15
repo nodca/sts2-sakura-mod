@@ -37,18 +37,11 @@ public class ClassicDarkSakuraPower : SakuraPowerModel
         if (Owner.Side != side || !participants.Contains(Owner) || Owner.Player is not { } player)
             return;
 
-        var hand = CardPile.GetCards(player, PileType.Hand).ToList();
-        if (hand.Count == 0)
-            return;
-
         var selected = (await CardSelectCmd.FromHand(
             choiceContext,
             player,
-            new CardSelectorPrefs(ClassicDarkPower.SelectionPrompt, 0, hand.Count)
-            {
-                Cancelable = true
-            },
-            hand.Contains,
+            new CardSelectorPrefs(ClassicDarkPower.SelectionPrompt, 0, 999999999),
+            null,
             this)).ToList();
 
         if (selected.Count == 0)

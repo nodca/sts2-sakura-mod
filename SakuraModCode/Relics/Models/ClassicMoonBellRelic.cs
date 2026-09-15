@@ -72,13 +72,7 @@ public class ClassicMoonBellRelic : SakuraRelicModel
             Owner.Creature,
             Math.Max(1, Owner.Creature.MaxHp * DynamicVars["DeathPreventHealPercent"].IntValue / 100));
 
-        var combatState = Owner.Creature.CombatState
-            ?? throw new InvalidOperationException("Moon Bell generated Turn requires an active combat.");
-        var handCard = combatState.CreateCard<SpellTurn>(Owner);
-        await CardPileCmd.AddGeneratedCardToCombat(handCard, PileType.Hand, Owner, CardPilePosition.Random);
-
-        var deckCard = Owner.RunState.CreateCard<SpellTurn>(Owner);
-        await CardPileCmd.Add(deckCard, PileType.Deck, CardPilePosition.Bottom, this, skipVisuals: true);
+        await SpellTurn.GrantPersistentTurn(Owner, "Moon Bell", this);
     }
 
     internal void RestoreSavedPresentation()

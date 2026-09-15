@@ -191,13 +191,8 @@ public class ClassicSealedWandRelic : SakuraRelicModel
         await AddGeneratedTurnCard();
     }
 
-    protected virtual async Task AddGeneratedTurnCard()
-    {
-        var combatState = Owner.Creature.CombatState
-            ?? throw new InvalidOperationException($"{GeneratedTurnSourceName} generated Turn requires an active combat.");
-        var turn = combatState.CreateCard<SpellTurn>(Owner);
-        await CardPileCmd.AddGeneratedCardToCombat(turn, PileType.Hand, Owner, CardPilePosition.Random);
-    }
+    protected virtual Task AddGeneratedTurnCard() =>
+        SpellTurn.GrantPersistentTurn(Owner, GeneratedTurnSourceName, this);
 
     public override Task AfterCombatEnd(CombatRoom room)
     {

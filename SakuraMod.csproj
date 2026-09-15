@@ -1,4 +1,4 @@
-﻿<Project Sdk="Godot.NET.Sdk/4.5.1" InitialTargets="CheckDependencyPaths">
+<Project Sdk="Godot.NET.Sdk/4.5.1" InitialTargets="CheckDependencyPaths">
     <Import Project=".\Sts2PathDiscovery.props"/>
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
@@ -29,7 +29,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.5.20" PrivateAssets="All"/>
+        <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.6.2" PrivateAssets="All"/>
         <AdditionalFiles Include="SakuraMod/localization/**/*.json"/> <!-- Used by analyzer -->
     </ItemGroup>
 
@@ -42,6 +42,7 @@
         <Compile Remove="tests/**" />
         <Compile Remove="output/**" />
         <Compile Remove="tmp/**" />
+        <Compile Remove="docs/**" />
         <Compile Remove=".cs" />
         <EmbeddedResource Remove="SakuraMod/**" />
         <EmbeddedResource Remove="materials/**" />
@@ -49,8 +50,10 @@
         <EmbeddedResource Remove="images/**" />
         <EmbeddedResource Remove="SakuraMod.Tests/**" />
         <EmbeddedResource Remove="tests/**" />
+        <EmbeddedResource Remove="docs/**" />
         <None Remove="SakuraMod.Tests/**" />
         <None Remove="tests/**" />
+        <None Remove="docs/**" />
     </ItemGroup>
 
     <ItemGroup>

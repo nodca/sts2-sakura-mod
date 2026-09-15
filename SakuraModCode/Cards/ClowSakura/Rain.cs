@@ -32,7 +32,7 @@ public class ClowRain() : ClowExtraEffectCard(2, CardType.Skill, CardRarity.Unco
 
     protected override PileType GetResultPileTypeForCardPlay()
     {
-        return SakuraExtraEffectTransaction.CanActivate(Owner)
+        return SakuraExtraEffectTransaction.ShouldShowAsActive(this)
             ? PileType.Discard
             : base.GetResultPileTypeForCardPlay();
     }

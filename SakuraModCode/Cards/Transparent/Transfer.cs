@@ -22,7 +22,7 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Transfer() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
+public class Transfer() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars =>

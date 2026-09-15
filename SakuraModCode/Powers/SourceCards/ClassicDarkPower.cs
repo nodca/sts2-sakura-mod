@@ -37,21 +37,14 @@ public class ClassicDarkPower : SakuraPowerModel
 
     public override async Task BeforeSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
-        if (Owner.Side != side || !participants.Contains(Owner) || Owner.Player is not { } player)
-            return;
-
-        var hand = CardPile.GetCards(player, PileType.Hand).ToList();
-        if (hand.Count == 0)
+        if (Owner.Side != side || !participants.Contains(Owner) || Owner.Player is not { } player || Amount <= 0)
             return;
 
         var selected = (await CardSelectCmd.FromHand(
             choiceContext,
             player,
-            new CardSelectorPrefs(SelectionPrompt, 0, Math.Min(Amount, hand.Count))
-            {
-                Cancelable = true
-            },
-            hand.Contains,
+            new CardSelectorPrefs(SelectionPrompt, 0, Amount),
+            null,
             this)).ToList();
 
         if (selected.Count == 0)

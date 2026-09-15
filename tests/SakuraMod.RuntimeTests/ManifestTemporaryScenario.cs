@@ -68,7 +68,7 @@ internal static class ManifestTemporaryScenario
         assertions.True("stabilized_same_combat_identity", combat.ContainsCard(manifested));
         assertions.Equal("stabilized_temporary_removed", false, manifested.IsTemporary());
         assertions.True("stabilized_card_stays_in_hand", playerCombat.Hand.Cards.Contains(manifested));
-        assertions.Equal("stabilize_energy_gain", energyBefore + 2, playerCombat.Energy);
+        assertions.Equal("stabilize_energy_gain", energyBefore + 1, playerCombat.Energy);
         assertions.True(
             "true_or_false_result_pile",
             playerCombat.DiscardPile.Cards.Contains(trueOrFalse));
@@ -123,7 +123,7 @@ internal static class ManifestTemporaryScenario
         assertions.Equal("classic_temporary_stabilized", false, classicTemporary.IsTemporary());
         assertions.Equal(
             "classic_temporary_stabilize_energy_gain",
-            energyBeforeClassicStabilize + 2,
+            energyBeforeClassicStabilize + 1,
             playerCombat.Energy);
         assertions.True("classic_real_only_exhausts", playerCombat.ExhaustPile.Cards.Contains(realOnly));
         assertions.Equal("classic_stabilize_selector_released", null, CardSelectCmd.Selector);
