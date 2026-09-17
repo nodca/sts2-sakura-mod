@@ -248,6 +248,22 @@ public abstract class SakuraSourceCard(
     protected async Task ApplyPower<T>(PlayerChoiceContext choiceContext, Creature target, int amount) where T : PowerModel =>
         await PowerCmd.Apply<T>(choiceContext, target, amount, Owner.Creature, this, false);
 
+    /// <summary>
+    /// Enters an element state, recording that this play is the one that granted it.
+    /// </summary>
+    /// <remarks>
+    /// An element state pays off on element cards played while it is up, so the play that
+    /// enters it must not also collect the payoff. Stacks on an existing state instead of
+    /// skipping it, unlike the Extra Effect and Magic Charge entries which only fill gaps.
+    /// </remarks>
+    protected async Task EnterElementState<T>(PlayerChoiceContext choiceContext) where T : SakuraElementStatePower
+    {
+        var wasMissing = Owner.Creature.GetPower<T>() is null;
+        var power = await PowerCmd.Apply<T>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
+        if (wasMissing && power is not null)
+            SakuraElementState.MarkEnteredByPlay(this, power.Element);
+    }
+
     protected async Task ApplyPowerToEnemies<T>(PlayerChoiceContext choiceContext, int amount) where T : PowerModel =>
         await PowerCmd.Apply<T>(choiceContext, CombatState!.HittableEnemies.ToList(), amount, Owner.Creature, this, false);
 

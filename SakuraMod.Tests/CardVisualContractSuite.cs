@@ -11,6 +11,25 @@ using System.Reflection;
 public sealed class CardVisualContractSuite
 {
     [Fact]
+    public void ClassicPrintedTitlesAndTopGlyphsFollowTheirArtwork()
+    {
+        RegressionTestHarness.Require(
+            !ClassicCardTextLayoutPolicy.ShowsRuntimeEnglishName(new ClowShield())
+            && !ClassicCardTextLayoutPolicy.ShowsRuntimeEnglishName(new SakuraShield())
+            && ClassicCardTextLayoutPolicy.ShowsRuntimeEnglishName(new SakuraLove())
+            && !ClassicCardTextLayoutPolicy.ShowsRuntimeEnglishName(new SpellSeal()),
+            "Expected runtime English names only for non-Spell Classic art that lacks a printed title.");
+
+        var clowTitleBox = ClassicCardTextLayoutPolicy.TitleBox(new ClowShield());
+        var sakuraTitleBox = ClassicCardTextLayoutPolicy.TitleBox(new SakuraShield());
+        RegressionTestHarness.Require(
+            clowTitleBox.Position == new Vector2(28f, 1f)
+            && sakuraTitleBox.Position == new Vector2(28f, 6f)
+            && clowTitleBox.Size == sakuraTitleBox.Size,
+            "Expected the runtime top glyph to follow the higher Clow sun disc while preserving the Sakura layout.");
+    }
+
+    [Fact]
     public void CardVfxRouteCoversEveryConsumerWithoutReplacingVisualAssetOwners()
     {
         var sharedCelPaths = CelVfxSession.SharedAssetPaths;

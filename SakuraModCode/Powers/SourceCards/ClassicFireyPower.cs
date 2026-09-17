@@ -32,7 +32,7 @@ public class ClassicFireyPower : SakuraElementStatePower
     public const int Damage = 3;
 
     protected override string IconFileName => "firey_power.png";
-    protected override SakuraElement Element => SakuraElement.Fire;
+    internal override SakuraElement Element => SakuraElement.Fire;
     protected override Type PermanentPowerType => typeof(ClassicFireyPermanentPower);
 
     protected override async Task TriggerElement(PlayerChoiceContext choiceContext, CardPlay play)

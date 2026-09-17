@@ -415,6 +415,20 @@ public sealed class ElementStateVisualSuite
             && power.Contains("play.Card?.Owner?.Creature != Owner", StringComparison.Ordinal),
             "Expected element triggers to evaluate directly from the synced play instead of a Before/After flag pair.");
 
+        // Entering a state is part of resolving the play that grants it, so that play records
+        // the entry and the trigger it would otherwise fire on itself consumes the record.
+        // Without this, Clow Sword's own Magic Charge entry pays off on the same play.
+        var elementState = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraElementState.cs"));
+        var sourceCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraSourceCard.cs"));
+        RegressionTestHarness.Require(
+            power.Contains("ConsumeEnteredByPlay", StringComparison.Ordinal)
+            && elementState.Contains("MarkEnteredByPlay", StringComparison.Ordinal)
+            && sourceCard.Contains("EnterElementState", StringComparison.Ordinal),
+            "Expected the play that enters an element state to be recorded so the state does not "
+            + "trigger on the play that granted it.");
+
         // Trigger counters gate synced commands (Draw / GainEnergy), so they must
         // live in the synced SavedAttachedState, not plain fields.
         var wind = File.ReadAllText(RegressionTestHarness.FindRepoFile(

@@ -198,9 +198,10 @@ internal static class GeneratedPileMemoryScenario
 
         var remind = await CombatScenarioContext.AddGeneratedCardToHandAsync<Remind>(combat, player);
         remind.UpgradeInternal();
+        var handBeforeRemind = playerCombat.Hand.Cards.ToList();
         await CombatScenarioContext.PlayCardAsync(remind);
         var recalled = playerCombat.Hand.Cards
-            .Where(card => card.IsTemporary() && !card.ReturnsToMemoryAfterTemporary())
+            .Where(card => !handBeforeRemind.Contains(card))
             .ToList();
         assertions.Equal("temporary_memory_consumed", 0, SakuraMemoryPile.Count(player));
         assertions.True("remind_enters_discard", playerCombat.DiscardPile.Cards.Contains(remind));
@@ -209,7 +210,7 @@ internal static class GeneratedPileMemoryScenario
         assertions.True(
             "recalled_copy_inherits_enchantment",
             recalled.OfType<Spiral>().Single().Enchantment is SharpEnchantment { Amount: 2 });
-        assertions.True("recalled_copies_are_temporary", recalled.All(card => card.IsTemporary()));
+        assertions.True("recalled_copies_are_ordinary", recalled.All(card => !card.IsTemporary()));
         assertions.Equal("recalled_copies_return_to_memory", false, recalled.Any(card => card.ReturnsToMemoryAfterTemporary()));
         assertions.True(
             "recalled_copy_is_free_this_turn",

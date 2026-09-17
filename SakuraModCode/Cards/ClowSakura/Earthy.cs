@@ -33,7 +33,7 @@ public class ClowEarthy() : ClowCard(1, CardType.Skill, CardRarity.Uncommon, Tar
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await ApplyPower<ClassicEarthyPower>(choiceContext, Owner.Creature, 1);
+        await EnterElementState<ClassicEarthyPower>(choiceContext);
         SakuraElementStateVisuals.NotifyIconicEarthyPlayed(Owner.Creature);
         await AddGeneratedSpells<SpellLeiDi>(choiceContext, ReleasedMagic());
     }
@@ -48,7 +48,7 @@ public class SakuraEarthy() : SakuraFormCard(1, CardType.Power, TargetType.None)
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await ApplyPower<ClassicEarthyPermanentPower>(choiceContext, Owner.Creature, 1);
-        await ApplyPower<ClassicEarthyPower>(choiceContext, Owner.Creature, 1);
+        await EnterElementState<ClassicEarthyPower>(choiceContext);
         SakuraElementStateVisuals.NotifyIconicEarthyPlayed(Owner.Creature);
     }
 }

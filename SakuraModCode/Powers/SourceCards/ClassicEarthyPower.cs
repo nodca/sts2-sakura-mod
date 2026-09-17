@@ -32,7 +32,7 @@ public class ClassicEarthyPower : SakuraElementStatePower
     public const int Block = 4;
 
     protected override string IconFileName => "earthy_power.png";
-    protected override SakuraElement Element => SakuraElement.Earth;
+    internal override SakuraElement Element => SakuraElement.Earth;
     protected override Type PermanentPowerType => typeof(ClassicEarthyPermanentPower);
 
     protected override async Task TriggerElement(PlayerChoiceContext choiceContext, CardPlay play)

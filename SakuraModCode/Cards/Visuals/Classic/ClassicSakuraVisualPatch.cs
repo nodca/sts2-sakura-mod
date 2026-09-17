@@ -127,6 +127,29 @@ internal static class ClassicCardVisualAssets
 
 }
 
+internal static class ClassicCardTextLayoutPolicy
+{
+    private static readonly Rect2 ClowTitleBox = new(new Vector2(28f, 1f), new Vector2(165f, 42f));
+    private static readonly Rect2 SakuraTitleBox = new(new Vector2(28f, 6f), new Vector2(165f, 42f));
+
+    // Clow and Sakura full faces carry their printed English title in the
+    // artwork, so the runtime label would double-print over it. Cards whose art
+    // lacks a printed title (the nameless card) still get the runtime label.
+    private static readonly HashSet<string> ArtStemsWithoutPrintedTitle = new()
+    {
+        "the_love",
+    };
+
+    internal static Rect2 TitleBox(SakuraSourceCard model) =>
+        model.IsClowCard ? ClowTitleBox : SakuraTitleBox;
+
+    internal static bool ShowsRuntimeEnglishName(SakuraSourceCard model) =>
+        !model.IsSpellCard
+        && ArtStemsWithoutPrintedTitle.Contains(
+            Path.GetFileNameWithoutExtension(
+                ClassicCardVisualAssets.ArtStem(model.GetType()).NormalClassicArtStem()));
+}
+
 internal static class ClassicCardLayout
 {
     private static readonly ClassicCardLayoutSpec Spec = new();
@@ -286,7 +309,7 @@ internal static class ClassicCardLayout
         ApplyEnglishNameLayout(
             state.GetOrCreateEnglishNameLabel(card),
             model,
-            showFaceIdentity && ShowsRuntimeEnglishName(model));
+            showFaceIdentity && ClassicCardTextLayoutPolicy.ShowsRuntimeEnglishName(model));
         ApplyDescriptionRegion(card, model, nodes.DescriptionLabel, state, showFaceIdentity);
         if (model.ShowsEnergyCost)
         {
@@ -430,7 +453,7 @@ internal static class ClassicCardLayout
 
     private static void ApplyTitleLayout(MegaLabel? title, SakuraSourceCard model)
     {
-        ApplyBox(title, Spec.TitleBox);
+        ApplyBox(title, ClassicCardTextLayoutPolicy.TitleBox(model));
         if (title is null)
             return;
 
@@ -662,21 +685,6 @@ internal static class ClassicCardLayout
         model.IsSakuraCard
             ? Spec.SakuraEnglishNameBox
             : Spec.ClowEnglishNameBox;
-
-    // Sakura full faces carry their printed English title in the artwork, so
-    // the runtime label would double-print over it. Cards whose art lacks a
-    // printed title (the nameless card) still get the runtime label.
-    private static readonly HashSet<string> SakuraArtStemsWithoutPrintedTitle = new()
-    {
-        "the_love",
-    };
-
-    private static bool ShowsRuntimeEnglishName(SakuraSourceCard model) =>
-        !model.IsSpellCard
-        && (!model.IsSakuraCard
-            || SakuraArtStemsWithoutPrintedTitle.Contains(
-                Path.GetFileNameWithoutExtension(
-                    ClassicCardVisualAssets.ArtStem(model.GetType()).NormalClassicArtStem())));
 
     private static string ClassicEnglishName(Type cardType)
     {
@@ -1077,7 +1085,6 @@ internal static class ClassicCardLayout
         public Rect2 CenteredRootBox => SakuraCardGeometry.ClassicLayout.CenteredRootBox;
         public Vector2 HighlightMargin => SakuraCardGeometry.ClassicLayout.HighlightMargin;
         public Rect2 HighlightBox => new(-HighlightMargin, RootSize + HighlightMargin * 2f);
-        public Rect2 TitleBox { get; } = new(new Vector2(28f, 6f), new Vector2(165f, 42f));
         public Rect2 ClowEnglishNameBox { get; } = new(new Vector2(23f, 433f), new Vector2(175f, 34f));
         public Rect2 SakuraEnglishNameBox { get; } = new(new Vector2(23f, 425f), new Vector2(175f, 34f));
         public Rect2 DescriptionPanelBox { get; } = new(new Vector2(16f, 273f), new Vector2(190f, 140f));

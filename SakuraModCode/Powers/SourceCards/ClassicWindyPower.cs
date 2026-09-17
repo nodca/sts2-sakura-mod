@@ -38,7 +38,7 @@ public class ClassicWindyPower : SakuraElementStatePower
         new("SakuraMod_ClassicWindyTriggerCounter", () => 0);
 
     protected override string IconFileName => "windy_power.png";
-    protected override SakuraElement Element => SakuraElement.Wind;
+    internal override SakuraElement Element => SakuraElement.Wind;
     protected override Type PermanentPowerType => typeof(ClassicWindyPermanentPower);
 
     protected override async Task TriggerElement(PlayerChoiceContext choiceContext, CardPlay play)

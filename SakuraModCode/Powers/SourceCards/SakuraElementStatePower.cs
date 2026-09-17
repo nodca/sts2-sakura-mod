@@ -38,7 +38,8 @@ public abstract class SakuraElementStatePower : SakuraPowerModel
     public override PowerStackType StackType => PowerStackType.Counter;
     protected override bool IsVisibleInternal => false;
 
-    protected abstract SakuraElement Element { get; }
+    internal abstract SakuraElement Element { get; }
+
     protected abstract Type PermanentPowerType { get; }
 
     public static void PreserveAllForNextTurn(Creature owner)
@@ -50,15 +51,18 @@ public abstract class SakuraElementStatePower : SakuraPowerModel
     public void PreserveForNextTurn() =>
         _preserveForNextTurn = true;
 
-    // Evaluated directly from the play and the synced power Amount. A
-    // Before/After flag pair would silently desync when a play is cancelled or
-    // nested (AutoPlay), and a one-sided TriggerElement is a multiplayer
-    // checksum divergence.
+    // A state pays off on element cards played while it is up, not on the play that entered
+    // it. Entering is part of resolving a play, and the play is what records the entry, so
+    // the decision still reads the After hook's play rather than a Before/After flag pair.
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (play.Card?.Owner?.Creature != Owner
-            || Amount <= 0
-            || !SakuraActions.HasElement(play.Card, Element))
+        if (play.Card?.Owner?.Creature != Owner)
+            return;
+
+        // Consumed even where it suppresses: the record belongs to one play, and the card's
+        // next play decides from its own entry.
+        var enteredByThisPlay = SakuraElementState.ConsumeEnteredByPlay(play.Card, Element);
+        if (enteredByThisPlay || Amount <= 0 || !SakuraActions.HasElement(play.Card, Element))
             return;
 
         await TriggerElement(choiceContext, play);

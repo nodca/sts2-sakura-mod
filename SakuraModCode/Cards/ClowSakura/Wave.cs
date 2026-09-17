@@ -43,10 +43,10 @@ public class SakuraWave() : SakuraFormCard(1, CardType.Skill, TargetType.None)
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await ApplyPower<ClassicEarthyPower>(choiceContext, Owner.Creature, 1);
-        await ApplyPower<ClassicFireyPower>(choiceContext, Owner.Creature, 1);
-        await ApplyPower<ClassicWateryPower>(choiceContext, Owner.Creature, 1);
-        await ApplyPower<ClassicWindyPower>(choiceContext, Owner.Creature, 1);
+        await EnterElementState<ClassicEarthyPower>(choiceContext);
+        await EnterElementState<ClassicFireyPower>(choiceContext);
+        await EnterElementState<ClassicWateryPower>(choiceContext);
+        await EnterElementState<ClassicWindyPower>(choiceContext);
     }
 }
 

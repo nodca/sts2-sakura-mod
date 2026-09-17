@@ -38,7 +38,7 @@ public class ClassicWateryPower : SakuraElementStatePower
         new("SakuraMod_ClassicWateryTriggerCounter", () => 0);
 
     protected override string IconFileName => "watery_power.png";
-    protected override SakuraElement Element => SakuraElement.Water;
+    internal override SakuraElement Element => SakuraElement.Water;
     protected override Type PermanentPowerType => typeof(ClassicWateryPermanentPower);
 
     protected override async Task TriggerElement(PlayerChoiceContext choiceContext, CardPlay play)

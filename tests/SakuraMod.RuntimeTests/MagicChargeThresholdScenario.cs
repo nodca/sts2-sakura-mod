@@ -106,7 +106,12 @@ internal static class MagicChargeThresholdScenario
         var triggerBefore = SakuraActions.ExtraEffectTriggerCountThisTurn(player);
 
         var flower = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowFlower>(combat, player);
+        var blockBeforeFlower = player.Creature.Block;
         await CombatScenarioContext.PlayCardAsync(flower);
+        assertions.Equal(
+            "flower_entering_play_does_not_trigger_earth_state",
+            blockBeforeFlower,
+            player.Creature.Block);
         assertions.Equal(
             "flower_does_not_self_enable_non_exhaust",
             PileType.Exhaust,

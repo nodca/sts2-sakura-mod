@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -16,6 +17,39 @@ namespace SakuraMod.SakuraModCode.Character;
 
 internal static class SakuraElementState
 {
+    // Elements the card now in flight has entered. Entering an element state is part of
+    // resolving the play that grants it, so the record is held against that card: the state
+    // then pays off on element cards played while it is up, and not on the play that entered
+    // it. Recorded here rather than in a Before hook, so the trigger keeps deciding from the
+    // play the After hook carries.
+    private static readonly ConditionalWeakTable<CardModel, EnteredElements> EnteredByPlayInFlight = new();
+
+    private sealed class EnteredElements
+    {
+        internal SakuraElementSet Elements;
+    }
+
+    internal static void MarkEnteredByPlay(CardModel card, SakuraElement element)
+    {
+        var entered = EnteredByPlayInFlight.GetOrCreateValue(card);
+        entered.Elements |= element.ToSet();
+    }
+
+    internal static bool ConsumeEnteredByPlay(CardModel card, SakuraElement element)
+    {
+        if (!EnteredByPlayInFlight.TryGetValue(card, out var entered)
+            || !entered.Elements.AsElements().Contains(element))
+        {
+            return false;
+        }
+
+        entered.Elements &= ~element.ToSet();
+        if (entered.Elements == SakuraElementSet.None)
+            EnteredByPlayInFlight.Remove(card);
+
+        return true;
+    }
+
     public static async Task<bool> ApplyMissing(PlayerChoiceContext choiceContext, CardModel card)
     {
         if (!card.IsMutable)
@@ -23,7 +57,13 @@ internal static class SakuraElementState
 
         var applied = false;
         foreach (var element in SakuraActions.ElementSetOf(card).AsElements())
-            applied |= await ApplyMissing(choiceContext, card.Owner, element);
+        {
+            var elementApplied = await ApplyMissing(choiceContext, card.Owner, element);
+            if (elementApplied)
+                MarkEnteredByPlay(card, element);
+            applied |= elementApplied;
+        }
+
         return applied;
     }
 
