@@ -79,7 +79,13 @@ internal static class SakuraCombatArtPreference
             return;
 
         if (persistGlobalDefault)
-            SakuraModConfig.UseChibiCombatArtBinding.Write(useChibi);
+        {
+            // The global default outlives the lobby, so persist it here instead
+            // of waiting for a mod settings page flush that never runs.
+            var combatArtBinding = SakuraModConfig.UseChibiCombatArtBinding;
+            combatArtBinding.Write(useChibi);
+            combatArtBinding.Save();
+        }
 
         _runData?.Lobby.Set(
             lobby,

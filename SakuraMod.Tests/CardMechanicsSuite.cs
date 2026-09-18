@@ -755,6 +755,22 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             SakuraSourceCardText.ElementStatesReferencedBy(clowCloud).SequenceEqual([SakuraElement.Water]),
             "Expected Clow Cloud to expose the Watery-state hover tip used by its conditional Rain generation.");
+
+        // The card's own Watery element must not feed its own multiplier: the played card sits in the
+        // Play pile while OnPlay runs, so a preview that counted it would show one Watery card more
+        // Block than the play grants.
+        var handAndExhaust = new List<CardModel>
+        {
+            clowCloud,
+            new ClowWatery(),
+            new SakuraWatery(),
+            new Reflect(),
+            new Gale()
+        };
+        RegressionTestHarness.Require(
+            SakuraCloudEffects.CountWateryCards(handAndExhaust, clowCloud) == 3
+            && SakuraCloudEffects.CountWateryCards(handAndExhaust.Where(card => card != clowCloud).ToList(), clowCloud) == 3,
+            "Expected Clow Cloud to count 3 other Watery cards and to ignore itself in both its hand preview and its play resolution.");
     }
 
     [Fact]
@@ -780,7 +796,7 @@ public sealed class CardMechanicsSuite
                 new Reflect(),
                 new SpellShuiLong(),
                 new Gale()
-            ]) == 4,
+            ], source: null) == 4,
             "Expected both Cloud forms to count Transparent and Spell cards through the shared Watery element projection.");
 
         RegressionTestHarness.Require(

@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using STS2RitsuLib.Settings;
 
 namespace SakuraMod.SakuraModCode.Character;
 
@@ -174,23 +175,29 @@ internal static class SakuraCharacterSelectOptionsPatch
 
         private void ToggleVoice()
         {
-            SakuraModConfig.EnableSakuraVoiceBinding.Write(
-                !SakuraModConfig.EnableSakuraVoiceBinding.Read());
+            ToggleAndPersist(SakuraModConfig.EnableSakuraVoiceBinding);
             Refresh();
         }
 
         private void ToggleCardBgm()
         {
-            SakuraModConfig.EnableCardBgmBinding.Write(
-                !SakuraModConfig.EnableCardBgmBinding.Read());
+            ToggleAndPersist(SakuraModConfig.EnableCardBgmBinding);
             Refresh();
         }
 
         private void ToggleCardVfx()
         {
-            SakuraModConfig.EnableCardVfxBinding.Write(
-                !SakuraModConfig.EnableCardVfxBinding.Read());
+            ToggleAndPersist(SakuraModConfig.EnableCardVfxBinding);
             Refresh();
+        }
+
+        // RitsuLib only flushes dirty bindings while the mod settings page is
+        // open, so these controls must persist their own writes; otherwise the
+        // in-memory value is lost on the next launch.
+        private static void ToggleAndPersist(IModSettingsValueBinding<bool> binding)
+        {
+            binding.Write(!binding.Read());
+            binding.Save();
         }
 
         private void Refresh()

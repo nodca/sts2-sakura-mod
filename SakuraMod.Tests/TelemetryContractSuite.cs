@@ -641,6 +641,17 @@ public sealed class TelemetryContractSuite
         }
     }
 
+    [Fact]
+    public void UnicodeChecksumMatchesSharedReceiverFixture()
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "tools/telemetry-ingestion/internal/contracts/testdata/context_checksum_unicode_v2.json")));
+        var context = JsonSerializer.Deserialize<SakuraTelemetryRunContext>(document.RootElement.GetProperty("context").GetRawText())!;
+        var expected = document.RootElement.GetProperty("checksum").GetString();
+        Assert.Equal(expected, SakuraTelemetryContract.ContextChecksum(context));
+        Assert.Equal(expected, SakuraTelemetryContract.ContextChecksum(context with { GameplayMods = context.GameplayMods.Reverse().ToArray() }));
+    }
+
     private static SakuraTelemetryRunContext FixtureContext() => new(
         BalanceContractVersion: SakuraTelemetryContract.Version,
         RunKey: "018f6b8d-78ef-7a63-8f4a-4d663f3f0e61",

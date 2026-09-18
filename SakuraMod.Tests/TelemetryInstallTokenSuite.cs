@@ -45,7 +45,7 @@ public sealed class TelemetryInstallTokenSuite
             registration.Url == "https://example.test/v1/ritsulib/install"
             && registration.Headers[InstallTokenHttpTelemetryAdapter.AuthorizationHeaderName] == "Bearer legacy-cred"
             && registration.JsonBody.Contains("\"applicant_id\":\"SakuraMod\""),
-            "Expected registration to hit the install endpoint with the legacy bootstrap credential.");
+            "Expected registration to hit the install endpoint with the public bootstrap credential.");
         var send = transport.Requests[1];
         RegressionTestHarness.Require(
             send.Url == "https://example.test/v1/ritsulib/batch"
@@ -103,26 +103,14 @@ public sealed class TelemetryInstallTokenSuite
     }
 
     [Fact]
-    public async Task AdapterFallsBackToLegacyCredentialWhenRegistrationUnavailable()
+    public async Task AdapterDoesNotSendBatchWhenRegistrationUnavailable()
     {
         var transport = new FakeTransport();
-        transport.Respond["batch"] = new TelemetryHttpResult(202, null, null);
-        var store = new MemoryTokenStore();
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
-
+            "https://example.test/v1/ritsulib/batch", "bootstrap-cred", "SakuraMod", new MemoryTokenStore(), transport, new MemoryQuarantine(), _ => { });
         var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
-
-        RegressionTestHarness.Require(result.Success, "Expected the legacy fallback send to succeed against a pre-rollout receiver.");
-        RegressionTestHarness.Require(
-            transport.Requests.Count(request => request.Url.EndsWith("/batch", StringComparison.Ordinal)) == 1,
-            "Expected exactly one batch send, sent via the legacy credential fallback.");
-        RegressionTestHarness.Require(
-            transport.Requests.Last().Headers[InstallTokenHttpTelemetryAdapter.AuthorizationHeaderName] == "Bearer legacy-cred",
-            "Expected the fallback send to authenticate with the bundled legacy credential.");
-        RegressionTestHarness.Require(
-            string.IsNullOrEmpty(store.Saved),
-            "Expected no install token to be persisted when registration is unavailable.");
+        RegressionTestHarness.Require(!result.Success, "Registration failure must preserve queued telemetry.");
+        RegressionTestHarness.Require(transport.Requests.All(request => !request.Url.EndsWith("/batch")), "Never send a shared-credential batch.");
     }
 
     [Fact]
@@ -149,7 +137,7 @@ public sealed class TelemetryInstallTokenSuite
         var transport = new FakeTransport();
         transport.Respond["batch"] = new TelemetryHttpResult(202, null, null);
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", new MemoryTokenStore(), transport, new MemoryQuarantine(), _ => { });
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", new MemoryTokenStore { Saved = ValidToken("ab") }, transport, new MemoryQuarantine(), _ => { });
 
         await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
         var body = transport.Requests.Last().JsonBody;
@@ -239,20 +227,20 @@ public sealed class TelemetryInstallTokenSuite
     }
 
     [Fact]
-    public async Task LegacyFallbackFailureAlsoCarriesRetryAfter()
+    public async Task RegistrationFailureCarriesRetryAfter()
     {
         var transport = new FakeTransport();
-        transport.Respond["batch"] = new TelemetryHttpResult(429, null, null, TimeSpan.FromSeconds(1));
+        transport.Respond["install"] = new TelemetryHttpResult(429, null, null, TimeSpan.FromSeconds(1));
         var store = new MemoryTokenStore();
         var adapter = new InstallTokenHttpTelemetryAdapter(
             "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
 
         var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
 
-        RegressionTestHarness.Require(!result.Success, "Expected the legacy fallback to surface the receiver's rate-limit verdict.");
+        RegressionTestHarness.Require(!result.Success, "Expected the registration failure to surface the receiver's rate-limit verdict.");
         RegressionTestHarness.Require(
             result.ErrorMessage == "telemetry endpoint returned 429 retry-after=1s",
-            $"Expected the legacy failure to carry the Retry-After contract, got {result.ErrorMessage}.");
+            $"Expected the registration failure to carry the Retry-After contract, got {result.ErrorMessage}.");
     }
 
     private static string ValidToken(string seed) =>

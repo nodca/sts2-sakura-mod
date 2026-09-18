@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using SakuraMod.SakuraModCode;
 using SakuraMod.SakuraModCode.Character;
 using STS2RitsuLib.RunData;
@@ -156,6 +157,19 @@ public sealed class SakuraCombatArtSuite
             && options.Contains("FocusNeighborTop", StringComparison.Ordinal)
             && options.Contains("RestoreFocusNeighbors", StringComparison.Ordinal),
             "Expected one patch to reuse all three local presentation bindings and connect the two-row option grid to native focus neighbors.");
+    }
+
+    [Fact]
+    public void CharacterSelectPreferenceWritesPersistImmediately()
+    {
+        var options = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraCharacterSelectOptions.cs"));
+        var preference = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraCombatArtPreference.cs"));
+
+        RegressionTestHarness.Require(
+            EveryWritePersists(options) && EveryWritePersists(preference),
+            "Expected every character-select preference write to save its binding: RitsuLib only flushes dirty bindings while the mod settings page is open, so an unsaved write is lost on the next launch.");
     }
 
     [Fact]
@@ -491,4 +505,17 @@ public sealed class SakuraCombatArtSuite
 
     private static int CountOccurrences(string source, string value) =>
         source.Split(value, StringSplitOptions.None).Length - 1;
+
+    private static bool EveryWritePersists(string source)
+    {
+        var writes = 0;
+        foreach (Match write in Regex.Matches(source, @"(\w+)\.Write\("))
+        {
+            writes++;
+            if (!source.Contains($"{write.Groups[1].Value}.Save();", StringComparison.Ordinal))
+                return false;
+        }
+
+        return writes > 0;
+    }
 }

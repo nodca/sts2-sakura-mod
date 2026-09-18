@@ -113,18 +113,24 @@ public class SakuraCloud() : SakuraFormCard(1, CardType.Skill, TargetType.None)
 
 internal static class SakuraCloudEffects
 {
-    internal static int CountWateryCardsInHandAndExhaust(Player owner) =>
+    // The source card is never part of its own count. CardModel.OnPlayWrapper moves the played card
+    // into PileType.Play before OnPlay runs, so the resolution count already excludes Cloud while the
+    // hand preview would otherwise count it as one of its own Watery cards and overstate the Block.
+    internal static int CountWateryCardsInHandAndExhaust(Player owner, CardModel source) =>
         CountWateryCards(
-            CardPile.GetCards(owner, PileType.Hand).Concat(CardPile.GetCards(owner, PileType.Exhaust)));
+            CardPile.GetCards(owner, PileType.Hand).Concat(CardPile.GetCards(owner, PileType.Exhaust)),
+            source);
 
     internal static decimal WateryHandAndExhaustMultiplier(CardModel card, Creature? _) =>
-        card.Owner is { } owner ? CountWateryCardsInHandAndExhaust(owner) : 0;
+        card.Owner is { } owner ? CountWateryCardsInHandAndExhaust(owner, card) : 0;
 
+    // Deck counts read the run deck, whose cards are cloned into combat and never leave the pile, so
+    // the Sakura form's own count is stable between preview and resolution.
     internal static decimal WateryDeckMultiplier(CardModel card, Creature? _) =>
-        card.Owner is { } owner ? CountWateryCards(owner.Deck.Cards) : 0;
+        card.Owner is { } owner ? CountWateryCards(owner.Deck.Cards, source: null) : 0;
 
-    internal static int CountWateryCards(IEnumerable<CardModel> cards) =>
-        cards.Count(static card => SakuraActions.HasElement(card, SakuraElement.Water));
+    internal static int CountWateryCards(IEnumerable<CardModel> cards, CardModel? source) =>
+        cards.Count(card => card != source && SakuraActions.HasElement(card, SakuraElement.Water));
 
     public static async Task AddRainToHand(Player owner, PlayerChoiceContext choiceContext, bool freeForCombat)
     {

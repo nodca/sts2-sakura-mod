@@ -25,8 +25,7 @@ internal readonly record struct TelemetryHttpResult(int StatusCode, string? Body
 /// <summary>
 /// Persists the per-install telemetry token issued by the receiver. The token
 /// is an abuse-containment gate, not a secret: it is stored in the game's
-/// user data directory and can be re-registered while the legacy credential
-/// is accepted.
+/// user data directory and can be re-registered through the bootstrap endpoint.
 /// </summary>
 internal interface IInstallTokenStore
 {
@@ -42,12 +41,11 @@ internal interface IInstallTokenStore
 /// token, a request timestamp, and a single-use nonce instead of the shared
 /// public write credential. The wire contract (JSON fields, casing, consent
 /// gating upstream of the adapter) matches the bundled HttpJsonTelemetryAdapter;
-/// only the authentication headers change. Registration and legacy fallback
-/// keep working against pre-rollout receivers and during the legacy window.
+/// registration failures preserve their status and never fall back to shared batch credentials.
 /// </summary>
 internal sealed class InstallTokenHttpTelemetryAdapter(
     string endpoint,
-    string legacyCredential,
+    string bootstrapCredential,
     string applicantId,
     IInstallTokenStore tokenStore,
     ITelemetryHttpTransport transport,
@@ -77,7 +75,7 @@ internal sealed class InstallTokenHttpTelemetryAdapter(
 
     private readonly string _batchEndpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
     private readonly string _installEndpoint = BuildInstallEndpoint(endpoint ?? throw new ArgumentNullException(nameof(endpoint)));
-    private readonly string _legacyCredential = legacyCredential ?? throw new ArgumentNullException(nameof(legacyCredential));
+    private readonly string _bootstrapCredential = bootstrapCredential ?? throw new ArgumentNullException(nameof(bootstrapCredential));
     private readonly string _applicantId = applicantId ?? throw new ArgumentNullException(nameof(applicantId));
     private readonly IInstallTokenStore _tokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
     private readonly ITelemetryHttpTransport _transport = transport ?? throw new ArgumentNullException(nameof(transport));
@@ -247,58 +245,19 @@ internal sealed class InstallTokenHttpTelemetryAdapter(
 
     private async Task<TelemetryHttpResult> SendAuthenticatedAsync(string body, CancellationToken cancellationToken)
     {
-        TelemetryHttpResult? tokenPathResult = null;
-        var tryLegacy = false;
-
         var token = _tokenStore.Load();
         if (token is null)
         {
-            token = await RegisterAsync(cancellationToken).ConfigureAwait(false);
-            tryLegacy = token is null;
+            var registration = await RegisterAsync(cancellationToken).ConfigureAwait(false);
+            if (registration.Token is null) return registration.Result;
+            token = registration.Token;
         }
-        if (!tryLegacy)
-        {
-            var result = await SendWithTokenAsync(token!, body, cancellationToken).ConfigureAwait(false);
-            if (result.IsSuccess)
-                return result;
-            tokenPathResult = result;
-
-            if (result.StatusCode == 401)
-            {
-                // The token was rejected (unknown, revoked, or stale): clear
-                // it, register again while the legacy credential is accepted,
-                // and retry the batch once with the fresh token.
-                _tokenStore.Clear();
-                var refreshed = await RegisterAsync(cancellationToken).ConfigureAwait(false);
-                if (refreshed is null)
-                {
-                    tryLegacy = true;
-                }
-                else
-                {
-                    var retry = await SendWithTokenAsync(refreshed, body, cancellationToken).ConfigureAwait(false);
-                    if (retry.IsSuccess)
-                        return retry;
-                    tokenPathResult = retry;
-                    tryLegacy = retry.StatusCode == 401;
-                }
-            }
-        }
-        if (!tryLegacy)
-        {
-            // The receiver answered the token path with a verdict (rate limit,
-            // storage failure, ...). Retry logic belongs to the same path;
-            // switching credentials here would bypass per-install limits.
-            return tokenPathResult!.Value;
-        }
-
-        var legacy = await _transport
-            .PostAsync(_batchEndpoint, LegacyHeaders(), body, cancellationToken)
-            .ConfigureAwait(false);
-        // A 401 on the legacy credential means the receiver is past the
-        // legacy window (or the credential changed); the token-path result is
-        // the more informative failure in that case.
-        return tokenPathResult is not null && legacy.StatusCode == 401 ? tokenPathResult.Value : legacy;
+        var result = await SendWithTokenAsync(token, body, cancellationToken).ConfigureAwait(false);
+        if (result.StatusCode != 401) return result;
+        _tokenStore.Clear();
+        var refreshed = await RegisterAsync(cancellationToken).ConfigureAwait(false);
+        return refreshed.Token is null ? refreshed.Result
+            : await SendWithTokenAsync(refreshed.Token, body, cancellationToken).ConfigureAwait(false);
     }
 
     internal static string BuildInstallEndpoint(string batchEndpoint)
@@ -336,36 +295,37 @@ internal sealed class InstallTokenHttpTelemetryAdapter(
         return await _transport.PostAsync(_batchEndpoint, headers, body, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<string?> RegisterAsync(CancellationToken cancellationToken)
+    private async Task<(string? Token, TelemetryHttpResult Result)> RegisterAsync(CancellationToken cancellationToken)
     {
         var body = JsonSerializer.Serialize(
             new { schema = InstallSchema, applicant_id = _applicantId },
             JsonOptions);
         var result = await _transport
-            .PostAsync(_installEndpoint, LegacyHeaders(), body, cancellationToken)
+            .PostAsync(_installEndpoint, BootstrapHeaders(), body, cancellationToken)
             .ConfigureAwait(false);
-        if (!result.IsSuccess || string.IsNullOrEmpty(result.Body))
-            return null;
+        if (!result.IsSuccess) return (null, result);
+        var invalid = new TelemetryHttpResult(502, null, "invalid install registration response");
+        if (string.IsNullOrEmpty(result.Body)) return (null, invalid);
         try
         {
             if (JsonNode.Parse(result.Body)?["install_token"] is not JsonNode tokenNode)
-                return null;
+                return (null, invalid);
             var token = tokenNode.GetValue<string>();
             if (!IsWellFormedInstallToken(token))
-                return null;
+                return (null, invalid);
             _tokenStore.Save(token);
-            return token;
+            return (token, result);
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException or FormatException)
         {
-            return null;
+            return (null, invalid);
         }
     }
 
-    private IReadOnlyDictionary<string, string> LegacyHeaders() =>
+    private IReadOnlyDictionary<string, string> BootstrapHeaders() =>
         new Dictionary<string, string>
         {
-            [AuthorizationHeaderName] = $"Bearer {_legacyCredential}"
+            [AuthorizationHeaderName] = $"Bearer {_bootstrapCredential}"
         };
 
     internal static bool IsWellFormedInstallToken(string? token)
