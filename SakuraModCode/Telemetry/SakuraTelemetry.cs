@@ -33,7 +33,7 @@ internal static class SakuraTelemetry
 
     private const string DisplayName = "SakuraMod";
     private const string ConsentDescriptionKey = "SAKURAMOD-TELEMETRY_CONSENT.description";
-    private const string ConsentDescriptionFallback = "Sends completed Standard-mode Kinomoto Sakura run history, correlated card reward choices, aggregate card draw counts, an opaque run key, exact ascension/player count, SakuraMod version, and loaded gameplay Mod ids/versions for balance diagnostics. SakuraMod adds no card-play data, card text, local path, or personal identifier.";
+    private const string ConsentDescriptionFallback = "Sends completed Standard-mode Kinomoto Sakura run history, card choices and their definitions, aggregate card draw counts, an opaque run key, exact ascension/player count, SakuraMod version, and loaded gameplay Mod ids/versions for balance diagnostics. SakuraMod adds no card-play data, card text, local path, or personal identifier.";
     internal const string BalanceContextEventName = "balance_run.context";
     internal const string CardRewardOfferedEventName = "card_reward.offered";
     internal const string CardRewardTakenEventName = "card_reward.taken";
@@ -110,10 +110,7 @@ internal static class SakuraTelemetry
             return false;
         return context.EventName == RunHistoryEventName
             ? SakuraTelemetryTerminalCapture.IsCapturingAbandonment
-            : context.EventName is BalanceContextEventName
-                or CardRewardOfferedEventName
-                or CardRewardTakenEventName
-                or SakuraTelemetryCoverage.SessionStartedEventName
+            : context.EventName is SakuraTelemetryCoverage.SessionStartedEventName
                 or SakuraTelemetryCoverage.CoverageEventName;
     }
 
@@ -163,67 +160,6 @@ internal static class SakuraTelemetry
             mods);
     }
 
-    internal static bool CaptureRunContext(SakuraTelemetryRunContext context)
-    {
-        var client = RitsuLibFramework.GetTelemetryClient(ApplicantId);
-        return SakuraTelemetryCoverage.CaptureIfEnabled(
-            client,
-            BalanceContextEventName,
-            JsonSerializer.SerializeToNode(context)!);
-    }
-
-    internal static bool CaptureApplicantPayload(
-        string eventName,
-        JsonNode payload,
-        IReadOnlyDictionary<string, object?>? properties = null)
-    {
-        var client = RitsuLibFramework.GetTelemetryClient(ApplicantId);
-        return SakuraTelemetryCoverage.CaptureIfEnabled(client, eventName, payload, properties);
-    }
-
-    internal static JsonObject BuildCardRewardOfferedPayload(CardRewardOfferSnapshot snapshot) =>
-        JsonSerializer.SerializeToNode(new
-        {
-            balance_contract_version = SakuraTelemetryContract.Version,
-            run_key = snapshot.RunKey,
-            offer_sequence = snapshot.OfferSequence,
-            run_floor = snapshot.RunFloor,
-            act_floor = snapshot.ActFloor,
-            reward_source = snapshot.RewardSource,
-            rarity_odds = snapshot.RarityOdds,
-            offered_cards = snapshot.OfferedCards
-        })!.AsObject();
-
-    internal static JsonObject BuildCardRewardTakenPayload(
-        CardRewardOfferSnapshot snapshot,
-        IReadOnlyList<SakuraTelemetryCardChoice> choices,
-        bool skipped = false) =>
-        JsonSerializer.SerializeToNode(new
-        {
-            balance_contract_version = SakuraTelemetryContract.Version,
-            run_key = snapshot.RunKey,
-            offer_sequence = snapshot.OfferSequence,
-            selected_cards = choices
-                .Where(static choice => choice.WasPicked)
-                .Select(static choice => new { id = choice.CardId, upgrade = choice.UpgradeLevel })
-                .ToArray(),
-            unpicked_cards = choices
-                .Where(static choice => !choice.WasPicked)
-                .Select(static choice => new { id = choice.CardId, upgrade = choice.UpgradeLevel })
-                .ToArray(),
-            skipped
-        })!.AsObject();
-
-    internal static IReadOnlyDictionary<string, object?> BuildCardRewardProperties(CardRewardOfferSnapshot snapshot) =>
-        new Dictionary<string, object?>
-        {
-            ["run_key"] = snapshot.RunKey,
-            ["run_floor"] = snapshot.RunFloor,
-            ["act_floor"] = snapshot.ActFloor,
-            ["reward_source"] = snapshot.RewardSource,
-            ["offer_sequence"] = snapshot.OfferSequence
-        };
-
     internal static void LogCaptureFailure(string phase, Exception exception) =>
         MainFile.Logger.Warn($"SakuraMod telemetry {phase} capture failed: {exception.Message}");
 
@@ -270,14 +206,11 @@ internal static class SakuraTelemetryRunHooks
         RitsuLibFramework.SubscribeLifecycle<RunLoadedEvent>(
             static evt => Activate(evt.RunState),
             replayCurrentState: false);
-        RitsuLibFramework.SubscribeLifecycle<RewardsScreenContinuingEvent>(
-            static _ => _activeHook?.CaptureSkippedOffers(),
-            replayCurrentState: false);
         _registered = true;
     }
 
-    internal static JsonNode? BuildActiveContribution() =>
-        _activeHook?.BuildContribution();
+    internal static JsonNode? BuildActiveContribution(JsonNode? basePayload) =>
+        _activeHook?.BuildContribution(basePayload);
 
     internal static void ObserveTerminal(RunState? runState)
     {
@@ -332,8 +265,8 @@ internal sealed class SakuraBalanceRunContributionProvider : ITelemetryContribut
         try
         {
             return SakuraTelemetryTerminalCapture.IsCapturingAbandonment
-                ? SakuraTelemetryTerminalCapture.BuildAbandonedContribution()
-                : SakuraTelemetryRunHooks.BuildActiveContribution();
+                ? SakuraTelemetryTerminalCapture.BuildAbandonedContribution(context.BasePayload)
+                : SakuraTelemetryRunHooks.BuildActiveContribution(context.BasePayload);
         }
         catch (Exception exception)
         {
@@ -347,13 +280,11 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
 {
     private RunState? _runState;
     private SakuraTelemetryUsageAccumulator _usage = new();
-    private ConditionalWeakTable<Player, CardRewardCorrelation<CardRewardOfferSnapshot>> _rewardStates = new();
     private BalanceRunIdentity? _runData;
     private SakuraTelemetryRunContext? _context;
     private SakuraTelemetryCoverageAccumulator _coverage = new();
     private bool _activated;
     private bool _captureBalance;
-    private bool _captureRewards;
     private bool _terminalCoverageSent;
 
     // ModelDb constructs every mod-owned AbstractModel through a public parameterless constructor.
@@ -380,13 +311,11 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
         base.DeepCloneFields();
         _runState = null;
         _usage = new SakuraTelemetryUsageAccumulator();
-        _rewardStates = new ConditionalWeakTable<Player, CardRewardCorrelation<CardRewardOfferSnapshot>>();
         _runData = null;
         _context = null;
         _coverage = new SakuraTelemetryCoverageAccumulator();
         _activated = false;
         _captureBalance = false;
-        _captureRewards = false;
         _terminalCoverageSent = false;
     }
 
@@ -398,7 +327,6 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
         _activated = true;
         var client = RitsuLibFramework.GetTelemetryClient(SakuraTelemetry.ApplicantId);
         _captureBalance = client.IsEnabled(SakuraTelemetry.RunHistoryRequestId);
-        _captureRewards = _captureBalance;
         if (!_captureBalance)
             return;
 
@@ -406,7 +334,6 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
         if (_runData is null)
         {
             _captureBalance = false;
-            _captureRewards = false;
             return;
         }
 
@@ -416,24 +343,12 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
         _runData.ContextChecksum = SakuraTelemetryContract.ContextChecksum(_context);
         SakuraTelemetry.PersistRunData(BoundRunState, _runData);
         SakuraTelemetryCoverage.TryCaptureSessionStarted();
-        SakuraTelemetry.TryExecute(
-            () =>
-            {
-                if (SakuraTelemetry.CaptureRunContext(_context))
-                    _coverage.RecordContextCaptured();
-            },
-            exception =>
-            {
-                _coverage.RecordFailure(SakuraTelemetryCoverage.ClassifyFailure(exception));
-                SakuraTelemetry.LogCaptureFailure("run context", exception);
-            });
         EmitCoverage(SakuraTelemetryCoverage.StageStarted);
     }
 
     internal void Disable()
     {
         _captureBalance = false;
-        _captureRewards = false;
     }
 
     public override Task BeforeCombatStart()
@@ -484,180 +399,23 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
 
             _usage.EndCombat();
             _runData.Usage = _usage.Snapshot();
-            _coverage.SetLastOfferSequence(_runData.LastOfferSequence);
             SakuraTelemetry.PersistRunData(BoundRunState, _runData);
-            if (_coverage.HasUnpublishedChanges)
-                EmitCoverage(SakuraTelemetryCoverage.StageCheckpoint);
         });
         return Task.CompletedTask;
     }
 
-    public override bool TryModifyCardRewardOptionsLate(
-        Player player,
-        List<CardCreationResult> cardRewardOptions,
-        CardCreationOptions creationOptions)
-    {
-        Guard("card reward offer", () => CaptureCardRewardOffered(player, cardRewardOptions, creationOptions));
-        return false;
-    }
-
-    public override Task AfterRewardTaken(Player player, Reward reward)
-    {
-        if (reward is CardReward)
-            Guard("card reward take", () => CaptureCardRewardTaken(player));
-        return Task.CompletedTask;
-    }
-
-    internal JsonNode? BuildContribution()
+    internal JsonNode? BuildContribution(JsonNode? basePayload)
     {
         if (!_captureBalance || _runData is null || _context is null)
             return null;
 
         _runData.Usage = _usage.Snapshot();
         SakuraTelemetry.PersistRunData(BoundRunState, _runData);
-        var contribution = JsonSerializer.SerializeToNode(new SakuraTelemetryBalanceRun(
-            SakuraTelemetryContract.Version,
-            _runData.RunKey,
-            _runData.ContextChecksum,
-            _runData.Usage));
-        if (contribution is not null)
-            _coverage.RecordCompletedCaptured();
+        var currentVersion = SakuraTelemetryContract.SakuraModVersion(
+            SakuraTelemetryContract.GameplayMods(RitsuModManager.GetKnownMods()));
+        var contribution = SakuraTelemetryReport.Build(_runData, basePayload,
+            reference => _context.SakuraModVersion == currentVersion ? SakuraTelemetryReport.Resolve(reference) : null);
         return contribution;
-    }
-
-    internal void CaptureSkippedOffers()
-    {
-        if (!_captureRewards)
-            return;
-
-        foreach (var player in BoundRunState.Players)
-        {
-            if (!_rewardStates.TryGetValue(player, out var state))
-                continue;
-
-            foreach (var result in state.DrainSkipped())
-            {
-                Guard("card reward skip", () =>
-                    CaptureTakenPayload(
-                        result.Payload,
-                        ToTelemetryChoices(result.Choices),
-                        skipped: true));
-            }
-        }
-    }
-
-    private void CaptureCardRewardOffered(
-        Player player,
-        IReadOnlyList<CardCreationResult> cardRewardOptions,
-        CardCreationOptions creationOptions)
-    {
-        if (!_captureRewards || _runData is null || cardRewardOptions.Count == 0)
-            return;
-
-        var offeredCards = cardRewardOptions
-            .Select(static option => SakuraTelemetryCardClassifier.TryClassify(option.Card, out var info)
-                ? (SakuraTelemetryCardInfo?)info
-                : null)
-            .Where(static card => card.HasValue)
-            .Select(static card => card!.Value)
-            .GroupBy(
-                static card => (card.CardId, card.UpgradeLevel))
-            .Select(static group => group.First())
-            .ToArray();
-        if (offeredCards.Length == 0)
-            return;
-
-        var state = _rewardStates.GetValue(player, static _ => new CardRewardCorrelation<CardRewardOfferSnapshot>());
-        var snapshot = new CardRewardOfferSnapshot(
-            _runData.RunKey,
-            NextOfferSequence(),
-            player.RunState.TotalFloor,
-            player.RunState.ActFloor,
-            creationOptions.Source.ToString(),
-            creationOptions.RarityOdds.ToString(),
-            CurrentCardChoiceHistoryCount(player),
-            offeredCards);
-        state.Remember(new CardRewardCorrelationOffer<CardRewardOfferSnapshot>(
-            snapshot,
-            snapshot.OfferSequence,
-            snapshot.InitialCardChoiceHistoryCount,
-            snapshot.OfferedCards
-                .Select(static card => new CardRewardCorrelationCard(card.CardId, card.UpgradeLevel))
-                .ToArray()));
-
-        CaptureCountedEvent(
-            record: captured => _coverage.RecordOffer(captured),
-            () => SakuraTelemetry.CaptureApplicantPayload(
-                SakuraTelemetry.CardRewardOfferedEventName,
-                SakuraTelemetry.BuildCardRewardOfferedPayload(snapshot),
-                SakuraTelemetry.BuildCardRewardProperties(snapshot)));
-        _coverage.SetLastOfferSequence(snapshot.OfferSequence);
-    }
-
-    private void CaptureCardRewardTaken(Player player)
-    {
-        if (!_captureRewards)
-            return;
-
-        var history = CurrentCardChoices(player);
-        if (history is null || history.Count == 0 || !_rewardStates.TryGetValue(player, out var state))
-            return;
-
-        var result = state.TakeMatching(NormalizeCardChoices(history));
-        if (result is null)
-            return;
-
-        var choices = ToTelemetryChoices(result.Choices);
-        if (choices.Count > 0)
-            CaptureTakenPayload(result.Payload, choices, skipped: !choices.Any(static choice => choice.WasPicked));
-    }
-
-    private static IReadOnlyList<CardChoiceHistoryEntry>? CurrentCardChoices(Player player) =>
-        player.RunState.CurrentMapPointHistoryEntry?.GetEntry(player.NetId).CardChoices;
-
-    private static int CurrentCardChoiceHistoryCount(Player player) =>
-        CurrentCardChoices(player)?.Count ?? 0;
-
-    private static IReadOnlyList<CardRewardCorrelationChoice> NormalizeCardChoices(
-        IReadOnlyList<CardChoiceHistoryEntry> history) =>
-        history
-            .Select(static choice => new CardRewardCorrelationChoice(
-                choice.Card.Id?.Entry,
-                choice.Card.CurrentUpgradeLevel,
-                choice.wasPicked))
-            .ToArray();
-
-    private static IReadOnlyList<SakuraTelemetryCardChoice> ToTelemetryChoices(
-        IReadOnlyList<CardRewardCorrelationChoice> choices) =>
-        choices
-            .Where(static choice => choice.CardId is not null)
-            .Select(static choice => new SakuraTelemetryCardChoice(
-                choice.CardId!,
-                choice.UpgradeLevel,
-                choice.WasPicked))
-            .ToArray();
-
-    private int NextOfferSequence()
-    {
-        if (_runData is null)
-            throw new InvalidOperationException("Balance run data is unavailable.");
-
-        _runData.LastOfferSequence++;
-        SakuraTelemetry.PersistRunData(BoundRunState, _runData);
-        return _runData.LastOfferSequence;
-    }
-
-    private void CaptureTakenPayload(
-        CardRewardOfferSnapshot snapshot,
-        IReadOnlyList<SakuraTelemetryCardChoice> choices,
-        bool skipped)
-    {
-        CaptureCountedEvent(
-            record: captured => _coverage.RecordTake(captured),
-            () => SakuraTelemetry.CaptureApplicantPayload(
-                SakuraTelemetry.CardRewardTakenEventName,
-                SakuraTelemetry.BuildCardRewardTakenPayload(snapshot, choices, skipped),
-                SakuraTelemetry.BuildCardRewardProperties(snapshot)));
     }
 
     internal void ObserveTerminal()
@@ -666,7 +424,6 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
             return;
 
         _terminalCoverageSent = true;
-        _coverage.SetLastOfferSequence(_runData.LastOfferSequence);
         EmitCoverage(SakuraTelemetryCoverage.StageTerminalAttempted);
         _runData.Usage = _usage.Snapshot();
         SakuraTelemetry.PersistRunData(BoundRunState, _runData);
@@ -674,14 +431,14 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
 
     private void EmitCoverage(string stage)
     {
-        if (_runData is null)
+        if (_runData is null || BoundRunState.Players.Count != 1)
             return;
 
         SakuraTelemetry.TryExecute(
             () =>
             {
                 var client = RitsuLibFramework.GetTelemetryClient(SakuraTelemetry.ApplicantId);
-                if (SakuraTelemetryCoverage.CaptureIfEnabled(
+                SakuraTelemetryCoverage.CaptureIfEnabled(
                     client,
                     SakuraTelemetryCoverage.CoverageEventName,
                     SakuraTelemetryCoverage.BuildCoveragePayload(
@@ -689,8 +446,7 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
                         stage,
                         BoundRunState.Players.Count,
                         BoundRunState.Players.Count(static player => SakuraTelemetry.IsSakuraCharacterId(player.Character.Id)),
-                        _coverage)))
-                    _coverage.MarkPublished();
+                        _coverage));
             },
             exception =>
             {
@@ -699,29 +455,6 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
             });
     }
 
-    private void CaptureCountedEvent(Action<bool> record, Func<bool> capture)
-    {
-        var captured = false;
-        SakuraTelemetry.TryExecute(
-            () => captured = capture(),
-            exception =>
-            {
-                _coverage.RecordFailure(SakuraTelemetryCoverage.ClassifyFailure(exception));
-                SakuraTelemetry.LogCaptureFailure("counted capture", exception);
-            });
-        record(captured);
-    }
-
     private static void Guard(string phase, Action action)
         => SakuraTelemetry.TryExecute(action, exception => SakuraTelemetry.LogCaptureFailure(phase, exception));
 }
-
-internal sealed record CardRewardOfferSnapshot(
-    string RunKey,
-    int OfferSequence,
-    int RunFloor,
-    int ActFloor,
-    string RewardSource,
-    string RarityOdds,
-    int InitialCardChoiceHistoryCount,
-    IReadOnlyList<SakuraTelemetryCardInfo> OfferedCards);

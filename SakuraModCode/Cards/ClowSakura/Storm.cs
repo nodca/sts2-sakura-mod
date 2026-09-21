@@ -77,10 +77,22 @@ internal static class StormRules
 
 public class SakuraStorm() : SakuraFormCard(1, CardType.Attack, TargetType.None)
 {
+    private const int MinDamage = 4;
     private const int MaxDamageOffset = 5;
 
+    internal const string MaxDamageVar = "MaxDamage";
+
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(4, ValueProp.Move), new DynamicVar("MaxDamage", 9), new DynamicVar("Magic", 7)];
+
+    // Both ends are damage vars so Strength, Weak, Vulnerable, and enchantments move
+    // the displayed range together; the roll below stays on the unmodified base values
+    // because the damage pipeline applies those hooks to every hit.
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new SakuraSourceDamageVar(MinDamage, ValueProp.Move),
+        new SakuraSourceDamageVar(MaxDamageVar, MinDamage + MaxDamageOffset, ValueProp.Move),
+        new DynamicVar("Magic", 7)
+    ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -91,7 +103,9 @@ public class SakuraStorm() : SakuraFormCard(1, CardType.Attack, TargetType.None)
             if (target is null)
                 return;
 
-            var amount = Owner.RunState.Rng.CombatCardSelection.NextInt(ReleasedDamage(), ReleasedDamage() + MaxDamageOffset + 1);
+            var amount = Owner.RunState.Rng.CombatCardSelection.NextInt(
+                ReleasedDamage(),
+                ReleasedValue(MaxDamageVar) + 1);
             await DealDamageHit(attack, choiceContext, target, amount);
         }
     }

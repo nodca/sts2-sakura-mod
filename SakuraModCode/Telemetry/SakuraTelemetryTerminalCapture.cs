@@ -17,10 +17,15 @@ internal static class SakuraTelemetryTerminalCapture
 
     internal static bool IsCapturingAbandonment => _abandonedRun is not null;
 
-    internal static JsonNode? BuildAbandonedContribution() => _abandonedRun is { } data
-        ? JsonSerializer.SerializeToNode(new SakuraTelemetryBalanceRun(
-            data.Context!.BalanceContractVersion, data.RunKey, data.ContextChecksum, data.Usage))
-        : null;
+    internal static JsonNode? BuildAbandonedContribution(JsonNode? basePayload = null)
+    {
+        if (_abandonedRun is not { } data) return null;
+        if (basePayload is null) return SakuraTelemetryReport.Build(data, null, _ => null);
+        var version = SakuraTelemetryContract.SakuraModVersion(
+            SakuraTelemetryContract.GameplayMods(STS2RitsuLib.Compat.RitsuModManager.GetKnownMods()));
+        return SakuraTelemetryReport.Build(data, basePayload,
+            reference => data.Context?.SakuraModVersion == version ? SakuraTelemetryReport.Resolve(reference) : null);
+    }
 
     internal static void WithAbandonedContribution(BalanceRunIdentity data, Action capture)
     {
@@ -77,10 +82,10 @@ internal static class SakuraTelemetryTerminalCapture
 
         AttemptedAbandons.Add(run, new object());
         var coverage = new SakuraTelemetryCoverageAccumulator();
-        coverage.SetLastOfferSequence(data.LastOfferSequence);
-        SakuraTelemetryCoverage.CaptureIfEnabled(client, SakuraTelemetryCoverage.CoverageEventName,
-            SakuraTelemetryCoverage.BuildCoveragePayload(data.RunKey,
-                SakuraTelemetryCoverage.StageTerminalAttempted, run.Players.Count, run.Players.Count, coverage));
+        if (run.Players.Count == 1)
+            SakuraTelemetryCoverage.CaptureIfEnabled(client, SakuraTelemetryCoverage.CoverageEventName,
+                SakuraTelemetryCoverage.BuildCoveragePayload(data.RunKey,
+                    SakuraTelemetryCoverage.StageTerminalAttempted, 1, 1, coverage));
         return data;
     }
 

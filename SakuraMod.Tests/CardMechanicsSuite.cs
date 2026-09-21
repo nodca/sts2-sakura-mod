@@ -2140,4 +2140,25 @@ public sealed class CardMechanicsSuite
             && englishCards.Contains("cost 0 for the rest of combat", StringComparison.Ordinal),
             "Expected Choice to upgrade both branches, execute both during Extra, and keep manifested cards at their combat cost reductions; Appear should use the same combat-wide Extra cost state.");
     }
+
+    [Fact]
+    public void SakuraStormExposesBothDamageEndsAsModifierAwareDamageVars()
+    {
+        var storm = new SakuraStorm();
+        var stormSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Storm.cs"));
+
+        RegressionTestHarness.Require(
+            storm.DynamicVars.Damage is SakuraSourceDamageVar
+            && storm.DynamicVars[SakuraStorm.MaxDamageVar] is SakuraSourceDamageVar
+            && storm.DynamicVars.Damage.IntValue == 4
+            && storm.DynamicVars[SakuraStorm.MaxDamageVar].IntValue == 9
+            && storm.DynamicVars["Magic"].IntValue == 7,
+            "Expected Sakura Storm's 4-9 range to expose both ends as damage vars so Strength and other damage hooks move them together.");
+
+        RegressionTestHarness.Require(
+            stormSource.Contains("ReleasedValue(MaxDamageVar)", StringComparison.Ordinal)
+            && !stormSource.Contains("ReleasedDamage() + MaxDamageOffset", StringComparison.Ordinal),
+            "Expected the Storm roll to read its upper bound from the MaxDamage variable instead of recomputing Damage + offset.");
+    }
 }

@@ -9,11 +9,10 @@ namespace SakuraMod.SakuraModCode.Telemetry;
 
 internal static class SakuraTelemetryCoverage
 {
-    internal const int ContractVersion = 1;
+    internal const int ContractVersion = 2;
     internal const string SessionStartedEventName = "sakuramod.session.started";
     internal const string CoverageEventName = "balance_run.coverage";
     internal const string StageStarted = "started";
-    internal const string StageCheckpoint = "checkpoint";
     internal const string StageTerminalAttempted = "terminal_attempted";
 
     private static bool _sessionStartedSent;
@@ -39,8 +38,7 @@ internal static class SakuraTelemetryCoverage
             sakuraPlayerCount,
             accumulator.Expected,
             accumulator.Captured,
-            accumulator.Failures,
-            accumulator.LastOfferSequence))!.AsObject();
+            accumulator.Failures))!.AsObject();
 
     internal static CoverageFailureKind ClassifyFailure(Exception exception) =>
         exception is JsonException or NotSupportedException
@@ -95,48 +93,9 @@ internal enum CoverageFailureKind
 
 internal sealed class SakuraTelemetryCoverageAccumulator
 {
-    public SakuraTelemetryCoverageCounters Expected { get; private set; } = new(1, 0, 0, 1);
-    public SakuraTelemetryCoverageCounters Captured { get; private set; } = new(0, 0, 0, 0);
+    public SakuraTelemetryCoverageCounters Expected { get; } = new(1);
+    public SakuraTelemetryCoverageCounters Captured { get; } = new(0);
     public SakuraTelemetryCaptureFailures Failures { get; private set; } = new(0, 0);
-    public int LastOfferSequence { get; private set; }
-    public bool HasUnpublishedChanges { get; private set; }
-
-    public void RecordContextCaptured()
-    {
-        Captured = Captured with { Context = 1 };
-        HasUnpublishedChanges = true;
-    }
-
-    public void RecordOffer(bool captured)
-    {
-        Expected = Expected with { RewardOffers = Expected.RewardOffers + 1 };
-        if (captured)
-            Captured = Captured with { RewardOffers = Captured.RewardOffers + 1 };
-        HasUnpublishedChanges = true;
-    }
-
-    public void RecordTake(bool captured)
-    {
-        Expected = Expected with { RewardTakes = Expected.RewardTakes + 1 };
-        if (captured)
-            Captured = Captured with { RewardTakes = Captured.RewardTakes + 1 };
-        HasUnpublishedChanges = true;
-    }
-
-    public void RecordCompletedCaptured()
-    {
-        Captured = Captured with { Completed = 1 };
-        HasUnpublishedChanges = true;
-    }
-
-    public void SetLastOfferSequence(int sequence)
-    {
-        if (sequence == LastOfferSequence)
-            return;
-        LastOfferSequence = sequence;
-        HasUnpublishedChanges = true;
-    }
-
     public void RecordFailure(CoverageFailureKind kind)
     {
         Failures = kind switch
@@ -144,11 +103,7 @@ internal sealed class SakuraTelemetryCoverageAccumulator
             CoverageFailureKind.Serialization => Failures with { Serialization = Failures.Serialization + 1 },
             _ => Failures with { Unknown = Failures.Unknown + 1 }
         };
-        HasUnpublishedChanges = true;
     }
-
-    public void MarkPublished() =>
-        HasUnpublishedChanges = false;
 }
 
 internal sealed record SakuraTelemetrySessionStarted(
@@ -156,9 +111,6 @@ internal sealed record SakuraTelemetrySessionStarted(
     [property: JsonPropertyName("sakura_mod_version")] string SakuraModVersion);
 
 internal sealed record SakuraTelemetryCoverageCounters(
-    [property: JsonPropertyName("context")] int Context,
-    [property: JsonPropertyName("reward_offers")] int RewardOffers,
-    [property: JsonPropertyName("reward_takes")] int RewardTakes,
     [property: JsonPropertyName("completed")] int Completed);
 
 internal sealed record SakuraTelemetryCaptureFailures(
@@ -174,5 +126,4 @@ internal sealed record SakuraTelemetryRunCoverage(
     [property: JsonPropertyName("sakura_player_count")] int SakuraPlayerCount,
     [property: JsonPropertyName("expected")] SakuraTelemetryCoverageCounters Expected,
     [property: JsonPropertyName("captured")] SakuraTelemetryCoverageCounters Captured,
-    [property: JsonPropertyName("capture_failure_counts")] SakuraTelemetryCaptureFailures CaptureFailureCounts,
-    [property: JsonPropertyName("last_offer_sequence")] int LastOfferSequence);
+    [property: JsonPropertyName("capture_failure_counts")] SakuraTelemetryCaptureFailures CaptureFailureCounts);

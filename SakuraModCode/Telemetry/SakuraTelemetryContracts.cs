@@ -23,9 +23,6 @@ internal sealed class BalanceRunIdentity
     [JsonPropertyName("usage")]
     public IReadOnlyList<SakuraTelemetryUsageRow> Usage { get; set; } = [];
 
-    [JsonPropertyName("last_offer_sequence")]
-    public int LastOfferSequence { get; set; }
-
     public static BalanceRunIdentity Create() =>
         new() { RunKey = Guid.NewGuid().ToString("D") };
 
@@ -50,7 +47,9 @@ internal sealed record SakuraTelemetryBalanceRun(
     [property: JsonPropertyName("balance_contract_version")] int BalanceContractVersion,
     [property: JsonPropertyName("run_key")] string RunKey,
     [property: JsonPropertyName("context_checksum")] string ContextChecksum,
-    [property: JsonPropertyName("usage")] IReadOnlyList<SakuraTelemetryUsageRow> Usage);
+    [property: JsonPropertyName("usage")] IReadOnlyList<SakuraTelemetryUsageRow> Usage,
+    [property: JsonPropertyName("context"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] SakuraTelemetryRunContext? Context = null,
+    [property: JsonPropertyName("card_definitions"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<SakuraTelemetryCardInfo>? CardDefinitions = null);
 
 internal readonly record struct SakuraTelemetryCardInfo(
     [property: JsonPropertyName("id")] string CardId,
@@ -61,14 +60,10 @@ internal readonly record struct SakuraTelemetryCardInfo(
     [property: JsonPropertyName("category")] string Category,
     [property: JsonPropertyName("owner")] string Owner);
 
-internal readonly record struct SakuraTelemetryCardChoice(
-    [property: JsonPropertyName("id")] string CardId,
-    [property: JsonPropertyName("upgrade")] int UpgradeLevel,
-    bool WasPicked);
-
 internal static class SakuraTelemetryContract
 {
     internal const int Version = 2;
+    internal const int ReportVersion = 3;
 
     internal static IReadOnlyList<SakuraTelemetryGameplayMod> GameplayMods(
         IEnumerable<RitsuModInfo> knownMods) =>
@@ -127,13 +122,15 @@ internal static class SakuraTelemetryCardClassifier
 
     internal static bool TryClassifyOwner(Type cardType, out string category, out string owner)
     {
-        if (SakuraCardCatalog.TryGetMetadata(cardType, out var metadata) && metadata.Era.HasValue)
+        if (SakuraCardCatalog.TryGetMetadata(cardType, out var metadata)
+            && !typeof(SpellCard).IsAssignableFrom(cardType))
         {
-            category = metadata.Era.Value switch
+            category = metadata.Era switch
             {
                 SourceEraClass.Clear => "transparent",
                 SourceEraClass.Clow => "clow",
                 SourceEraClass.Sakura => "sakura",
+                null => "special",
                 _ => throw new ArgumentOutOfRangeException(nameof(cardType))
             };
             owner = MainFile.ModId;

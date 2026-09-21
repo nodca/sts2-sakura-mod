@@ -205,26 +205,26 @@ public sealed class TelemetryContractSuite
                 new RunEndedEvent(nonSakuraRun, IsVictory: true, IsAbandoned: false, DateTimeOffset.UnixEpoch))),
             "Expected the capture filter to reject non-Sakura run-history events.");
         RegressionTestHarness.Require(
-            runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
+            !runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 SakuraTelemetry.BalanceContextEventName,
                 SakuraTelemetry.RunHistoryRequestId,
                 TelemetryDataCategory.RunHistory,
                 "applicant")),
-            "Expected the capture filter to accept the authorized balance context event.");
+            "Expected the capture filter to reject the retired standalone context event.");
         RegressionTestHarness.Require(
-            runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
+            !runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 SakuraTelemetry.CardRewardOfferedEventName,
                 SakuraTelemetry.RunHistoryRequestId,
                 TelemetryDataCategory.RunHistory,
                 "applicant")),
-            "Expected the capture filter to accept the authorized card reward offered event.");
+            "Expected the capture filter to reject the retired card reward offered event.");
         RegressionTestHarness.Require(
-            runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
+            !runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 SakuraTelemetry.CardRewardTakenEventName,
                 SakuraTelemetry.RunHistoryRequestId,
                 TelemetryDataCategory.RunHistory,
                 "applicant")),
-            "Expected the capture filter to accept the authorized card reward taken event.");
+            "Expected the capture filter to reject the retired card reward taken event.");
         RegressionTestHarness.Require(
             runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 SakuraTelemetryCoverage.SessionStartedEventName,
@@ -275,49 +275,6 @@ public sealed class TelemetryContractSuite
     }
 
     [Fact]
-    public void CardRewardPayloadSeparatesOfferedSelectedAndSkippedCards()
-    {
-        var offerSnapshot = new CardRewardOfferSnapshot(
-            RunKey: "018f6b8d-78ef-7a63-8f4a-4d663f3f0e61",
-            OfferSequence: 7,
-            RunFloor: 12,
-            ActFloor: 5,
-            RewardSource: "Encounter",
-            RarityOdds: "RegularEncounter",
-            InitialCardChoiceHistoryCount: 3,
-            OfferedCards:
-            [
-                new SakuraTelemetryCardInfo("SAKURA_MOD_CARD_CLOW_SWORD", 1, "Common", "Attack", "1", "clow", MainFile.ModId),
-                new SakuraTelemetryCardInfo("SAKURA_MOD_CARD_CLOW_SHIELD", 0, "Common", "Skill", "1", "clow", MainFile.ModId)
-            ]);
-        JsonObject offeredPayload = SakuraTelemetry.BuildCardRewardOfferedPayload(offerSnapshot);
-        RegressionTestHarness.Require(
-            offeredPayload["offer_sequence"]!.GetValue<int>() == 7
-            && offeredPayload["run_key"]!.GetValue<string>() == offerSnapshot.RunKey
-            && offeredPayload["offered_cards"]!.AsArray().Count == 2,
-            "Expected Sakura telemetry card reward offer payload to match the correlated snake-case contract.");
-        JsonObject takenPayload = SakuraTelemetry.BuildCardRewardTakenPayload(
-            offerSnapshot,
-            [
-                new SakuraTelemetryCardChoice("SAKURA_MOD_CARD_CLOW_SWORD", 1, WasPicked: true),
-                new SakuraTelemetryCardChoice("SAKURA_MOD_CARD_CLOW_SHIELD", 0, WasPicked: false)
-            ]);
-        RegressionTestHarness.Require(
-            takenPayload["selected_cards"]!.AsArray().Count == 1
-            && takenPayload["unpicked_cards"]!.AsArray().Count == 1
-            && !takenPayload["skipped"]!.GetValue<bool>(),
-            "Expected Sakura telemetry card reward take payload to separate picked and unpicked compact card entries.");
-        JsonObject filteredPickPayload = SakuraTelemetry.BuildCardRewardTakenPayload(
-            offerSnapshot,
-            [new SakuraTelemetryCardChoice("SAKURA_MOD_CARD_CLOW_SHIELD", 0, WasPicked: false)],
-            skipped: true);
-        RegressionTestHarness.Require(
-            filteredPickPayload["selected_cards"]!.AsArray().Count == 0
-            && filteredPickPayload["skipped"]!.GetValue<bool>(),
-            "Expected a selected excluded-owner card to appear as skipped within the eligible analysis card pool.");
-    }
-
-    [Fact]
     public void ClientJsonAndChecksumMatchServerContractFixtures()
     {
         var fixtureContext = FixtureContext();
@@ -331,44 +288,23 @@ public sealed class TelemetryContractSuite
                 JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
                     "tools/telemetry-ingestion/internal/contracts/testdata/balance_run_context_v2.json")))),
             "Expected the client run-context JSON to match the server fixture field-for-field.");
-        var fixtureOffer = new CardRewardOfferSnapshot(
-            RunKey: fixtureContext.RunKey,
-            OfferSequence: 3,
-            RunFloor: 12,
-            ActFloor: 12,
-            RewardSource: "Combat",
-            RarityOdds: "Default",
-            InitialCardChoiceHistoryCount: 0,
-            OfferedCards:
-            [
-                new SakuraTelemetryCardInfo("Windy", 0, "Common", "Skill", "1", "clow", MainFile.ModId),
-                new SakuraTelemetryCardInfo("StrikeRed", 0, "Basic", "Attack", "1", "vanilla", "vanilla")
-            ]);
-        RegressionTestHarness.Require(
-            JsonNode.DeepEquals(
-                SakuraTelemetry.BuildCardRewardOfferedPayload(fixtureOffer),
-                JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
-                    "tools/telemetry-ingestion/internal/contracts/testdata/card_reward_offered_v2.json")))),
-            "Expected the client reward-offer JSON to match the server fixture field-for-field.");
-        RegressionTestHarness.Require(
-            JsonNode.DeepEquals(
-                SakuraTelemetry.BuildCardRewardTakenPayload(
-                    fixtureOffer,
-                    [
-                        new SakuraTelemetryCardChoice("Windy", 0, WasPicked: true),
-                        new SakuraTelemetryCardChoice("StrikeRed", 0, WasPicked: false)
-                    ]),
-                JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
-                    "tools/telemetry-ingestion/internal/contracts/testdata/card_reward_taken_v2.json")))),
-            "Expected the client reward-take JSON to match the server fixture field-for-field.");
+        var legacy = JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "tools/telemetry-ingestion/internal/contracts/testdata/balance_run_v2.json")))!;
+        var identity = new BalanceRunIdentity
+        {
+            RunKey = fixtureContext.RunKey, Context = fixtureContext, ContextChecksum = fixtureChecksum,
+            Usage = legacy["usage"]!.Deserialize<SakuraTelemetryUsageRow[]>()!
+        };
+        Assert.True(JsonNode.DeepEquals(SakuraTelemetryReport.Build(identity, null, _ => null),
+            JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
+                "tools/telemetry-ingestion/internal/contracts/testdata/balance_run_v3.json")))));
         RegressionTestHarness.Require(
             JsonNode.DeepEquals(
                 SakuraTelemetryCoverage.BuildSessionStartedPayload("0.9.0"),
                 JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
-                    "tools/telemetry-ingestion/internal/contracts/testdata/session_started_v1.json")))),
+                    "tools/telemetry-ingestion/internal/contracts/testdata/session_started_v2.json")))),
             "Expected the client session-started JSON to match the server fixture field-for-field.");
         var startedCoverage = new SakuraTelemetryCoverageAccumulator();
-        startedCoverage.RecordContextCaptured();
         RegressionTestHarness.Require(
             JsonNode.DeepEquals(
                 SakuraTelemetryCoverage.BuildCoveragePayload(
@@ -378,7 +314,7 @@ public sealed class TelemetryContractSuite
                     sakuraPlayerCount: 1,
                     startedCoverage),
                 JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
-                    "tools/telemetry-ingestion/internal/contracts/testdata/balance_run_coverage_started_v1.json")))),
+                    "tools/telemetry-ingestion/internal/contracts/testdata/balance_run_coverage_started_v2.json")))),
             "Expected the client run-coverage JSON to match the started fixture field-for-field.");
     }
 
@@ -469,7 +405,6 @@ public sealed class TelemetryContractSuite
         persistedRunData.Context = fixtureContext with { RunKey = persistedRunData.RunKey };
         persistedRunData.ContextChecksum = SakuraTelemetryContract.ContextChecksum(persistedRunData.Context);
         persistedRunData.Usage = usageRows;
-        persistedRunData.LastOfferSequence = 12;
         var restoredRunData = JsonSerializer.Deserialize<BalanceRunIdentity>(JsonSerializer.Serialize(persistedRunData));
         RegressionTestHarness.Require(
             restoredRunData is not null,
@@ -486,9 +421,6 @@ public sealed class TelemetryContractSuite
         RegressionTestHarness.Require(
             restoredRunData!.Usage.Count == 2,
             "Expected the aggregate usage to survive the round trip.");
-        RegressionTestHarness.Require(
-            restoredRunData!.LastOfferSequence == 12,
-            "Expected the reward offer sequence to survive the round trip.");
         Exception? capturedTelemetryFailure = null;
         RegressionTestHarness.Require(
             !SakuraTelemetry.TryExecute(
@@ -496,64 +428,6 @@ public sealed class TelemetryContractSuite
                 exception => capturedTelemetryFailure = exception)
             && capturedTelemetryFailure is InvalidOperationException,
             "Expected telemetry failures to be contained and reported without escaping into gameplay.");
-    }
-
-    [Fact]
-    public void CardRewardCorrelationUsesBoundedNewestMatchSemantics()
-    {
-        var capacity = new CardRewardCorrelation<string>();
-        for (var sequence = 1; sequence <= 17; sequence++)
-        {
-            capacity.Remember(Offer($"offer-{sequence}", sequence, $"card-{sequence}"));
-        }
-
-        RegressionTestHarness.Require(
-            capacity.TakeMatching([new CardRewardCorrelationChoice("card-1", 0, WasPicked: true)]) is null
-            && capacity.TakeMatching([new CardRewardCorrelationChoice("card-2", 0, WasPicked: true)])?.Payload == "offer-2",
-            "Expected Card Reward Correlation to retain only the newest 16 offers.");
-
-        var newest = new CardRewardCorrelation<string>();
-        newest.Remember(Offer("old", 20, "old-card"));
-        newest.Remember(Offer("shared-1", 21, "shared-card"));
-        newest.Remember(Offer("shared-2", 22, "shared-card"));
-        newest.Remember(Offer("future", 23, "future-card"));
-        var newestMatch = newest.TakeMatching([
-            new CardRewardCorrelationChoice("shared-card", 0, WasPicked: false)
-        ]);
-        RegressionTestHarness.Require(
-            newestMatch?.Payload == "shared-2"
-            && newest.TakeMatching([new CardRewardCorrelationChoice("old-card", 0, WasPicked: true)]) is null
-            && newest.TakeMatching([new CardRewardCorrelationChoice("future-card", 0, WasPicked: true)])?.Payload == "future",
-            "Expected the newest matching offer to win while removing it and older stale offers only.");
-
-        var duplicates = new CardRewardCorrelation<string>();
-        duplicates.Remember(Offer("duplicates", 24, "duplicate-card"));
-        var duplicateMatch = duplicates.TakeMatching([
-            new CardRewardCorrelationChoice("duplicate-card", 0, WasPicked: false),
-            new CardRewardCorrelationChoice("duplicate-card", 0, WasPicked: true)
-        ]);
-        RegressionTestHarness.Require(
-            duplicateMatch?.Choices.Count == 1
-            && duplicateMatch.Choices[0].WasPicked,
-            "Expected duplicate card-choice history to collapse with picked-if-any semantics.");
-
-        var skipped = new CardRewardCorrelation<string>();
-        skipped.Remember(Offer("skip-a", 25, "skip-a-card"));
-        skipped.Remember(Offer("skip-b", 26, "skip-b-card"));
-        var skippedResults = skipped.DrainSkipped();
-        RegressionTestHarness.Require(
-            skippedResults.Count == 2
-            && skippedResults.All(static result => result.Choices.Count == 1 && !result.Choices[0].WasPicked)
-            && skipped.DrainSkipped().Count == 0,
-            "Expected continue/skip to drain every pending offer as unpicked results.");
-
-        var pendingBeforeLoad = new CardRewardCorrelation<string>();
-        pendingBeforeLoad.Remember(Offer("ephemeral", 27, "ephemeral-card"));
-        var reconstructedAfterLoad = new CardRewardCorrelation<string>();
-        RegressionTestHarness.Require(
-            pendingBeforeLoad.DrainSkipped().Count == 1
-            && reconstructedAfterLoad.DrainSkipped().Count == 0,
-            "Expected pending Card Reward Correlation offers to be empty after reconstruction.");
     }
 
     [Fact]
@@ -571,18 +445,14 @@ public sealed class TelemetryContractSuite
 
         var enabled = new RecordingTelemetryClient { Enabled = true };
         var accumulator = new SakuraTelemetryCoverageAccumulator();
-        accumulator.RecordContextCaptured();
-        accumulator.RecordOffer(captured: true);
-        accumulator.RecordTake(captured: false);
         accumulator.RecordFailure(CoverageFailureKind.Unknown);
-        accumulator.SetLastOfferSequence(3);
         RegressionTestHarness.Require(
             SakuraTelemetryCoverage.CaptureIfEnabled(
                 enabled,
                 SakuraTelemetryCoverage.CoverageEventName,
                 SakuraTelemetryCoverage.BuildCoveragePayload(
                     "018f6b8d-78ef-7a63-8f4a-4d663f3f0e61",
-                    SakuraTelemetryCoverage.StageCheckpoint,
+                    SakuraTelemetryCoverage.StageTerminalAttempted,
                     playerCount: 1,
                     sakuraPlayerCount: 1,
                     accumulator))
@@ -593,14 +463,12 @@ public sealed class TelemetryContractSuite
 
         var payload = enabled.Captured[0].Payload!.AsObject();
         RegressionTestHarness.Require(
-            payload["stage"]!.GetValue<string>() == SakuraTelemetryCoverage.StageCheckpoint
-            && payload["expected"]!["reward_offers"]!.GetValue<int>() == 1
-            && payload["captured"]!["reward_offers"]!.GetValue<int>() == 1
-            && payload["expected"]!["reward_takes"]!.GetValue<int>() == 1
-            && payload["captured"]!["reward_takes"]!.GetValue<int>() == 0
+            payload["stage"]!.GetValue<string>() == SakuraTelemetryCoverage.StageTerminalAttempted
+            && payload["expected"]!["completed"]!.GetValue<int>() == 1
+            && payload["expected"]!["reward_offers"] is null
+            && payload["last_offer_sequence"] is null
             && payload["captured"]!["completed"]!.GetValue<int>() == 0
-            && payload["capture_failure_counts"]!["unknown"]!.GetValue<int>() == 1
-            && payload["last_offer_sequence"]!.GetValue<int>() == 3,
+            && payload["capture_failure_counts"]!["unknown"]!.GetValue<int>() == 1,
             "Expected coverage lifecycle counters to record expected, captured, and bounded failure counts.");
         RegressionTestHarness.Require(
             !payload.ToJsonString().Contains("card_id", StringComparison.Ordinal)
@@ -665,10 +533,4 @@ public sealed class TelemetryContractSuite
             new SakuraTelemetryGameplayMod("STS2-RitsuLib", "0.4.54")
         ]);
 
-    private static CardRewardCorrelationOffer<string> Offer(string payload, int sequence, string cardId) =>
-        new(
-            payload,
-            sequence,
-            InitialCardChoiceHistoryCount: 0,
-            [new CardRewardCorrelationCard(cardId, 0)]);
 }
