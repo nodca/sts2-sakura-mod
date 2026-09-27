@@ -32,7 +32,7 @@ public sealed class TelemetryReportSuite
         Assert.Contains(new("B", 0), requested);
         Assert.Contains(new("C", 1), requested);
         Assert.Equal(5, report["card_definitions"]!.AsArray().Count);
-        Assert.Equal(3, report["balance_contract_version"]!.GetValue<int>());
+        Assert.Equal(4, report["balance_contract_version"]!.GetValue<int>());
         Assert.Equal(identity.RunKey, report["context"]!["run_key"]!.GetValue<string>());
         Assert.Equal(original, history.ToJsonString());
         var restored = JsonSerializer.Deserialize<BalanceRunIdentity>(JsonSerializer.Serialize(identity))!;

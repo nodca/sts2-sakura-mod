@@ -23,6 +23,9 @@ internal sealed class BalanceRunIdentity
     [JsonPropertyName("usage")]
     public IReadOnlyList<SakuraTelemetryUsageRow> Usage { get; set; } = [];
 
+    [JsonPropertyName("reward_choices")]
+    public List<SakuraTelemetryRewardChoice> RewardChoices { get; set; } = [];
+
     public static BalanceRunIdentity Create() =>
         new() { RunKey = Guid.NewGuid().ToString("D") };
 
@@ -49,7 +52,8 @@ internal sealed record SakuraTelemetryBalanceRun(
     [property: JsonPropertyName("context_checksum")] string ContextChecksum,
     [property: JsonPropertyName("usage")] IReadOnlyList<SakuraTelemetryUsageRow> Usage,
     [property: JsonPropertyName("context"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] SakuraTelemetryRunContext? Context = null,
-    [property: JsonPropertyName("card_definitions"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<SakuraTelemetryCardInfo>? CardDefinitions = null);
+    [property: JsonPropertyName("card_definitions"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<SakuraTelemetryCardInfo>? CardDefinitions = null,
+    [property: JsonPropertyName("reward_choices"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<SakuraTelemetryRewardChoice>? RewardChoices = null);
 
 internal readonly record struct SakuraTelemetryCardInfo(
     [property: JsonPropertyName("id")] string CardId,
@@ -63,7 +67,7 @@ internal readonly record struct SakuraTelemetryCardInfo(
 internal static class SakuraTelemetryContract
 {
     internal const int Version = 2;
-    internal const int ReportVersion = 3;
+    internal const int ReportVersion = 4;
 
     internal static IReadOnlyList<SakuraTelemetryGameplayMod> GameplayMods(
         IEnumerable<RitsuModInfo> knownMods) =>

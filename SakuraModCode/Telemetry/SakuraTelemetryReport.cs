@@ -1,3 +1,4 @@
+using SakuraMod.SakuraModCode.Character;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using MegaCrit.Sts2.Core.Models;
@@ -49,9 +50,32 @@ internal static class SakuraTelemetryReport
         }
     }
 
+    internal static IEnumerable<SakuraTelemetryCardReference> CatalogCardReferences()
+    {
+        foreach (var entry in SakuraCardCatalog.Entries)
+        {
+            string? id = null;
+            try
+            {
+                id = ModelDb.GetId(entry.CardType).Entry;
+            }
+            catch
+            {
+                // In case of any unmapped type in isolated environments
+            }
+
+            if (!string.IsNullOrEmpty(id))
+            {
+                yield return new SakuraTelemetryCardReference(id, 0);
+                yield return new SakuraTelemetryCardReference(id, 1);
+            }
+        }
+    }
+
     internal static JsonNode Build(
         BalanceRunIdentity identity, JsonNode? basePayload,
-        Func<SakuraTelemetryCardReference, SakuraTelemetryCardInfo?> resolve)
+        Func<SakuraTelemetryCardReference, SakuraTelemetryCardInfo?> resolve,
+        bool includeCatalogCards = false)
     {
         var definitions = new Dictionary<SakuraTelemetryCardReference, SakuraTelemetryCardInfo>();
         foreach (var usage in identity.Usage)
@@ -65,11 +89,25 @@ internal static class SakuraTelemetryReport
             if (!definitions.ContainsKey(reference) && resolve(reference) is { } card)
                 definitions.Add(reference, card);
         }
+        foreach (var choice in identity.RewardChoices ?? [])
+        {
+            var reference = new SakuraTelemetryCardReference(choice.Card.Id, choice.Card.Upgrade);
+            if (!definitions.ContainsKey(reference) && resolve(reference) is { } info)
+                definitions[reference] = info;
+        }
+        if (includeCatalogCards)
+        {
+            foreach (var reference in CatalogCardReferences())
+            {
+                if (!definitions.ContainsKey(reference) && resolve(reference) is { } card)
+                    definitions.Add(reference, card);
+            }
+        }
         var cards = definitions.Values.OrderBy(static card => card.CardId, StringComparer.Ordinal)
             .ThenBy(static card => card.UpgradeLevel).ToArray();
         return JsonSerializer.SerializeToNode(new SakuraTelemetryBalanceRun(
             SakuraTelemetryContract.ReportVersion, identity.RunKey, identity.ContextChecksum, identity.Usage,
-            identity.Context, cards))!;
+            identity.Context, cards, identity.RewardChoices ?? []))!;
     }
 
     internal static SakuraTelemetryCardInfo? Resolve(SakuraTelemetryCardReference reference)

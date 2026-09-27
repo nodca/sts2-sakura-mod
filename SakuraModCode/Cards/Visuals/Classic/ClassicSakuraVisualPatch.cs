@@ -26,9 +26,9 @@ internal static class ClassicCardVisualAssets
 {
     private static readonly IReadOnlyDictionary<Type, string> SpellArtStems = new Dictionary<Type, string>
     {
-        [typeof(SpellSeal)] = "default_card_p.png",
-        [typeof(SpellRelease)] = "default_card_p.png",
-        [typeof(SpellTurn)] = "default_card_p.png",
+        [typeof(SpellSeal)] = "seal_p.png",
+        [typeof(SpellRelease)] = "release_p.png",
+        [typeof(SpellTurn)] = "turn_p.png",
         [typeof(SpellEmptySpell)] = "empty_spell_p.png",
         [typeof(SpellHuoShen)] = "huoshen_p.png",
         [typeof(SpellLeiDi)] = "leidi_p.png",
@@ -141,7 +141,9 @@ internal static class ClassicCardTextLayoutPolicy
     };
 
     internal static Rect2 TitleBox(SakuraSourceCard model) =>
-        model.IsClowCard ? ClowTitleBox : SakuraTitleBox;
+        model.IsClowCard || model is SpellSeal or SpellRelease or SpellTurn
+            ? ClowTitleBox
+            : SakuraTitleBox;
 
     internal static bool ShowsRuntimeEnglishName(SakuraSourceCard model) =>
         !model.IsSpellCard

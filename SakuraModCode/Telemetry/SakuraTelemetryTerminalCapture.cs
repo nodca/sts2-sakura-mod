@@ -20,11 +20,11 @@ internal static class SakuraTelemetryTerminalCapture
     internal static JsonNode? BuildAbandonedContribution(JsonNode? basePayload = null)
     {
         if (_abandonedRun is not { } data) return null;
-        if (basePayload is null) return SakuraTelemetryReport.Build(data, null, _ => null);
         var version = SakuraTelemetryContract.SakuraModVersion(
             SakuraTelemetryContract.GameplayMods(STS2RitsuLib.Compat.RitsuModManager.GetKnownMods()));
         return SakuraTelemetryReport.Build(data, basePayload,
-            reference => data.Context?.SakuraModVersion == version ? SakuraTelemetryReport.Resolve(reference) : null);
+            reference => data.Context?.SakuraModVersion == version ? SakuraTelemetryReport.Resolve(reference) : null,
+            includeCatalogCards: true);
     }
 
     internal static void WithAbandonedContribution(BalanceRunIdentity data, Action capture)

@@ -295,9 +295,12 @@ public sealed class TelemetryContractSuite
             RunKey = fixtureContext.RunKey, Context = fixtureContext, ContextChecksum = fixtureChecksum,
             Usage = legacy["usage"]!.Deserialize<SakuraTelemetryUsageRow[]>()!
         };
+        var reportFixture = JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "tools/telemetry-ingestion/internal/contracts/testdata/balance_run_v4.json")))!;
+        identity.RewardChoices = reportFixture["reward_choices"]!.Deserialize<List<SakuraTelemetryRewardChoice>>()!;
         Assert.True(JsonNode.DeepEquals(SakuraTelemetryReport.Build(identity, null, _ => null),
             JsonNode.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
-                "tools/telemetry-ingestion/internal/contracts/testdata/balance_run_v3.json")))));
+                "tools/telemetry-ingestion/internal/contracts/testdata/balance_run_v4.json")))));
         RegressionTestHarness.Require(
             JsonNode.DeepEquals(
                 SakuraTelemetryCoverage.BuildSessionStartedPayload("0.9.0"),

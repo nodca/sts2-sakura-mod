@@ -209,6 +209,14 @@ internal static class SakuraTelemetryRunHooks
         _registered = true;
     }
 
+    internal static bool CanObserveRewards(RunState runState) =>
+        Hooks.TryGetValue(runState, out var hook) && hook.CanObserveRewards;
+
+    internal static void RecordRewardChoices(RunState runState, IReadOnlyList<SakuraTelemetryRewardChoice> choices)
+    {
+        if (Hooks.TryGetValue(runState, out var hook)) hook.RecordRewardChoices(choices);
+    }
+
     internal static JsonNode? BuildActiveContribution(JsonNode? basePayload) =>
         _activeHook?.BuildContribution(basePayload);
 
@@ -404,6 +412,29 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
         return Task.CompletedTask;
     }
 
+    internal bool CanObserveRewards => _captureBalance && _runData is not null
+        && BoundRunState.Players.Count == 1
+        && RitsuLibFramework.GetTelemetryClient(SakuraTelemetry.ApplicantId).IsEnabled(SakuraTelemetry.RunHistoryRequestId);
+
+    internal void RecordRewardChoices(IReadOnlyList<SakuraTelemetryRewardChoice> choices)
+    {
+        if (!CanObserveRewards || _runData is null) return;
+        _runData.RewardChoices ??= [];
+        foreach (var choice in choices)
+        {
+            // Nested native rewards may resolve while an outer reward awaits selection.
+            // A history position already observed by the inner reward keeps its evidence.
+            if (_runData.RewardChoices.Any(existing => existing.Floor == choice.Floor
+                    && (choice.HistoryIndex >= 0
+                        ? existing.HistoryIndex == choice.HistoryIndex
+                        : existing.HistoryIndex < 0 && existing.GainedIndex == choice.GainedIndex))) continue;
+            if (_runData.RewardChoices.Count >= 4096)
+                throw new InvalidOperationException("Reward telemetry reached its bounded observation limit.");
+            _runData.RewardChoices.Add(choice);
+        }
+        SakuraTelemetry.PersistRunData(BoundRunState, _runData);
+    }
+
     internal JsonNode? BuildContribution(JsonNode? basePayload)
     {
         if (!_captureBalance || _runData is null || _context is null)
@@ -414,7 +445,8 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
         var currentVersion = SakuraTelemetryContract.SakuraModVersion(
             SakuraTelemetryContract.GameplayMods(RitsuModManager.GetKnownMods()));
         var contribution = SakuraTelemetryReport.Build(_runData, basePayload,
-            reference => _context.SakuraModVersion == currentVersion ? SakuraTelemetryReport.Resolve(reference) : null);
+            reference => _context.SakuraModVersion == currentVersion ? SakuraTelemetryReport.Resolve(reference) : null,
+            includeCatalogCards: true);
         return contribution;
     }
 
