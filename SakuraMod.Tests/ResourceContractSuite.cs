@@ -2521,10 +2521,14 @@ public sealed class ResourceContractSuite
             "Expected generated test package mirrors to stay outside Godot resource import scanning.");
     }
 
-    [Fact]
-    public void SpellReleaseBgmResourceRemainsComplete()
+    [Theory]
+    [InlineData("release.ogg")]
+    [InlineData("release_2.ogg")]
+    [InlineData("release_3.ogg")]
+    [InlineData("release_4.ogg")]
+    public void SpellReleaseBgmResourceRemainsComplete(string fileName)
     {
-        const string relativePath = "SakuraMod/music/release.ogg";
+        var relativePath = $"SakuraMod/music/{fileName}";
         var audioPath = RegressionTestHarness.FindRepoFile(relativePath);
         var bytes = File.ReadAllBytes(audioPath);
         var import = File.ReadAllText($"{audioPath}.import");

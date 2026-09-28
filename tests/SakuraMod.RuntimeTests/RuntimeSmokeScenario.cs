@@ -77,6 +77,7 @@ internal static class RuntimeSmokeScenario
         assertions.Equal("ritsulib_debug_compatibility", false, StrictRuntimeAdapter.IsRitsuDebugCompatibilityEnabled());
         assertions.True("sakura_voice_lifecycle_cleanup_registered", SakuraVoicePlayback.LifecycleCleanupRegistered);
         assertions.True("another_me_bgm_lifecycle_cleanup_registered", AnotherMeBgmPlayback.LifecycleCleanupRegistered);
+        assertions.True("spell_release_bgm_lifecycle_cleanup_registered", SpellReleaseBgmPlayback.LifecycleCleanupRegistered);
         RuntimeTestHost.WriteCheckpoint(request, "ritsulib_verified", "RitsuLib health and strict mode were inspected.");
         var settings = InspectSettings(assertions);
         RuntimeTestHost.WriteCheckpoint(request, "settings_verified", "SakuraMod settings registration was inspected.");
@@ -861,6 +862,8 @@ internal static class RuntimeSmokeScenario
         };
         foreach (var voiceLine in SakuraVoiceLines.All)
             resources[$"voice_{voiceLine.Key}"] = voiceLine.ResourcePath;
+        foreach (var path in SpellReleaseBgmPlayback.RelativePaths)
+            resources[$"spell_release_bgm_{Path.GetFileNameWithoutExtension(path)}"] = $"{MainFile.ResPath}/{path}";
         for (var index = 0; index < WindEnemyAssets.All.Count; index++)
             resources[$"wind_enemy_{index}"] = WindEnemyAssets.All[index];
         for (var index = 0; index < LibraEnemyAssets.All.Count; index++)
@@ -885,6 +888,8 @@ internal static class RuntimeSmokeScenario
             {
                 resource = ResourceLoader.Load(path);
                 assertions.True($"resource_{name}_loads", resource is not null, path);
+                if (name.StartsWith("spell_release_bgm_", StringComparison.Ordinal))
+                    assertions.True($"resource_{name}_duration", resource is AudioStream audio && audio.GetLength() > 0d, path);
             }
             finally
             {

@@ -1230,19 +1230,16 @@ centered = false
 [node name="SkirtWaistRoot" type="Node2D" parent="CharacterRoot/SkirtMotionRoot" unique_id=1486981126]
 
 [node name="SkirtSeamUnderlay" type="Sprite2D" parent="CharacterRoot/SkirtMotionRoot/SkirtWaistRoot" unique_id=161412560]
-z_index = 1
 position = Vector2(-506.331, -706.758)
 texture = ExtResource("4_8wkq5")
 centered = false
 
 [node name="SkirtAnchor" type="Sprite2D" parent="CharacterRoot/SkirtMotionRoot/SkirtWaistRoot" unique_id=1458144515]
-z_index = 1
 position = Vector2(-506.331, -706.758)
 texture = ExtResource("5_fdaqr")
 centered = false
 
 [node name="SkirtBackTrainRoot" type="Node2D" parent="CharacterRoot/SkirtMotionRoot" unique_id=917835463]
-z_index = 1
 position = Vector2(-248.142, 128.211)
 
 [node name="SkirtBackTrain" type="Sprite2D" parent="CharacterRoot/SkirtMotionRoot/SkirtBackTrainRoot" unique_id=923147349]
@@ -1318,7 +1315,6 @@ polygons = [PackedInt32Array(3, 4, 11), PackedInt32Array(11, 4, 12), PackedInt32
 bones = ["BackTrainAnchorBone", PackedFloat32Array(0, 0, 0.5, 0.5, 0, 0, 0, 0, 0.5, 0, 0, 0, 0), "BackTrainAnchorBone/BackTrainMidBone", PackedFloat32Array(0, 0, 0.5, 0.5, 0.4, 0, 0, 0.4, 0.5, 0, 0, 0.6, 0.6), "BackTrainAnchorBone/BackTrainMidBone/BackTrainTipBone", PackedFloat32Array(0, 0, 0, 0, 0, 0, 0, 0.4, 0, 0, 0, 0.4, 0.4), "BackTrainAnchorBone/BackTrainMidBone/BackTrainTipBone/BackTrainCurlBone", PackedFloat32Array(0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0, 0, 0), "BackTrainAnchorBone/BackTrainMidBone/BackTrainInnerTipBone", PackedFloat32Array(0, 0, 0, 0, 0.6, 0, 0, 0, 0, 0, 0, 0, 0)]
 
 [node name="SkirtLeftFrontRoot" type="Node2D" parent="CharacterRoot/SkirtMotionRoot" unique_id=2107441026]
-z_index = 1
 position = Vector2(-174.541, 55.951)
 
 [node name="SkirtLeftFront" type="Sprite2D" parent="CharacterRoot/SkirtMotionRoot/SkirtLeftFrontRoot" unique_id=764610658]
@@ -1351,7 +1347,6 @@ bones = ["LeftFrontAnchorBone", PackedFloat32Array(1, 1, 0, 0, 0.5), "LeftFrontA
 internal_vertex_count = 1
 
 [node name="SkirtCenterFrontRoot" type="Node2D" parent="CharacterRoot/SkirtMotionRoot" unique_id=1480881461]
-z_index = 1
 position = Vector2(20.517, 25.702)
 
 [node name="SkirtCenterFront" type="Sprite2D" parent="CharacterRoot/SkirtMotionRoot/SkirtCenterFrontRoot" unique_id=424786871]
@@ -1385,7 +1380,6 @@ bones = ["WaistBone", PackedFloat32Array(1, 0.5, 0, 0, 0, 0.5, 1, 1, 0.5), "Wais
 internal_vertex_count = 1
 
 [node name="SkirtRightFrontRoot" type="Node2D" parent="CharacterRoot/SkirtMotionRoot" unique_id=1510508232]
-z_index = 1
 position = Vector2(150.124, 39.111)
 
 [node name="SkirtRightFront" type="Sprite2D" parent="CharacterRoot/SkirtMotionRoot/SkirtRightFrontRoot" unique_id=758357836]
@@ -1420,13 +1414,11 @@ internal_vertex_count = 1
 [node name="UpperBodyMotionRoot" type="Node2D" parent="CharacterRoot" unique_id=830174221]
 
 [node name="TorsoUnderlay" type="Sprite2D" parent="CharacterRoot/UpperBodyMotionRoot" unique_id=1794248307]
-z_index = 2
 position = Vector2(-506.331, -706.758)
 texture = ExtResource("10_bbux5")
 centered = false
 
 [node name="BreathRoot" type="Node2D" parent="CharacterRoot/UpperBodyMotionRoot" unique_id=666824827]
-z_index = 2
 position = Vector2(38.669, -39.758)
 
 [node name="TorsoBackRoot" type="Node2D" parent="CharacterRoot/UpperBodyMotionRoot/BreathRoot" unique_id=1342704199]
@@ -1444,13 +1436,11 @@ texture = ExtResource("12_y6ras")
 centered = false
 
 [node name="BodyUpperRigid" type="Sprite2D" parent="CharacterRoot/UpperBodyMotionRoot" unique_id=313471590]
-z_index = 3
 position = Vector2(-506.331, -706.758)
 texture = ExtResource("21_body_headless")
 centered = false
 
 [node name="WandRoot" type="Node2D" parent="CharacterRoot/UpperBodyMotionRoot"]
-z_index = 3
 
 [node name="RightWandWing" type="Sprite2D" parent="CharacterRoot/UpperBodyMotionRoot/WandRoot"]
 position = Vector2(-506.331, -706.758)
@@ -1458,11 +1448,9 @@ texture = ExtResource("23_right_wand_wing")
 centered = false
 
 [node name="HeadMotionRoot" type="Node2D" parent="CharacterRoot/UpperBodyMotionRoot" unique_id=1053647019]
-z_index = 4
 position = Vector2(0, -315)
 
 [node name="HeadCoreUnderlay" type="Sprite2D" parent="CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot" unique_id=1273264863]
-z_index = -1
 position = Vector2(-506.331, -391.758)
 texture = ExtResource("22_head_core_underlay")
 centered = false
@@ -1491,7 +1479,6 @@ bones = ["BackHairRootBone", PackedFloat32Array(1, 1, 0, 0, 0.55), "BackHairRoot
 internal_vertex_count = 1
 
 [node name="Face" type="Sprite2D" parent="CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot" unique_id=239186360]
-z_index = 1
 position = Vector2(-506.331, -391.758)
 texture = ExtResource("18_face")
 centered = false
@@ -1510,7 +1497,6 @@ length = 140.0
 bone_angle = 85.913994
 
 [node name="FrontHairMesh" type="Polygon2D" parent="CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot" unique_id=764936176]
-z_index = 2
 position = Vector2(-506.331, -391.758)
 texture = ExtResource("19_front_hair")
 skeleton = NodePath("../FrontHairSkeleton")
@@ -1521,27 +1507,23 @@ bones = ["FrontHairRootBone", PackedFloat32Array(1, 1, 0, 0, 0.55), "FrontHairRo
 internal_vertex_count = 1
 
 [node name="HeadAccessories" type="Sprite2D" parent="CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot" unique_id=855029249]
-z_index = 3
 position = Vector2(-506.331, -391.758)
 texture = ExtResource("20_head_accessories")
 centered = false
 
 [node name="EyeHalfClosed" type="Sprite2D" parent="CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot" unique_id=1158866928]
 visible = false
-z_index = 4
 position = Vector2(-506.331, -391.758)
 texture = ExtResource("14_7fugh")
 centered = false
 
 [node name="EyeClosed" type="Sprite2D" parent="CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot" unique_id=1992824429]
 visible = false
-z_index = 4
 position = Vector2(-506.331, -391.758)
 texture = ExtResource("15_fx2ba")
 centered = false
 
 [node name="DaimaoRoot" type="Node2D" parent="CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot" unique_id=58614708]
-z_index = 5
 position = Vector2(65.669, -169.758)
 
 [node name="Daimao" type="Sprite2D" parent="CharacterRoot/UpperBodyMotionRoot/HeadMotionRoot/DaimaoRoot" unique_id=468264333]

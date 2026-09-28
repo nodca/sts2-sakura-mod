@@ -1,6 +1,5 @@
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Nodes.Audio;
 using MegaCrit.Sts2.Core.Rooms;
 using SakuraMod.SakuraModCode;
 using STS2RitsuLib;
@@ -10,8 +9,13 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 internal static class SpellReleaseBgmPlayback
 {
-    internal const string ResourcePath = $"{MainFile.ResPath}/music/release.ogg";
-    internal const string RelativePath = "music/release.ogg";
+    internal static readonly IReadOnlyList<string> RelativePaths = Array.AsReadOnly(new[]
+    {
+        "music/release.ogg",
+        "music/release_2.ogg",
+        "music/release_3.ogg",
+        "music/release_4.ogg"
+    });
     internal const string MusicChannel = $"{MainFile.ModId}.SpellReleaseBgm";
     internal const float MusicVolume = 0.32f;
     internal const float FadeInSeconds = CardBgmPlayback.FadeInSeconds;
@@ -20,8 +24,9 @@ internal static class SpellReleaseBgmPlayback
     private static readonly HashSet<ICombatState> TriggeredCombats = [];
     private static bool _lifecycleRegistered;
 
-    private static readonly CardBgmPlayback Track = CardBgmPlayback.CreateTrack(
-        new CardBgmPlayback.Config(ResourcePath, RelativePath, MusicChannel, MusicVolume, "Spell Release"));
+    private static readonly CardBgmPlayback[] Tracks = RelativePaths.Select(path =>
+        CardBgmPlayback.CreateTrack(new CardBgmPlayback.Config(
+            $"{MainFile.ResPath}/{path}", path, MusicChannel, MusicVolume, $"Spell Release ({path})"))).ToArray();
 
     public static void Register()
     {
@@ -46,7 +51,8 @@ internal static class SpellReleaseBgmPlayback
             return;
 
         TriggeredCombats.Add(card.CombatState!);
-        Track.TryPlay(card);
+        // Presentation-only randomness must not advance the run's gameplay RNG.
+        Tracks[Random.Shared.Next(Tracks.Length)].TryPlay(card);
     }
 
     public static bool ShouldPlay(CardModel card)
@@ -71,5 +77,5 @@ internal static class SpellReleaseBgmPlayback
 
     internal static void ResetPerCombat() => TriggeredCombats.Clear();
 
-    internal static AudioPlaybackOptions CreatePlaybackOptions() => Track.CreatePlaybackOptions();
+    internal static AudioPlaybackOptions CreatePlaybackOptions() => Tracks[0].CreatePlaybackOptions();
 }

@@ -31,10 +31,11 @@ public sealed class SpellReleaseBgmSuite
 
         RegressionTestHarness.Require(
             SpellReleaseBgmPlayback.MusicChannel != AnotherMeBgmPlayback.MusicChannel
-            && SpellReleaseBgmPlayback.MusicChannel != SpellTurnBgmPlayback.MusicChannel
-            && SpellReleaseBgmPlayback.RelativePath == "music/release.ogg"
-            && SpellReleaseBgmPlayback.ResourcePath == $"{MainFile.ResPath}/music/release.ogg",
-            "Expected Spell Release to own a dedicated release track instead of reusing Another Me or Spell Turn.");
+            && SpellReleaseBgmPlayback.MusicChannel != SpellTurnBgmPlayback.MusicChannel,
+            "Expected Spell Release to own a dedicated release channel instead of reusing Another Me or Spell Turn.");
+        Assert.Equal(
+            new[] { "music/release.ogg", "music/release_2.ogg", "music/release_3.ogg", "music/release_4.ogg" },
+            SpellReleaseBgmPlayback.RelativePaths);
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public sealed class SpellReleaseBgmSuite
 
         RegressionTestHarness.Require(
             facade.Contains("CardBgmPlayback.CreateTrack(", StringComparison.Ordinal)
-            && facade.Contains("Track.TryPlay(card)", StringComparison.Ordinal)
+            && facade.Contains("Tracks[Random.Shared.Next(Tracks.Length)].TryPlay(card)", StringComparison.Ordinal)
             && !facade.Contains("CreateTween", StringComparison.Ordinal)
             && !facade.Contains("GameAudioService", StringComparison.Ordinal)
             && !facade.Contains("ProcessFrame", StringComparison.Ordinal)
