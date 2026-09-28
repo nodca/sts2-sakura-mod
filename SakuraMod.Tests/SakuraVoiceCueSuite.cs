@@ -38,54 +38,123 @@ public sealed class SakuraVoiceCueSuite
     public void VoiceCuesMapToIndependentPerCombatGroups()
     {
         RegressionTestHarness.Require(
-            SakuraVoicePlayback.CueFor(new SpellRelease()) == SakuraVoiceCue.Release
-            && SakuraVoicePlayback.CueFor(new SpellSeal()) == SakuraVoiceCue.Seal
-            && SakuraVoicePlayback.CueFor(new GrowingMagic()) == SakuraVoiceCue.Seal
-            && SakuraVoicePlayback.CueFor(new ClowArrow()) is null
-            && SakuraVoicePlayback.PathFor(SakuraVoiceCue.Release) == SakuraVoicePlayback.ReleaseVoicePath
-            && SakuraVoicePlayback.PathFor(SakuraVoiceCue.Seal) == SakuraVoicePlayback.SealVoicePath,
-            "Expected Release to use its own cue and Seal/Growing Magic to share the Seal cue.");
+            SakuraVoicePlayback.LineFor(new SpellSeal()) == SakuraVoiceLines.Seal
+            && SakuraVoicePlayback.LineFor(new GrowingMagic()) == SakuraVoiceLines.Seal
+            && SakuraVoicePlayback.LineFor(new SpellRelease()) is null
+            && SakuraVoicePlayback.LineFor(new ClowArrow()) is null
+            && SakuraVoiceLines.Release.ResourcePath == $"{MainFile.ResPath}/voices/dream_wand.ogg"
+            && SakuraVoiceLines.Seal.ResourcePath == $"{MainFile.ResPath}/voices/stabilize.ogg"
+            && SakuraVoiceLines.Release.Key != SakuraVoiceLines.Seal.Key,
+            "Expected Seal/Growing Magic to share the Seal line and Spell Release to route through its own release entry.");
 
         var gate = new SakuraVoiceCueGate();
         var firstCombat = new object();
         var secondCombat = new object();
+        var release = SakuraVoiceLines.Release.Key;
+        var seal = SakuraVoiceLines.Seal.Key;
         RegressionTestHarness.Require(
-            gate.CanPlay(firstCombat, SakuraVoiceCue.Release)
-            && gate.CanPlay(firstCombat, SakuraVoiceCue.Release),
+            gate.CanPlay(firstCombat, release)
+            && gate.CanPlay(firstCombat, release),
             "Expected an unplayed cue to remain available until playback succeeds.");
 
-        gate.MarkPlayed(firstCombat, SakuraVoiceCue.Release);
+        gate.MarkPlayed(firstCombat, release);
         RegressionTestHarness.Require(
-            !gate.CanPlay(firstCombat, SakuraVoiceCue.Release)
-            && gate.CanPlay(firstCombat, SakuraVoiceCue.Seal),
+            !gate.CanPlay(firstCombat, release)
+            && gate.CanPlay(firstCombat, seal),
             "Expected only successfully played cues to be consumed.");
 
-        gate.MarkPlayed(firstCombat, SakuraVoiceCue.Seal);
+        gate.MarkPlayed(firstCombat, seal);
         RegressionTestHarness.Require(
-            !gate.CanPlay(firstCombat, SakuraVoiceCue.Seal)
-            && gate.CanPlay(secondCombat, SakuraVoiceCue.Seal)
-            && gate.CanPlay(secondCombat, SakuraVoiceCue.Release),
+            !gate.CanPlay(firstCombat, seal)
+            && gate.CanPlay(secondCombat, seal)
+            && gate.CanPlay(secondCombat, release),
             "Expected two independent once-per-combat cue groups that reset for a new combat identity.");
+    }
+
+    [Fact]
+    public void CardVoiceLinesBindToSourceIdentityAcrossEras()
+    {
+        var clowSword = SakuraCardVoiceCatalog.For(new ClowSword());
+        var sakuraSword = SakuraCardVoiceCatalog.For(new SakuraSword());
+
+        RegressionTestHarness.Require(
+            clowSword is { } line
+            && clowSword == sakuraSword
+            && line.RelativePath == "voices/cards/sword.ogg"
+            && SakuraCardVoiceCatalog.For(new ClowArrow()) is null
+            && SakuraCardVoiceCatalog.For(new SpellRelease()) is null,
+            "Expected ClowSword and SakuraSword to share the Sword line and cards without a line to map to none.");
+
+        var keys = SakuraVoiceLines.All.Select(static line => line.Key).ToList();
+        RegressionTestHarness.Require(
+            keys.Count == keys.Distinct(StringComparer.Ordinal).Count()
+            && SakuraCardVoiceCatalog.All.All(static line =>
+                line.RelativePath.StartsWith("voices/cards/", StringComparison.Ordinal)
+                && line.RelativePath.EndsWith(".ogg", StringComparison.Ordinal)),
+            "Expected unique voice gate keys and per-card lines under voices/cards/.");
+    }
+
+    [Fact]
+    public void ReleaseUsesEitherTheCardLineOrTheGenericLineNeverBoth()
+    {
+        var sword = SakuraCardVoiceCatalog.For(new ClowSword())!.Value;
+        RegressionTestHarness.Require(
+            SakuraVoicePlayback.ReleaseLineFor(new SakuraSword()) == sword
+            && SakuraVoicePlayback.ReleaseLineFor(new ClowArrow()) == SakuraVoiceLines.Release
+            && SakuraVoicePlayback.ReleaseLineFor(null) == SakuraVoiceLines.Release,
+            "Expected a card with its own line to use only that line and every other release the generic line.");
+
+        var gate = new SakuraVoiceCueGate();
+        var combat = new object();
+        gate.MarkPlayed(combat, sword.Key);
+        RegressionTestHarness.Require(
+            !gate.CanPlay(combat, sword.Key)
+            && gate.CanPlay(combat, SakuraVoiceLines.Release.Key)
+            && gate.CanPlay(new object(), sword.Key),
+            "Expected card lines and the generic Release line to be gated independently and reset per combat.");
+
+        var playback = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraVoicePlayback.cs"));
+        RegressionTestHarness.Require(
+            playback.Contains("TryPlayGated(card, ReleaseLineFor(releasedTarget))", StringComparison.Ordinal)
+            && !playback.Contains("foreach (var line in candidates)", StringComparison.Ordinal),
+            "Expected a played card line to stay silent rather than fall back to the generic Release line.");
+    }
+
+    [Fact]
+    public void CardLineGainTrimsTheEnvelopeWithoutMutingIt()
+    {
+        foreach (var line in SakuraVoiceLines.All)
+            RegressionTestHarness.Require(
+                line.Gain is > 0f and <= 1f,
+                $"Expected voice line {line.Key} gain in (0, 1].");
+
+        var playback = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraVoicePlayback.cs"));
+        RegressionTestHarness.Require(
+            playback.Contains("volume * _activeGain * SakuraGameVolumeFollower.VoiceFactor()", StringComparison.Ordinal)
+            && playback.Contains("_envelopeVolume * _activeGain * SakuraGameVolumeFollower.VoiceFactor()", StringComparison.Ordinal),
+            "Expected both envelope writes and the per-frame refresh to apply the active line gain.");
     }
 
     [Fact]
     public void VoiceCuesUseOneNonOverlappingFadedCombatChannel()
     {
-        var releaseOptions = SakuraVoicePlayback.CreatePlaybackOptions(SakuraVoiceCue.Release);
-        var sealOptions = SakuraVoicePlayback.CreatePlaybackOptions(SakuraVoiceCue.Seal);
+        foreach (var line in SakuraVoiceLines.All)
+        {
+            var options = SakuraVoicePlayback.CreatePlaybackOptions(line);
+            RegressionTestHarness.Require(
+                options.Volume == 0f
+                && options.Scope == AudioLifecycleScope.Combat
+                && options.Routing?.Channel == SakuraVoicePlayback.VoiceChannel
+                && options.Routing.ChannelMode == AudioChannelMode.KeepExisting,
+                $"Expected voice line {line.Key} to start silent on the shared keep-existing combat channel.");
+        }
 
         RegressionTestHarness.Require(
-            releaseOptions.Volume == 0f
-            && sealOptions.Volume == 0f
-            && releaseOptions.Scope == AudioLifecycleScope.Combat
-            && sealOptions.Scope == AudioLifecycleScope.Combat
-            && releaseOptions.Routing?.Channel == SakuraVoicePlayback.VoiceChannel
-            && sealOptions.Routing?.Channel == SakuraVoicePlayback.VoiceChannel
-            && releaseOptions.Routing.ChannelMode == AudioChannelMode.KeepExisting
-            && sealOptions.Routing.ChannelMode == AudioChannelMode.KeepExisting
-            && SakuraVoicePlayback.FadeInSeconds > 0f
+            SakuraVoicePlayback.FadeInSeconds > 0f
             && SakuraVoicePlayback.FadeOutSeconds > 0f,
-            "Expected both cues to start silent on one keep-existing combat channel with a fade envelope.");
+            "Expected voice lines to use a fade envelope.");
     }
 
     [Fact]
@@ -93,40 +162,47 @@ public sealed class SakuraVoiceCueSuite
     {
         var playback = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/SakuraVoicePlayback.cs"));
-        var releaseExternal = SakuraVoicePlayback.ExternalVoicePathFor(SakuraVoiceCue.Release);
-        var sealExternal = SakuraVoicePlayback.ExternalVoicePathFor(SakuraVoiceCue.Seal);
         var separator = Path.DirectorySeparatorChar;
 
+        foreach (var line in SakuraVoiceLines.All)
+        {
+            var external = SakuraVoicePlayback.ExternalVoicePathFor(line);
+            RegressionTestHarness.Require(
+                Path.IsPathRooted(external)
+                && external.EndsWith(line.RelativePath.Replace('/', separator), StringComparison.Ordinal),
+                $"Expected voice line {line.Key} to resolve a loose package file beside the mod assembly.");
+        }
+
         RegressionTestHarness.Require(
-            Path.IsPathRooted(releaseExternal)
-            && Path.IsPathRooted(sealExternal)
-            && releaseExternal.EndsWith(
-                SakuraVoicePlayback.ReleaseVoiceRelativePath.Replace('/', separator),
-                StringComparison.Ordinal)
-            && sealExternal.EndsWith(
-                SakuraVoicePlayback.SealVoiceRelativePath.Replace('/', separator),
-                StringComparison.Ordinal)
-            && playback.Contains("AudioSource.File(externalPath)", StringComparison.Ordinal)
+            playback.Contains("AudioSource.File(externalPath)", StringComparison.Ordinal)
             && !playback.Contains("ResourceSoundFileSource", StringComparison.Ordinal)
             && playback.IndexOf("File.Exists(externalPath)", StringComparison.Ordinal)
                 < playback.IndexOf("AudioSource.File(externalPath)", StringComparison.Ordinal),
-            "Expected both cues to resolve loose package files beside the mod assembly and gate FMOD playback on file presence.");
+            "Expected FMOD playback to be gated on loose file presence.");
     }
 
     [Fact]
-    public void EligibleCardsRequestTheirVoiceCueAtPlayStart()
+    public void EligibleCardsRequestTheirVoiceCueAtTheRightMoment()
     {
-        var spellCards = string.Join(
-            '\n',
-            File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/Spells/SpellSeal.cs")),
-            File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/Spells/SpellRelease.cs")));
+        var seal = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/Spells/SpellSeal.cs"));
+        var release = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/Spells/SpellRelease.cs"));
         var ancientCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Ancients/GrowingMagic.cs"));
 
         RegressionTestHarness.Require(
-            CountOccurrences(spellCards, "SakuraVoicePlayback.TryPlay(this);") == 2
-            && CountOccurrences(ancientCard, "SakuraVoicePlayback.TryPlay(this);") == 1,
-            "Expected SpellRelease, SpellSeal, and GrowingMagic to be the only card play bodies requesting Sakura voice cues.");
+            CountOccurrences(seal, "SakuraVoicePlayback.TryPlay(this);") == 1
+            && CountOccurrences(ancientCard, "SakuraVoicePlayback.TryPlay(this);") == 1
+            && CountOccurrences(release, "SakuraVoicePlayback.TryPlay(this);") == 0
+            && CountOccurrences(release, "SakuraVoicePlayback.TryPlayRelease(this, selected);") == 1,
+            "Expected SpellSeal and GrowingMagic to request the Seal cue and SpellRelease to use its release request only.");
+
+        var select = release.IndexOf("CardSelectCmd.FromHand(", StringComparison.Ordinal);
+        var apply = release.IndexOf("ApplyRelease(selected);", StringComparison.Ordinal);
+        var voice = release.IndexOf("SakuraVoicePlayback.TryPlayRelease(this, selected);", StringComparison.Ordinal);
+        var vulnerable = release.IndexOf("PowerCmd.Apply<VulnerablePower>(", StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            select >= 0 && select < apply && apply < voice && voice < vulnerable,
+            "Expected Spell Release to request its voice after target selection and release, before Vulnerable.");
     }
 
     [Fact]
@@ -141,13 +217,17 @@ public sealed class SakuraVoiceCueSuite
             "|| !SakuraModConfig.IsSakuraVoiceEnabled()",
             StringComparison.Ordinal);
         var cueGuard = playback.IndexOf(
-            "|| !CueGate.CanPlay(combatState, cue.Value)",
+            "if (CueGate.CanPlay(combatState, line.Key))",
+            StringComparison.Ordinal);
+        var markPlayed = playback.IndexOf(
+            "CueGate.MarkPlayed(combatState, line.Key);",
             StringComparison.Ordinal);
 
         RegressionTestHarness.Require(
             localOwnerGuard >= 0
             && localOwnerGuard < settingGuard
-            && settingGuard < cueGuard,
+            && settingGuard < cueGuard
+            && cueGuard < markPlayed,
             "Expected remote card plays to be rejected before reading local voice settings or claiming a combat cue.");
     }
 

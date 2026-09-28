@@ -10,27 +10,41 @@ using STS2RitsuLib.Audio;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-internal enum SakuraVoiceCue
+/// <summary>
+/// One playable Sakura voice line. <see cref="Key"/> is the per-combat gate and failure-dedup key;
+/// <see cref="RelativePath"/> names both the loose package file FMOD plays and its imported res:// twin;
+/// <see cref="Gain"/> trims a line's authored loudness against the others.
+/// </summary>
+internal readonly record struct SakuraVoiceLine(string Key, string RelativePath, float Gain = 1f)
 {
-    Release,
-    Seal
+    // The imported res:// twin only supplies the authoritative envelope duration.
+    public string ResourcePath => $"{MainFile.ResPath}/{RelativePath}";
+}
+
+internal static class SakuraVoiceLines
+{
+    internal static readonly SakuraVoiceLine Release = new("release", "voices/dream_wand.ogg");
+    internal static readonly SakuraVoiceLine Seal = new("seal", "voices/stabilize.ogg");
+
+    internal static IEnumerable<SakuraVoiceLine> All =>
+        [Release, Seal, .. SakuraCardVoiceCatalog.All];
 }
 
 internal sealed class SakuraVoiceCueGate
 {
     private object? _currentCombat;
-    private readonly HashSet<SakuraVoiceCue> _claimedCues = [];
+    private readonly HashSet<string> _claimedCues = [];
 
-    public bool CanPlay(object combatState, SakuraVoiceCue cue)
+    public bool CanPlay(object combatState, string key)
     {
         ResetIfCombatChanged(combatState);
-        return !_claimedCues.Contains(cue);
+        return !_claimedCues.Contains(key);
     }
 
-    public void MarkPlayed(object combatState, SakuraVoiceCue cue)
+    public void MarkPlayed(object combatState, string key)
     {
         ResetIfCombatChanged(combatState);
-        _claimedCues.Add(cue);
+        _claimedCues.Add(key);
     }
 
     private void ResetIfCombatChanged(object combatState)
@@ -45,20 +59,17 @@ internal sealed class SakuraVoiceCueGate
 
 public static class SakuraVoicePlayback
 {
-    internal const string ReleaseVoicePath = $"{MainFile.ResPath}/voices/dream_wand.ogg";
-    internal const string SealVoicePath = $"{MainFile.ResPath}/voices/stabilize.ogg";
-    // FMOD reads the loose package files directly; the imported res:// twins only supply the envelope duration.
-    internal const string ReleaseVoiceRelativePath = "voices/dream_wand.ogg";
-    internal const string SealVoiceRelativePath = "voices/stabilize.ogg";
     internal const string VoiceChannel = $"{MainFile.ModId}.Voice";
     internal const float FadeInSeconds = 0.18f;
     internal const float FadeOutSeconds = 0.28f;
+    private const string PreconditionFailureKey = "preconditions";
 
     private static readonly SakuraVoiceCueGate CueGate = new();
-    private static readonly HashSet<SakuraVoiceCue> ReportedFailures = [];
+    private static readonly HashSet<string> ReportedFailures = [];
     private static AudioFileHandle? _activeHandle;
     private static Tween? _envelopeTween;
     private static float _envelopeVolume;
+    private static float _activeGain = 1f;
     private static SceneTree? _volumeRefreshTree;
     private static IDisposable? _combatEndedSubscription;
     private static IDisposable? _runEndedSubscription;
@@ -83,92 +94,111 @@ public static class SakuraVoicePlayback
         LifecycleCleanupRegistered = true;
     }
 
+    /// <summary>Plays the fixed cue of a Seal-group card (Spell Seal, Growing Magic).</summary>
     public static void TryPlay(CardModel card)
     {
-        if (TestMode.IsOn || card.CombatState is not ICombatState combatState)
+        if (LineFor(card) is not { } line)
             return;
 
-        var cue = CueFor(card);
-        if (cue is null)
+        TryPlayGated(card, line);
+    }
+
+    /// <summary>
+    /// Plays one Spell Release line after target selection. A released card with its own line only ever
+    /// uses that line (silent once played this combat); every other release uses the generic Release line.
+    /// </summary>
+    public static void TryPlayRelease(SpellRelease card, CardModel? releasedTarget) =>
+        TryPlayGated(card, ReleaseLineFor(releasedTarget));
+
+    internal static SakuraVoiceLine? LineFor(CardModel card) => card switch
+    {
+        SpellSeal or GrowingMagic => SakuraVoiceLines.Seal,
+        _ => null
+    };
+
+    internal static SakuraVoiceLine ReleaseLineFor(CardModel? releasedTarget) =>
+        releasedTarget is not null && SakuraCardVoiceCatalog.For(releasedTarget) is { } cardLine
+            ? cardLine
+            : SakuraVoiceLines.Release;
+
+    private static void TryPlayGated(CardModel card, SakuraVoiceLine line)
+    {
+        if (TestMode.IsOn || card.CombatState is not ICombatState combatState)
             return;
 
         try
         {
             if (!LocalContext.IsMe(card.Owner)
                 || !SakuraModConfig.IsSakuraVoiceEnabled()
-                || !CueGate.CanPlay(combatState, cue.Value)
                 || IsChannelBusy())
                 return;
+        }
+        catch (Exception exception)
+        {
+            ReportFailureOnce(PreconditionFailureKey, exception.Message);
+            return;
+        }
 
-            var externalPath = ExternalVoicePathFor(cue.Value);
+        if (CueGate.CanPlay(combatState, line.Key))
+            TryPlayLine(combatState, line);
+    }
+
+    private static bool TryPlayLine(ICombatState combatState, SakuraVoiceLine line)
+    {
+        try
+        {
+            var externalPath = ExternalVoicePathFor(line);
             if (!File.Exists(externalPath))
             {
-                ReportFailureOnce(cue.Value, $"voice file not found: {externalPath}");
-                return;
+                ReportFailureOnce(line.Key, $"voice file not found: {externalPath}");
+                return false;
             }
 
             var result = GameAudioService.Shared.PlayOneShot(
                 AudioSource.File(externalPath),
-                CreatePlaybackOptions(cue.Value));
+                CreatePlaybackOptions(line));
 
             if (!result.Succeeded || result.Handle is not AudioFileHandle handle)
             {
-                ReportFailureOnce(cue.Value, $"{result.Status}: {result.Message ?? "no details"}");
-                return;
+                ReportFailureOnce(line.Key, $"{result.Status}: {result.Message ?? "no details"}");
+                return false;
             }
 
             _activeHandle = handle;
-            if (!TryStartEnvelope(handle, PathFor(cue.Value)))
+            _activeGain = line.Gain;
+            if (!TryStartEnvelope(handle, line.ResourcePath))
             {
                 StopActivePlayback(handle);
-                ReportFailureOnce(cue.Value, "could not create the voice volume envelope");
-                return;
+                ReportFailureOnce(line.Key, "could not create the voice volume envelope");
+                return false;
             }
 
-            CueGate.MarkPlayed(combatState, cue.Value);
+            CueGate.MarkPlayed(combatState, line.Key);
+            return true;
         }
         catch (Exception exception)
         {
             if (_activeHandle is { } handle)
                 StopActivePlayback(handle);
-            ReportFailureOnce(cue.Value, exception.Message);
+            ReportFailureOnce(line.Key, exception.Message);
+            return false;
         }
     }
 
-    internal static SakuraVoiceCue? CueFor(CardModel card) => card switch
-    {
-        SpellRelease => SakuraVoiceCue.Release,
-        SpellSeal or GrowingMagic => SakuraVoiceCue.Seal,
-        _ => null
-    };
-
-    internal static string PathFor(SakuraVoiceCue cue) => cue switch
-    {
-        SakuraVoiceCue.Release => ReleaseVoicePath,
-        SakuraVoiceCue.Seal => SealVoicePath,
-        _ => throw new ArgumentOutOfRangeException(nameof(cue), cue, null)
-    };
-
-    internal static string ExternalVoicePathFor(SakuraVoiceCue cue) => cue switch
-    {
-        SakuraVoiceCue.Release => ResolveExternalVoicePath(ReleaseVoiceRelativePath),
-        SakuraVoiceCue.Seal => ResolveExternalVoicePath(SealVoiceRelativePath),
-        _ => throw new ArgumentOutOfRangeException(nameof(cue), cue, null)
-    };
-
-    private static string ResolveExternalVoicePath(string relativePath)
+    // FMOD reads the loose package file beside the mod assembly directly.
+    internal static string ExternalVoicePathFor(SakuraVoiceLine line)
     {
         var modDirectory = Path.GetDirectoryName(typeof(MainFile).Assembly.Location);
         return Path.Combine(
             modDirectory ?? AppContext.BaseDirectory,
-            relativePath.Replace('/', Path.DirectorySeparatorChar));
+            line.RelativePath.Replace('/', Path.DirectorySeparatorChar));
     }
 
-    internal static AudioPlaybackOptions CreatePlaybackOptions(SakuraVoiceCue cue) => new()
+    internal static AudioPlaybackOptions CreatePlaybackOptions(SakuraVoiceLine line) => new()
     {
         Volume = 0f,
         Scope = AudioLifecycleScope.Combat,
-        DebugName = $"{VoiceChannel}.{cue}",
+        DebugName = $"{VoiceChannel}.{line.Key}",
         Routing = new AudioRoutingOptions
         {
             Channel = VoiceChannel,
@@ -228,7 +258,7 @@ public static class SakuraVoicePlayback
 
         _envelopeVolume = volume;
         if (handle.IsValid)
-            handle.TrySetVolume(volume * SakuraGameVolumeFollower.VoiceFactor());
+            handle.TrySetVolume(volume * _activeGain * SakuraGameVolumeFollower.VoiceFactor());
     }
 
     private static void AttachVolumeRefresh(SceneTree tree)
@@ -252,7 +282,7 @@ public static class SakuraVoicePlayback
     private static void RefreshVolumeFromGameBuses()
     {
         if (_activeHandle is { IsValid: true } handle)
-            handle.TrySetVolume(_envelopeVolume * SakuraGameVolumeFollower.VoiceFactor());
+            handle.TrySetVolume(_envelopeVolume * _activeGain * SakuraGameVolumeFollower.VoiceFactor());
     }
 
     private static void StopActivePlayback(AudioFileHandle handle)
@@ -301,9 +331,9 @@ public static class SakuraVoicePlayback
         _envelopeTween = null;
     }
 
-    private static void ReportFailureOnce(SakuraVoiceCue cue, string details)
+    private static void ReportFailureOnce(string key, string details)
     {
-        if (ReportedFailures.Add(cue))
-            MainFile.Logger.Warn($"Sakura voice cue {cue} failed: {details}");
+        if (ReportedFailures.Add(key))
+            MainFile.Logger.Warn($"Sakura voice line {key} failed: {details}");
     }
 }

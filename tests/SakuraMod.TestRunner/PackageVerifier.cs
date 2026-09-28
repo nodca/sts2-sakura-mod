@@ -46,7 +46,8 @@ public sealed class PackageVerifier(IPckInspector pckInspector)
         "music/platinum.ogg",
         "music/release.ogg",
         "voices/dream_wand.ogg",
-        "voices/stabilize.ogg"
+        "voices/stabilize.ogg",
+        "voices/cards/sword.ogg"
     ];
     private const string KeroCompanionImportPath =
         "res://SakuraMod/images/charui/combat/kero_companion.png.import";

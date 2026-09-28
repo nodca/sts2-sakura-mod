@@ -35,14 +35,14 @@ public class SpellRelease() : SpellCard(1, CardType.Skill, CardRarity.Basic, Tar
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        SakuraVoicePlayback.TryPlay(this);
         SpellReleaseBgmPlayback.TryPlay(this);
         var choices = CardPile.GetCards(Owner, PileType.Hand)
             .Where(CanRelease)
             .ToList();
+        CardModel? selected = null;
         if (choices.Count > 0)
         {
-            var selected = (await CardSelectCmd.FromHand(
+            selected = (await CardSelectCmd.FromHand(
                 choiceContext,
                 Owner,
                 new CardSelectorPrefs(Prompt, 1)
@@ -56,6 +56,9 @@ public class SpellRelease() : SpellCard(1, CardType.Skill, CardRarity.Basic, Tar
             if (selected is not null)
                 ApplyRelease(selected);
         }
+
+        // Presentation only: the released card's own line if it has one, else the generic Release line.
+        SakuraVoicePlayback.TryPlayRelease(this, selected);
 
         await PowerCmd.Apply<VulnerablePower>(
             choiceContext,

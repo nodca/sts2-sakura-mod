@@ -1,9 +1,7 @@
 using MegaCrit.Sts2.Core.Combat;
-using MegaCrit.Sts2.Core.Commands;
-using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Helpers;
+using MegaCrit.Sts2.Core.Modding;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
 using SakuraMod.SakuraModCode.Cards;
@@ -26,6 +24,9 @@ internal static class SakuraRunHooks
         if (_registered)
             return;
 
+        ModHelper.SubscribeForRunStateHooks(
+            "SakuraMod.FourthAct.Rewards",
+            static runState => runState.Act is SakuraFourthAct ? [runState.Act] : []);
         _combatStartingSubscription = RitsuLibFramework.SubscribeLifecycle<CombatStartingEvent>(
             OnCombatStarting,
             replayCurrentState: false);
@@ -84,33 +85,9 @@ internal static class SakuraRunHooks
     {
         foreach (var player in SakuraPlayers(evt.RunState))
         {
-            TryGrantFourthActReward(evt.RunState, evt.Room.Encounter.GetType(), player);
             if (SakuraCreateLegacy.TryConsumeReward(player, evt.Room.RoomType))
                 SakuraCreateRewards.AddExclusiveOrNormalRelicReward(player);
         }
-    }
-
-    internal static bool TryGrantFourthActReward(
-        IRunState runState,
-        Type encounterType,
-        Player player)
-    {
-        if (runState.Act is not SakuraFourthAct
-            || FourthActRouteCatalog.RewardEncounterFor(encounterType) is not { } encounter)
-        {
-            return false;
-        }
-
-        var cardType = SakuraSourceCardRules.SakuraTypeFor(encounter.RewardIdentity)
-            ?? throw new InvalidOperationException($"Missing Sakura Card reward for {encounter.RewardIdentity}.");
-        var template = ModelDb.GetById<CardModel>(ModelDb.GetId(cardType));
-        var reward = player.RunState.CreateCard(template, player);
-        TaskHelper.RunSafely(CardPileCmd.Add(
-            reward,
-            PileType.Deck,
-            CardPilePosition.Bottom,
-            skipVisuals: true));
-        return true;
     }
 
     private static void OnRunLoaded(RunLoadedEvent evt)

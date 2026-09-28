@@ -1,9 +1,16 @@
 using Godot;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Acts;
 using MegaCrit.Sts2.Core.Random;
+using MegaCrit.Sts2.Core.Rewards;
+using MegaCrit.Sts2.Core.Rooms;
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Unlocks;
+using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
 using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Routing;
@@ -46,6 +53,41 @@ public sealed class SakuraFourthAct : ModActTemplate
         AllAncients;
 
     public override MapPointTypeCounts GetMapPointTypes(Rng mapRng) => new(0, 1);
+
+    public override bool TryModifyRewards(Player player, List<Reward> rewards, AbstractRoom? room)
+    {
+        if (player.RunState.Act is not SakuraFourthAct
+            || !SakuraStarterCompatibility.IsKinomotoSakura(player)
+            || room is not CombatRoom combatRoom
+            || FourthActRouteCatalog.RewardEncounterFor(combatRoom.Encounter.GetType()) is not { } encounter)
+        {
+            return false;
+        }
+
+        var cardType = SakuraSourceCardRules.SakuraTypeFor(encounter.RewardIdentity)
+            ?? throw new InvalidOperationException($"Missing Sakura Card reward for {encounter.RewardIdentity}.");
+        var template = ModelDb.GetById<CardModel>(ModelDb.GetId(cardType));
+        var card = player.RunState.CreateCard(template, player);
+        // Fixed-card rewards cannot be serialized in CombatRoom.ExtraRewards; regenerate through this hook on load.
+        rewards.Add(new CardReward(
+            [card],
+            CardCreationSource.Encounter,
+            player,
+            CardCreationOptions.ForRoom(player, room.RoomType)));
+        return true;
+    }
+
+    internal static async Task OfferCardRewardsAsync(CombatRoom room, CancellationToken cancellationToken)
+    {
+        await MegaCrit.Sts2.Core.Commands.Cmd.Wait(1f, cancellationToken);
+        await Task.WhenAll(room.CombatState.Players.Select(player =>
+        {
+            var rewards = new RewardsSet(player).EmptyForRoom(room);
+            if (room.ExtraRewards.TryGetValue(player, out var extraRewards))
+                rewards.WithCustomRewards(extraRewards);
+            return rewards.Offer();
+        }));
+    }
 
     internal void ConfigureRouteBosses()
     {

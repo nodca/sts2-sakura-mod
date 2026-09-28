@@ -219,6 +219,14 @@ internal static class SakuraFourthActTerminalTransitionPatch
     {
         var runManager = RunManager.Instance;
         var runState = runManager.DebugOnlyGetState();
+        if (runState?.Act is SakuraFourthAct
+            && runState.CurrentRoom is CombatRoom rewardRoom
+            && FourthActRouteCatalog.RewardEncounterFor(rewardRoom.Encounter.GetType()) is not null)
+        {
+            __result = SakuraFourthAct.OfferCardRewardsAsync(rewardRoom, ____cts.Token);
+            return false;
+        }
+
         if (runState is null || !SakuraFourthActTerminalTransition.ShouldRouteToArchitect(runState))
             return true;
 

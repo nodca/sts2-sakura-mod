@@ -2476,11 +2476,16 @@ public sealed class ResourceContractSuite
     [Fact]
     public void SakuraVoiceResourcesRemainComplete()
     {
-        foreach (var relativePath in new[]
-                 {
-                     "SakuraMod/voices/dream_wand.ogg",
-                     "SakuraMod/voices/stabilize.ogg"
-                 })
+        var relativePaths = SakuraVoiceLines.All
+            .Select(static line => $"{MainFile.ModId}/{line.RelativePath}")
+            .ToList();
+        RegressionTestHarness.Require(
+            relativePaths.Contains("SakuraMod/voices/dream_wand.ogg")
+            && relativePaths.Contains("SakuraMod/voices/stabilize.ogg")
+            && relativePaths.Contains("SakuraMod/voices/cards/sword.ogg"),
+            "Expected the voice line catalog to cover the generic cues and the Sword card line.");
+
+        foreach (var relativePath in relativePaths)
         {
             var audioPath = RegressionTestHarness.FindRepoFile(relativePath);
             var bytes = File.ReadAllBytes(audioPath);

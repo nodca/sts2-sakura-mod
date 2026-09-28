@@ -44,7 +44,7 @@ public sealed class SpellReleaseBgmSuite
             "SakuraModCode/Cards/Spells/SpellRelease.cs"));
 
         var voiceIndex = source.IndexOf(
-            "SakuraVoicePlayback.TryPlay(this);",
+            "SakuraVoicePlayback.TryPlayRelease(this, selected);",
             StringComparison.Ordinal);
         var bgmIndex = source.IndexOf(
             "SpellReleaseBgmPlayback.TryPlay(this);",
@@ -54,11 +54,10 @@ public sealed class SpellReleaseBgmSuite
             StringComparison.Ordinal);
 
         RegressionTestHarness.Require(
-            voiceIndex >= 0
-            && bgmIndex >= 0
-            && voiceIndex < bgmIndex
-            && bgmIndex < selectIndex,
-            "Expected Spell Release to invoke BGM playback immediately alongside voice playback in PlayCard.");
+            bgmIndex >= 0
+            && bgmIndex < selectIndex
+            && selectIndex < voiceIndex,
+            "Expected Spell Release to start BGM at play start and request its voice line after target selection.");
     }
 
     [Fact]

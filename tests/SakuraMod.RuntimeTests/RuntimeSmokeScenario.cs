@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Models.Acts;
@@ -20,6 +21,7 @@ using MegaCrit.Sts2.Core.Nodes.RestSite;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Random;
+using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves.Runs;
@@ -357,21 +359,46 @@ internal static class RuntimeSmokeScenario
             acts: [ModelDb.Act<SakuraFourthAct>()],
             seed: "SAKURA_FOURTH_ACT_REWARD_RUNTIME");
         var before = player.Deck.Cards.OfType<SakuraFreeze>().Count();
+        var room = new CombatRoom(ModelDb.GetById<EncounterModel>(ModelDb.GetId<FreezeEncounter>()).ToMutable(), runState);
+        var ordinaryReward = new GoldReward(10, 10, player);
+        List<Reward> rewards = [ordinaryReward];
 
         assertions.True(
-            "fourth_act_freeze_reward_granted",
-            SakuraRunHooks.TryGrantFourthActReward(runState, typeof(FreezeEncounter), player));
+            "fourth_act_reward_hook_registered",
+            Hook.ModifyRewards(runState, player, rewards, room).Contains(runState.Act));
+        var reward = rewards.OfType<CardReward>().Single();
+        assertions.True("fourth_act_ordinary_rewards_preserved", rewards.Contains(ordinaryReward));
+        assertions.Equal("fourth_act_freeze_reward_single_option", 1, reward.Cards.Count());
+        assertions.True("fourth_act_freeze_reward_identity", reward.Cards.Single() is SakuraFreeze);
+        assertions.True("fourth_act_freeze_reward_skippable", reward.CanSkip);
         assertions.Equal(
-            "fourth_act_freeze_reward_added_to_deck",
-            before + 1,
+            "fourth_act_freeze_reward_not_added_to_deck",
+            before,
             player.Deck.Cards.OfType<SakuraFreeze>().Count());
+
+        room.MarkPreFinished();
+        var savedRoom = room.ToSerializable();
+        assertions.Equal("fourth_act_reward_not_stored_in_extra_rewards", 0, savedRoom.ExtraRewards.Count);
+        var restoredRoom = CombatRoom.FromSerializable(savedRoom, runState);
+        List<Reward> restoredRewards = [];
+        Hook.ModifyRewards(runState, player, restoredRewards, restoredRoom).ToArray();
+        assertions.True("fourth_act_freeze_reward_restored",
+            restoredRewards.OfType<CardReward>().Single().Cards.Single() is SakuraFreeze);
+
+        List<Reward> endpointRewards = [];
         assertions.True(
             "fourth_act_dark_reward_omitted",
-            !SakuraRunHooks.TryGrantFourthActReward(runState, typeof(DarkEncounter), player));
+            !runState.Act.TryModifyRewards(player, endpointRewards,
+                new CombatRoom(ModelDb.GetById<EncounterModel>(ModelDb.GetId<DarkEncounter>()).ToMutable(), runState)));
+        assertions.Equal("fourth_act_dark_rewards_empty", 0, endpointRewards.Count);
+        assertions.True("fourth_act_custom_reward_sets_ignored",
+            !runState.Act.TryModifyRewards(player, endpointRewards, null));
 
         return new
         {
             identity = SourceCardIdentity.Freeze.ToString(),
+            options = reward.Cards.Count(),
+            canSkip = reward.CanSkip,
             added = player.Deck.Cards.OfType<SakuraFreeze>().Count() - before
         };
     }
@@ -822,8 +849,6 @@ internal static class RuntimeSmokeScenario
             ["another_me_power_icon"] = "res://SakuraMod/images/powers/another_me.png",
             ["another_me_bgm"] = AnotherMeBgmPlayback.ResourcePath,
             ["spell_turn_bgm"] = SpellTurnBgmPlayback.ResourcePath,
-            ["release_voice"] = SakuraVoicePlayback.ReleaseVoicePath,
-            ["seal_voice"] = SakuraVoicePlayback.SealVoicePath,
             ["spell_turn_audio"] = SpellTurnTransformationVfx.TurnAudioPath,
             ["dark_standee"] = DarkEnemyAssets.Standee,
             ["dark_action"] = DarkEnemyAssets.Action,
@@ -834,6 +859,8 @@ internal static class RuntimeSmokeScenario
             ["eclipse_petal"] = FourthActCombatBackgrounds.EclipsePetalTexturePath,
             ["eclipse_shader"] = FourthActCombatBackgrounds.EclipseShaderPath
         };
+        foreach (var voiceLine in SakuraVoiceLines.All)
+            resources[$"voice_{voiceLine.Key}"] = voiceLine.ResourcePath;
         for (var index = 0; index < WindEnemyAssets.All.Count; index++)
             resources[$"wind_enemy_{index}"] = WindEnemyAssets.All[index];
         for (var index = 0; index < LibraEnemyAssets.All.Count; index++)
