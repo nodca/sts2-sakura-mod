@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Hooks;
@@ -908,12 +909,19 @@ internal static class SakuraSnowRules
 
 internal static class SakuraPowerRules
 {
+    // Shared by both Bubbles forms. Only audited, independently removable buffs belong here.
+    // Buff also labels encounter state: Sandpit kills on removal, Swipe owns stolen cards,
+    // and Skittish is dereferenced by its monster's animator. Unknown powers stay protected.
     public static bool IsBubblesRemovableBuff(PowerModel power) =>
-        power is StrengthPower { Amount: > 0 }
-        or ArtifactPower { Amount: > 0 }
-        or RitualPower { Amount: > 0 }
-        or ThornsPower { Amount: > 0 }
-        or PlatingPower { Amount: > 0 };
+        power.Amount > 0
+        && power.TypeForCurrentAmount == PowerType.Buff
+        && power is (StrengthPower or DexterityPower or VigorPower
+            or ArtifactPower or RitualPower or ThornsPower or PlatingPower
+            or BufferPower or BarricadePower or RegenPower or BlurPower
+            or BlockNextTurnPower or FlameBarrierPower or IntangiblePower or SlipperyPower
+            or HighVoltagePower or EnragePower or TerritorialPower or SuckPower or CrabRagePower
+            or RampartPower or PaperCutsPower or PersonalHivePower or WitheringPresencePower
+            or NemesisPower or SoarPower or CurlUpPower);
 
     public static async Task ApplyBypassingArtifact<T>(
         PlayerChoiceContext choiceContext,

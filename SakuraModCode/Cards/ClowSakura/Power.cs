@@ -30,7 +30,7 @@ public class ClowPower() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Co
     private const int ExtraHpLoss = 15;
 
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(26, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(22, ValueProp.Move)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {

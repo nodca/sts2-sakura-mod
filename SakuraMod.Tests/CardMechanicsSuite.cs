@@ -18,6 +18,57 @@ using STS2RitsuLib.RunData;
 public sealed class CardMechanicsSuite
 {
     [Fact]
+    public void BubblesPreviewFiltersAndDeduplicatesWithoutReadingNonCombatTargets()
+    {
+        var amountField = typeof(PowerModel).GetField("_amount",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var strength = new StrengthPower();
+        var buffer = new BufferPower();
+        var powers = new PowerModel[] { strength, new StrengthPower(), new SandpitPower(), buffer, new DexterityPower() };
+        foreach (var power in powers)
+            amountField.SetValue(power, power is DexterityPower ? -2 : 2);
+
+        Assert.Equal(new PowerModel[] { strength, buffer }, SakuraSourceCardText.BubblesPreviewBuffs(powers));
+        Assert.Empty(SakuraSourceCardText.BubblesPreviewBuffs([powers[2], powers[4]]));
+        Assert.Equal("SAKURAMOD-BUBBLES.previewNone",
+            SakuraSourceCardText.BubblesBuffDescription(new ClowBubbles(), null)?.LocEntryKey);
+        Assert.Equal("SAKURAMOD-BUBBLES.previewNone",
+            SakuraSourceCardText.BubblesBuffDescription(new SakuraBubbles(), null)?.LocEntryKey);
+        Assert.Null(SakuraSourceCardText.BubblesBuffDescription(new ClowJump(), null));
+    }
+
+    [Fact]
+    public void BubblesDispelIncludesIndependentBuffsButProtectsEncounterState()
+    {
+        // Set only the amount: native Apply/SetAmount needs a live owner and Godot hooks.
+        var amountField = typeof(PowerModel).GetField("_amount",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var candidates = new PowerModel[]
+        {
+            new StrengthPower(), new HighVoltagePower(), new BufferPower(), new PersonalHivePower(),
+            new SandpitPower(), new SwipePower(), new HeistPower(), new PossessStrengthPower(),
+            new MinionPower(), new AdaptablePower(), new FlutterPower(), new RavenousPower(),
+            new SkittishPower(), new PainfulStabsPower(), new HardenedShellPower(), new WeakPower(),
+            new ClassicMagicChargePower()
+        };
+        foreach (var power in candidates)
+            amountField.SetValue(power, 2);
+
+        Assert.Equal(candidates.Take(4), candidates.Where(SakuraPowerRules.IsBubblesRemovableBuff));
+        foreach (var power in new PowerModel[] { new StrengthPower(), new DexterityPower() })
+        {
+            foreach (var amount in new[] { -2, 0, 2 })
+            {
+                amountField.SetValue(power, amount);
+                Assert.Equal(amount > 0, SakuraPowerRules.IsBubblesRemovableBuff(power));
+            }
+        }
+
+        Assert.Contains(SakuraCardHoverTips.BubblesBuffTipKey, SakuraSourceCardText.StaticTipKeys(new ClowBubbles()));
+        Assert.Contains(SakuraCardHoverTips.BubblesBuffTipKey, SakuraSourceCardText.StaticTipKeys(new SakuraBubbles()));
+    }
+
+    [Fact]
     public void CleansingUsesExplicitNativeWhitelistAndSharedHoverTips()
     {
         foreach (var power in new PowerModel[] { new WeakPower(), new VulnerablePower(), new FrailPower(), new PoisonPower() })
@@ -524,25 +575,64 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void ClowFlyIsAnInnateOneShotMagicChargeStarter()
+    public void ClowFlyIsAnInnateAirborneOpener()
     {
         var baseCard = new ClowFly();
         var upgradedCard = RegressionTestHarness.MutableForCostTest(new ClowFly());
         upgradedCard.UpgradeInternal();
+        var airborne = new AirbornePower();
         var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/ClowSakura/Fly.cs"));
+        var clowFlySource = source[..source.IndexOf("public class SakuraFly()", StringComparison.Ordinal)];
+        var powerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/SourceCards/AirbornePower.cs"));
+        var englishCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/eng/cards.json"));
+        var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/zhs/cards.json"));
+        var englishPowers = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/eng/powers.json"));
+        var chinesePowers = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/zhs/powers.json"));
 
         RegressionTestHarness.Require(
             baseCard.EnergyCost.Canonical == 0
             && baseCard.Rarity == CardRarity.Uncommon
             && baseCard.CanonicalKeywords.SequenceEqual([CardKeyword.Innate, CardKeyword.Exhaust])
-            && baseCard.DynamicVars.Cards.IntValue == 2
-            && baseCard.DynamicVars["Magic"].IntValue == 1
-            && upgradedCard.DynamicVars.Cards.IntValue == 3
-            && upgradedCard.DynamicVars["Magic"].IntValue == 2
-            && source.Contains("SakuraMagicCharge.GainMagic(choiceContext, Owner, ReleasedMagic(), this)", StringComparison.Ordinal)
-            && !source.Contains("SpendUpToMagic", StringComparison.Ordinal),
-            "Expected the Uncommon Clow Fly to cost 0, be Innate and Exhaust, draw 2/3, gain 1/2 explicit Magic Charge, and never spend Magic Charge.");
+            && baseCard.DynamicVars["AirbornePower"].IntValue == 1
+            && baseCard.DynamicVars.Cards.IntValue == 1
+            && upgradedCard.DynamicVars["AirbornePower"].IntValue == 1
+            && upgradedCard.DynamicVars.Cards.IntValue == 1,
+            "Expected the Uncommon Clow Fly to cost 0, be Innate and Exhaust, and keep Airborne 1 / Cards 1 across the upgrade.");
+        RegressionTestHarness.Require(
+            clowFlySource.Contains("private const int ExtraAirborne = 1;", StringComparison.Ordinal)
+            && clowFlySource.Contains("GainAirborne(choiceContext, ExtraAirborne)", StringComparison.Ordinal)
+            && clowFlySource.Contains("ApplyPower<AirbornePower>(choiceContext, Owner.Creature, ReleasedValue(\"AirbornePower\") + extraAirborne)", StringComparison.Ordinal)
+            && clowFlySource.Contains("if (IsUpgraded)", StringComparison.Ordinal)
+            && clowFlySource.Contains("CardPileCmd.Draw(choiceContext, ReleasedValue(\"Cards\"), Owner, false)", StringComparison.Ordinal)
+            && !clowFlySource.Contains("GainMagic", StringComparison.Ordinal)
+            && !clowFlySource.Contains("ExtraDraw", StringComparison.Ordinal),
+            "Expected Clow Fly to apply Airborne (+1 on Extra), draw only when upgraded, and never gain explicit Magic Charge.");
+        RegressionTestHarness.Require(
+            airborne.Type == PowerType.Buff
+            && airborne.StackType == PowerStackType.Counter
+            && AirbornePower.DamageMultiplier == 0.5m
+            && powerSource.Contains("target == Owner && dealer?.Side != Owner.Side && props.IsPoweredAttack()", StringComparison.Ordinal)
+            && powerSource.Contains("BeforeSideTurnStart", StringComparison.Ordinal)
+            && powerSource.Contains("PowerCmd.Decrement(this)", StringComparison.Ordinal),
+            "Expected Airborne to be a Counter Buff that halves enemy powered attack damage with a constant multiplier and decrements at its owner's turn start.");
+        RegressionTestHarness.Require(
+            englishCards.Contains("\"SAKURA_MOD_CARD_CLOW_FLY.description\": \"[gold]Windy[/gold]\\nGain {AirbornePower:diff()} [gold]Airborne[/gold].{IfUpgraded:show:\\nDraw {Cards:diff()} card.|}\"", StringComparison.Ordinal)
+            && chineseCards.Contains("\"SAKURA_MOD_CARD_CLOW_FLY.description\": \"[gold]风[/gold]\\n获得 {AirbornePower:diff()} 层[gold]腾空[/gold]。{IfUpgraded:show:\\n抽 {Cards:diff()} 张牌。|}\"", StringComparison.Ordinal)
+            && englishCards.Contains("\"SAKURA_MOD_CARD_CLOW_FLY.extraDescription\": \"[gold]Extra:[/gold] Gain 1 additional [gold]Airborne[/gold].\"", StringComparison.Ordinal)
+            && chineseCards.Contains("\"SAKURA_MOD_CARD_CLOW_FLY.extraDescription\": \"[gold]额外效果：[/gold]额外获得 1 层[gold]腾空[/gold]。\"", StringComparison.Ordinal)
+            && new[] { englishPowers, chinesePowers }.All(static powers =>
+                powers.Contains("\"SAKURA_MOD_POWER_AIRBORNE_POWER.title\"", StringComparison.Ordinal)
+                && powers.Contains("\"SAKURA_MOD_POWER_AIRBORNE_POWER.description\"", StringComparison.Ordinal)
+                && powers.Contains("\"SAKURA_MOD_POWER_AIRBORNE_POWER.smartDescription\"", StringComparison.Ordinal))
+            && englishPowers.Contains("\"SAKURA_MOD_POWER_AIRBORNE_POWER.title\": \"Airborne\"", StringComparison.Ordinal)
+            && chinesePowers.Contains("\"SAKURA_MOD_POWER_AIRBORNE_POWER.title\": \"腾空\"", StringComparison.Ordinal),
+            "Expected Clow Fly and Airborne text in both locales.");
     }
 
     [Fact]
@@ -747,11 +837,11 @@ public sealed class CardMechanicsSuite
             && clowCloud.Elements == SakuraElementSet.Water
             && clowCloud.DynamicVars.CalculationBase.IntValue == 5
             && clowCloud.DynamicVars.CalculationExtra.IntValue == 5
-            && upgradedClowCloud.DynamicVars.CalculationBase.IntValue == 8
-            && upgradedClowCloud.DynamicVars.CalculationExtra.IntValue == 8
+            && upgradedClowCloud.DynamicVars.CalculationBase.IntValue == 7
+            && upgradedClowCloud.DynamicVars.CalculationExtra.IntValue == 7
             && sakuraCloud.DynamicVars.CalculationBase.IntValue == 7
             && sakuraCloud.DynamicVars.CalculationExtra.IntValue == 3,
-            "Expected Clow Cloud to block for 5 plus 5 per Watery card (8/8 upgraded) and Sakura Cloud to block for 7 plus 3 per Watery card.");
+            "Expected Clow Cloud to block for 5 plus 5 per Watery card (7/7 upgraded) and Sakura Cloud to block for 7 plus 3 per Watery card.");
         RegressionTestHarness.Require(
             SakuraSourceCardText.ElementStatesReferencedBy(clowCloud).SequenceEqual([SakuraElement.Water]),
             "Expected Clow Cloud to expose the Watery-state hover tip used by its conditional Rain generation.");
@@ -1485,10 +1575,10 @@ public sealed class CardMechanicsSuite
             && struggle.Rarity == CardRarity.Uncommon
             && struggle.CanonicalKeywords.SequenceEqual([SakuraKeywords.Fire])
             && SakuraCardModel.HasMagicChargeExtraEffect(struggle)
-            && struggle.DynamicVars.Damage.IntValue == 16
+            && struggle.DynamicVars.Damage.IntValue == 14
             && struggle.DynamicVars.ExtraDamage.IntValue == 8
             && upgradedStruggle.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
-            && upgradedStruggle.DynamicVars.Damage.IntValue == 20
+            && upgradedStruggle.DynamicVars.Damage.IntValue == 18
             && !StruggleRules.IsOtherAttack(struggle, struggle)
             && StruggleRules.IsOtherAttack(struggle, new Struggle())
             && StruggleRules.IsOtherAttack(struggle, new Hail())
@@ -1501,7 +1591,7 @@ public sealed class CardMechanicsSuite
             && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardPlayed")
             && swingChinese.Contains("[gold]力量[/gold]对本牌造成伤害的影响翻倍。", StringComparison.Ordinal)
             && swingEnglish.Contains("[gold]Strength[/gold]'s effect on this card's damage is doubled.", StringComparison.Ordinal),
-            "Expected Struggle to cost 2, deal 16 damage plus 8 with Extra, receive Strength twice, discount for other Attacks this turn, and upgrade to 20 damage.");
+            "Expected Struggle to cost 2, deal 14 damage plus 8 with Extra, receive Strength twice, discount for other Attacks this turn, and upgrade to 18 damage.");
 
         var blade = new Blade();
         var upgradedBlade = RegressionTestHarness.MutableForCostTest(new Blade());
@@ -1982,6 +2072,10 @@ public sealed class CardMechanicsSuite
             SakuraSourceCardText.ReferencesBlurTip(new ClowShadow())
             && !SakuraSourceCardText.ReferencesBlurTip(new SakuraShadow()),
             "Expected Clow Shadow hover tips to explain Blur, but not Sakura Shadow.");
+        RegressionTestHarness.Require(
+            SakuraSourceCardText.ReferencesAirborneTip(new ClowFly())
+            && !SakuraSourceCardText.ReferencesAirborneTip(new SakuraFly()),
+            "Expected Clow Fly hover tips to explain Airborne, but not Sakura Fly.");
         RegressionTestHarness.Require(
             SakuraSourceCardText.ReferencesIntangibleTip(new SakuraShadow())
             && !SakuraSourceCardText.ReferencesIntangibleTip(new ClowShadow()),

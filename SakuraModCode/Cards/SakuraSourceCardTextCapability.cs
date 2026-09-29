@@ -1,4 +1,5 @@
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
@@ -27,10 +28,15 @@ internal sealed class SakuraSourceCardTextCapability :
             ? SakuraSourceCardText.HoverTips(classicCard)
             : [];
 
-    public IEnumerable<CardDescriptionFragment> GetDescriptionFragments(CardDescriptionContext context) =>
-        context.Card is ClowExtraEffectCard card && SakuraSourceCardText.ShouldShowMagicChargeExtraDescription(card)
-            ? [new CardDescriptionFragment(SakuraSourceCardText.MagicChargeExtraDescription(card))]
-            : [];
+    public IEnumerable<CardDescriptionFragment> GetDescriptionFragments(CardDescriptionContext context)
+    {
+        if (context.Card is ClowExtraEffectCard card && SakuraSourceCardText.ShouldShowMagicChargeExtraDescription(card))
+            yield return new CardDescriptionFragment(SakuraSourceCardText.MagicChargeExtraDescription(card));
+
+        // Fragments sort by ascending Order; the Extra line uses the default 0, so the preview sits above it.
+        if (SakuraSourceCardText.BubblesBuffDescription(context.Card, context.Target) is { } buffs)
+            yield return new CardDescriptionFragment(buffs, CardDescriptionFragmentPlacement.AfterBase, -100);
+    }
 }
 
 internal static class SakuraSourceCardTextCapabilities
@@ -44,6 +50,38 @@ internal static class SakuraSourceCardTextCapabilities
 internal static class SakuraSourceCardText
 {
     private const string SourceSpellTipKey = "SAKURAMOD-SPELL_CARD";
+
+    internal static IReadOnlyList<Creature>? BubblesPreviewTargets(CardModel card, Creature? target)
+    {
+        if (card is not (ClowBubbles or SakuraBubbles) || !card.IsMutable || card.CombatState is not { } combat)
+            return null;
+
+        if (card is SakuraBubbles)
+            return combat.HittableEnemies.ToList();
+
+        return target is not null && combat.HittableEnemies.Contains(target) ? [target] : null;
+    }
+
+    internal static IEnumerable<PowerModel> BubblesPreviewBuffs(IEnumerable<PowerModel> powers) =>
+        powers.Where(SakuraPowerRules.IsBubblesRemovableBuff).DistinctBy(power => power.GetType());
+
+    // Always shown on both Bubbles forms; without a combat target or dispellable buff it reads "none".
+    internal static LocString? BubblesBuffDescription(CardModel card, Creature? target)
+    {
+        if (card is not (ClowBubbles or SakuraBubbles))
+            return null;
+
+        var names = BubblesPreviewTargets(card, target) is { } targets
+            ? BubblesPreviewBuffs(targets.SelectMany(creature => creature.Powers))
+                .Select(power => power.Title.GetFormattedText()).ToList()
+            : [];
+        if (names.Count == 0)
+            return new LocString("cards", "SAKURAMOD-BUBBLES.previewNone");
+
+        var text = new LocString("cards", "SAKURAMOD-BUBBLES.preview");
+        text.Add("Buffs", string.Join(new LocString("cards", "SAKURAMOD-BUBBLES.buffSeparator").GetFormattedText(), names));
+        return text;
+    }
 
     public static IEnumerable<IHoverTip> HoverTips(
         SakuraSourceCard card,
@@ -76,6 +114,9 @@ internal static class SakuraSourceCardText
 
         if (ReferencesBlurTip(card))
             tips.Add(HoverTipFactory.FromPower<BlurPower>());
+
+        if (ReferencesAirborneTip(card))
+            tips.Add(HoverTipFactory.FromPower<AirbornePower>());
 
         if (ReferencesIntangibleTip(card))
             tips.Add(HoverTipFactory.FromPower<IntangiblePower>());
@@ -117,6 +158,9 @@ internal static class SakuraSourceCardText
     internal static bool ReferencesBlurTip(SakuraSourceCard card) =>
         card is ClowShadow;
 
+    internal static bool ReferencesAirborneTip(SakuraSourceCard card) =>
+        card is ClowFly;
+
     internal static bool ReferencesIntangibleTip(SakuraSourceCard card) =>
         card is SakuraShadow;
 
@@ -135,6 +179,7 @@ internal static class SakuraSourceCardText
                 yield return SakuraCardHoverTips.DebuffTipKey;
                 break;
             case ClowBubbles:
+            case SakuraBubbles:
                 yield return SakuraCardHoverTips.BubblesBuffTipKey;
                 break;
             case ClowMist:

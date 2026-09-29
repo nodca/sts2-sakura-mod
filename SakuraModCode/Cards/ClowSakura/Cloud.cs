@@ -74,8 +74,8 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
 
     protected override void OnUpgrade()
     {
-        DynamicVars.CalculationBase.UpgradeValueBy(3);
-        DynamicVars.CalculationExtra.UpgradeValueBy(3);
+        DynamicVars.CalculationBase.UpgradeValueBy(2);
+        DynamicVars.CalculationExtra.UpgradeValueBy(2);
     }
 }
 

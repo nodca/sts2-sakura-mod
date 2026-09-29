@@ -40,8 +40,8 @@
   "SAKURAMOD-WINDY_STATE.description": "每打出 2 张风元素牌，抽 1 张牌。",
   "SAKURAMOD-DEBUFF.title": "减益",
   "SAKURAMOD-DEBUFF.description": "包括：[gold]虚弱[/gold]、[gold]易伤[/gold]、[gold]脆弱[/gold]、[gold]中毒[/gold]、[gold]负力量[/gold]和[gold]负敏捷[/gold]。",
-  "SAKURAMOD-BUBBLES_BUFF.title": "增益",
-  "SAKURAMOD-BUBBLES_BUFF.description": "包括敌人的[gold]力量[/gold]、[gold]人工制品[/gold]、[gold]仪式[/gold]、[gold]荆棘[/gold]和[gold]覆甲[/gold]。",
+  "SAKURAMOD-BUBBLES_BUFF.title": "可驱散的增益",
+  "SAKURAMOD-BUBBLES_BUFF.description": "敌人身上的大多数正面状态，例如[gold]力量[/gold]、[gold]人工制品[/gold]、[gold]荆棘[/gold]、[gold]无实体[/gold]。\n与敌人自身机制绑定的状态不会被移除。",
   "SAKURAMOD-MIST_DEFENSE.title": "防护效果",
   "SAKURAMOD-MIST_DEFENSE.description": "包括敌人的[gold]格挡[/gold]、[gold]人工制品[/gold]、[gold]荆棘[/gold]、[gold]缓冲[/gold]、[gold]无实体[/gold]、[gold]壁垒[/gold]和[gold]滑溜[/gold]。"
 }

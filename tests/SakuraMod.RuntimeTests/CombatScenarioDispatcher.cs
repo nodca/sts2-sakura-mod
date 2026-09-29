@@ -22,6 +22,7 @@ internal static class CombatScenarioDispatcher
             "starter-run" => await StarterRunScenario.ExecuteAsync(request, assertions),
             "clow-shield-singleplayer" => await ClowShieldSingleplayerScenario.ExecuteAsync(request, assertions),
             "clow-mist-slippery" => await ClowMistSlipperyScenario.ExecuteAsync(request, assertions),
+            "clow-fly-airborne" => await ClowFlyAirborneScenario.ExecuteAsync(request, assertions),
             "extra-effect-choice" => await ExtraEffectChoiceScenario.ExecuteAsync(request, assertions),
             "extra-effect-play" => await ExtraEffectPlayScenario.ExecuteAsync(request, assertions),
             "exchange-four-pile-selection" => await ExchangePileScenario.ExecuteAsync(request, assertions),

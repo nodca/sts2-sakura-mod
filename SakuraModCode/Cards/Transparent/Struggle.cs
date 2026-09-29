@@ -23,7 +23,7 @@ public class Struggle() : TransparentExtraEffectCard(2, CardType.Attack, CardRar
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(16, ValueProp.Move),
+        new DamageVar(14, ValueProp.Move),
         new ExtraDamageVar(8)
     ];
 

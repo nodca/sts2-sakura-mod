@@ -27,29 +27,27 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowFly() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
-    private const int ExtraDraw = 2;
+    private const int ExtraAirborne = 1;
 
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Innate, CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2), new DynamicVar("Magic", 1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<AirbornePower>(1), new CardsVar(1)];
 
     protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        DrawAndGainMagic(choiceContext, 0);
+        GainAirborne(choiceContext, 0);
 
     protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        DrawAndGainMagic(choiceContext, ExtraDraw);
+        GainAirborne(choiceContext, ExtraAirborne);
 
-    private async Task DrawAndGainMagic(PlayerChoiceContext choiceContext, int extraDraw)
+    private async Task GainAirborne(PlayerChoiceContext choiceContext, int extraAirborne)
     {
-        await CardPileCmd.Draw(choiceContext, ReleasedValue("Cards") + extraDraw, Owner, false);
-        await SakuraMagicCharge.GainMagic(choiceContext, Owner, ReleasedMagic(), this);
+        await ApplyPower<AirbornePower>(choiceContext, Owner.Creature, ReleasedValue("AirbornePower") + extraAirborne);
+        if (IsUpgraded)
+            await CardPileCmd.Draw(choiceContext, ReleasedValue("Cards"), Owner, false);
     }
 
-    protected override void OnUpgrade()
-    {
-        DynamicVars.Cards.UpgradeValueBy(1);
-        DynamicVars["Magic"].UpgradeValueBy(1);
-    }
+    // The upgrade unlocks the draw line; no displayed number changes.
+    protected override void OnUpgrade() { }
 }
 
 public class SakuraFly() : SakuraFormCard(1, CardType.Power, TargetType.None)

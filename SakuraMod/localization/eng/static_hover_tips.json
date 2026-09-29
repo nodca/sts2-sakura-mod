@@ -40,8 +40,8 @@
   "SAKURAMOD-WINDY_STATE.description": "Whenever you play 2 Windy cards, draw 1 card.",
   "SAKURAMOD-DEBUFF.title": "Debuff",
   "SAKURAMOD-DEBUFF.description": "Includes: [gold]Weak[/gold], [gold]Vulnerable[/gold], [gold]Frail[/gold], [gold]Poison[/gold], [gold]negative Strength[/gold], and [gold]negative Dexterity[/gold].",
-  "SAKURAMOD-BUBBLES_BUFF.title": "Buffs",
-  "SAKURAMOD-BUBBLES_BUFF.description": "Includes enemy [gold]Strength[/gold], [gold]Artifact[/gold], [gold]Ritual[/gold], [gold]Thorns[/gold], and [gold]Plating[/gold].",
+  "SAKURAMOD-BUBBLES_BUFF.title": "Dispellable Buffs",
+  "SAKURAMOD-BUBBLES_BUFF.description": "Most positive enemy powers, such as [gold]Strength[/gold], [gold]Artifact[/gold], [gold]Thorns[/gold] and [gold]Intangible[/gold].\nPowers tied to an enemy's own mechanics are not removed.",
   "SAKURAMOD-MIST_DEFENSE.title": "Defensive effects",
   "SAKURAMOD-MIST_DEFENSE.description": "Includes enemy [gold]Block[/gold], [gold]Artifact[/gold], [gold]Thorns[/gold], [gold]Buffer[/gold], [gold]Intangible[/gold], [gold]Barricade[/gold], and [gold]Slippery[/gold]."
 }
