@@ -654,8 +654,8 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             englishCards.Contains("{IfUpgraded:show:Fight+|Fight}", StringComparison.Ordinal)
             && chineseCards.Contains("{IfUpgraded:show:斗+|斗}", StringComparison.Ordinal)
-            && englishCards.Contains("[gold]Extra:[/gold] Gain 2", StringComparison.Ordinal)
-            && chineseCards.Contains("[gold]额外效果：[/gold]获得 2", StringComparison.Ordinal),
+            && englishCards.Contains("[gold]Extra:[/gold] Also gain 2", StringComparison.Ordinal)
+            && chineseCards.Contains("[gold]额外效果：[/gold]再获得 2", StringComparison.Ordinal),
             "Expected Clow Fight's text to use the native generated-card hand wording for a standard Fight or Fight+.");
     }
 
@@ -683,7 +683,7 @@ public sealed class CardMechanicsSuite
             && powerSource.Contains("fight.UpgradeInternal();", StringComparison.Ordinal)
             && powerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal)
             && fightSource.Contains("GetPower<SakuraFightPower>()?.Amount", StringComparison.Ordinal)
-            && chineseCards.Contains("拥有[red]遗忘[/red]的[gold]斗+[/gold]", StringComparison.Ordinal),
+            && chineseCards.Contains("带有[red]遗忘[/red]的[gold]斗+[/gold]", StringComparison.Ordinal),
             "Expected Sakura Fight to generate Forgotten Fight+ cards and add its stacks to Fight's temporary Strength.");
     }
 
@@ -723,7 +723,7 @@ public sealed class CardMechanicsSuite
             && runHooksSource.Contains("SubscribeLifecycle<CombatVictoryEvent>", StringComparison.Ordinal)
             && runHooksSource.Contains("TryConsumeReward(player, evt.Room.RoomType)", StringComparison.Ordinal)
             && runHooksSource.Contains("AddExclusiveOrNormalRelicReward(player)", StringComparison.Ordinal)
-            && chineseCards.Contains("下 3 次击败首领或精英时", StringComparison.Ordinal),
+            && chineseCards.Contains("本局接下来 3 次击败精英或首领时", StringComparison.Ordinal),
             "Expected Sakura Create to stack and resolve three persistent character-exclusive Elite or Boss rewards.");
     }
 
@@ -1343,9 +1343,9 @@ public sealed class CardMechanicsSuite
             && spiralNextTurnPowerSource.Contains("AddTemporary = true", StringComparison.Ordinal)
             && !spiralNextTurnPowerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal)
             && !spiralNextTurnPowerSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal)
-            && chineseCards.Contains("将 {NextTurnCopies:diff()} 张带有[red]遗忘[/red]的[gold]螺旋[/gold]置于抽牌堆顶", StringComparison.Ordinal)
-            && chineseCards.Contains("生成 {ExtraCopies:diff()} 张[gold]螺旋[/gold]，并给予[red]遗忘[/red]，本回合能耗为 0", StringComparison.Ordinal)
-            && englishCards.Contains("on top of your draw pile", StringComparison.Ordinal)
+            && chineseCards.Contains("将 {NextTurnCopies:diff()} 张带有[red]遗忘[/red]的[gold]螺旋[/gold]置于你的[gold]抽牌堆[/gold]顶", StringComparison.Ordinal)
+            && chineseCards.Contains("将 {ExtraCopies:diff()} 张带有[red]遗忘[/red]的[gold]螺旋[/gold]加入你的[gold]手牌[/gold]，本回合耗能为 0", StringComparison.Ordinal)
+            && englishCards.Contains("on top of your [gold]Draw Pile[/gold]", StringComparison.Ordinal)
             && englishCards.Contains("They cost 0 this turn", StringComparison.Ordinal),
             "Expected Spiral+ to put a base Forgotten Spiral on top before next turn's draw, while Extra generates three base Forgotten Spirals that cost 0 this turn.");
 
@@ -1559,8 +1559,8 @@ public sealed class CardMechanicsSuite
             && swingPowerSource.Contains("cardSource is { Type: CardType.Attack }", StringComparison.Ordinal)
             && swingPowerSource.Contains("cardSource.Owner?.Creature == owner", StringComparison.Ordinal)
             && swingPowerSource.Contains("GetScaledAmountForMultiplayer", StringComparison.Ordinal)
-            && swingChinese.Contains("你的本次伤害和本回合内的后续攻击", StringComparison.Ordinal)
-            && swingEnglish.Contains("Your damage this time and later Attacks this turn", StringComparison.Ordinal),
+            && swingChinese.Contains("本回合，你的攻击（包括此牌）对拥有[gold]虚弱[/gold]的敌人造成双倍伤害", StringComparison.Ordinal)
+            && swingEnglish.Contains("This turn, your Attacks, including this one, deal double damage", StringComparison.Ordinal),
             "Expected Swing to deal 12/16 damage and open a 2x/3x owner-scoped Weak damage window for Powered Attacks.");
 
         var struggle = new Struggle();
@@ -1589,8 +1589,8 @@ public sealed class CardMechanicsSuite
             && struggleSource.Contains("GetPower<StrengthPower>()?.Amount", StringComparison.Ordinal)
             && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardEnteredCombat")
             && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardPlayed")
-            && swingChinese.Contains("[gold]力量[/gold]对本牌造成伤害的影响翻倍。", StringComparison.Ordinal)
-            && swingEnglish.Contains("[gold]Strength[/gold]'s effect on this card's damage is doubled.", StringComparison.Ordinal),
+            && swingChinese.Contains("[gold]力量[/gold]对此牌生效两次。", StringComparison.Ordinal)
+            && swingEnglish.Contains("[gold]Strength[/gold] affects this card twice.", StringComparison.Ordinal),
             "Expected Struggle to cost 2, deal 14 damage plus 8 with Extra, receive Strength twice, discount for other Attacks this turn, and upgrade to 18 damage.");
 
         var blade = new Blade();
@@ -1710,11 +1710,11 @@ public sealed class CardMechanicsSuite
         var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraMod/localization/zhs/cards.json"));
         var englishCards = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraMod/localization/eng/cards.json"));
         RegressionTestHarness.Require(
-            chineseCards.Contains("状态牌与诅咒牌获得[red]遗忘[/red]", StringComparison.Ordinal)
-            && chineseCards.Contains("下回合额外抽 1 张牌", StringComparison.Ordinal)
+            chineseCards.Contains("状态牌和诅咒牌获得[red]遗忘[/red]", StringComparison.Ordinal)
+            && chineseCards.Contains("下回合多抽 1 张牌", StringComparison.Ordinal)
             && !chineseCards.Contains("SAKURA_MOD_CARD_BLANK.description\": \"获得 {Block:diff()}", StringComparison.Ordinal)
             && englishCards.Contains("Status and Curse cards gain [red]Forgotten[/red]", StringComparison.Ordinal)
-            && englishCards.Contains("draw 1 additional card next turn", StringComparison.Ordinal)
+            && englishCards.Contains("Next turn, draw 1 more card for each", StringComparison.Ordinal)
             && !englishCards.Contains("SAKURA_MOD_CARD_BLANK.description\": \"Gain {Block:diff()}", StringComparison.Ordinal),
             "Expected both localizations to describe Blank's Forgotten and next-turn draw effects without Block.");
     }
@@ -1748,8 +1748,8 @@ public sealed class CardMechanicsSuite
         var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraMod/localization/zhs/cards.json"));
         var englishCards = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraMod/localization/eng/cards.json"));
         RegressionTestHarness.Require(
-            chineseCards.Contains("选择[gold]消耗堆[/gold]中的 {Cards:diff()} 张牌放入手牌", StringComparison.Ordinal)
-            && englishCards.Contains("Choose {Cards:diff()} card(s) from your [gold]exhaust pile[/gold]", StringComparison.Ordinal),
+            chineseCards.Contains("从你的[gold]消耗牌堆[/gold]中选择 {Cards:diff()} 张牌，放入你的[gold]手牌[/gold]", StringComparison.Ordinal)
+            && englishCards.Contains("Choose {Cards:diff()} {Cards:plural:card|cards} from your [gold]Exhaust Pile[/gold]", StringComparison.Ordinal),
             "Expected Rewind localizations to gold the exhaust pile and use Cards:diff().");
     }
 
@@ -2226,11 +2226,11 @@ public sealed class CardMechanicsSuite
             && choiceSource.Contains("SetThisCombat", StringComparison.Ordinal)
             && appearSource.Contains("SetThisCombat(0, reduceOnly: true)", StringComparison.Ordinal)
             && appearSource.Contains("upgraded: IsUpgraded", StringComparison.Ordinal)
-            && chineseCards.Contains("所显现的牌本场战斗内能耗减少 1", StringComparison.Ordinal)
-            && chineseCards.Contains("执行上述两项", StringComparison.Ordinal)
-            && chineseCards.Contains("本场战斗内能耗变为 0", StringComparison.Ordinal)
-            && englishCards.Contains("cost 1 less for the rest of combat", StringComparison.Ordinal)
-            && englishCards.Contains("Do both options", StringComparison.Ordinal)
+            && chineseCards.Contains("其本场战斗耗能减少 1", StringComparison.Ordinal)
+            && chineseCards.Contains("两项都执行", StringComparison.Ordinal)
+            && chineseCards.Contains("本场战斗内耗能变为 0", StringComparison.Ordinal)
+            && englishCards.Contains("costing 1 less this combat", StringComparison.Ordinal)
+            && englishCards.Contains("[gold]Extra:[/gold] Do both.", StringComparison.Ordinal)
             && englishCards.Contains("cost 0 for the rest of combat", StringComparison.Ordinal),
             "Expected Choice to upgrade both branches, execute both during Extra, and keep manifested cards at their combat cost reductions; Appear should use the same combat-wide Extra cost state.");
     }

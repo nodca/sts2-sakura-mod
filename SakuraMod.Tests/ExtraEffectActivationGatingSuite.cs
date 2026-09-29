@@ -70,8 +70,8 @@ public sealed class ExtraEffectActivationGatingSuite
 
         var descriptions = new[]
         {
-            ("SakuraMod/localization/zhs/cards.json", "[gold]地[/gold]\n需要 10 点[gold]魔力充能[/gold]。"),
-            ("SakuraMod/localization/eng/cards.json", "[gold]Earthy[/gold]\nRequires 10 [gold]Magic Charge[/gold].")
+            ("SakuraMod/localization/zhs/cards.json", "[gold]地[/gold]\n只有拥有 10 点[gold]魔力充能[/gold]时才能打出。"),
+            ("SakuraMod/localization/eng/cards.json", "[gold]Earthy[/gold]\nCan only be played with 10 [gold]Magic Charge[/gold].")
         };
 
         foreach (var (relativePath, expected) in descriptions)

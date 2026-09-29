@@ -404,7 +404,7 @@ public sealed class WindEnemyContractSuite
         Assert.Equal("幻象", chinesePowers[illusionTitle].GetString());
         Assert.True(englishPowers.ContainsKey(illusionDescription));
         Assert.Equal(
-            "幻的真身或假身。假身不会造成伤害，其受到伤害或被给予状态后会消失。假身和真身的位置每回合可能交换。",
+            "幻的真身或假身。假身不造成伤害，受到伤害或被给予状态后消失。真身与假身每回合可能交换位置。",
             chinesePowers[illusionDescription].GetString());
     }
 

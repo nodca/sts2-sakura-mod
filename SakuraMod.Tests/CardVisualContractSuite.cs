@@ -595,10 +595,10 @@ public sealed class CardVisualContractSuite
             SakuraDescriptionRegion.NormalizeText(new SpellHuoShen(), normalizedSpellKeywords) == normalizedSpellKeywords,
             "Expected repeated visual application to keep identity brackets idempotent.");
         const string sakuraIdentityKeywordText =
-            "[center][gold]Sakura Card[/gold] [gold]Firey[/gold] [gold]Removable[/gold].\nCopy a [gold]Sakura Card[/gold].[/center]";
+            "[center][gold]Sakura Card[/gold] [gold]Fiery[/gold] [gold]Removable[/gold].\nCopy a [gold]Sakura Card[/gold].[/center]";
         RegressionTestHarness.Require(
             SakuraDescriptionRegion.NormalizeText(new SakuraSword(), sakuraIdentityKeywordText)
-                == "「[gold]Sakura Card[/gold]」「[gold]Firey[/gold]」 [gold]Removable[/gold]\nCopy a [gold]Sakura Card[/gold].",
+                == "「[gold]Sakura Card[/gold]」「[gold]Fiery[/gold]」 [gold]Removable[/gold]\nCopy a [gold]Sakura Card[/gold].",
             "Expected Sakura Card and element identity labels to be bracketed without decorating unrelated keywords or body references.");
         const string transparentElementOnlyHeader =
             "[center][gold]Watery[/gold]\nChoose 1 enemy.[/center]";

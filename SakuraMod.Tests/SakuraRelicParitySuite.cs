@@ -211,13 +211,13 @@ public sealed class SakuraRelicParitySuite
             "SAKURA_MOD_RELIC_CLASSIC_MOON_BELL_RELIC.description"
         };
 
-        const string PersistenceClause = "未打出的转牌可以保留到之后的战斗";
-        const string EngPersistenceClause = "an unplayed Turn is kept for later battles";
+        const string PersistenceClause = "保留到之后的战斗";
+        string[] engPersistenceClauses = ["is kept for later combats", "carry over to later combats", "carries over to later combats"];
 
         RegressionTestHarness.Require(
             keys.All(key => LineFor(zhsLines, key).Contains(PersistenceClause, StringComparison.Ordinal))
-            && keys.All(key => LineFor(engLines, key).Contains(EngPersistenceClause, StringComparison.Ordinal)),
-            "Expected every Turn-granting relic to state that an unplayed Turn is kept for later battles.");
+            && keys.All(key => engPersistenceClauses.Any(clause => LineFor(engLines, key).Contains(clause, StringComparison.Ordinal))),
+            "Expected every Turn-granting relic to state that an unplayed Turn is kept for later combats.");
 
         RegressionTestHarness.Require(
             keys.All(key => !LineFor(zhsLines, key).Contains("加入手牌和牌组", StringComparison.Ordinal))

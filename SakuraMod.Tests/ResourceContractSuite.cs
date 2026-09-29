@@ -2685,7 +2685,7 @@ public sealed class ResourceContractSuite
                 $"Expected {locale} Forgotten hover text to explain only its general Memory rule.");
             RegressionTestHarness.Require(
                 locale == "zhs"
-                    ? remind.Contains("本回合能耗为 0", StringComparison.Ordinal)
+                    ? remind.Contains("本回合耗能为 0", StringComparison.Ordinal)
                     : remind.Contains("cost 0 this turn", StringComparison.OrdinalIgnoreCase),
                 $"Expected {locale} Remind hover text to keep recalled copies free for the turn.");
             RegressionTestHarness.Require(
