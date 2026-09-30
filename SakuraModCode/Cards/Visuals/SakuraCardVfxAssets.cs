@@ -21,6 +21,9 @@ internal static class SakuraCardVfxAssets
         [.. SnowBlizzardVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> FreezePaths =
         [.. FreezeCageVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+    // The line burst stays declared: it is Song's hit feedback whenever the staff is not drawn.
+    private static readonly IReadOnlyList<string> SongPaths =
+        [.. SongStaffVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths, .. SakuraNativeHitFx.LineBurstAssetPaths];
 
     public static IEnumerable<string> RunAssetPaths(CardModel card)
     {
@@ -43,6 +46,7 @@ internal static class SakuraCardVfxAssets
         ClowSnow or SakuraSnow => SnowPaths,
         ClowFreeze or SakuraFreeze => FreezePaths,
         SpellTurn => SpellTurnTransformationVfx.AssetPaths,
+        ClowSong or SakuraSong => SongPaths,
         _ => []
     };
 }

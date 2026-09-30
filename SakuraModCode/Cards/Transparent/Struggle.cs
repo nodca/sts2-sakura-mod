@@ -33,7 +33,7 @@ public class Struggle() : TransparentExtraEffectCard(2, CardType.Attack, CardRar
         if (activation.IsActive)
             damage += DynamicVars.ExtraDamage.IntValue;
 
-        await SakuraActions.Attack(choiceContext, this, RequiredTarget(play), damage);
+        await SakuraActions.Attack(choiceContext, this, RequiredTarget(play), damage, hitVfx: SakuraNativeHitFx.HeavyBlunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx);
     }
 
     public override decimal ModifyDamageAdditive(

@@ -1,0 +1,66 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Shader" uid="uid://x7rxf2ebffgq" path="res://SakuraMod/shaders/card_vfx/song_staff.gdshader" id="1_staff"]
+[ext_resource type="Shader" uid="uid://by5uv10d81tjw" path="res://SakuraMod/shaders/card_vfx/song_glyph.gdshader" id="2_glyph"]
+[ext_resource type="Texture2D" uid="uid://cwhgs62cjfayj" path="res://SakuraMod/images/card_vfx/song/glyphs_sdf.png" id="3_atlas"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_staff"]
+resource_local_to_scene = true
+shader = ExtResource("1_staff")
+shader_parameter/region_size = Vector2(1200, 420)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/clef_point = Vector2(80, 160)
+shader_parameter/zone_start = 700.0
+shader_parameter/zone_end = 1120.0
+shader_parameter/zone_mid_y = 120.0
+shader_parameter/staff_space = 26.0
+shader_parameter/reveal = 0.0
+shader_parameter/wave_amplitude = 7.0
+shader_parameter/flash = 0.0
+shader_parameter/opacity = 1.0
+shader_parameter/line_colour = Color(0.8, 0.96, 0.87, 1)
+shader_parameter/accent_colour = Color(0.97, 0.83, 0.45, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_glyph"]
+resource_local_to_scene = true
+shader = ExtResource("2_glyph")
+shader_parameter/spread_px = 14.0
+shader_parameter/fill_colour = Color(0.98, 1, 0.98, 1)
+shader_parameter/ink_colour = Color(0.06, 0.18, 0.18, 1)
+shader_parameter/accent_colour = Color(0.97, 0.83, 0.45, 1)
+shader_parameter/accent = 0.0
+shader_parameter/opacity = 1.0
+
+[node name="SongStaffVfx" type="Node2D"]
+
+[node name="Staff" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_staff")
+offset_right = 1200.0
+offset_bottom = 420.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Glyphs" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Ripples" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="GlyphTemplate" type="Sprite2D" parent="."]
+unique_name_in_owner = true
+visible = false
+texture_filter = 2
+material = SubResource("ShaderMaterial_glyph")
+texture = ExtResource("3_atlas")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 0, 144, 318)
+
+[node name="InputPassThrough" type="Control" parent="."]
+layout_mode = 0
+offset_right = 1.0
+offset_bottom = 1.0
+mouse_filter = 2

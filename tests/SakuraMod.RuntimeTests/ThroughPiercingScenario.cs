@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.TestProtocol;
+using Break = SakuraMod.SakuraModCode.Cards.Break;
 
 namespace SakuraMod.RuntimeTests;
 
@@ -93,10 +94,74 @@ internal static class ThroughPiercingScenario
         assertions.Equal("through_transfer_strength_per_target", enemies.Count, player.Creature.GetPowerAmount<StrengthPower>() - strengthBefore);
         assertions.Equal("through_transfer_dexterity_per_target", enemies.Count, player.Creature.GetPowerAmount<DexterityPower>() - dexterityBefore);
 
+        foreach (var cardCase in new[] { "break", "bubbles", "clow-erase" })
+        {
+            await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
+            var targetSetup = new RuntimeFixtureAction(
+                player,
+                async choiceContext =>
+                {
+                    await PlayerCmd.GainEnergy(10, player);
+                    if (player.Creature.GetPower<StrengthPower>() is { } strength)
+                        await PowerCmd.Remove(strength);
+                    if (player.Creature.GetPower<ClassicMagicChargePower>() is { } charge)
+                        await PowerCmd.Remove(charge);
+                    foreach (var enemy in enemies)
+                    {
+                        await CreatureCmd.SetMaxAndCurrentHp(enemy, 100);
+                        await CreatureCmd.LoseBlock(enemy, enemy.Block);
+                        await CreatureCmd.Stun(enemy);
+                    }
+                    if (cardCase == "break")
+                        await CreatureCmd.GainBlock(enemies[0], 10, ValueProp.Unpowered, null, true);
+                    if (cardCase == "bubbles")
+                    {
+                        foreach (var enemy in enemies)
+                        {
+                            if (enemy.GetPower<StrengthPower>() is { } buff)
+                                await PowerCmd.Remove(buff);
+                            await PowerCmd.Apply<StrengthPower>(choiceContext, enemy, 5, enemy, null);
+                        }
+                    }
+                    if (cardCase == "clow-erase")
+                        await PowerCmd.Apply<MinionPower>(choiceContext, enemies[0], 1, enemies[0], null);
+                });
+            await CombatScenarioContext.EnqueueAndWaitAsync(targetSetup);
+
+            var card = cardCase switch
+            {
+                "break" => (MegaCrit.Sts2.Core.Models.CardModel)await CombatScenarioContext.AddGeneratedCardToHandAsync<Break>(combat, player),
+                "bubbles" => await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowBubbles>(combat, player),
+                _ => await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowErase>(combat, player)
+            };
+            await CombatScenarioContext.PlayCardAsync(card, enemies[0]);
+
+            for (var i = 0; i < enemies.Count; i++)
+            {
+                var enemy = enemies[i];
+                if (cardCase == "clow-erase" && i == 0)
+                {
+                    assertions.True("through_clow_erase_kills_primary_minion", !enemy.IsAlive);
+                    continue;
+                }
+                var expectedDamage = cardCase switch
+                {
+                    "break" => i == 0 ? 14 : 7,
+                    "bubbles" => 5,
+                    _ => 9
+                };
+                assertions.Equal($"through_{cardCase}_damage_once_{enemy.CombatId}", expectedDamage, 100 - enemy.CurrentHp);
+                if (cardCase == "break")
+                    assertions.Equal($"through_break_removes_block_{enemy.CombatId}", 0, enemy.Block);
+                if (cardCase == "bubbles")
+                    assertions.Equal($"through_bubbles_removes_buff_{enemy.CombatId}", 0, enemy.GetPowerAmount<StrengthPower>());
+            }
+        }
+
         RuntimeTestHost.WriteCheckpoint(
             request,
             "through_piercing_verified",
-            "Through propagated damage and Transfer target transactions by enemy order, triggered only once in a turn, refreshed next turn, and respected Artifact independently per target.");
+            "Through propagated automatic commands and manual Transfer, Break, Bubbles, and Erase target transactions without duplicate damage, including continuation after primary minion death.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {

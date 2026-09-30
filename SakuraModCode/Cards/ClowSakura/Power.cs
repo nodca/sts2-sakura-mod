@@ -34,7 +34,7 @@ public class ClowPower() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Co
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage());
+        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage(), hitVfx: SakuraNativeHitFx.HeavyBlunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx);
         await ApplyPower<StrengthPower>(choiceContext, Owner.Creature, -1);
     }
 

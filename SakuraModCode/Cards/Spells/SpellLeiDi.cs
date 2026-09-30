@@ -33,7 +33,7 @@ public class SpellLeiDi() : ElementSpellCard(0, CardType.Attack, TargetType.None
     {
         var target = Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
         if (target is not null)
-            await DealDamage(choiceContext, target, ReleasedDamage());
+            await DealDamage(choiceContext, target, ReleasedDamage(), hitSfx: SakuraNativeHitFx.LightningSfx, hitVfx: SakuraNativeHitFx.Lightning, spawnHitVfxAtBase: true);
     }
 }
 

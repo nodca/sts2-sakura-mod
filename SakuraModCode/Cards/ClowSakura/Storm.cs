@@ -41,12 +41,12 @@ public class ClowStorm() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Un
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, CalculatedDamage(target), hitCount: ReleasedMagic());
+        await DealDamage(choiceContext, target, CalculatedDamage(target), hitCount: ReleasedMagic(), hitVfx: SakuraNativeHitFx.Slash);
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies, CalculatedDamage(null), hitCount: ReleasedMagic());
+        await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies, CalculatedDamage(null), hitCount: ReleasedMagic(), hitVfx: SakuraNativeHitFx.Slash);
     }
 
     private int CalculatedDamage(Creature? target) =>
@@ -106,7 +106,7 @@ public class SakuraStorm() : SakuraFormCard(1, CardType.Attack, TargetType.None)
             var amount = Owner.RunState.Rng.CombatCardSelection.NextInt(
                 ReleasedDamage(),
                 ReleasedValue(MaxDamageVar) + 1);
-            await DealDamageHit(attack, choiceContext, target, amount);
+            await DealDamageHit(attack, choiceContext, target, amount, hitVfx: SakuraNativeHitFx.Slash);
         }
     }
 }

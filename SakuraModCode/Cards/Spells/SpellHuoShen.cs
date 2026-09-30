@@ -30,6 +30,6 @@ public class SpellHuoShen() : ElementSpellCard(0, CardType.Attack, TargetType.An
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(5, ValueProp.Move)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage());
+        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.FireBurst);
 }
 

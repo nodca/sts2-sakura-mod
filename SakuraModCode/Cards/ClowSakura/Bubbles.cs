@@ -25,7 +25,7 @@ using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class ClowBubbles() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+public class ClowBubbles() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Water;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(5, ValueProp.Move), new DynamicVar("Magic", 2)];
@@ -36,7 +36,7 @@ public class ClowBubbles() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.
         {
             foreach (var target in SakuraThroughResolution.TargetsFor(play))
             {
-                await DealDamage(choiceContext, target, ReleasedDamage());
+                await DealDamage(choiceContext, target, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.WaterSplash);
                 var removed = await RemoveRandomBuff(choiceContext, target);
                 await GainUpgradeMagicCharge(choiceContext, removed);
             }
@@ -49,7 +49,7 @@ public class ClowBubbles() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.
         {
             foreach (var target in SakuraThroughResolution.TargetsFor(play))
             {
-                await DealDamage(choiceContext, target, ReleasedDamage());
+                await DealDamage(choiceContext, target, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.WaterSplash);
                 var removed = await RemoveAllBuffs(target);
                 await GainUpgradeMagicCharge(choiceContext, removed);
             }
@@ -97,7 +97,7 @@ public class SakuraBubbles() : SakuraFormCard(0, CardType.Attack, TargetType.All
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var enemies = CombatState!.HittableEnemies.ToList();
-        await DealDamageToEnemies(choiceContext, enemies, ReleasedDamage());
+        await DealDamageToEnemies(choiceContext, enemies, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.WaterSplash);
         foreach (var enemy in enemies)
         {
             foreach (var buff in enemy.Powers.Where(SakuraPowerRules.IsBubblesRemovableBuff).ToList())

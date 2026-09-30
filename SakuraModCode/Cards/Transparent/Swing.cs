@@ -45,7 +45,7 @@ public class Swing() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
 
         var targets = CombatState!.HittableEnemies.ToList();
         foreach (var enemy in targets.Where(enemy => enemy.IsAlive))
-            await SakuraActions.Attack(choiceContext, this, enemy, DynamicVars.Damage.IntValue);
+            await SakuraActions.Attack(choiceContext, this, enemy, DynamicVars.Damage.IntValue, hitVfx: SakuraNativeHitFx.HeavyBlunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx, spawnHitVfxAtBase: true);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(4);

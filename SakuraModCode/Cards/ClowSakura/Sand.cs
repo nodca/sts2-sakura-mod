@@ -35,7 +35,7 @@ public class ClowSand() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Com
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, ReleasedDamage());
+        await DealDamage(choiceContext, target, ReleasedDamage(), hitVfx: SakuraNativeHitFx.SandyImpact);
         await ApplyPower<PoisonPower>(choiceContext, target, ReleasedValue("PoisonPower"));
     }
 

@@ -89,11 +89,16 @@ public static class SakuraActions
         Creature target,
         decimal damage,
         ValueProp props = ValueProp.Move,
-        int hitCount = 1)
+        int hitCount = 1,
+        string? hitVfx = null,
+        string? hitTmpSfx = null,
+        bool spawnHitVfxAtBase = false)
     {
-        await AttackCommand(source, target, damage, props, hitCount)
-            .WithNoAttackerAnim()
-            .Execute(context);
+        var attack = AttackCommand(source, target, damage, props, hitCount, vfx: hitVfx, tmpSfx: hitTmpSfx)
+            .WithNoAttackerAnim();
+        if (spawnHitVfxAtBase)
+            attack.WithHitVfxSpawnedAtBase();
+        await attack.Execute(context);
     }
 
     public static async Task Attack(

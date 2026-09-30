@@ -56,7 +56,7 @@ public class Reversal() : TransparentExtraEffectCard(0, CardType.Attack, CardRar
             exchangedCards,
             DynamicVars["PileCardsPerDamage"].IntValue,
             DynamicVars["PileDamage"].IntValue);
-        await SakuraActions.Attack(choiceContext, this, RequiredTarget(play), damage);
+        await SakuraActions.Attack(choiceContext, this, RequiredTarget(play), damage, hitVfx: SakuraNativeHitFx.Slash);
         if (activation.IsActive)
             await ApplyExtraEffect(choiceContext, play);
     }

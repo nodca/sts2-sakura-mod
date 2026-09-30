@@ -18,12 +18,12 @@ using STS2RitsuLib.Cards.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Shade() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity.Common, TargetType.AllEnemies)
+public class Shade() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity.Uncommon, TargetType.AllEnemies)
 {
     public override bool GainsBlock => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
 
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(12, ValueProp.Move), new PowerVar<WeakPower>(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(11, ValueProp.Move), new PowerVar<WeakPower>(1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {

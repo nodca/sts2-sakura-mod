@@ -1446,15 +1446,15 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             shade.EnergyCost.Canonical == 2
             && shade.Type == CardType.Skill
-            && shade.Rarity == CardRarity.Common
+            && shade.Rarity == CardRarity.Uncommon
             && shade.TargetType == TargetType.AllEnemies
             && shade.CanonicalKeywords.SequenceEqual([SakuraKeywords.Water])
             && SakuraCardModel.HasMagicChargeExtraEffect(shade)
-            && shade.DynamicVars.Block.IntValue == 12
+            && shade.DynamicVars.Block.IntValue == 11
             && shade.DynamicVars.Weak.IntValue == 1
-            && upgradedShade.DynamicVars.Block.IntValue == 14
+            && upgradedShade.DynamicVars.Block.IntValue == 13
             && upgradedShade.DynamicVars.Weak.IntValue == 2,
-            "Expected Shade to cost 2, gain 12 Block, apply 1 Weak to all enemies, retain Block with Extra, and upgrade to 14 Block and 2 Weak.");
+            "Expected Shade to be Uncommon, cost 2, gain 11 Block, apply 1 Weak to all enemies, retain Block with Extra, and upgrade to 13 Block and 2 Weak.");
 
         var flight = new Flight();
         var upgradedFlight = RegressionTestHarness.MutableForCostTest(new Flight());
@@ -1799,16 +1799,16 @@ public sealed class CardMechanicsSuite
             promise.CanonicalKeywords.Contains(SakuraKeywords.Earth)
             && !promise.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
             && SakuraCardModel.HasMagicChargeExtraEffect(promise)
-            && promise.DynamicVars.Block.IntValue == 8
+            && promise.DynamicVars.Block.IntValue == 7
             && promise.DynamicVars["PromiseManifestPower"].IntValue == 1
             && promise.DynamicVars["PlatingPower"].IntValue == 4
-            && upgradedPromise.DynamicVars.Block.IntValue == 8
+            && upgradedPromise.DynamicVars.Block.IntValue == 7
             && upgradedPromise.DynamicVars["PromiseManifestPower"].IntValue == 2
             && new PromiseManifestPower().StackType == PowerStackType.Counter
             && RegressionTestHarness.DeclaresMethod<PromiseManifestPower>("ModifyHandDraw")
             && RegressionTestHarness.DeclaresMethod<PromiseManifestPower>("AfterEnergyReset")
             && RegressionTestHarness.DeclaresMethod<PromiseManifestPower>("AfterPlayerTurnStart"),
-            "Expected Promise to gain 8 Block, grant 4 Plating with Extra, and upgrade its safe-next-turn reward from 1 to 2 draw and Energy.");
+            "Expected Promise to gain 7 Block, grant 4 Plating with Extra, and upgrade its safe-next-turn reward from 1 to 2 draw and Energy.");
 
         var dreaming = new Dreaming();
         var upgradedDreaming = RegressionTestHarness.MutableForCostTest(new Dreaming());

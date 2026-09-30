@@ -35,6 +35,7 @@ public class SpellSeal() : SpellCard(2, CardType.Attack, CardRarity.Basic, Targe
         await DamageCmd.Attack(DynamicVars.Damage.IntValue)
             .FromCard(this)
             .Targeting(RequiredTarget(play))
+            .WithHitFx(SakuraNativeHitFx.Blunt, null, SakuraNativeHitFx.HeavyTmpSfx)
             .Execute(choiceContext);
     }
 

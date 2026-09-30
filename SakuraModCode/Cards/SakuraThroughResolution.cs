@@ -101,7 +101,7 @@ internal static class SakuraThroughResolution
         IEnumerable<Creature> originalTargets,
         CardModel? cardSource)
     {
-        if (!TryGetActiveScope(cardSource, out var scope))
+        if (IsPropagationSuppressed || !TryGetActiveScope(cardSource, out var scope))
             return null;
 
         var targets = originalTargets as IReadOnlyList<Creature> ?? originalTargets.ToList();
@@ -183,7 +183,8 @@ internal static class SakuraThroughResolution
         PowerModel power,
         out ThroughPlayScope scope)
     {
-        if (!TryGetActiveScope(cardSource, out var active)
+        if (IsPropagationSuppressed
+            || !TryGetActiveScope(cardSource, out var active)
             || active.PrimaryTarget != target)
         {
             scope = null!;
@@ -199,8 +200,7 @@ internal static class SakuraThroughResolution
         out ThroughPlayScope scope)
     {
         scope = null!;
-        if (IsPropagationSuppressed
-            || cardSource is null
+        if (cardSource is null
             || !cardSource.IsMutable)
             return false;
 

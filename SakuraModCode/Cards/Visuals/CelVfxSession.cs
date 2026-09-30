@@ -183,6 +183,28 @@ internal abstract class CelVfxSession : IDisposable
             _reportFailure = reportFailure;
         }
 
+        /// <summary>
+        /// Whether a presentation is still running behind these cues.
+        /// </summary>
+        /// <remarks>
+        /// False when card VFX are off, when creation or the prelude failed, and
+        /// after any cue failed. A card whose bespoke effect replaces its baseline
+        /// hit feedback reads this to fall back to that feedback instead of
+        /// playing silently. Reading it never changes gameplay.
+        /// </remarks>
+        internal bool IsLive => _session is not null;
+
+        /// <summary>
+        /// <see cref="IsLive"/> narrowed by the session's own view of itself — for
+        /// a session that can stop drawing (its lifetime net expired, combat ended)
+        /// before the scope hears about it.
+        /// </summary>
+        internal bool IsLiveWhere(Func<TSession, bool> stillDrawing)
+        {
+            ArgumentNullException.ThrowIfNull(stillDrawing);
+            return _session is { } session && stillDrawing(session);
+        }
+
         internal async Task PrepareAsync()
         {
             if (_session is not { } session)

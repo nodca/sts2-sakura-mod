@@ -35,23 +35,23 @@ public class ClowSong() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Unc
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var count = await ExhaustSongCards(choiceContext) ?? 0;
-        await Sing(choiceContext, count);
+        var hits = await ExhaustSongCards(choiceContext);
+        await Sing(choiceContext, SongBeatSchedule.EchoBeats(hits ?? []));
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var exhausted = await ExhaustSongCards(choiceContext);
-        if (exhausted is null)
+        var hits = await ExhaustSongCards(choiceContext);
+        if (hits is null)
             return;
 
-        var count = exhausted.Value + ExtraHits;
-        await Sing(choiceContext, count);
+        await Sing(choiceContext, SongBeatSchedule.EchoBeats(hits, ExtraHits));
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(2);
 
-    private async Task<int?> ExhaustSongCards(PlayerChoiceContext choiceContext)
+    /// <summary>Exhausts the chosen cards and returns each one's hit count, in exhaust order.</summary>
+    private async Task<IReadOnlyList<int>?> ExhaustSongCards(PlayerChoiceContext choiceContext)
     {
         var hand = CardPile.GetCards(Owner, PileType.Hand).Where(card => card != this).ToList();
         if (hand.Count == 0)
@@ -71,24 +71,48 @@ public class ClowSong() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Unc
             card => hand.Contains(card),
             this)).ToList();
 
-        var count = selected.Sum(SongCount);
+        var hits = selected.Select(SongCount).ToList();
         foreach (var card in selected)
             await CardCmd.Exhaust(choiceContext, card);
 
-        return count;
+        return hits;
     }
 
-    private int SongCount(CardModel card) =>
+    /// <summary>Hits one exhausted card sings: the Voice card's Echo adds <c>Magic</c> more.</summary>
+    internal static int SongCount(CardModel card) =>
         card is SakuraSourceCard { Identity: SourceCardIdentity.Voice } voice
         && voice.DynamicVars.TryGetValue("Magic", out var magic)
             ? 1 + magic.IntValue
             : 1;
 
-    private async Task Sing(PlayerChoiceContext choiceContext, int count)
+    private Task Sing(PlayerChoiceContext choiceContext, bool[] echoes)
     {
-        for (var i = 0; i < count; i++)
-            await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies.ToList(), ReleasedDamage());
+        var count = echoes.Length;
+        if (count <= 0)
+            return Task.CompletedTask;
+
+        // The staff opens only after the exhaust selection: the selection is an
+        // unbounded player interaction and the session is bounded by a wall clock.
+        return SongStaffVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            CombatState!.HittableEnemies.ToList(),
+            echoes,
+            async cues =>
+            {
+                for (var i = 0; i < count; i++)
+                {
+                    var enemies = CombatState!.HittableEnemies.ToList();
+                    await cues.Beat(i, enemies);
+                    await DealDamageToEnemies(choiceContext, enemies, ReleasedDamage(), hitVfxNode: SongHitFallback(cues));
+                }
+                cues.Finale();
+            });
     }
+
+    /// <summary>The vanilla line burst, only when the staff is not being drawn.</summary>
+    internal static Func<Creature, Godot.Node2D?>? SongHitFallback(SongStaffVfx.Cues cues) =>
+        cues.IsLive ? null : SakuraNativeHitFx.LineBurst;
 }
 
 public class SakuraSong() : SakuraFormCard(1, CardType.Attack, TargetType.AllEnemies)
@@ -99,19 +123,35 @@ public class SakuraSong() : SakuraFormCard(1, CardType.Attack, TargetType.AllEne
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var count = await ExhaustSongCards(choiceContext);
-        for (var i = 0; i < count; i++)
-        {
-            await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies.ToList(), ReleasedDamage());
-            await GainBlock(play, ReleasedBlock());
-        }
+        var echoes = SongBeatSchedule.EchoBeats(await ExhaustSongCards(choiceContext));
+        var count = echoes.Length;
+        if (count <= 0)
+            return;
+
+        await SongStaffVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            CombatState!.HittableEnemies.ToList(),
+            echoes,
+            async cues =>
+            {
+                for (var i = 0; i < count; i++)
+                {
+                    var enemies = CombatState!.HittableEnemies.ToList();
+                    await cues.Beat(i, enemies);
+                    await DealDamageToEnemies(choiceContext, enemies, ReleasedDamage(), hitVfxNode: ClowSong.SongHitFallback(cues));
+                    await GainBlock(play, ReleasedBlock());
+                }
+                cues.Finale();
+            });
     }
 
-    private async Task<int> ExhaustSongCards(PlayerChoiceContext choiceContext)
+    /// <summary>Exhausts the chosen cards and returns each one's hit count, in exhaust order.</summary>
+    private async Task<IReadOnlyList<int>> ExhaustSongCards(PlayerChoiceContext choiceContext)
     {
         var hand = CardPile.GetCards(Owner, PileType.Hand).Where(card => card != this).ToList();
         if (hand.Count == 0)
-            return 0;
+            return [];
 
         var selected = (await CardSelectCmd.FromHand(
             choiceContext,
@@ -123,16 +163,10 @@ public class SakuraSong() : SakuraFormCard(1, CardType.Attack, TargetType.AllEne
             card => hand.Contains(card),
             this)).ToList();
 
-        var count = selected.Sum(SongCount);
+        var hits = selected.Select(ClowSong.SongCount).ToList();
         foreach (var card in selected)
             await CardCmd.Exhaust(choiceContext, card);
 
-        return count;
+        return hits;
     }
-
-    private int SongCount(CardModel card) =>
-        card is SakuraSourceCard { Identity: SourceCardIdentity.Voice } voice
-        && voice.DynamicVars.TryGetValue("Magic", out var magic)
-            ? 1 + magic.IntValue
-            : 1;
 }

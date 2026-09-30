@@ -31,7 +31,7 @@ public class ClowMaze() : ClowExtraEffectCard(2, CardType.Skill, CardRarity.Comm
 
     public override bool GainsBlock => true;
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceBlockVar(17, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceBlockVar(16, ValueProp.Move)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await GainBlock(play, ReleasedBlock());

@@ -34,7 +34,7 @@ public class Break() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity
                     await CreatureCmd.LoseBlock(target, target.Block);
 
                 var damage = DynamicVars.Damage.IntValue * (hadBlock ? 2 : 1);
-                await SakuraActions.Attack(choiceContext, this, target, damage);
+                await SakuraActions.Attack(choiceContext, this, target, damage, hitVfx: SakuraNativeHitFx.RockShatter, hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx);
                 if (activation.IsActive)
                     await ApplyExtraEffect(choiceContext, target);
             }

@@ -52,11 +52,12 @@ public class ClowErase() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Co
     {
         if (SakuraEnemyRules.IsMinion(target) || (!SakuraEnemyRules.IsEliteOrBossCombat(target) && target.CurrentHp * 100 <= target.MaxHp * killHpPercent))
         {
+            SakuraNativeHitFx.PlayOn(target, SakuraNativeHitFx.EraseSmoke);
             await CreatureCmd.Kill(target, force: true);
             return;
         }
 
-        await DealDamage(choiceContext, target, ReleasedDamage());
+        await DealDamage(choiceContext, target, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.EraseSmoke);
     }
 }
 

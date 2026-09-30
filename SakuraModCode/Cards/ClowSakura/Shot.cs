@@ -40,7 +40,7 @@ public class ClowShot() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Com
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage(), hitCount: Hits);
+        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage(), hitCount: Hits, hitVfx: SakuraNativeHitFx.Blunt);
         await ApplyPower<VigorPower>(choiceContext, Owner.Creature, ReleasedValue("VigorPower"));
     }
 
@@ -64,7 +64,7 @@ public class SakuraShot() : SakuraFormCard(1, CardType.Attack, TargetType.AnyEne
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, ReleasedDamage(), hitCount: ReleasedMagic());
+        await DealDamage(choiceContext, target, ReleasedDamage(), hitCount: ReleasedMagic(), hitVfx: SakuraNativeHitFx.Blunt);
     }
 }
 

@@ -36,7 +36,7 @@ public class ClowFight() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ra
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage());
+        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage(), hitVfx: SakuraNativeHitFx.Blunt, hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx);
         await SakuraMagicCharge.GainMagic(choiceContext, Owner, 1, this);
         var temporaryStrength = ReleasedMagic() + (Owner.Creature.GetPower<SakuraFightPower>()?.Amount ?? 0);
         await ApplyPower<ClassicTemporaryStrengthPower>(choiceContext, Owner.Creature, temporaryStrength);

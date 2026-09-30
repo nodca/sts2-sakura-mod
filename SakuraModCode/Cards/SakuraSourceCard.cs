@@ -94,7 +94,18 @@ public abstract class SakuraSourceCard(
     protected static Creature RequiredTarget(CardPlay play) =>
         play.Target ?? throw new InvalidOperationException("Card target is required by this card's TargetType.");
 
-    protected async Task<AttackCommand?> DealDamage(PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move, int hitCount = 1, string? hitSfx = null, Func<Creature, Task>? onHit = null)
+    protected async Task<AttackCommand?> DealDamage(
+        PlayerChoiceContext choiceContext,
+        Creature target,
+        int amount,
+        ValueProp props = ValueProp.Move,
+        int hitCount = 1,
+        string? hitSfx = null,
+        Func<Creature, Task>? onHit = null,
+        string? hitVfx = null,
+        string? hitTmpSfx = null,
+        Func<Creature, Godot.Node2D?>? hitVfxNode = null,
+        bool spawnHitVfxAtBase = false)
     {
         if (hitCount <= 0)
             return null;
@@ -105,23 +116,51 @@ public abstract class SakuraSourceCard(
             .WithValueProp(props)
             .WithNoAttackerAnim()
             .Targeting(target);
-        if (hitSfx != null)
-            attack.WithHitFx(null, hitSfx);
+        WithHitFx(attack, hitVfx, hitSfx, hitTmpSfx, hitVfxNode, spawnHitVfxAtBase);
         return await WithHitObserver(attack, onHit).Execute(choiceContext);
     }
 
-    protected async Task<AttackCommand?> DealDamageToEnemies(PlayerChoiceContext choiceContext, IEnumerable<Creature> targets, int amount, ValueProp props = ValueProp.Move, int hitCount = 1)
+    protected async Task<AttackCommand?> DealDamageToEnemies(
+        PlayerChoiceContext choiceContext,
+        IEnumerable<Creature> targets,
+        int amount,
+        ValueProp props = ValueProp.Move,
+        int hitCount = 1,
+        string? hitVfx = null,
+        string? hitTmpSfx = null,
+        Func<Creature, Godot.Node2D?>? hitVfxNode = null)
     {
         if (hitCount <= 0)
             return null;
 
-        return await DamageCmd.Attack(amount)
+        var attack = DamageCmd.Attack(amount)
             .WithHitCount(hitCount)
             .FromCard(this)
             .WithValueProp(props)
             .WithNoAttackerAnim()
-            .TargetingFiltered(targets.Where(static target => target.IsAlive).ToList())
-            .Execute(choiceContext);
+            .TargetingFiltered(targets.Where(static target => target.IsAlive).ToList());
+        WithHitFx(attack, hitVfx, null, hitTmpSfx, hitVfxNode, spawnHitVfxAtBase: false);
+        return await attack.Execute(choiceContext);
+    }
+
+    /// <summary>
+    /// Applies an optional vanilla hit effect: a scene path through <c>WithHitFx</c>, or a
+    /// per-target node factory through <c>WithHitVfxNode</c> for effects that take a tint or scale.
+    /// </summary>
+    private static void WithHitFx(
+        AttackCommand attack,
+        string? vfx,
+        string? sfx,
+        string? tmpSfx,
+        Func<Creature, Godot.Node2D?>? vfxNode,
+        bool spawnHitVfxAtBase)
+    {
+        if (vfx != null || sfx != null || tmpSfx != null)
+            attack.WithHitFx(vfx, sfx, tmpSfx);
+        if (vfx != null && spawnHitVfxAtBase)
+            attack.WithHitVfxSpawnedAtBase();
+        if (vfxNode != null)
+            attack.WithHitVfxNode(vfxNode);
     }
 
     protected async Task<AttackCommand?> DealDamageToRandomEnemies(
@@ -235,11 +274,14 @@ public abstract class SakuraSourceCard(
         }
     }
 
-    protected async Task DealDamageHit(AttackContext attackContext, PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move)
+    protected async Task DealDamageHit(AttackContext attackContext, PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move, string? hitVfx = null)
     {
         if (!target.IsAlive)
             return;
 
+        // This hit bypasses AttackCommand, so it plays the hit VFX the way AttackCommand does.
+        if (hitVfx != null)
+            VfxCmd.PlayOnCreatureCenter(target, hitVfx);
         attackContext.AddHit(await CreatureCmd.Damage(choiceContext, target, amount, props, Owner.Creature, this));
     }
 

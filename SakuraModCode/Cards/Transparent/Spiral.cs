@@ -43,7 +43,7 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
         var target = RequiredTarget(play);
         var damage = SpiralRules.ScaledValue(this, DynamicVars.Damage);
         var block = SpiralRules.ScaledValue(this, DynamicVars.Block);
-        await SakuraActions.Attack(choiceContext, this, target, damage);
+        await SakuraActions.Attack(choiceContext, this, target, damage, hitVfx: SakuraNativeHitFx.Slash);
         await CreatureCmd.GainBlock(Owner.Creature, block, ValueProp.Move, play, false);
         if (IsUpgraded)
             await ScheduleNextTurnCopies(choiceContext);
