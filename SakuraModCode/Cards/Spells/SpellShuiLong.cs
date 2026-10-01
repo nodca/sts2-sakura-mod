@@ -30,5 +30,9 @@ public class SpellShuiLong() : ElementSpellCard(0, CardType.Attack, TargetType.N
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(4, ValueProp.Move)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.WaterSplash);
+        await SpellTalismanVfx.PlayOrResolveAsync(this, async cues =>
+        {
+            await cues.Release();
+            await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.WaterSplash);
+        });
 }

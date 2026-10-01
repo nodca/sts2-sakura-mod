@@ -59,6 +59,7 @@ public sealed class LibraEncounter() : FireEncounterTemplate(RoomType.Elite)
 
 public sealed class FireyEncounter() : FireEncounterTemplate(RoomType.Boss)
 {
+    public override EncounterAssetProfile AssetProfile => FourthActEncounterAssets.FireBoss;
     public override IReadOnlyList<string> Slots => ["BOSS"];
     public override IEnumerable<MonsterModel> AllPossibleMonsters => [ModelDb.Monster<FireyMonster>()];
     protected override IReadOnlyList<(MonsterModel, string?)> Monsters => [(ModelDb.Monster<FireyMonster>().ToMutable(), "BOSS")];
@@ -66,6 +67,7 @@ public sealed class FireyEncounter() : FireEncounterTemplate(RoomType.Boss)
 
 public sealed class LightEncounter() : FireEncounterTemplate(RoomType.Boss)
 {
+    public override EncounterAssetProfile AssetProfile => FourthActEncounterAssets.LightBoss;
     protected override BackgroundAssets? BuildProgrammaticCombatBackground(ActModel parentAct, Rng rng) =>
         FourthActCombatBackgrounds.CreateLightEternalDay();
 

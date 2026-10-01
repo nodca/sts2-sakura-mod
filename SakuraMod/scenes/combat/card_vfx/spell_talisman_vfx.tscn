@@ -1,0 +1,27 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" uid="uid://cjt35yeytttqd" path="res://SakuraMod/shaders/card_vfx/spell_talisman.gdshader" id="1_talisman"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_talisman"]
+resource_local_to_scene = true
+shader = ExtResource("1_talisman")
+shader_parameter/mask_size = Vector2(220, 500)
+shader_parameter/glyph_colour = Color(1, 0.42, 0.16, 1)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/glow = 0.0
+shader_parameter/opacity = 1.0
+
+[node name="SpellTalismanVfx" type="Node2D"]
+
+[node name="Anchor" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Glyph" type="ColorRect" parent="Anchor"]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_talisman")
+offset_right = 221.0
+offset_bottom = 491.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)

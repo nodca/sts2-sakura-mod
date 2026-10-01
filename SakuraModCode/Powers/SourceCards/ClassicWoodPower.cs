@@ -32,7 +32,7 @@ public class ClassicWoodPower : SakuraPowerModel
     public const int DefaultStrengthLoss = 2;
     public const int InitialPoison = 3;
 
-    protected override string IconFileName => "earthy_power.png";
+    protected override string IconFileName => "wood_power.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
@@ -84,4 +84,3 @@ public class ClassicWoodPower : SakuraPowerModel
     protected virtual int PoisonAmount(int strengthLoss) =>
         strengthLoss / DefaultStrengthLoss * InitialPoison;
 }
-

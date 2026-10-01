@@ -32,8 +32,14 @@ public class SpellLeiDi() : ElementSpellCard(0, CardType.Attack, TargetType.None
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
-        if (target is not null)
+        if (target is null)
+            return;
+
+        await SpellTalismanVfx.PlayOrResolveAsync(this, async cues =>
+        {
+            await cues.Release();
             await DealDamage(choiceContext, target, ReleasedDamage(), hitSfx: SakuraNativeHitFx.LightningSfx, hitVfx: SakuraNativeHitFx.Lightning, spawnHitVfxAtBase: true);
+        });
     }
 }
 

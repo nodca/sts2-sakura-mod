@@ -32,7 +32,11 @@ public class SpellFengHua() : ElementSpellCard(0, CardType.Attack, TargetType.An
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, ReleasedDamage(), hitCount: ReleasedMagic(), hitVfx: SakuraNativeHitFx.FlyingSlash);
+        await SpellTalismanVfx.PlayOrResolveAsync(this, async cues =>
+        {
+            await cues.Release();
+            await DealDamage(choiceContext, target, ReleasedDamage(), hitCount: ReleasedMagic(), hitVfx: SakuraNativeHitFx.FlyingSlash);
+        });
     }
 }
 

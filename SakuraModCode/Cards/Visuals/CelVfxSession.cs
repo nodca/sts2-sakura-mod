@@ -412,7 +412,7 @@ internal abstract class CelVfxSession : IDisposable
 
     private async Task<bool> PlayStandardPrelude(CardModel card)
     {
-        if (!TryFindNativePlayedCard(card, out var nativeCard))
+        if (!TryFindNativePlayedCard(_room, card, out var nativeCard))
             return IsActive();
 
         try
@@ -557,10 +557,14 @@ internal abstract class CelVfxSession : IDisposable
         _preludeLineMaterial.SetShaderParameter("speed_lines_enabled", 1f);
     }
 
-    private bool TryFindNativePlayedCard(CardModel card, out NCard nativeCard)
+    /// <summary>
+    /// The node of <paramref name="card"/> while it sits in the play area, where
+    /// vanilla holds a card for the length of its resolution.
+    /// </summary>
+    protected static bool TryFindNativePlayedCard(NCombatRoom room, CardModel card, out NCard nativeCard)
     {
         nativeCard = null!;
-        if (_room.Ui is not { } ui
+        if (room.Ui is not { } ui
             || NCard.FindOnTable(card) is not { } foundCard
             || !GodotObject.IsInstanceValid(foundCard)
             || !ui.PlayContainer.IsAncestorOf(foundCard))

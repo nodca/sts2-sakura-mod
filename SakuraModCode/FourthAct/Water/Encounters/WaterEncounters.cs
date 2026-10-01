@@ -2,6 +2,8 @@ using Godot;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Rooms;
 using SakuraMod.SakuraModCode.FourthAct.Water.Models;
+using SakuraMod.SakuraModCode.FourthAct.Routing;
+using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Water.Encounters;
 
@@ -21,6 +23,7 @@ public sealed class RainEncounter() : WaterMonsterTemplate(RoomType.Elite)
 
 public sealed class WateryEncounter() : WaterMonsterTemplate(RoomType.Boss)
 {
+    public override EncounterAssetProfile AssetProfile => FourthActEncounterAssets.WaterBoss;
     protected override IReadOnlyDictionary<string, Vector2> SlotPositions { get; } = new Dictionary<string, Vector2> { ["BOSS"] = new(1450, 710) };
     public override IEnumerable<MonsterModel> AllPossibleMonsters => [ModelDb.Monster<WateryMonster>()];
     protected override IReadOnlyList<(MonsterModel, string?)> GenerateMonsters() => [(ModelDb.Monster<WateryMonster>().ToMutable(), "BOSS")];

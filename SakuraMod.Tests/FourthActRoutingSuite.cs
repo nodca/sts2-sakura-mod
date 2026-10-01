@@ -102,6 +102,31 @@ public sealed class FourthActRoutingSuite
     }
 
     [Fact]
+    public void MapIconsFollowBranchCoordinatesAndTheRestoredEndpointRoute()
+    {
+        var routes = FourthActRouteCatalog.Resolve().CompleteRoutes;
+        var endpoint = new MapCoord { col = 3, row = 5 };
+        var expected = new[] { "windy", "watery", "firey", "earthy" };
+        for (var route = 0; route < expected.Length; route++)
+        {
+            var branchBoss = new MapCoord { col = route * 2, row = 3 };
+            var icon = SakuraFourthActMapIcons.Resolve(routes, MapPointType.Boss, branchBoss, endpoint, []);
+            Assert.EndsWith($"/{expected[route]}_icon.png", icon!.RunHistoryIconPath);
+
+            // This is the same persisted coordinate history used after SavedActMap restoration.
+            var finalIcon = SakuraFourthActMapIcons.Resolve(routes, MapPointType.Boss, endpoint, endpoint,
+                [new MapCoord { col = route * 2, row = 4 }]);
+            Assert.EndsWith(route < 2 ? "/dark_icon.png" : "/light_icon.png", finalIcon!.RunHistoryIconPath);
+        }
+        Assert.EndsWith("/light_dark_icon.png",
+            SakuraFourthActMapIcons.Resolve(routes, MapPointType.Boss, endpoint, endpoint, [])!.RunHistoryIconPath);
+        Assert.Null(SakuraFourthActMapIcons.Resolve(routes, MapPointType.Elite,
+            new MapCoord { col = 0, row = 2 }, endpoint, []));
+        Assert.Null(SakuraFourthActMapIcons.Resolve(routes, MapPointType.Boss,
+            new MapCoord { col = 1, row = 3 }, endpoint, []));
+    }
+
+    [Fact]
     public void RouteRewardIdentityComesFromTheActualEncounter()
     {
         Assert.Equal(SourceCardIdentity.Fly,

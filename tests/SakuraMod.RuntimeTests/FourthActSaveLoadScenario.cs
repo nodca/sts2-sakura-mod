@@ -1,9 +1,12 @@
+using Godot;
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes;
+using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
@@ -47,6 +50,7 @@ internal static class FourthActSaveLoadScenario
             run.CurrentActIndex);
         assertions.True("fourth_act_write_identity", run.Act is SakuraFourthAct);
         assertions.True("fourth_act_write_map_type", run.Map is SakuraFourthActMap);
+        InspectBossMapLayout(run, assertions, "write", "light_dark");
 
         var map = (SakuraFourthActMap)run.Map;
         await RunManager.Instance.EnterMapCoord(map.MerchantMapPoint.coord);
@@ -54,7 +58,7 @@ internal static class FourthActSaveLoadScenario
             () => run.CurrentRoom?.RoomType == RoomType.Shop,
             "fourth-act merchant room");
 
-        var elite = AssertSingle(map.MerchantMapPoint.Children, "fourth-act Wind elite route");
+        var elite = map.MerchantMapPoint.Children.Single(static point => point.coord.col == 0);
         await RunManager.Instance.EnterMapCoord(elite.coord);
         await CombatScenarioContext.WaitUntilAsync(
             () => CombatManager.Instance.IsInProgress
@@ -62,6 +66,15 @@ internal static class FourthActSaveLoadScenario
                 && run.CurrentRoom?.RoomType == RoomType.Elite,
             "fourth-act Wind elite opening hand");
         await RunManager.Instance.ActionExecutor.FinishedExecutingActions();
+        // EnterMapCoord bypasses the UI's travel handler; perform the same native
+        // refresh it calls after travel, without rebuilding the map or its nodes.
+        var screen = NMapScreen.Instance!;
+        screen.RefreshAllPointVisuals();
+        var points = (Dictionary<MapCoord, NMapPoint>)AccessTools.Field(typeof(NMapScreen), "_mapPointDictionary")
+            .GetValue(screen)!;
+        assertions.Equal("fourth_act_write_endpoint_switches_after_route_visit",
+            "res://SakuraMod/images/map/fourth_act/dark_icon.png",
+            points[run.Map.BossMapPoint.coord].GetNode<TextureRect>("%PlaceholderImage").Texture?.ResourcePath);
         var combat = CombatManager.Instance.DebugOnlyGetState()
             ?? throw new InvalidOperationException("Fourth-act elite combat has no state after startup.");
         var playerCombat = context.Player.PlayerCombatState
@@ -157,6 +170,7 @@ internal static class FourthActSaveLoadScenario
         assertions.Equal("fourth_act_read_identity", expected.ActId, run.Act.Id.ToString());
         assertions.True("fourth_act_read_model_type", run.Act is SakuraFourthAct);
         assertions.True("fourth_act_read_saved_map_type", run.Map is SavedActMap);
+        InspectBossMapLayout(run, assertions, "read", "dark");
         assertions.Equal("fourth_act_read_visited_count", expected.VisitedCount, run.VisitedMapCoords.Count);
         assertions.True("fourth_act_read_merchant_visited", run.VisitedMapCoords.Contains(merchantCoord));
         assertions.True("fourth_act_read_elite_visited", run.VisitedMapCoords.Contains(eliteCoord));
@@ -213,11 +227,62 @@ internal static class FourthActSaveLoadScenario
         return request.PriorSnapshotPath;
     }
 
-    private static T AssertSingle<T>(IReadOnlyCollection<T> values, string description) =>
-        values.Count == 1
-            ? values.Single()
-            : throw new InvalidOperationException(
-                $"Expected one {description}, found {values.Count}.");
+    private static void InspectBossMapLayout(RunState run, RuntimeAssertionCollector assertions,
+        string phase, string endpointName)
+    {
+        var screen = NMapScreen.Instance
+            ?? throw new InvalidOperationException("The fourth-act map screen is unavailable.");
+        var points = (Dictionary<MapCoord, NMapPoint>)AccessTools.Field(typeof(NMapScreen), "_mapPointDictionary")
+            .GetValue(screen)!;
+        var branches = points.Values.Where(static node => node.Point.coord.row == 3)
+            .OrderBy(static node => node.Point.coord.col).ToArray();
+        var prefix = $"fourth_act_{phase}_map";
+        assertions.Equal($"{prefix}_elemental_boss_count", 4, branches.OfType<NBossMapPoint>().Count());
+        var endpoint = points[run.Map.BossMapPoint.coord];
+        assertions.True($"{prefix}_endpoint_boss_type", endpoint is NBossMapPoint);
+        assertions.Equal($"{prefix}_endpoint_icon", $"res://SakuraMod/images/map/fourth_act/{endpointName}_icon.png",
+            endpoint.GetNode<TextureRect>("%PlaceholderImage").Texture?.ResourcePath);
+        assertions.Equal($"{prefix}_endpoint_scale", Vector2.One, endpoint.Scale);
+
+        var names = new[] { "windy", "watery", "firey", "earthy" };
+        var getLineEndpoint = AccessTools.Method(typeof(NMapScreen), "GetLineEndpoint");
+        var paths = (Dictionary<(MapCoord, MapCoord), IReadOnlyList<TextureRect>>)
+            AccessTools.Field(typeof(NMapScreen), "_paths").GetValue(screen)!;
+        var previousRight = float.NegativeInfinity;
+        for (var index = 0; index < branches.Length; index++)
+        {
+            var boss = (NBossMapPoint)branches[index];
+            var icon = boss.GetNode<TextureRect>("%PlaceholderImage");
+            assertions.Equal($"{prefix}_{names[index]}_texture",
+                $"res://SakuraMod/images/map/fourth_act/{names[index]}_icon.png", icon.Texture?.ResourcePath);
+            assertions.True($"{prefix}_{names[index]}_outline", boss.GetNode<TextureRect>("%PlaceholderOutline").Texture is not null);
+
+            var center = (Vector2)getLineEndpoint.Invoke(screen, [boss])!;
+            assertions.True($"{prefix}_{names[index]}_path_center",
+                center.IsEqualApprox(boss.GetTransform() * (boss.Size * 0.5f)));
+            // Include the native 1.05 hover enlargement and the clickable root.
+            var width = Math.Max(boss.Size.X, icon.Size.X * 1.05f) * boss.Scale.X;
+            var left = center.X - width * 0.5f;
+            var right = center.X + width * 0.5f;
+            assertions.True($"{prefix}_{names[index]}_spacing", left - previousRight >= 20f,
+                $"Gap {left - previousRight:F1}; center {center}; hover width {width:F1}.");
+            assertions.True($"{prefix}_{names[index]}_inside_map", left >= 0f && right <= screen.Size.X);
+            previousRight = right;
+            assertions.True($"{prefix}_{names[index]}_incoming_path",
+                paths.TryGetValue((new MapCoord(index * 2, 2), boss.Point.coord), out var incoming) && incoming.Count > 0);
+            assertions.True($"{prefix}_{names[index]}_outgoing_path",
+                paths.TryGetValue((boss.Point.coord, new MapCoord(index * 2, 4)), out var outgoing) && outgoing.Count > 0);
+            assertions.True($"{prefix}_{names[index]}_controller_neighbor",
+                boss.GetNodeOrNull<NMapPoint>(boss.FocusNeighborRight) == branches[Math.Min(index + 1, branches.Length - 1)]);
+
+            var state = boss.State;
+            boss.OnSelected();
+            assertions.Equal($"{prefix}_{names[index]}_selected_state", MapPointState.Traveled, boss.State);
+            assertions.Equal($"{prefix}_{names[index]}_selected_tint", run.Act.MapTraveledColor, icon.SelfModulate);
+            boss.State = state;
+        }
+        screen.RefreshAllMapPointVotes();
+    }
 }
 
 internal sealed record FourthActSaveSnapshot(

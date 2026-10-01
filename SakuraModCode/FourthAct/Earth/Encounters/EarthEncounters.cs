@@ -51,6 +51,7 @@ public sealed class WoodEncounter() : EarthEncounterTemplate(RoomType.Elite)
 
 public sealed class EarthyEncounter() : EarthEncounterTemplate(RoomType.Boss)
 {
+    public override EncounterAssetProfile AssetProfile => FourthActEncounterAssets.EarthBoss;
     public override IReadOnlyList<string> Slots => ["BOSS"];
     public override IEnumerable<MonsterModel> AllPossibleMonsters => [ModelDb.Monster<EarthyMonster>()];
     protected override IReadOnlyList<(MonsterModel, string?)> Monsters => [(ModelDb.Monster<EarthyMonster>().ToMutable(), "BOSS")];

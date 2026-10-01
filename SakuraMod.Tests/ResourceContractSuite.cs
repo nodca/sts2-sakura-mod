@@ -2246,7 +2246,7 @@ public sealed class ResourceContractSuite
             : string.Empty;
         RegressionTestHarness.Require(
             session.Contains("SakuraStandeeIdleController.TryGet(casterNode)", StringComparison.Ordinal)
-            && standardPrelude.Contains("TryFindNativePlayedCard(card, out var nativeCard)", StringComparison.Ordinal)
+            && standardPrelude.Contains("TryFindNativePlayedCard(_room, card, out var nativeCard)", StringComparison.Ordinal)
             && standardPrelude.Contains("CreateStandardPrelude(nativeCard);", StringComparison.Ordinal)
             && standardPrelude.Contains("WaitActive(StandardPreludeLeadDuration)", StringComparison.Ordinal)
             && standardPrelude.Contains("BeginWandPreludeHold();", StringComparison.Ordinal)

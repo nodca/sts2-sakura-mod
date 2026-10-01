@@ -20,6 +20,7 @@ using MegaCrit.Sts2.Core.Nodes.Pooling;
 using MegaCrit.Sts2.Core.Nodes.RestSite;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
@@ -116,6 +117,14 @@ internal static class RuntimeSmokeScenario
         assertions.True(
             "fourth_act_terminal_transition_patch_owned_by_sakura",
             terminalTransitionPatch?.Prefixes.Any(static patch => patch.owner == SakuraHarmonyOwner) == true);
+        var elementalRewardsPatch = Harmony.GetPatchInfo(AccessTools.Method(
+            typeof(MegaCrit.Sts2.Core.Nodes.Screens.NRewardsScreen), "OnProceedButtonPressed"));
+        assertions.True("fourth_act_elemental_rewards_patch_owned_by_sakura",
+            elementalRewardsPatch?.Prefixes.Any(static patch => patch.owner == SakuraHarmonyOwner) == true);
+        var restAnimationPatch = Harmony.GetPatchInfo(AccessTools.Method(
+            typeof(MegaCrit.Sts2.Core.Nodes.RestSite.NRestSiteCharacter), "_Ready"));
+        assertions.True("fourth_act_rest_animation_patch_owned_by_sakura",
+            restAnimationPatch?.Transpilers.Any(static patch => patch.owner == SakuraHarmonyOwner) == true);
         var restoredTerminalTransitionPatch = Harmony.GetPatchInfo(AccessTools.Method(
             typeof(RunManager),
             nameof(RunManager.LoadIntoLatestMapCoord),
@@ -335,6 +344,7 @@ internal static class RuntimeSmokeScenario
             .Single(static point => point.coord.col == 2)
             .coord;
         runState.Map = new SavedActMap(SerializableActMap.FromActMap(map));
+        InspectFourthActMapIcons(runState, assertions);
         assertions.True("fourth_act_water_coord_visited", runState.AddVisitedMapCoord(waterEliteCoord));
         var waterElite = SakuraFourthActEncounterDispatch.Resolve(runState, RoomType.Elite);
         assertions.True(
@@ -344,12 +354,68 @@ internal static class RuntimeSmokeScenario
         assertions.True(
             "fourth_act_dispatch_rejects_wrong_room_type",
             SakuraFourthActEncounterDispatch.Resolve(runState, RoomType.Boss) is null);
+        InspectFourthActEndpointIcon(runState, "dark", assertions);
         return new
         {
             type = map.GetType().FullName,
             routes = fourthActMap.Routes.Count,
             water_elite = waterElite?.GetType().Name
         };
+    }
+
+    private static void InspectFourthActMapIcons(RunState runState, RuntimeAssertionCollector assertions)
+    {
+        var names = new[] { "windy", "watery", "firey", "earthy" };
+        for (var index = 0; index < names.Length; index++)
+        {
+            var point = runState.Map.GetAllMapPoints()
+                .Single(point => point.coord.col == index * 2 && point.coord.row == 3);
+            var node = NBossMapPoint.Create(point, null!, runState);
+            try
+            {
+                var icon = node.GetNode<TextureRect>("%PlaceholderImage");
+                var outline = node.GetNode<TextureRect>("%PlaceholderOutline");
+                AccessTools.Field(typeof(NBossMapPoint), "_placeholderImage").SetValue(node, icon);
+                AccessTools.Field(typeof(NBossMapPoint), "_placeholderOutline").SetValue(node, outline);
+                AccessTools.Method(typeof(NBossMapPoint), "RefreshColorInstantly").Invoke(node, null);
+                assertions.Equal($"fourth_act_{names[index]}_map_icon",
+                    $"res://SakuraMod/images/map/fourth_act/{names[index]}_icon.png", icon.Texture?.ResourcePath);
+                assertions.True($"fourth_act_{names[index]}_map_outline", outline.Texture is not null);
+                assertions.Equal($"fourth_act_{names[index]}_map_ink_color",
+                    runState.Act.MapUntraveledColor,
+                    icon.SelfModulate);
+            }
+            finally
+            {
+                node.Free();
+            }
+        }
+        InspectFourthActEndpointIcon(runState, "light_dark", assertions);
+        assertions.True("fourth_act_light_map_icon_available",
+            ResourceLoader.Load<Texture2D>(FourthActEncounterAssets.LightBoss.RunHistoryIconPath!) is not null);
+        assertions.True("fourth_act_light_map_outline_available",
+            ResourceLoader.Load<Texture2D>(FourthActEncounterAssets.LightBoss.RunHistoryIconOutlinePath!) is not null);
+    }
+
+    private static void InspectFourthActEndpointIcon(RunState runState, string expected,
+        RuntimeAssertionCollector assertions)
+    {
+        var node = NBossMapPoint.Create(runState.Map.BossMapPoint, null!, runState);
+        try
+        {
+            var icon = node.GetNode<TextureRect>("%PlaceholderImage");
+            var outline = node.GetNode<TextureRect>("%PlaceholderOutline");
+            AccessTools.Field(typeof(NBossMapPoint), "_placeholderImage").SetValue(node, icon);
+            AccessTools.Field(typeof(NBossMapPoint), "_placeholderOutline").SetValue(node, outline);
+            AccessTools.Method(typeof(NBossMapPoint), "RefreshColorInstantly").Invoke(node, null);
+            assertions.Equal($"fourth_act_{expected}_endpoint_map_icon",
+                $"res://SakuraMod/images/map/fourth_act/{expected}_icon.png", icon.Texture?.ResourcePath);
+            assertions.True($"fourth_act_{expected}_endpoint_map_outline", outline.Texture is not null);
+        }
+        finally
+        {
+            node.Free();
+        }
     }
 
     private static object InspectFourthActReward(RuntimeAssertionCollector assertions)

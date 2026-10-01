@@ -29,7 +29,14 @@ public class SpellHuoShen() : ElementSpellCard(0, CardType.Attack, TargetType.An
 {
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(5, ValueProp.Move)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.FireBurst);
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        var target = RequiredTarget(play);
+        await SpellTalismanVfx.PlayOrResolveAsync(this, async cues =>
+        {
+            await cues.Release();
+            await DealDamage(choiceContext, target, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.FireBurst);
+        });
+    }
 }
 

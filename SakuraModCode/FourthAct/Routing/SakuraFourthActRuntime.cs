@@ -1,11 +1,15 @@
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Threading;
 using System.Threading.Tasks;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Nodes.RestSite;
+using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using MegaCrit.Sts2.Core.Rooms;
@@ -240,6 +244,31 @@ internal static class SakuraFourthActTerminalTransitionPatch
     }
 }
 
+// Native terminal reward screens treat every Boss room as an act finale. The
+// branch bosses have a rest-site child and must use the normal map continuation.
+[HarmonyPatch(typeof(NRewardsScreen), "OnProceedButtonPressed")]
+internal static class SakuraFourthActElementalBossRewardsPatch
+{
+    [HarmonyPrefix]
+    private static bool Prefix(IRunState ____runState, bool ____isTerminal)
+    {
+        if (!____isTerminal
+            || RunManager.Instance.debugAfterCombatRewardsOverride is not null
+            || ____runState.Act is not SakuraFourthAct
+            || ____runState.CurrentRoom is not CombatRoom { RoomType: RoomType.Boss } room
+            || ____runState.CurrentMapCoord is not { } coord
+            || SakuraFourthActMap.EncounterAt(
+                FourthActRouteCatalog.Resolve().CompleteRoutes, coord, ____runState.Rng.Seed)
+                ?.EncounterType != room.Encounter.GetType())
+        {
+            return true;
+        }
+
+        TaskHelper.RunSafely(RunManager.Instance.ProceedFromTerminalRewardsScreen());
+        return false;
+    }
+}
+
 [HarmonyPatch(typeof(RunManager), nameof(RunManager.LoadIntoLatestMapCoord))]
 internal static class SakuraFourthActRestoredTerminalTransitionPatch
 {
@@ -272,4 +301,27 @@ internal static class SakuraFourthActRunTransitionPatch
         if (runState is not null)
             SakuraFourthActRunTransition.TryAppendSlot(runState);
     }
+}
+
+// The native rest-site animation switch accepts only act indices 0..2. Sakura's
+// fourth act reuses Glory assets; project that index only for this visual read.
+[HarmonyPatch(typeof(NRestSiteCharacter), nameof(NRestSiteCharacter._Ready))]
+internal static class SakuraFourthActRestSiteAnimationPatch
+{
+    [HarmonyTranspiler]
+    private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+    {
+        var getter = AccessTools.PropertyGetter(typeof(IRunState), nameof(IRunState.CurrentActIndex));
+        var replacement = AccessTools.Method(typeof(SakuraFourthActRestSiteAnimationPatch), nameof(AnimationActIndex));
+        var code = instructions.ToList();
+        var matches = code.Where(instruction => instruction.Calls(getter)).ToList();
+        if (matches.Count != 1)
+            throw new InvalidOperationException("Expected one native rest-site act animation index read.");
+        matches[0].opcode = OpCodes.Call;
+        matches[0].operand = replacement;
+        return code;
+    }
+
+    private static int AnimationActIndex(IRunState runState) =>
+        runState.Act is SakuraFourthAct ? 2 : runState.CurrentActIndex;
 }

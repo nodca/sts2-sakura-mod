@@ -32,11 +32,15 @@ public class ClowSilent() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Co
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await ApplyPower<BufferPower>(choiceContext, Owner.Creature, 1);
+        SilentQuietVisual.NotifyVeilSummoned(Owner.Creature);
         await ApplyPower<ClassicSilentPendingPower>(choiceContext, Owner.Creature, 1);
     }
 
-    protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+    protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
         await ApplyPower<BufferPower>(choiceContext, Owner.Creature, 1);
+        SilentQuietVisual.NotifyVeilSummoned(Owner.Creature);
+    }
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
@@ -47,7 +51,10 @@ public class SakuraSilent() : SakuraFormCard(1, CardType.Skill, TargetType.None)
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<BufferPower>(2)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
         await ApplyPower<BufferPower>(choiceContext, Owner.Creature, ReleasedValue("BufferPower"));
+        SilentQuietVisual.NotifyVeilSummoned(Owner.Creature);
+    }
 }
 

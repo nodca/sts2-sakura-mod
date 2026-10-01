@@ -359,7 +359,7 @@
   "SAKURA_MOD_CARD_SPELL_RELEASE.title": "Release",
   "SAKURA_MOD_CARD_SPELL_RELEASE.selectionPrompt": "Choose a card in your [gold]Hand[/gold].",
   "SAKURA_MOD_CARD_SPELL_RELEASE.description": "[gold]Spell[/gold].\nChoose a [gold]Clow Card[/gold], [gold]Sakura Card[/gold], or [gold]Clear Card[/gold] in your [gold]Hand[/gold].\nIt costs 0 this turn, all its numbers increase by 50% this combat, and it gains [gold]Ethereal[/gold] and [gold]Exhaust[/gold].\nApply {VulnerablePower:diff()} [gold]Vulnerable[/gold] to ALL enemies.\nEach card can only be [gold]Released[/gold] once per combat.",
-  "SAKURAMOD-COMPASS.selectionPrompt": "Choose a Clow Card.",
+  "SAKURAMOD-COMPASS.selectionPrompt": "Choose up to 1 Clow Card.",
   "SAKURA_MOD_CARD_SPELL_TURN.title": "Turn",
   "SAKURA_MOD_CARD_SPELL_TURN.selectionPrompt": "Choose a Clow Card to turn into Sakura.",
   "SAKURA_MOD_CARD_SPELL_TURN.description": "[gold]Spell[/gold] [gold]Purge[/gold].\nChoose a [gold]Clow Card[/gold] in your [gold]Hand[/gold]. It becomes its [gold]Sakura Card[/gold], both in your [gold]Hand[/gold] and permanently in your deck.",

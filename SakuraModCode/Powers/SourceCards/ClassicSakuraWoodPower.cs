@@ -32,9 +32,9 @@ public class ClassicSakuraWoodPower : ClassicWoodPower
     public const int StrengthLoss = 4;
     public const int PoisonPerTrigger = 2;
 
+    protected override string IconFileName => "wood_power_sakuracard.png";
     protected override bool AppliesBothBranches => true;
 
     protected override int PoisonAmount(int strengthLoss) =>
         strengthLoss / StrengthLoss * PoisonPerTrigger;
 }
-

@@ -4,27 +4,22 @@ namespace SakuraMod.SakuraModCode.FourthAct.Routing;
 
 internal static class FourthActEncounterAssets
 {
-    internal static EncounterAssetProfile WindBoss { get; } = FromVanillaBoss("queen_boss");
-    internal static EncounterAssetProfile DarkBoss { get; } = FromVanillaPlaceholderBoss("aeonglass_boss");
+    internal static EncounterAssetProfile WindBoss { get; } = Boss("windy");
+    internal static EncounterAssetProfile WaterBoss { get; } = Boss("watery");
+    internal static EncounterAssetProfile FireBoss { get; } = Boss("firey");
+    internal static EncounterAssetProfile EarthBoss { get; } = Boss("earthy");
+    internal static EncounterAssetProfile LightBoss { get; } = Boss("light");
+    internal static EncounterAssetProfile DarkBoss { get; } = Boss("dark");
+    internal static EncounterAssetProfile UnchosenEndpoint { get; } = Boss("light_dark");
 
-    private static EncounterAssetProfile FromVanillaBoss(string encounterEntry)
+    private static EncounterAssetProfile Boss(string name)
     {
-        var source = ContentAssetProfiles.Encounter(encounterEntry);
-        return new EncounterAssetProfile(
-            BossNodeSpinePath: source.BossNodeSpinePath,
-            MapNodeAssetPaths: [source.BossNodeSpinePath!],
-            RunHistoryIconPath: source.RunHistoryIconPath,
-            RunHistoryIconOutlinePath: source.RunHistoryIconOutlinePath);
-    }
-
-    private static EncounterAssetProfile FromVanillaPlaceholderBoss(string encounterEntry)
-    {
-        var source = ContentAssetProfiles.Encounter(encounterEntry);
-        var bossNodePath = $"res://images/map/placeholder/{encounterEntry}_icon";
+        var bossNodePath = $"res://SakuraMod/images/map/fourth_act/{name}_icon";
+        // An extensionless stem selects the native static icon + paper-outline path.
         return new EncounterAssetProfile(
             BossNodeSpinePath: bossNodePath,
             MapNodeAssetPaths: [$"{bossNodePath}.png", $"{bossNodePath}_outline.png"],
-            RunHistoryIconPath: source.RunHistoryIconPath,
-            RunHistoryIconOutlinePath: source.RunHistoryIconOutlinePath);
+            RunHistoryIconPath: $"{bossNodePath}.png",
+            RunHistoryIconOutlinePath: $"{bossNodePath}_outline.png");
     }
 }

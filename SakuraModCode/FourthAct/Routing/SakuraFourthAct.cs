@@ -1,6 +1,7 @@
 using Godot;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Acts;
@@ -80,13 +81,21 @@ public sealed class SakuraFourthAct : ModActTemplate
     internal static async Task OfferCardRewardsAsync(CombatRoom room, CancellationToken cancellationToken)
     {
         await MegaCrit.Sts2.Core.Commands.Cmd.Wait(1f, cancellationToken);
-        await Task.WhenAll(room.CombatState.Players.Select(player =>
+        var generated = new List<RewardsSet>();
+        foreach (var player in room.CombatState.Players)
         {
             var rewards = new RewardsSet(player).EmptyForRoom(room);
             if (room.ExtraRewards.TryGetValue(player, out var extraRewards))
                 rewards.WithCustomRewards(extraRewards);
-            return rewards.Offer();
-        }));
+            // Match CombatRoom.OfferRoomEndRewards: generate before returning,
+            // then let the player handle rewards independently of room loading.
+            await rewards.GenerateWithoutOffering();
+            generated.Add(rewards);
+        }
+        foreach (var rewards in generated)
+        {
+            TaskHelper.RunSafely(rewards.Offer());
+        }
     }
 
     internal void ConfigureRouteBosses()

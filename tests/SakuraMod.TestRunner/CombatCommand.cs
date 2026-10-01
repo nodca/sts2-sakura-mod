@@ -45,7 +45,8 @@ public static class CombatCommand
     [
         "light-eternal-day",
         "save-load-restoration",
-        "fourth-act-save-load"
+        "fourth-act-save-load",
+        "fourth-act-finished-combat-transition"
     ];
 
     public static void PrintHelp(TextWriter writer)

@@ -70,17 +70,15 @@ public class ClassicCompassRelic : SakuraRelicModel
         CardModel? selected = null;
         try
         {
-            selected = choices.Count == 1
-                ? choices[0]
-                : (await CardSelectCmd.FromSimpleGrid(
-                    choiceContext,
-                    choices,
-                    Owner,
-                    new CardSelectorPrefs(Prompt, DynamicVars["ChoiceLimit"].IntValue)
-                    {
-                        Cancelable = true,
-                        RequireManualConfirmation = false
-                    })).FirstOrDefault();
+            selected = (await CardSelectCmd.FromSimpleGrid(
+                choiceContext,
+                choices,
+                Owner,
+                new CardSelectorPrefs(Prompt, 0, DynamicVars["ChoiceLimit"].IntValue)
+                {
+                    Cancelable = true,
+                    RequireManualConfirmation = true
+                })).FirstOrDefault();
 
             if (selected is null)
                 return;

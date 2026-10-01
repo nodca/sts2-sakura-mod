@@ -47,6 +47,8 @@ internal static class SakuraCardVfxAssets
         ClowFreeze or SakuraFreeze => FreezePaths,
         SpellTurn => SpellTurnTransformationVfx.AssetPaths,
         ClowSong or SakuraSong => SongPaths,
+        ClowSilent or SakuraSilent => SilentQuietVisual.AssetPaths,
+        SpellHuoShen or SpellLeiDi or SpellShuiLong or SpellFengHua => SpellTalismanVfx.RunAssetPaths(card),
         _ => []
     };
 }
