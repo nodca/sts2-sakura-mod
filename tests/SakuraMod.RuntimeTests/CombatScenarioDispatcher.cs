@@ -32,7 +32,7 @@ internal static class CombatScenarioDispatcher
             "dream-turn-restoration" => await DreamTurnRestorationScenario.ExecuteAsync(request, assertions),
             "spell-turn-transformation" => await SpellTurnTransformationScenario.ExecuteAsync(request, assertions),
             "wand-turn-persistence" => await WandTurnPersistenceScenario.ExecuteAsync(request, assertions),
-            "labyrinth-attack-immunity" => await LabyrinthAttackImmunityScenario.ExecuteAsync(request, assertions),
+            "labyrinth-field" => await LabyrinthFieldScenario.ExecuteAsync(request, assertions),
             "magic-charge-thresholds" => await MagicChargeThresholdScenario.ExecuteAsync(request, assertions),
             "sakura-ancient-cards" => await SakuraAncientCardsScenario.ExecuteAsync(request, assertions),
             "siege-end-turn" => await SiegeEndTurnScenario.ExecuteAsync(request, assertions),

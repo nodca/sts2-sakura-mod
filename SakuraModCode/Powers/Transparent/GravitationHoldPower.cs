@@ -33,6 +33,9 @@ public class GravitationHoldPower : SakuraPowerModel
 
     public void ExcludeSource(CardModel card) => _excludedSources.Add(card);
 
+    internal bool CanReturnPlayedCard(CardModel card) =>
+        Amount > 0 && card.Owner?.Creature == Owner && !card.EnergyCost.CostsX && !_excludedSources.Contains(card);
+
     public override Task AfterApplied(Creature? applier, CardModel? cardSource)
     {
         GravitationHoldVisual.Mount(Owner);
@@ -46,10 +49,7 @@ public class GravitationHoldPower : SakuraPowerModel
         PileType pileType,
         CardPilePosition position)
     {
-        if (Amount <= 0
-            || card.Owner?.Creature != Owner
-            || _excludedSources.Contains(card)
-            || pileType != PileType.Discard)
+        if (!CanReturnPlayedCard(card) || pileType != PileType.Discard)
             return (pileType, position);
 
         _pendingReturns.Add(card);

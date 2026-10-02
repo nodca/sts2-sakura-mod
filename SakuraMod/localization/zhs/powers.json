@@ -48,8 +48,8 @@
   "SAKURA_MOD_POWER_DREAMING_POWER.description": "每回合开始抽牌前，从你的[gold]抽牌堆[/gold]中选择 1 张牌置于顶部。其当回合耗能为 0 并获得[red]遗忘[/red]。",
   "SAKURA_MOD_POWER_DREAMING_POWER.smartDescription": "每回合开始抽牌前，从你的[gold]抽牌堆[/gold]中选择 1 张牌置于顶部。其当回合耗能为 0 并获得[red]遗忘[/red]。",
   "SAKURA_MOD_POWER_GRAVITATION_HOLD_POWER.title": "引力维持",
-  "SAKURA_MOD_POWER_GRAVITATION_HOLD_POWER.description": "本回合，你打出的牌不进入[gold]弃牌堆[/gold]，改为回到你的[gold]手牌[/gold]，每次回手耗能增加 1。",
-  "SAKURA_MOD_POWER_GRAVITATION_HOLD_POWER.smartDescription": "打出的牌不进入[gold]弃牌堆[/gold]，改为回到你的[gold]手牌[/gold]，每次回手耗能增加 1。",
+  "SAKURA_MOD_POWER_GRAVITATION_HOLD_POWER.description": "本回合，你打出的牌（X 费牌除外）不进入[gold]弃牌堆[/gold]，改为回到你的[gold]手牌[/gold]，每次回手耗能增加 1。",
+  "SAKURA_MOD_POWER_GRAVITATION_HOLD_POWER.smartDescription": "本回合，你打出的牌（X 费牌除外）不进入[gold]弃牌堆[/gold]，改为回到你的[gold]手牌[/gold]，每次回手耗能增加 1。",
   "SAKURA_MOD_POWER_KINDNESS_POWER.title": "慈爱",
   "SAKURA_MOD_POWER_KINDNESS_POWER.description": "本场战斗中，你[gold]显现[/gold]的牌不再获得[red]遗忘[/red]；[gold]解封[/gold]不再使牌获得[gold]消耗[/gold]和[gold]虚无[/gold]。",
   "SAKURA_MOD_POWER_KINDNESS_POWER.smartDescription": "显现不再赋予遗忘；解封不再赋予消耗和虚无。",
@@ -57,8 +57,8 @@
   "SAKURA_MOD_POWER_MIRAGE_POWER.description": "直到该敌人回合结束，其造成的攻击伤害为 0。",
   "SAKURA_MOD_POWER_MIRAGE_POWER.smartDescription": "该敌人攻击伤害为 0，直到其回合结束。",
   "SAKURA_MOD_POWER_LABYRINTH_POWER.title": "迷宫",
-  "SAKURA_MOD_POWER_LABYRINTH_POWER.description": "迷宫中的敌人无法行动，也不受攻击牌影响。",
-  "SAKURA_MOD_POWER_LABYRINTH_POWER.smartDescription": "敌人无法行动且不受攻击牌影响。",
+  "SAKURA_MOD_POWER_LABYRINTH_POWER.description": "所有生物每回合首次受到的攻击伤害减半。[gold]地元素牌[/gold]造成的伤害不受影响，也不会消耗这次减半。\n你每回合打出的第一张[gold]地元素牌[/gold]耗能减少 1。",
+  "SAKURA_MOD_POWER_LABYRINTH_POWER.smartDescription": "所有生物每回合首次受到的攻击伤害减半。[gold]地元素牌[/gold]造成的伤害不受影响，也不会消耗这次减半。\n你每回合打出的第一张[gold]地元素牌[/gold]耗能减少 1。",
   "SAKURA_MOD_POWER_TIME_STOP_POWER.title": "时间",
   "SAKURA_MOD_POWER_TIME_STOP_POWER.description": "你将在敌人行动前进行一个额外回合。",
   "SAKURA_MOD_POWER_TIME_STOP_POWER.smartDescription": "进行额外回合。",
@@ -269,5 +269,8 @@
   "SAKURA_MOD_POWER_WOOD_ROOTED_POWER.title": "扎根",
   "SAKURA_MOD_POWER_WOOD_ROOTED_POWER.description": "层数等于目标玩家[gold]消耗牌堆[/gold]中的牌数。强化树的攻击与格挡。",
   "SAKURA_MOD_POWER_EARTHY_SEDIMENT_POWER.title": "沉积",
-  "SAKURA_MOD_POWER_EARTHY_SEDIMENT_POWER.description": "层数等于上回合进入该玩家弃牌堆的牌数。强化地鸣的伤害。"
+  "SAKURA_MOD_POWER_EARTHY_SEDIMENT_POWER.description": "层数等于上回合进入该玩家弃牌堆的牌数。强化地鸣的伤害。",
+  "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.title": "迷途",
+  "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.description": "每回合首次受到的攻击伤害减半。[gold]地元素牌[/gold]造成的伤害不受影响，也不会消耗这次减半。",
+  "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.smartDescription": "每回合首次受到的攻击伤害减半。[gold]地元素牌[/gold]造成的伤害不受影响，也不会消耗这次减半。"
 }

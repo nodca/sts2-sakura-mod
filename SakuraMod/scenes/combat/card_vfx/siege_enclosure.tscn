@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/siege_enclosure.gdshader" id="1_cube"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cube"]
+resource_local_to_scene = true
+shader = ExtResource("1_cube")
+shader_parameter/region_size = Vector2(528, 528)
+shader_parameter/cube_width = 320.0
+shader_parameter/layer_mode = 1.0
+shader_parameter/assemble = 0.0
+shader_parameter/pulse = 0.0
+shader_parameter/release = 0.0
+
+[node name="SiegeEnclosure" type="Node2D"]
+
+[node name="Cube" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_cube")
+offset_left = -264.0
+offset_top = -264.0
+offset_right = 264.0
+offset_bottom = 264.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)

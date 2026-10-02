@@ -38,6 +38,7 @@ internal static class SakuraCardVfxAssets
         ClowArrow or SakuraArrow => ArrowPaths,
         Aqua => AquaWaterSphereVfx.AssetPaths,
         Hail => HailPaths,
+        Siege => SiegeEnclosureVfx.AssetPaths,
         Blaze => BlazePaths,
         Time => SakuraCardPlayVfx.TimeAssetPaths,
         ClowSword or SakuraSword or Blade => SwordPaths,

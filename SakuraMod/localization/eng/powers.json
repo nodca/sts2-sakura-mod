@@ -48,8 +48,8 @@
   "SAKURA_MOD_POWER_DREAMING_POWER.description": "At the start of each turn, before you draw, choose a card in your [gold]Draw Pile[/gold] and put it on top. It costs 0 that turn and gains [red]Forgotten[/red].",
   "SAKURA_MOD_POWER_DREAMING_POWER.smartDescription": "At the start of each turn, before you draw, choose a card in your [gold]Draw Pile[/gold] and put it on top. It costs 0 that turn and gains [red]Forgotten[/red].",
   "SAKURA_MOD_POWER_GRAVITATION_HOLD_POWER.title": "Gravitation Hold",
-  "SAKURA_MOD_POWER_GRAVITATION_HOLD_POWER.description": "This turn, your played cards return to your [gold]Hand[/gold] instead of your [gold]Discard Pile[/gold], costing 1 more each time.",
-  "SAKURA_MOD_POWER_GRAVITATION_HOLD_POWER.smartDescription": "Played cards return to your [gold]Hand[/gold] instead of your [gold]Discard Pile[/gold], costing 1 more each time.",
+  "SAKURA_MOD_POWER_GRAVITATION_HOLD_POWER.description": "This turn, cards you play (except X-cost cards) return to your [gold]Hand[/gold] instead of your [gold]Discard Pile[/gold], costing 1 more each time they return.",
+  "SAKURA_MOD_POWER_GRAVITATION_HOLD_POWER.smartDescription": "This turn, cards you play (except X-cost cards) return to your [gold]Hand[/gold] instead of your [gold]Discard Pile[/gold], costing 1 more each time they return.",
   "SAKURA_MOD_POWER_KINDNESS_POWER.title": "Kindness",
   "SAKURA_MOD_POWER_KINDNESS_POWER.description": "This combat, cards you [gold]Manifest[/gold] no longer gain [red]Forgotten[/red]. [gold]Release[/gold] no longer grants [gold]Exhaust[/gold] or [gold]Ethereal[/gold].",
   "SAKURA_MOD_POWER_KINDNESS_POWER.smartDescription": "Manifest no longer grants Forgotten. Release no longer grants Exhaust or Ethereal.",
@@ -57,8 +57,8 @@
   "SAKURA_MOD_POWER_MIRAGE_POWER.description": "This enemy deals 0 attack damage until the end of its turn.",
   "SAKURA_MOD_POWER_MIRAGE_POWER.smartDescription": "This enemy's attack damage is 0 until the end of its turn.",
   "SAKURA_MOD_POWER_LABYRINTH_POWER.title": "Labyrinth",
-  "SAKURA_MOD_POWER_LABYRINTH_POWER.description": "Enemies in the Labyrinth cannot act and are unaffected by Attack cards.",
-  "SAKURA_MOD_POWER_LABYRINTH_POWER.smartDescription": "Enemies cannot act and are unaffected by Attack cards.",
+  "SAKURA_MOD_POWER_LABYRINTH_POWER.description": "ALL creatures take half damage from the first attack hit each turn. Damage from [gold]Earthy[/gold] cards is unaffected and does not consume this reduction.\nThe first [gold]Earthy[/gold] card you play each turn costs 1 less Energy.",
+  "SAKURA_MOD_POWER_LABYRINTH_POWER.smartDescription": "ALL creatures take half damage from the first attack hit each turn. Damage from [gold]Earthy[/gold] cards is unaffected and does not consume this reduction.\nThe first [gold]Earthy[/gold] card you play each turn costs 1 less Energy.",
   "SAKURA_MOD_POWER_TIME_STOP_POWER.title": "Time",
   "SAKURA_MOD_POWER_TIME_STOP_POWER.description": "You will take an extra turn before enemies act.",
   "SAKURA_MOD_POWER_TIME_STOP_POWER.smartDescription": "Take an extra turn.",
@@ -269,5 +269,8 @@
   "SAKURA_MOD_POWER_WOOD_ROOTED_POWER.title": "Rooted",
   "SAKURA_MOD_POWER_WOOD_ROOTED_POWER.description": "Equal to the number of cards in the target player's [gold]Exhaust Pile[/gold]. Strengthens Wood's attacks and Block.",
   "SAKURA_MOD_POWER_EARTHY_SEDIMENT_POWER.title": "Sediment",
-  "SAKURA_MOD_POWER_EARTHY_SEDIMENT_POWER.description": "Amount equals cards that entered the player's [gold]Discard Pile[/gold] last turn. Increases Tremor damage."
+  "SAKURA_MOD_POWER_EARTHY_SEDIMENT_POWER.description": "Amount equals cards that entered the player's [gold]Discard Pile[/gold] last turn. Increases Tremor damage.",
+  "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.title": "Lost",
+  "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.description": "Take half damage from the first attack hit each turn. Damage from [gold]Earthy[/gold] cards is unaffected and does not consume this reduction.",
+  "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.smartDescription": "Take half damage from the first attack hit each turn. Damage from [gold]Earthy[/gold] cards is unaffected and does not consume this reduction."
 }

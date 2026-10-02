@@ -2,207 +2,95 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
-using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
-using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Powers;
-using MegaCrit.Sts2.Core.ValueProps;
-using SakuraMod.SakuraModCode;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Cards.Visuals;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Powers;
-using SakuraMod.SakuraModCode.Extensions;
-using STS2RitsuLib.Combat.HandSize;
-using STS2RitsuLib.Scaffolding.Content;
-using STS2RitsuLib.Scaffolding.Content.Patches;
+using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
 public class LabyrinthPower : SakuraPowerModel
 {
-    private readonly HashSet<Creature> _enemies = [];
-    private readonly List<CardPlay> _activeCardPlays = [];
-    private int _playerTurnEndsUntilRelease = 1;
-    private Creature? _pendingReleaseEnemy;
+    private static readonly SavedAttachedState<LabyrinthPower, bool> EarthCardPlayed =
+        new("SakuraMod_LabyrinthEarthCardPlayed", () => false);
 
-    protected override string IconFileName => "sleep_power.png";
-
+    protected override string IconFileName => "labyrinth.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
-    internal static bool AllowsCardInteraction(CardModel? card, bool isTrapped, bool isAlive) =>
-        !isTrapped || !isAlive || card?.Type != CardType.Attack;
-
-    public async Task Enter(IEnumerable<Creature> enemies)
+    public override async Task AfterApplied(Creature? applier, CardModel? cardSource)
     {
-        _playerTurnEndsUntilRelease = 1;
-        _pendingReleaseEnemy = null;
-        foreach (var enemy in enemies.Where(enemy => enemy.IsMonster && enemy.IsAlive))
-        {
-            _enemies.Add(enemy);
-            SakuraLabyrinthMove.Apply(enemy);
-        }
-
-        await RemoveIfEmpty();
+        foreach (var creature in Owner.CombatState!.Creatures.ToList())
+            await ProtectCreature(creature);
+        RefreshCardCosts();
+        LabyrinthFieldBackgroundVisuals.Refresh(Owner.CombatState!);
     }
 
+    public override Task AfterCreatureAddedToCombat(Creature creature) => ProtectCreature(creature);
+
+    private async Task ProtectCreature(Creature creature)
+    {
+        if (creature.IsAlive && creature.GetPower<LabyrinthLostPower>() is null)
+            await PowerCmd.Apply<LabyrinthLostPower>(new ThrowingPlayerChoiceContext(), creature, 1, Owner, null, false);
+    }
+
+    public override bool TryModifyEnergyCostInCombat(CardModel card, decimal currentCost, out decimal newCost)
+    {
+        newCost = currentCost;
+        if (Amount <= 0 || EarthCardPlayed[this] || !IsOwnedEarthCard(card) || card.EnergyCost.CostsX || currentCost <= 0)
+            return false;
+
+        newCost = Math.Max(0, currentCost - 1);
+        return true;
+    }
+
+    // Resources have already been paid here. Commit before resolution so nested plays cannot reuse the discount.
     public override Task BeforeCardPlayed(CardPlay play)
     {
-        _activeCardPlays.Add(play);
+        if (Amount > 0 && !EarthCardPlayed[this] && IsOwnedEarthCard(play.Card))
+        {
+            EarthCardPlayed[this] = true;
+            RefreshCardCosts();
+        }
         return Task.CompletedTask;
     }
 
-    public override Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
+    public override Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side,
+        IReadOnlyList<Creature> participants, ICombatState combatState)
     {
-        _activeCardPlays.Remove(play);
+        if (side == Owner.Side && participants.Contains(Owner))
+        {
+            EarthCardPlayed[this] = false;
+            RefreshCardCosts();
+        }
         return Task.CompletedTask;
     }
 
-    public override bool ShouldAllowHitting(Creature creature) =>
-        AllowsCardInteraction(
-            _activeCardPlays.LastOrDefault()?.Card,
-            _enemies.Contains(creature),
-            creature.IsAlive);
-
-    public override decimal ModifyDamageMultiplicative(
-        Creature? target,
-        decimal amount,
-        ValueProp props,
-        Creature? dealer,
-        CardModel? cardSource) =>
-        AllowsCardInteraction(
-            cardSource,
-            target is not null && _enemies.Contains(target),
-            target?.IsAlive == true)
-            ? 1m
-            : 0m;
-
-    public override async Task BeforeSideTurnStart(
-        PlayerChoiceContext choiceContext,
-        CombatSide side,
-        IReadOnlyList<Creature> participants,
-        ICombatState combatState)
+    public override async Task AfterRemoved(Creature oldOwner)
     {
-        if (side != CombatSide.Enemy || Amount <= 0)
+        RefreshCardCosts();
+        if (oldOwner.CombatState is not { } combat)
             return;
-
-        CleanupDeadEnemies();
-        foreach (var enemy in _enemies.ToList())
-            SakuraLabyrinthMove.EnsureSuppressed(enemy);
-
-        await RemoveIfEmpty();
-    }
-
-    public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
-    {
-        if (Amount <= 0 || player != Owner.Player)
+        LabyrinthFieldBackgroundVisuals.Refresh(combat);
+        if (combat.Creatures.Any(c => c.GetPower<LabyrinthPower>() is not null))
             return;
-
-        CleanupDeadEnemies();
-        if (_playerTurnEndsUntilRelease == 0 && !IsTrapped(_pendingReleaseEnemy))
-            _pendingReleaseEnemy = PickRandomEnemy();
-
-        foreach (var enemy in _enemies.ToList())
-            SakuraLabyrinthMove.EnsureSuppressed(enemy, revealCoveredIntent: enemy == _pendingReleaseEnemy);
-
-        await RemoveIfEmpty();
+        foreach (var creature in combat.Creatures.ToList())
+            if (creature.GetPower<LabyrinthLostPower>() is { } lost)
+                await PowerCmd.Remove(lost);
     }
 
-    public override async Task AfterSideTurnEnd(
-        PlayerChoiceContext choiceContext,
-        CombatSide side,
-        IEnumerable<Creature> participants)
+    private bool IsOwnedEarthCard(CardModel card) =>
+        card.IsMutable && card.Owner?.Creature == Owner && SakuraActions.HasElement(card, SakuraElement.Earth);
+
+    private void RefreshCardCosts()
     {
-        CleanupDeadEnemies();
-        if (side != Owner.Side || !participants.Contains(Owner))
-        {
-            await RemoveIfEmpty();
+        if (Owner.Player is not { } player)
             return;
-        }
-
-        if (_playerTurnEndsUntilRelease > 0)
-        {
-            _playerTurnEndsUntilRelease--;
-            await RemoveIfEmpty();
-            return;
-        }
-
-        var enemy = IsTrapped(_pendingReleaseEnemy) ? _pendingReleaseEnemy : PickRandomEnemy();
-        if (enemy is not null)
-        {
-            _enemies.Remove(enemy);
-            SakuraLabyrinthMove.Restore(enemy);
-        }
-        _pendingReleaseEnemy = null;
-
-        await RemoveIfEmpty();
-    }
-
-    public override async Task AfterDeath(
-        PlayerChoiceContext choiceContext,
-        Creature creature,
-        bool wasRemovalPrevented,
-        float deathAnimLength)
-    {
-        if (!wasRemovalPrevented && _enemies.Remove(creature))
-        {
-            if (_pendingReleaseEnemy == creature)
-                _pendingReleaseEnemy = null;
-            SakuraLabyrinthMove.Clear(creature);
-        }
-
-        await RemoveIfEmpty();
-    }
-
-    public override Task AfterRemoved(Creature oldOwner)
-    {
-        foreach (var enemy in _enemies.Where(enemy => enemy.CombatState?.ContainsCreature(enemy) == true))
-            SakuraLabyrinthMove.Restore(enemy);
-        _enemies.Clear();
-        _activeCardPlays.Clear();
-        _pendingReleaseEnemy = null;
-        return Task.CompletedTask;
-    }
-
-    private Creature? PickRandomEnemy()
-    {
-        var combatState = Owner.CombatState;
-        var candidates = _enemies
-            .Where(enemy => enemy.IsAlive && combatState?.ContainsCreature(enemy) == true)
-            .OrderBy(enemy => enemy.CombatId ?? uint.MaxValue)
-            .ThenBy(enemy => enemy.SlotName, StringComparer.Ordinal)
-            .ToList();
-        return candidates.Count == 0
-            ? null
-            : Owner.Player?.RunState.Rng.CombatTargets.NextItem(candidates);
-    }
-
-    private void CleanupDeadEnemies()
-    {
-        var combatState = Owner.CombatState;
-        foreach (var enemy in _enemies
-                     .Where(enemy => !enemy.IsAlive || combatState?.ContainsCreature(enemy) != true)
-                     .ToList())
-        {
-            _enemies.Remove(enemy);
-            if (_pendingReleaseEnemy == enemy)
-                _pendingReleaseEnemy = null;
-            SakuraLabyrinthMove.Clear(enemy);
-        }
-    }
-
-    private bool IsTrapped(Creature? enemy) =>
-        enemy is not null
-        && enemy.IsAlive
-        && _enemies.Contains(enemy)
-        && Owner.CombatState?.ContainsCreature(enemy) == true;
-
-    private async Task RemoveIfEmpty()
-    {
-        if (_enemies.Count == 0 && Owner.GetPower<LabyrinthPower>() == this)
-            await PowerCmd.Remove(this);
+        foreach (var card in CardPile.GetCards(player, PileType.Hand, PileType.Draw, PileType.Discard, PileType.Exhaust))
+            if (IsOwnedEarthCard(card))
+                card.InvokeEnergyCostChanged();
     }
 }
-

@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/labyrinth/labyrinth_base.png" id="1_labyrinth"]
+
+[node name="LabyrinthBase" type="Control"]
+mouse_filter = 2
+
+[node name="LabyrinthPainting" type="TextureRect" parent="."]
+offset_left = -1360.0
+offset_top = -680.0
+offset_right = 1360.0
+offset_bottom = 680.0
+mouse_filter = 2
+texture = ExtResource("1_labyrinth")
+expand_mode = 1
+stretch_mode = 0

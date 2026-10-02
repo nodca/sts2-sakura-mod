@@ -2875,48 +2875,32 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
-    public void LabyrinthAssetsLocalizationAndReleaseContractRemainComplete()
+    public void LabyrinthFieldLocalizationAndStateContractRemainComplete()
     {
-        var intentIcon = RegressionTestHarness.FindRepoFile("SakuraMod/images/intents/labyrinth.png");
-        RegressionTestHarness.Require(File.Exists($"{intentIcon}.import"), "Expected the Labyrinth intent icon import to exist.");
         foreach (var locale in new[] { "eng", "zhs" })
         {
-            var localization = File.ReadAllText(RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/intents.json"));
-            RegressionTestHarness.Require(
-                localization.Contains("SAKURA_MOD_LABYRINTH.title", StringComparison.Ordinal)
-                && localization.Contains("SAKURA_MOD_LABYRINTH.description", StringComparison.Ordinal)
-                && localization.Contains("SAKURA_MOD_LABYRINTH_RELEASE_WARNING.title", StringComparison.Ordinal)
-                && localization.Contains("SAKURA_MOD_LABYRINTH_RELEASE_WARNING.description", StringComparison.Ordinal),
-                $"Expected {locale} Labyrinth intent localization.");
-
             var cards = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
-                RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/cards.json")))
-                ?? throw new InvalidOperationException($"Could not parse {locale} card localization.");
-            var staticTips = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
-                RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/static_hover_tips.json")))
-                ?? throw new InvalidOperationException($"Could not parse {locale} static hover-tip localization.");
+                RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/cards.json")))!;
+            var tips = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
+                RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/static_hover_tips.json")))!;
+            var powers = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
+                RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/powers.json")))!;
             RegressionTestHarness.Require(
-                cards["SAKURA_MOD_CARD_LABYRINTH.description"].Count(character => character == '\n') == 1
-                && staticTips.ContainsKey("SAKURAMOD-ENTER_LABYRINTH.title")
-                && staticTips.ContainsKey("SAKURAMOD-ENTER_LABYRINTH.description"),
-                $"Expected {locale} Labyrinth card text to keep its rules in the Enter the Labyrinth hover tip.");
+                cards["SAKURA_MOD_CARD_LABYRINTH.description"].Count(character => character == '\n') == 2
+                && tips.ContainsKey("SAKURAMOD-ENTER_LABYRINTH.description")
+                && powers.ContainsKey("SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.description"),
+                $"Expected {locale} Labyrinth field rules, Earthy discount, and Lost explanation.");
         }
-
-        var labyrinthCardSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Labyrinth.cs"));
-        var cardVfxSource = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraCardPlayVfx.cs"));
-        var labyrinthMoveSource = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/SakuraLabyrinthMove.cs"));
-        var powersSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/Transparent/LabyrinthPower.cs"));
-        RegressionTestHarness.Require(
-            !labyrinthCardSource.Contains("PlayLabyrinth", StringComparison.Ordinal)
-            && !cardVfxSource.Contains("Labyrinth", StringComparison.Ordinal),
-            "Expected the legacy Labyrinth line VFX to be removed.");
-        RegressionTestHarness.Require(
-            labyrinthMoveSource.Contains("Concat(_coveredMove.Intents)", StringComparison.Ordinal)
-            && powersSource.Contains("revealCoveredIntent: enemy == _pendingReleaseEnemy", StringComparison.Ordinal)
-            && powersSource.Contains("IsTrapped(_pendingReleaseEnemy) ? _pendingReleaseEnemy", StringComparison.Ordinal),
-            "Expected the release warning to reveal the covered move and release the enemy selected at player-turn start.");
+        foreach (var relativePath in new[]
+        {
+            "SakuraModCode/Powers/Transparent/LabyrinthPower.cs",
+            "SakuraModCode/Powers/Transparent/LabyrinthLostPower.cs"
+        })
+        {
+            var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath));
+            RegressionTestHarness.Require(source.Contains("SavedAttachedState<", StringComparison.Ordinal),
+                $"Expected {relativePath} per-turn state to participate in multiplayer checksums.");
+        }
     }
 
     [Fact]

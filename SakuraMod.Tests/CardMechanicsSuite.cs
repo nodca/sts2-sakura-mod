@@ -1646,30 +1646,20 @@ public sealed class CardMechanicsSuite
             && !labyrinth.CanonicalKeywords.Contains(CardKeyword.Exhaust)
             && !SakuraCardModel.HasMagicChargeExtraEffect(labyrinth)
             && SakuraCardHoverTips.StaticTipKeys(labyrinth).Contains(SakuraCardHoverTips.LabyrinthTipKey)
-            && upgradedLabyrinth.Keywords.Contains(CardKeyword.Retain)
+            && upgradedLabyrinth.Keywords.Contains(CardKeyword.Innate)
+            && !upgradedLabyrinth.Keywords.Contains(CardKeyword.Retain)
+            && labyrinth.EnergyCost.Canonical == 2
             && new LabyrinthPower().Type == PowerType.Buff
             && new LabyrinthPower().StackType == PowerStackType.Single
-            && new LabyrinthIntent().IntentType == IntentType.Stun
-            && new LabyrinthIntent().HasIntentTip
-            && new LabyrinthIntent().GetAnimation([], null!) == "hidden"
-            && new LabyrinthReleaseWarningIntent().HasIntentTip
-            && new LabyrinthReleaseWarningIntent().GetAnimation([], null!) == "hidden"
+            && new LabyrinthLostPower().Type == PowerType.Buff
+            && new LabyrinthLostPower().StackType == PowerStackType.Single
+            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("TryModifyEnergyCostInCombat")
             && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("BeforeCardPlayed")
-            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("AfterCardPlayed")
-            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("ShouldAllowHitting")
-            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("ModifyDamageMultiplicative")
-            && !RegressionTestHarness.DeclaresMethod<LabyrinthPower>("ShouldAllowTargeting")
-            && !LabyrinthPower.AllowsCardInteraction(new Gale(), isTrapped: true, isAlive: true)
-            && !LabyrinthPower.AllowsCardInteraction(new Aqua(), isTrapped: true, isAlive: true)
-            && LabyrinthPower.AllowsCardInteraction(new Shade(), isTrapped: true, isAlive: true)
-            && LabyrinthPower.AllowsCardInteraction(null, isTrapped: true, isAlive: true)
-            && LabyrinthPower.AllowsCardInteraction(new Gale(), isTrapped: false, isAlive: true)
-            && LabyrinthPower.AllowsCardInteraction(new Gale(), isTrapped: true, isAlive: false)
-            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("BeforeSideTurnStart")
-            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("AfterPlayerTurnStart")
-            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("AfterSideTurnEnd")
-            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("AfterDeath"),
-            "Expected Labyrinth enemies to be unaffected by Attack cards while their turns are suppressed, with one enemy released at each eligible turn end and Retain gained on upgrade.");
+            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("AfterCreatureAddedToCombat")
+            && RegressionTestHarness.DeclaresMethod<LabyrinthLostPower>("AfterModifyingDamageAmount")
+            && !RegressionTestHarness.DeclaresMethod<LabyrinthPower>("ShouldAllowHitting")
+            && !typeof(MainFile).Assembly.GetTypes().Any(type => type.Name is "LabyrinthIntent" or "SakuraLabyrinthMove"),
+            "Expected Labyrinth to protect against the first non-Earthy attack, discount the first Earthy card, and gain Innate on upgrade.");
     }
 
     [Fact]

@@ -49,20 +49,23 @@ public class SiegePendingPower : SakuraPowerModel
         if (_triggeredThisTurn)
         {
             Flash();
-            foreach (var extraEffect in pendingEffects.Where(static extraEffect => extraEffect))
+            await SiegeEnclosureVfx.PlayOrResolveAsync(Owner.CombatState?.HittableEnemies.ToList() ?? [], async () =>
             {
-                var damage = SiegeRules.ExtraDamage(Owner.Block);
-                foreach (var enemy in Owner.CombatState?.HittableEnemies.ToList() ?? [])
+                foreach (var extraEffect in pendingEffects.Where(static extraEffect => extraEffect))
                 {
-                    await CreatureCmd.Damage(
-                        choiceContext,
-                        enemy,
-                        damage,
-                        SakuraPowerValueProps.Damage,
-                        Owner,
-                        null);
+                    var damage = SiegeRules.ExtraDamage(Owner.Block);
+                    foreach (var enemy in Owner.CombatState?.HittableEnemies.ToList() ?? [])
+                    {
+                        await CreatureCmd.Damage(
+                            choiceContext,
+                            enemy,
+                            damage,
+                            SakuraPowerValueProps.Damage,
+                            Owner,
+                            null);
+                    }
                 }
-            }
+            });
         }
     }
 

@@ -21,7 +21,7 @@ public static class CombatCommand
         "dream-turn-restoration",
         "spell-turn-transformation",
         "wand-turn-persistence",
-        "labyrinth-attack-immunity",
+        "labyrinth-field",
         "magic-charge-thresholds",
         "sakura-ancient-cards",
         "siege-end-turn",
