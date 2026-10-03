@@ -14,7 +14,8 @@ internal static class SpellReleaseBgmPlayback
         "music/release.ogg",
         "music/release_2.ogg",
         "music/release_3.ogg",
-        "music/release_4.ogg"
+        "music/release_4.ogg",
+        "music/release_5.ogg"
     });
     internal const string MusicChannel = $"{MainFile.ModId}.SpellReleaseBgm";
     internal const float MusicVolume = 0.32f;

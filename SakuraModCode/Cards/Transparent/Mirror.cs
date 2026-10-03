@@ -25,6 +25,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class Mirror() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
+    internal override IEnumerable<CardKeyword> ReferencedKeywords => [CardKeyword.Ethereal];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new RepeatVar(1), new RepeatVar("ExtraRepeat", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
@@ -39,9 +40,10 @@ public class Mirror() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
             if (activation.IsActive)
                 amount += DynamicVars["ExtraRepeat"].IntValue;
             card.BaseReplayCount += amount;
+            if (!card.Keywords.Contains(CardKeyword.Ethereal))
+                card.AddKeyword(CardKeyword.Ethereal);
         }
     }
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
-

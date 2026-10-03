@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.FourthAct.Earth.Models;
 using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Earth.Powers;
@@ -86,6 +87,7 @@ public sealed class ShadowEchoPower : SakuraPowerModel
 {
     private readonly Dictionary<Creature, CardType> _currentTurnCard = [];
     private readonly Dictionary<Creature, CardType?> _lastTurnCard = [];
+    private bool _recordingPlayerTurn;
 
     protected override string IconFileName => "fourth_act/shadow_echo.png";
     public override PowerType Type => PowerType.Buff;
@@ -94,9 +96,27 @@ public sealed class ShadowEchoPower : SakuraPowerModel
 
     public override Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
+        if (!_recordingPlayerTurn)
+            return Task.CompletedTask;
+
         if (play.Card.Owner?.Creature is { } playerCreature)
         {
             _currentTurnCard[playerCreature] = play.Card.Type;
+            RefreshIntent();
+        }
+        return Task.CompletedTask;
+    }
+
+    public override Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side,
+        IReadOnlyList<Creature> participants, ICombatState combatState)
+    {
+        if (side == CombatSide.Player)
+        {
+            _recordingPlayerTurn = true;
+            // An extra turn only resets the players participating in that turn.
+            foreach (var participant in participants)
+                _currentTurnCard.Remove(participant);
+            RefreshIntent();
         }
         return Task.CompletedTask;
     }
@@ -105,6 +125,7 @@ public sealed class ShadowEchoPower : SakuraPowerModel
     {
         if (side == CombatSide.Player)
         {
+            _recordingPlayerTurn = false;
             foreach (var participant in participants.Where(c => c.IsPlayer))
             {
                 if (_currentTurnCard.TryGetValue(participant, out var cardType))
@@ -116,13 +137,26 @@ public sealed class ShadowEchoPower : SakuraPowerModel
                     _lastTurnCard[participant] = null;
                 }
             }
-            _currentTurnCard.Clear();
+            RefreshIntent();
         }
         return Task.CompletedTask;
     }
 
     public CardType? GetLastCardType(Creature player) =>
         _lastTurnCard.GetValueOrDefault(player);
+
+    internal CardType? GetIntentCardType(Creature player) =>
+        _currentTurnCard.TryGetValue(player, out var cardType) ? cardType : null;
+
+    public override Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature,
+        bool wasRemovalPrevented, float deathAnimLength)
+    {
+        if (creature.IsPlayer)
+            RefreshIntent();
+        return Task.CompletedTask;
+    }
+
+    private void RefreshIntent() => (Owner?.Monster as ShadowMonster)?.RefreshEchoIntent();
 }
 
 public sealed class WoodRootedPower : SakuraPowerModel

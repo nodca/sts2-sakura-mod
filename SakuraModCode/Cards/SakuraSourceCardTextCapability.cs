@@ -106,6 +106,16 @@ internal static class SakuraSourceCardText
                 tips.Add(HoverTipFactory.FromCard(spellCard));
         }
 
+        if (card is SakuraWave)
+        {
+            foreach (var type in SakuraWave.GeneratedCardTypes)
+            {
+                var generatedCard = generatedSpellTemplateFor(type);
+                if (generatedCard is not null)
+                    tips.Add(HoverTipFactory.FromCard(generatedCard));
+            }
+        }
+
         if (ReferencesThroughTip(card))
             tips.Add(HoverTipFactory.FromPower<ClassicThroughPower>());
 
@@ -245,9 +255,6 @@ internal static class SakuraSourceCardText
 
     internal static IEnumerable<SakuraElement> ElementStatesReferencedBy(SakuraSourceCard card)
     {
-        if (card.IsSakuraCard && card.Identity == SourceCardIdentity.Wave)
-            return (SakuraElementSet.Earth | SakuraElementSet.Fire | SakuraElementSet.Water | SakuraElementSet.Wind).AsElements();
-
         if (!card.IsClassicSourceCard)
             return [];
 

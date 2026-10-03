@@ -5,89 +5,201 @@ public sealed class ElementStateVisualSuite
     [Fact]
     public void FixedElementSlotsStayStableAcrossBodySizes()
     {
-        // Floor sits below the mount point. Each inset is how far down the matching
-        // shader draws its own ground line inside its own rect: water's surface, and
-        // earth's contact line. Water is then lifted slightly further so its mark stays
-        // readable above the feet and HP bar; earth keeps its contact line grounded but
-        // adds a separate slot-level lift to clear the combat status strip.
+        // Floor sits below the mount point. The earth inset is how far down its shader
+        // draws its contact line inside its own rect. Earth and the ground ambient layers
+        // stand on the visual ground line, which sits above the hitbox floor where the
+        // HP/Block strip is.
         const float floorY = 20f;
-        const float surfaceInset = 18.4f;
-        const float contactInset = 21.6f;
-        const float earthLift = 32f;
+        const float contactInset = 40.3f;
+        const float groundLift = 44f;
+        const float earthClearance = 4f;
         var standard = SakuraElementSlotLayout.FromBody(
-            new Godot.Vector2(120f, 260f), floorY, surfaceInset, contactInset);
+            new Godot.Vector2(264f, 468f), 0f, floorY, contactInset);
         var chibi = SakuraElementSlotLayout.FromBody(
-            new Godot.Vector2(180f, 360f), floorY, surfaceInset, contactInset);
+            new Godot.Vector2(264f, 354f), 0f, floorY, contactInset);
+        var wideOutfit = SakuraElementSlotLayout.FromBody(
+            new Godot.Vector2(330f, 383f), -6f, floorY, contactInset);
 
-        // Fire holds the centre axis alone; the ground marks' opposite sides are
-        // pinned exactly below.
+        // Fire holds the centre axis alone.
         RegressionTestHarness.Require(
             standard.Fire.X == 0f
             && chibi.Fire.X == 0f,
             "Expected fire to hold the centre axis at every body size.");
 
-        // Neither ground slot may flip with the standee. FacingSign is republished every
-        // frame by the idle controllers, so a mirrored slot would make a persistent mark
-        // jump across the character mid-combat; only one-shot beats may face, and earth's
-        // wall does that inside its own shader. FromBody taking no facing argument is
-        // what enforces this, and these fixed signs are what stop one being added.
+        // Earth stands just past the hitbox's right edge, measured from the real hitbox
+        // rather than a fraction of a clamped width: the HP bar is exactly as wide as the
+        // hitbox, and outfit hitboxes run wider than the clamp, so only the edge keeps the
+        // cluster beside the legs at every outfit.
         RegressionTestHarness.Require(
-            standard.Earth.X == 120f * 0.42f
-            && chibi.Earth.X == 180f * 0.42f
-            && standard.Water.X == -120f * 0.58f
-            && chibi.Water.X == -180f * 0.58f,
-            "Expected the ground slots to sit at fixed signed offsets that never mirror.");
+            standard.Earth.X == 132f + earthClearance
+            && chibi.Earth.X == 132f + earthClearance
+            && wideOutfit.Earth.X == -6f + 165f + earthClearance,
+            "Expected earth to stand a fixed clearance past the real hitbox's right edge.");
 
-        // The wind bias must stay a bias: left of centre, but nowhere near the water
-        // slot it would otherwise collide with.
-        RegressionTestHarness.Require(
-            standard.Wind.X < 0f
-            && standard.Wind.X > standard.Water.X * 0.5f
-            && chibi.Wind.X < 0f
-            && chibi.Wind.X > chibi.Water.X * 0.5f,
-            "Expected wind biased left of centre while staying clear of the water slot.");
+        // Wind and water hover in the open air on the left, the side that is dark and
+        // empty at chest height and above; neither crosses the white costume. Wind is the
+        // upper of the two and water stays above Kero's waist-height perch. FromBody takes
+        // no facing argument, and these fixed signs stop one being added: FacingSign is
+        // republished every frame, so a mirrored slot would jump across the character.
+        foreach (var layout in new[] { standard, chibi })
+            RegressionTestHarness.Require(
+                layout.Wind.X < layout.Water.X
+                && layout.Water.X < 0f
+                && layout.Fire.Y < layout.Wind.Y
+                && layout.Wind.Y < layout.Water.Y
+                && layout.Water.Y < -25f,
+                "Expected wind above water on the open left, fire above both, water clear of Kero.");
 
-        // The stacking order the slots encode must survive any body size: the wind
-        // rise has to clear the ember above it and stay above the ground marks.
+        // Ground-rooted marks derive from the real floor rather than from body height: a
+        // fraction of body height cannot express "on the floor", because the mount
+        // point's own height above the ground is not derivable from body size. Earth and
+        // the two ground ambients share one visual ground line, and water's rings take
+        // the left of the floor while earth's cracks take the right.
         RegressionTestHarness.Require(
-            standard.Fire.Y < standard.Wind.Y
-            && standard.Wind.Y < standard.Earth.Y
-            && chibi.Fire.Y < chibi.Wind.Y
-            && chibi.Wind.Y < chibi.Earth.Y,
-            "Expected fire above wind above the ground on the shared axis at every body size.");
-
-        // Both ground marks derive from the real floor rather than from body height, and
-        // for the same reason: a fraction of body height cannot express "on the floor",
-        // because the mount point's own height above the ground is not derivable from
-        // body size. That is why three rounds of tuning such a fraction never reached the
-        // ground, and earth was one of them (-0.08 of body height, roughly hip level)
-        // until it became the slot that had to draw a crack in the floor. These
-        // assertions are what stop a future change from going back to a fraction.
-        RegressionTestHarness.Require(
-            standard.Water.Y == floorY - surfaceInset - 30f
-            && chibi.Water.Y == floorY - surfaceInset - 30f
-            && standard.Earth.Y == floorY - contactInset - earthLift
-            && chibi.Earth.Y == floorY - contactInset - earthLift,
-            "Expected the water mark to use the floor while the earth mark uses its deliberate visual lift.");
-
-        // Earth's deliberate visual lift now places its stones above the water mark,
-        // keeping the raised stones clear of the pool and the HP/Block strip.
-        RegressionTestHarness.Require(
-            standard.Earth.Y < standard.Water.Y
-            && chibi.Earth.Y < chibi.Water.Y,
-            "Expected the lifted earth mark to stay above the water mark.");
+            standard.Earth.Y == floorY - groundLift - contactInset
+            && chibi.Earth.Y == floorY - groundLift - contactInset
+            && standard.FireAmbient == new Godot.Vector2(0f, floorY - groundLift)
+            && wideOutfit.FireAmbient == new Godot.Vector2(-6f, floorY - groundLift)
+            && standard.WaterAmbient.Y == floorY - groundLift
+            && standard.WaterAmbient.X < 0f
+            && standard.WindAmbient.X == 0f
+            && standard.WindAmbient.Y < 0f,
+            "Expected earth and the ground ambients to share the visual ground line on opposite sides.");
 
         // A degenerate hitbox can report a floor level with or above the mount point.
-        // The floor is clamped once and both ground slots derive from that shared safe
-        // value, so a bad floor degrades them together instead of dragging one to
-        // wherever the other happens to sit.
+        // The floor is clamped once and every ground slot derives from that shared safe
+        // value, so a bad floor degrades them together.
         var degenerate = SakuraElementSlotLayout.FromBody(
-            new Godot.Vector2(120f, 260f), -400f, surfaceInset, contactInset);
+            new Godot.Vector2(264f, 468f), 0f, -400f, contactInset);
         RegressionTestHarness.Require(
-            degenerate.Water.Y == -surfaceInset - 30f
-            && degenerate.Earth.Y == -contactInset - earthLift
-            && degenerate.Earth.Y < degenerate.Water.Y,
-            "Expected a floor above the mount point to clamp once and keep both ground marks ordered.");
+            degenerate.Earth.Y == -groundLift - contactInset
+            && degenerate.FireAmbient.Y == -groundLift
+            && degenerate.WaterAmbient.Y == -groundLift,
+            "Expected a floor above the mount point to clamp once for every ground slot.");
+    }
+
+    [Fact]
+    public void ElementSpiritsShareOneEdgeLanguage()
+    {
+        var common = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/sakura_element_state_common.gdshaderinc"));
+        var fire = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/sakura_element_state_firey.gdshader"));
+        var earth = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/sakura_element_state_earthy.gdshader"));
+        var wind = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/sakura_element_state_windy.gdshader"));
+        var water = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/sakura_element_state_watery.gdshader"));
+        var visuals = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraElementStateVisuals.cs"));
+        const string include =
+            "#include \"res://SakuraMod/shaders/card_vfx/sakura_element_state_common.gdshaderinc\"";
+
+        // Spirits sit on dark stages and against a white costume at once, where a dark
+        // outline is invisible on one and heavy on the other. A bright inner rim and a
+        // bounded SDF halo read on both, so the family owns exactly those two, once.
+        RegressionTestHarness.Require(
+            common.Contains("#ifndef SAKURA_ELEMENT_STATE_COMMON_INCLUDED", StringComparison.Ordinal)
+            && common.Contains("cel_vfx.gdshaderinc", StringComparison.Ordinal)
+            && common.Contains("ELEMENT_HALO_PX", StringComparison.Ordinal)
+            && common.Contains("float element_halo(", StringComparison.Ordinal)
+            && common.Contains("float element_rim(", StringComparison.Ordinal)
+            && common.Contains("float element_ambient_level(", StringComparison.Ordinal)
+            && !common.Contains("SCREEN_TEXTURE", StringComparison.Ordinal)
+            && !System.Text.RegularExpressions.Regex.IsMatch(
+                common, @"^\s*uniform\s", System.Text.RegularExpressions.RegexOptions.Multiline),
+            "Expected one guarded, uniform-free edge include with a bounded halo and an inner rim.");
+
+        // Fire is the reference the others are matched to: its shape stays, and it joins
+        // the family through the shared halo alone.
+        RegressionTestHarness.Require(
+            fire.Contains(include, StringComparison.Ordinal)
+            && fire.Contains("element_halo(", StringComparison.Ordinal)
+            && earth.Contains(include, StringComparison.Ordinal)
+            && earth.Contains("element_halo(", StringComparison.Ordinal)
+            && earth.Contains("element_rim(", StringComparison.Ordinal)
+            && wind.Contains(include, StringComparison.Ordinal)
+            && wind.Contains("element_halo(", StringComparison.Ordinal)
+            && wind.Contains("element_rim(", StringComparison.Ordinal)
+            && water.Contains(include, StringComparison.Ordinal)
+            && water.Contains("element_halo(", StringComparison.Ordinal)
+            && water.Contains("element_rim(", StringComparison.Ordinal),
+            "Expected every spirit to take its edges from the shared include.");
+
+        RegressionTestHarness.Require(
+            visuals.Contains("CommonShaderIncludePath", StringComparison.Ordinal)
+            && visuals.Contains("FireAmbientShaderPath", StringComparison.Ordinal)
+            && visuals.Contains("WindAmbientShaderPath", StringComparison.Ordinal)
+            && visuals.Contains("WaterAmbientShaderPath", StringComparison.Ordinal),
+            "Expected the shared include and the ambient shader in the element asset list.");
+    }
+
+    [Fact]
+    public void AmbientLayersStayFaintBoundedAndOptional()
+    {
+        var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/sakura_element_state_visuals.tscn"));
+        var visuals = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraElementStateVisuals.cs"));
+        var firstSpiritSlot = scene.IndexOf("[node name=\"FireSlot\" type=\"Node2D\" parent=\".\"]", StringComparison.Ordinal);
+
+        // Ambient is the "the air has changed" layer and must sit under every spirit, so
+        // each ambient slot comes before the first spirit slot among the root's children.
+        foreach (var (slot, rect, shaderName, budget) in new[]
+                 {
+                     ("FireAmbientSlot", "FireyAmbient", "firey_ambient", "EMBER_COUNT"),
+                     ("WindAmbientSlot", "WindyAmbient", "windy_ambient", "STRAND_COUNT"),
+                     ("WaterAmbientSlot", "WateryAmbient", "watery_ambient", "RING_COUNT")
+                 })
+        {
+            var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+                $"SakuraMod/shaders/card_vfx/sakura_element_state_{shaderName}.gdshader"));
+            var slotIndex = scene.IndexOf($"[node name=\"{slot}\" type=\"Node2D\" parent=\".\"]", StringComparison.Ordinal);
+            RegressionTestHarness.Require(
+                slotIndex >= 0
+                && slotIndex < firstSpiritSlot
+                && scene.Contains($"[node name=\"{rect}\" type=\"ColorRect\" parent=\"{slot}\"]", StringComparison.Ordinal),
+                $"Expected {rect} to draw beneath every spirit.");
+            RegressionTestHarness.Require(
+                shader.Contains("uniform float state_alpha", StringComparison.Ordinal)
+                && shader.Contains("uniform float ambient_alpha", StringComparison.Ordinal)
+                && shader.Contains("uniform float ambient_boost", StringComparison.Ordinal)
+                && shader.Contains("element_ambient_level(", StringComparison.Ordinal)
+                && shader.Contains(budget, StringComparison.Ordinal),
+                $"Expected {rect} to be bounded and driven by state, rest and boost levels.");
+        }
+
+        // Rest levels stay faint so four states can share the screen, and each one-shot
+        // boost is a held, killable tween so a trigger landing mid-fall restarts cleanly.
+        foreach (var element in new[] { "Fire", "Earth", "Wind", "Water" })
+            RegressionTestHarness.Require(
+                System.Text.RegularExpressions.Regex.IsMatch(
+                    visuals, $@"{element}AmbientRestAlpha = 0\.[2-5]\d*f;")
+                && visuals.Contains($"private Tween? _{element.ToLowerInvariant()}BoostTween;", StringComparison.Ordinal)
+                && visuals.Contains($"KillTween(ref _{element.ToLowerInvariant()}BoostTween);", StringComparison.Ordinal),
+                $"Expected a faint {element} ambient rest level and a killable boost tween.");
+
+        // Ambient is atmosphere: with optional card VFX off it rests at zero while the
+        // spirits keep the state readable.
+        var preference = visuals[visuals.IndexOf("private void ApplyAmbientPreference()", StringComparison.Ordinal)..];
+        preference = preference[..preference.IndexOf("private void PlayAmbientBoost(", StringComparison.Ordinal)];
+        RegressionTestHarness.Require(
+            preference.Contains("SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal)
+            && preference.Contains("_fireAmbient.Visible = enabled;", StringComparison.Ordinal)
+            && preference.Contains("_windAmbient.Visible = enabled;", StringComparison.Ordinal)
+            && preference.Contains("_waterAmbient.Visible = enabled;", StringComparison.Ordinal)
+            && preference.Contains("enabled ? EarthAmbientRestAlpha : 0f", StringComparison.Ordinal),
+            "Expected ambient layers to follow the optional card-VFX switch.");
+
+        // Wind's gust is the one intermittent ambient: a standing streak over the white
+        // costume is exactly what made the old wind mark vanish.
+        var gust = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/sakura_element_state_windy_ambient.gdshader"));
+        RegressionTestHarness.Require(
+            gust.Contains("GUST_PERIOD", StringComparison.Ordinal)
+            && gust.Contains("GUST_SPAN", StringComparison.Ordinal),
+            "Expected wind's ambient to pass as a periodic gust rather than stand on the body.");
     }
 
     [Fact]
@@ -113,7 +225,7 @@ public sealed class ElementStateVisualSuite
     }
 
     [Fact]
-    public void HybridWindResourcesExposeContinuousPseudoDepthCirculation()
+    public void HybridWindResourcesExposeAVortexWithRibbons()
     {
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/combat/sakura_element_state_visuals.tscn"));
@@ -121,35 +233,35 @@ public sealed class ElementStateVisualSuite
             "SakuraMod/shaders/card_vfx/sakura_element_state_windy.gdshader"));
 
         RegressionTestHarness.Require(
-            scene.Contains("[node name=\"WindyCurrents\" type=\"ColorRect\" parent=\"WindSlot\"]", StringComparison.Ordinal)
+            scene.Contains("[node name=\"WindySpirit\" type=\"ColorRect\" parent=\"WindSlot\"]", StringComparison.Ordinal)
             && scene.Contains("sakura_element_state_windy.gdshader", StringComparison.Ordinal),
-            "Expected the wind mark to live in the reserved WindSlot with its own shader.");
+            "Expected the wind spirit to live in the reserved WindSlot with its own shader.");
 
-        // The flow must rise and dissipate, never travel a closed loop. A closed
-        // orbit reads as "a few objects going around a centre" whatever shape rides
-        // it, which is the failure the earlier revisions shared; the named rise and
-        // spiral constants carry that decision.
         RegressionTestHarness.Require(
             shader.Contains("uniform float state_alpha", StringComparison.Ordinal)
             && shader.Contains("uniform float summon_progress", StringComparison.Ordinal)
-            && shader.Contains("uniform float trigger_progress", StringComparison.Ordinal)
-            && shader.Contains("RISE_HZ", StringComparison.Ordinal)
-            && shader.Contains("SPIRAL_TURNS", StringComparison.Ordinal),
-            "Expected the wind mark to carry its own state controls and named rise and spiral constants.");
+            && shader.Contains("uniform float trigger_progress", StringComparison.Ordinal),
+            "Expected the wind spirit to carry its own state controls.");
 
-        // Petals, not abstract specks: air is inferred from what it carries.
+        // A vortex is one body whose arms are the motion, so it can spin forever without
+        // reading as discrete objects circling a centre — the failure every orbit of
+        // carried shapes had. Ribbons trailing off it say which way the air goes.
         RegressionTestHarness.Require(
-            shader.Contains("float petal(", StringComparison.Ordinal),
-            "Expected a petal silhouette carried by the flow.");
+            shader.Contains("SPIN_HZ", StringComparison.Ordinal)
+            && shader.Contains("SPIRAL_TIGHT", StringComparison.Ordinal)
+            && shader.Contains("vec2 ribbon(", StringComparison.Ordinal)
+            && !shader.Contains("float petal(", StringComparison.Ordinal),
+            "Expected a spinning spiral vortex with trailing ribbons rather than carried petals.");
 
         // Visual work stays a fixed constant, never scaled by combat state.
         RegressionTestHarness.Require(
-            shader.Contains("PETAL_COUNT", StringComparison.Ordinal),
+            shader.Contains("ARM_COUNT", StringComparison.Ordinal)
+            && shader.Contains("RIBBON_COUNT", StringComparison.Ordinal),
             "Expected wind visual work to remain explicitly bounded.");
     }
 
     [Fact]
-    public void HybridWaterResourcesExposeLiquidCoalescenceAndPool()
+    public void HybridWaterResourcesExposeASwimmingFishTailedSpirit()
     {
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/combat/sakura_element_state_visuals.tscn"));
@@ -157,40 +269,46 @@ public sealed class ElementStateVisualSuite
             "SakuraMod/shaders/card_vfx/sakura_element_state_watery.gdshader"));
 
         RegressionTestHarness.Require(
-            scene.Contains("[node name=\"WateryDroplets\" type=\"ColorRect\" parent=\"WaterSlot\"]", StringComparison.Ordinal)
+            scene.Contains("[node name=\"WaterySpirit\" type=\"ColorRect\" parent=\"WaterSlot\"]", StringComparison.Ordinal)
             && scene.Contains("sakura_element_state_watery.gdshader", StringComparison.Ordinal),
-            "Expected the water mark to live in the reserved WaterSlot with its own shader.");
+            "Expected the water spirit to live in the reserved WaterSlot with its own shader.");
 
         RegressionTestHarness.Require(
             shader.Contains("uniform float state_alpha", StringComparison.Ordinal)
             && shader.Contains("uniform float summon_progress", StringComparison.Ordinal)
             && shader.Contains("uniform float trigger_progress", StringComparison.Ordinal),
-            "Expected the water mark to carry its own state controls.");
+            "Expected the water spirit to carry its own state controls.");
 
-        // The liquid bridge is the load-bearing detail. A rounded body with a tip and
-        // a short tail describes a comet just as well; drawing together into a neck is
-        // the one thing only a liquid does, so the union must be a smooth minimum
-        // rather than a max that would leave two separate blobs.
-        RegressionTestHarness.Require(
-            shader.Contains("float smin(", StringComparison.Ordinal),
-            "Expected a polynomial smooth-minimum union so approaching droplets grow a neck.");
-
-        // Water is the one element with a horizontal plane: fire rises, wind orbits,
-        // earth is fragments. The pool is what separates this from two blue spheres.
-        RegressionTestHarness.Require(
-            shader.Contains("POOL_Y", StringComparison.Ordinal),
-            "Expected a named pool line giving water its horizontal plane.");
-
-        // Chase path is a closed continuous curve, unlike wind: a liquid pair circling
-        // each other is correct, and Gerono's figure-eight has no seam to jump at.
+        // Water's failure mode is the glowing blue orb. Swimming — a beating tail and a
+        // body turned into its heading — is what only something made of water does.
+        // The swim path is Gerono's figure-eight, which has no period seam to jump at.
         RegressionTestHarness.Require(
             shader.Contains("vec2 gerono(", StringComparison.Ordinal)
-            && shader.Contains("CHASE_HZ", StringComparison.Ordinal),
-            "Expected a continuous figure-eight chase without a period seam.");
+            && shader.Contains("SWIM_HZ", StringComparison.Ordinal)
+            && shader.Contains("TAIL_HZ", StringComparison.Ordinal),
+            "Expected a continuous figure-eight swim with a beating tail.");
+
+        // Swimming left would turn the spirit upside down, so its frame mirrors to keep
+        // its back up.
+        RegressionTestHarness.Require(
+            shader.Contains("heading.x < 0.0 ? -1.0 : 1.0", StringComparison.Ordinal),
+            "Expected the swim frame to keep the spirit's back up in both directions.");
+
+        // Body and tail fuse, so the tail flexes out of the body. Water may use the
+        // shared smooth union; earth may not. Shared math, not a local copy.
+        RegressionTestHarness.Require(
+            shader.Contains("cel_smin(", StringComparison.Ordinal)
+            && !shader.Contains("float smin(", StringComparison.Ordinal),
+            "Expected the shared smooth union to join body and tail.");
+
+        RegressionTestHarness.Require(
+            shader.Contains("BUBBLE_COUNT", StringComparison.Ordinal)
+            && shader.Contains("GATHER_COUNT", StringComparison.Ordinal),
+            "Expected water visual work to remain explicitly bounded.");
     }
 
     [Fact]
-    public void HybridEarthResourcesExposeStillStonesAndASnappedWall()
+    public void HybridEarthResourcesExposeARootedCrystalClusterAndAPalisade()
     {
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/combat/sakura_element_state_visuals.tscn"));
@@ -200,67 +318,63 @@ public sealed class ElementStateVisualSuite
             "SakuraModCode/Character/SakuraElementStateVisuals.cs"));
 
         RegressionTestHarness.Require(
-            scene.Contains("[node name=\"EarthyFragments\" type=\"ColorRect\" parent=\"EarthSlot\"]", StringComparison.Ordinal)
+            scene.Contains("[node name=\"EarthySpire\" type=\"ColorRect\" parent=\"EarthSlot\"]", StringComparison.Ordinal)
             && scene.Contains("sakura_element_state_earthy.gdshader", StringComparison.Ordinal),
-            "Expected the earth mark to live in the reserved EarthSlot with its own shader.");
+            "Expected the earth spirit to live in the reserved EarthSlot with its own shader.");
 
         RegressionTestHarness.Require(
             shader.Contains("uniform float state_alpha", StringComparison.Ordinal)
             && shader.Contains("uniform float summon_progress", StringComparison.Ordinal)
             && shader.Contains("uniform float trigger_progress", StringComparison.Ordinal)
+            && shader.Contains("uniform float ambient_alpha", StringComparison.Ordinal)
+            && shader.Contains("uniform float ambient_boost", StringComparison.Ordinal)
             && shader.Contains("uniform float facing", StringComparison.Ordinal),
-            "Expected the earth mark to carry its own state controls plus a facing sign.");
+            "Expected the earth spirit to carry its state, ambient and facing controls.");
 
-        // The load-bearing decision: stone forbids idle motion. Fire flickers, wind
-        // rises and water falls because each is motion its material permits; a stone
-        // doing any of them reads as a floating brown polygon. The envelope must be zero
-        // outside a short span, which is what makes the rest of the period exactly still
-        // and the period wrap silent. A bare sin() on the resting position is precisely
-        // what this must never become.
+        // Rooted and upright. Stage rocks are wide and low; prism crystals with short
+        // pitched roofs break the ground line and cannot be read as scenery, where long
+        // thin tips read as thorns.
         RegressionTestHarness.Require(
-            shader.Contains("SETTLE_PERIOD", StringComparison.Ordinal)
-            && shader.Contains("SETTLE_SPAN", StringComparison.Ordinal),
-            "Expected motion spent as a bounded discrete settle rather than continuous drift.");
+            shader.Contains("vec2 crystal(", StringComparison.Ordinal)
+            && shader.Contains("TIP_SLOPE", StringComparison.Ordinal)
+            && shader.Contains("VEIN_GOLD", StringComparison.Ordinal)
+            && shader.Contains("FACE_LIGHT", StringComparison.Ordinal)
+            && shader.Contains("RIM_GOLD", StringComparison.Ordinal),
+            "Expected a gold-veined prism crystal cluster with lit and shaded faces.");
+
+        // A rooted body may not translate: life is spent as vein breath, rising motes and
+        // a pebble hop whose envelope is zero outside a short span, so the rest of the
+        // period is exactly still and the wrap is silent.
+        RegressionTestHarness.Require(
+            shader.Contains("VEIN_HZ", StringComparison.Ordinal)
+            && shader.Contains("HOP_PERIOD", StringComparison.Ordinal)
+            && shader.Contains("HOP_SPAN", StringComparison.Ordinal)
+            && shader.Contains("step(hopLocal, HOP_SPAN)", StringComparison.Ordinal),
+            "Expected rooted idle life as breath, motes and a bounded discrete hop.");
 
         // C# and the shader each hold one end of the same fact. If they drift, the slot is
-        // raised by the wrong distance and the stones float again.
+        // raised by the wrong distance and the cluster floats.
         RegressionTestHarness.Require(
-            shader.Contains("const float CONTACT_Y = 0.30;", StringComparison.Ordinal)
-            && visuals.Contains("EarthContactSurfaceFraction = 0.30f;", StringComparison.Ordinal)
-            && visuals.Contains("EarthVisualLift = 32f;", StringComparison.Ordinal),
-            "Expected the earth contact fraction and deliberate visual lift to agree with the controller.");
+            shader.Contains("const float CONTACT_Y = 0.36;", StringComparison.Ordinal)
+            && visuals.Contains("EarthContactSurfaceFraction = 0.36f;", StringComparison.Ordinal)
+            && visuals.Contains("GroundVisualLift = 44f;", StringComparison.Ordinal)
+            && !visuals.Contains("EarthVisualLift", StringComparison.Ordinal),
+            "Expected the earth contact fraction to agree with the controller on the visual ground.");
 
-        // The wall is a morph to its own trapezoid, not a smooth union of the stones:
-        // cel_smin on rock would round it into the fluid look and read as mud. Rigid
-        // bodies do not fuse, so the join softness stays small and the wall arrives by
-        // mix() instead.
+        // The wall is the spirit's own material: a palisade of the same crystals, joined
+        // by plain min because rigid bodies do not fuse. It rises, snaps, holds perfectly
+        // still and shatters, because Block is enduring, not hitting.
         RegressionTestHarness.Require(
-            shader.Contains("cel_tapered_segment(", StringComparison.Ordinal),
-            "Expected the wall to be a morph to a tapered trapezoid rather than a fluid union.");
-
-        // Block is enduring, not hitting, so the wall snaps and then holds perfectly
-        // still. A freeze shorter than the detail clock is not a freeze at all.
-        RegressionTestHarness.Require(
-            shader.Contains("WALL_SNAP_START", StringComparison.Ordinal)
+            shader.Contains("WALL_SHARD_COUNT", StringComparison.Ordinal)
+            && shader.Contains("WALL_SNAP_START", StringComparison.Ordinal)
             && shader.Contains("WALL_HOLD_START", StringComparison.Ordinal)
-            && shader.Contains("WALL_HOLD_END", StringComparison.Ordinal),
-            "Expected the wall to gather, snap, hold and shatter as explicit beats.");
+            && shader.Contains("WALL_HOLD_END", StringComparison.Ordinal)
+            && !shader.Contains("cel_smin(", StringComparison.Ordinal),
+            "Expected a crystal palisade that rises, snaps, holds and shatters without fusing.");
 
-        // Ochre is darker than the blue that already needed a bright rim to survive this
-        // game's dark stages, so the deepest band must not also own the outline. Pale gold
-        // top faces and a lit contact edge carry the silhouette instead.
+        // Shared math, not a second copy of it.
         RegressionTestHarness.Require(
-            shader.Contains("TOP_GOLD", StringComparison.Ordinal)
-            && shader.Contains("INK_OCHRE", StringComparison.Ordinal)
-            && shader.Contains("cel_bands3", StringComparison.Ordinal),
-            "Expected the named gold and ochre palettes to carry the silhouette through shared cel banding.");
-
-        // Shared cel math, not a second copy of it. Water carries its own smin, which is
-        // exactly the duplication the shared include exists to prevent.
-        RegressionTestHarness.Require(
-            shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_vfx.gdshaderinc\"", StringComparison.Ordinal)
-            && shader.Contains("cel_facet(", StringComparison.Ordinal)
-            && shader.Contains("cel_ellipse(", StringComparison.Ordinal)
+            shader.Contains("cel_tapered_segment(", StringComparison.Ordinal)
             && shader.Contains("cel_hash11(", StringComparison.Ordinal)
             && !shader.Contains("float smin(", StringComparison.Ordinal)
             && !shader.Contains("float hash21(", StringComparison.Ordinal),
@@ -268,7 +382,8 @@ public sealed class ElementStateVisualSuite
 
         // Visual work stays a fixed constant, never scaled by combat state or Block.
         RegressionTestHarness.Require(
-            shader.Contains("STONE_COUNT", StringComparison.Ordinal)
+            shader.Contains("SHARD_COUNT", StringComparison.Ordinal)
+            && shader.Contains("MOTE_COUNT", StringComparison.Ordinal)
             && shader.Contains("DEBRIS_COUNT", StringComparison.Ordinal),
             "Expected earth visual work to remain explicitly bounded.");
     }

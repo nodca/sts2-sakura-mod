@@ -7,6 +7,7 @@ internal partial class StaticCombatBackgroundVisuals : Node
     internal const string RooftopPaintingNodeName = "RooftopPainting";
     internal const string LightPaintingNodeName = "LightEternalDayPainting";
     internal const string EarthPenguinParkPaintingNodeName = "EarthPenguinParkPainting";
+    internal const string FireTokyoTowerPaintingNodeName = "FireTokyoTowerPainting";
     internal const float CanvasWidth = 2720f;
     internal const float CanvasHeight = 1360f;
     private TextureRect _painting = null!;

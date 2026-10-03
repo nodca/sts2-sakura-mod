@@ -21,70 +21,79 @@ internal readonly record struct SakuraElementSlotLayout(
     Vector2 Fire,
     Vector2 Wind,
     Vector2 Earth,
-    Vector2 Water)
+    Vector2 Water,
+    Vector2 FireAmbient,
+    Vector2 WindAmbient,
+    Vector2 WaterAmbient)
 {
-    // Keep the full water mark (droplets and its surface line) slightly above the
-    // floor anchor so it remains readable against the standee's feet and HP bar.
-    // Earth keeps its internal contact line grounded, then applies a separate visual
-    // lift so the complete mark clears the HP/Block strip in the combat layout.
-    private const float WaterVisualLift = 30f;
-    // The earth mark uses the real floor for its internal contact line, but the
-    // complete mark must sit above the HP/Block strip in the live combat layout.
-    // Keep this as a slot-level lift instead of changing CONTACT_Y in the shader so
-    // summon emergence and the wall remain grounded relative to one another.
-    private const float EarthVisualLift = 32f;
+    /// <summary>
+    /// The hitbox floor sits below the standee's visible feet, level with the HP/Block
+    /// strip. Anything that has to stand on the ground the player sees — the earth
+    /// cluster and the ambient layers rooted at the feet — stands on this line instead,
+    /// which also keeps it above that strip. One shared lift, so every ground-rooted
+    /// mark agrees on where the ground is.
+    /// </summary>
+    private const float GroundVisualLift = 44f;
+    /// <summary>
+    /// Gap between the hitbox's right edge and the earth cluster's axis. The HP bar is
+    /// as wide as the hitbox, so measuring from that edge keeps the cluster beside the
+    /// standee's legs at every outfit width, where a fraction of a clamped width could
+    /// not: outfit hitboxes run from about 230 to 330 pixels wide.
+    /// </summary>
+    private const float EarthEdgeClearance = 4f;
 
     /// <summary>
-    /// Fire owns the centre axis, water the left of the floor, earth the right of it,
-    /// and wind crosses the torso. Wind is in no side slot because it is the one
-    /// element with no location of its own: fire is a source, earth is low and heavy,
-    /// water flows but has a body. Crossing the body says "diffuse" in a way a patch
-    /// beside the shoulder cannot. Its rise is kept short enough to clear the fire slot
-    /// above and only graze the ground, and it carries a small leftward bias so the
-    /// rise reads against the standee instead of splitting it down the middle. The bias
-    /// stays far short of the water slot.
+    /// Fire owns the centre axis above the head. Wind and water hover in the open air to
+    /// the left, which is the one side of the standee that is dark and empty at chest
+    /// height and above: the wings fall to the lower left and the staff stands to the
+    /// right. Wind takes the upper of the two, beside the head, because it is the
+    /// lightest; water sits lower, at the chest, still clear above Kero's waist-height
+    /// perch. Neither crosses the body any more — the old wind mark did, and against the
+    /// white costume it vanished.
     ///
-    /// The two ground marks take opposite sides so neither has to yield size to the
-    /// other. Splitting them vertically was the alternative and it is strictly worse:
-    /// both belong on the floor, so stacking them would push one of them off it. Their
-    /// separation is horizontal and their heights are free.
+    /// Earth is rooted on the visual ground just past the hitbox's right edge. It is a
+    /// tall cluster, so beside the legs is the only place it is not drawn over the
+    /// standee, and the ground line keeps it clear of the HP/Block strip below.
     ///
-    /// Neither side flips with the standee. Position is read once when the slot is laid
+    /// The ambient layers belong to places, not to spirits: fire's embers and water's
+    /// rings sit on the visual ground, wind's gusts cross the chest. Water's rings take
+    /// the left of the floor and earth's cracks the right, so the two ground layers never
+    /// share space.
+    ///
+    /// Nothing flips with the standee. Position is read once when the slot is laid
     /// out, and <see cref="CelVfxGeometry.CasterAnchor.FacingSign"/> is deliberately not
     /// consulted: it is republished every frame by the idle controllers' SyncFlip, so a
     /// mirrored slot would make persistent marks jump across the character mid-combat.
     /// Only a one-shot beat may face — earth's wall reads facing when it starts and
-    /// mirrors inside its own shader, leaving the fragments where they were.
+    /// mirrors inside its own shader.
     ///
-    /// Water and earth are both measured from the floor instead of from body height,
-    /// and for the same reason. Every cue either one owns — falling, pooling and a
-    /// horizontal surface for water; cracks, contact shadows and fragments resting on
-    /// something for earth — belongs to the ground, and any of them floating at waist
-    /// height reads as a stray mark, which is worse than not drawing it at all. A
+    /// Ground-rooted slots are measured from the floor instead of from body height. A
     /// fraction of body height cannot express "on the floor": the mount point's own
     /// height above the ground is not knowable from body size, so any such fraction is
     /// a guess. The caster anchor already carries the real floor, and
-    /// <paramref name="floorY"/> is it. Earth was that guess (-0.08 of body height, so
-    /// roughly hip level, on the centre axis) until this became the slot that had to
-    /// draw a crack in the ground.
+    /// <paramref name="floorY"/> is it.
     /// </summary>
+    /// <param name="bodySize">
+    /// Hitbox size. The vertical slots clamp it; earth reads the raw width, because it
+    /// has to clear the real HP bar, which is exactly that wide.
+    /// </param>
+    /// <param name="bodyCentreX">
+    /// Hitbox centre in the same local space as the returned slots. The mount point is
+    /// not guaranteed to sit on it, and earth measures from the hitbox's edge.
+    /// </param>
     /// <param name="floorY">
     /// Floor position in the same local space as the returned slots, i.e. the caster
     /// anchor's floor converted into the visuals root.
     /// </param>
-    /// <param name="waterSurfaceInset">
-    /// Distance from the water rect's centre down to the surface line its shader
-    /// draws. The slot is raised by this much so that line lands on the floor.
-    /// </param>
     /// <param name="earthContactInset">
-    /// Distance from the earth rect's centre down to the contact line its shader rests
-    /// the fragments on. The slot is raised by this much so that line lands on the
-    /// floor, exactly as <paramref name="waterSurfaceInset"/> does for the pool.
+    /// Distance from the earth rect's centre down to the contact line its shader roots
+    /// the cluster on. The slot is raised by this much so that line lands on the
+    /// visual ground.
     /// </param>
     internal static SakuraElementSlotLayout FromBody(
         Vector2 bodySize,
+        float bodyCentreX,
         float floorY,
-        float waterSurfaceInset,
         float earthContactInset)
     {
         var width = Math.Clamp(bodySize.X, 100f, 240f);
@@ -96,13 +105,16 @@ internal readonly record struct SakuraElementSlotLayout(
         // degrades both to mount height together instead of dragging one to wherever
         // the other happens to sit.
         var groundY = Math.Max(floorY, 0f);
+        var visualGroundY = groundY - GroundVisualLift;
+        var hitboxRight = bodyCentreX + Math.Max(bodySize.X, 100f) * 0.5f;
         return new(
             Fire: new(0f, -height * 0.58f),
-            Wind: new(-width * 0.12f, -height * 0.22f),
-            // Further inboard than water's 0.58: earth is short and sits on the ground,
-            // where the HP bar and Block readout are, so it stays nearer the feet.
-            Earth: new(width * 0.42f, groundY - earthContactInset - EarthVisualLift),
-            Water: new(-width * 0.58f, groundY - waterSurfaceInset - WaterVisualLift));
+            Wind: new(-width * 0.62f, -height * 0.52f),
+            Earth: new(hitboxRight + EarthEdgeClearance, visualGroundY - earthContactInset),
+            Water: new(-width * 0.44f, -height * 0.36f),
+            FireAmbient: new(bodyCentreX, visualGroundY),
+            WindAmbient: new(bodyCentreX, -height * 0.28f),
+            WaterAmbient: new(bodyCentreX - width * 0.42f, visualGroundY));
     }
 }
 
@@ -118,19 +130,49 @@ internal static class SakuraElementStateVisuals
         MainFile.ResPath + "/shaders/card_vfx/sakura_element_state_watery.gdshader";
     internal const string EarthShaderPath =
         MainFile.ResPath + "/shaders/card_vfx/sakura_element_state_earthy.gdshader";
+    internal const string FireAmbientShaderPath =
+        MainFile.ResPath + "/shaders/card_vfx/sakura_element_state_firey_ambient.gdshader";
+    internal const string WindAmbientShaderPath =
+        MainFile.ResPath + "/shaders/card_vfx/sakura_element_state_windy_ambient.gdshader";
+    internal const string WaterAmbientShaderPath =
+        MainFile.ResPath + "/shaders/card_vfx/sakura_element_state_watery_ambient.gdshader";
+    internal const string CommonShaderIncludePath =
+        MainFile.ResPath + "/shaders/card_vfx/sakura_element_state_common.gdshaderinc";
 
     private const string RootName = "SakuraElementStateVisuals";
     private const string FireSlotName = "FireSlot";
     private const string FireyEmberName = "FireyEmber";
     private const string WindSlotName = "WindSlot";
-    private const string WindyCurrentsName = "WindyCurrents";
+    private const string WindySpiritName = "WindySpirit";
     private const string WaterSlotName = "WaterSlot";
-    private const string WateryDropletsName = "WateryDroplets";
+    private const string WaterySpiritName = "WaterySpirit";
     private const string EarthSlotName = "EarthSlot";
-    private const string EarthyFragmentsName = "EarthyFragments";
+    private const string EarthySpireName = "EarthySpire";
+    private const string FireAmbientSlotName = "FireAmbientSlot";
+    private const string FireyAmbientName = "FireyAmbient";
+    private const string WindAmbientSlotName = "WindAmbientSlot";
+    private const string WindyAmbientName = "WindyAmbient";
+    private const string WaterAmbientSlotName = "WaterAmbientSlot";
+    private const string WateryAmbientName = "WateryAmbient";
     private const float QuickRevealDuration = 0.3f;
     private const float SummonDuration = 0.98f;
     private const float DismissDuration = 0.24f;
+    /// <summary>
+    /// Resting strength of each ambient layer. Up to four states can be up at once,
+    /// so these stay faint: the spirits are what has to read, the ambient only says
+    /// the air has changed. Entry and trigger lift them briefly through
+    /// <c>ambient_boost</c> and they settle back here.
+    /// </summary>
+    private const float FireAmbientRestAlpha = 0.42f;
+    private const float EarthAmbientRestAlpha = 0.5f;
+    /// <summary>Wind's gust is already intermittent, so it can rest a little stronger.</summary>
+    private const float WindAmbientRestAlpha = 0.55f;
+    private const float WaterAmbientRestAlpha = 0.45f;
+    private const float AmbientBoostRise = 0.12f;
+    private const float AmbientBoostFall = 0.62f;
+    /// <summary>Entering a state is the bigger statement; a trigger is a reminder.</summary>
+    private const float EntryAmbientBoost = 1f;
+    private const float TriggerAmbientBoost = 0.6f;
     private const float TriggerDuration = 0.26f;
     private const float WindTriggerDuration = 0.3f;
     /// <summary>
@@ -151,29 +193,24 @@ internal static class SakuraElementStateVisuals
     /// </summary>
     private const float EarthTriggerDuration = 0.38f;
     /// <summary>
-    /// Where the water shader draws its surface line, as a fraction of the region
-    /// height measured down from the rect's centre. Must stay equal to
-    /// <c>POOL_Y</c> in <c>sakura_element_state_watery.gdshader</c>: the slot is
-    /// raised by this distance so the drawn line lands on the real floor, so the two
-    /// values drifting apart would float the pool again.
-    /// </summary>
-    private const float WaterPoolSurfaceFraction = 0.46f;
-    /// <summary>
-    /// Where the earth shader rests its fragments, as a fraction of the region height
+    /// Where the earth shader roots its cluster, as a fraction of the region height
     /// measured down from the rect's centre. Must stay equal to <c>CONTACT_Y</c> in
-    /// <c>sakura_element_state_earthy.gdshader</c>, for the same reason
-    /// <see cref="WaterPoolSurfaceFraction"/> must match its own shader: the slot is
-    /// raised by this distance so the drawn contact line lands on the real floor, and
-    /// the two drifting apart floats the stones again.
+    /// <c>sakura_element_state_earthy.gdshader</c>: the slot is raised by this distance
+    /// so the drawn contact line lands on the visual ground, and the two drifting apart
+    /// floats the cluster.
     /// </summary>
-    private const float EarthContactSurfaceFraction = 0.30f;
+    private const float EarthContactSurfaceFraction = 0.36f;
     private const int MaxTriggerTargets = 8;
     private const int WindStreamCount = 3;
 
     private static readonly ConditionalWeakTable<Creature, State> States = new();
 
     internal static IEnumerable<string> AssetPaths =>
-        [ScenePath, ShaderPath, WindShaderPath, WaterShaderPath, EarthShaderPath];
+        [
+            ScenePath, ShaderPath, WindShaderPath, WaterShaderPath, EarthShaderPath,
+            FireAmbientShaderPath, WindAmbientShaderPath, WaterAmbientShaderPath,
+            CommonShaderIncludePath
+        ];
 
     internal static void Mount(NCreature creatureNode)
     {
@@ -199,7 +236,8 @@ internal static class SakuraElementStateVisuals
             root = scene.Instantiate<Node2D>();
             root.Name = RootName;
             root.ZAsRelative = true;
-            root.ZIndex = 2;
+            // Stay in the creature's draw order so combat UI and card grids cover the marks.
+            root.ZIndex = 0;
             creatureNode.Visuals.VfxSpawnPosition.AddChildSafely(root);
             creatureNode.Visuals.VfxSpawnPosition.MoveChildSafely(root, 0);
 
@@ -296,14 +334,23 @@ internal static class SakuraElementStateVisuals
         private readonly ColorRect _ember;
         private readonly ShaderMaterial _material;
         private readonly Node2D _windSlot;
-        private readonly ColorRect _currents;
+        private readonly ColorRect _windSpirit;
         private readonly ShaderMaterial _windMaterial;
         private readonly Node2D _waterSlot;
-        private readonly ColorRect _droplets;
+        private readonly ColorRect _waterSpirit;
         private readonly ShaderMaterial _waterMaterial;
         private readonly Node2D _earthSlot;
-        private readonly ColorRect _fragments;
+        private readonly ColorRect _spire;
         private readonly ShaderMaterial _earthMaterial;
+        private readonly Node2D _fireAmbientSlot;
+        private readonly ColorRect _fireAmbient;
+        private readonly ShaderMaterial _fireAmbientMaterial;
+        private readonly Node2D _windAmbientSlot;
+        private readonly ColorRect _windAmbient;
+        private readonly ShaderMaterial _windAmbientMaterial;
+        private readonly Node2D _waterAmbientSlot;
+        private readonly ColorRect _waterAmbient;
+        private readonly ShaderMaterial _waterAmbientMaterial;
         private Tween? _entryTween;
         private Tween? _exitTween;
         private Tween? _windEntryTween;
@@ -321,6 +368,15 @@ internal static class SakuraElementStateVisuals
         /// has no formed shape to lose — that is worth tidying separately, not copying.
         /// </summary>
         private Tween? _earthTriggerTween;
+        /// <summary>
+        /// Ambient boosts are held for the same reason as <see cref="_earthTriggerTween"/>:
+        /// a trigger can land while the entry boost is still falling, and two tweens on
+        /// one <c>ambient_boost</c> would fight over it.
+        /// </summary>
+        private Tween? _fireBoostTween;
+        private Tween? _earthBoostTween;
+        private Tween? _windBoostTween;
+        private Tween? _waterBoostTween;
         private SakuraElementSet _activeStates;
         private bool _disposed;
 
@@ -337,20 +393,40 @@ internal static class SakuraElementStateVisuals
                 ?? throw new InvalidOperationException("Sakura fire state VFX requires a ShaderMaterial.");
             _ember.Material = _material;
             _windSlot = root.GetNode<Node2D>(WindSlotName);
-            _currents = root.GetNode<ColorRect>($"{WindSlotName}/{WindyCurrentsName}");
-            _windMaterial = _currents.Material?.Duplicate() as ShaderMaterial
+            _windSpirit = root.GetNode<ColorRect>($"{WindSlotName}/{WindySpiritName}");
+            _windMaterial = _windSpirit.Material?.Duplicate() as ShaderMaterial
                 ?? throw new InvalidOperationException("Sakura wind state VFX requires a ShaderMaterial.");
-            _currents.Material = _windMaterial;
+            _windSpirit.Material = _windMaterial;
             _waterSlot = root.GetNode<Node2D>(WaterSlotName);
-            _droplets = root.GetNode<ColorRect>($"{WaterSlotName}/{WateryDropletsName}");
-            _waterMaterial = _droplets.Material?.Duplicate() as ShaderMaterial
+            _waterSpirit = root.GetNode<ColorRect>($"{WaterSlotName}/{WaterySpiritName}");
+            _waterMaterial = _waterSpirit.Material?.Duplicate() as ShaderMaterial
                 ?? throw new InvalidOperationException("Sakura water state VFX requires a ShaderMaterial.");
-            _droplets.Material = _waterMaterial;
+            _waterSpirit.Material = _waterMaterial;
             _earthSlot = root.GetNode<Node2D>(EarthSlotName);
-            _fragments = root.GetNode<ColorRect>($"{EarthSlotName}/{EarthyFragmentsName}");
-            _earthMaterial = _fragments.Material?.Duplicate() as ShaderMaterial
+            _spire = root.GetNode<ColorRect>($"{EarthSlotName}/{EarthySpireName}");
+            _earthMaterial = _spire.Material?.Duplicate() as ShaderMaterial
                 ?? throw new InvalidOperationException("Sakura earth state VFX requires a ShaderMaterial.");
-            _fragments.Material = _earthMaterial;
+            _spire.Material = _earthMaterial;
+            _fireAmbientSlot = root.GetNode<Node2D>(FireAmbientSlotName);
+            _fireAmbient = root.GetNode<ColorRect>($"{FireAmbientSlotName}/{FireyAmbientName}");
+            _fireAmbientMaterial = _fireAmbient.Material?.Duplicate() as ShaderMaterial
+                ?? throw new InvalidOperationException("Sakura fire ambient VFX requires a ShaderMaterial.");
+            _fireAmbient.Material = _fireAmbientMaterial;
+            (_windAmbientSlot, _windAmbient, _windAmbientMaterial) =
+                ResolveAmbient(root, WindAmbientSlotName, WindyAmbientName);
+            (_waterAmbientSlot, _waterAmbient, _waterAmbientMaterial) =
+                ResolveAmbient(root, WaterAmbientSlotName, WateryAmbientName);
+        }
+
+        private static (Node2D Slot, ColorRect Rect, ShaderMaterial Material) ResolveAmbient(
+            Node2D root, string slotName, string rectName)
+        {
+            var slot = root.GetNode<Node2D>(slotName);
+            var rect = root.GetNode<ColorRect>($"{slotName}/{rectName}");
+            var material = rect.Material?.Duplicate() as ShaderMaterial
+                ?? throw new InvalidOperationException($"Sakura {rectName} VFX requires a ShaderMaterial.");
+            rect.Material = material;
+            return (slot, rect, material);
         }
 
         internal void Start()
@@ -359,40 +435,65 @@ internal static class SakuraElementStateVisuals
                 ?? throw new InvalidOperationException("Sakura fire state VFX requires caster geometry.");
             // The anchor's floor is global; slot positions are local to this root.
             var floorY = _root.ToLocal(geometry.Floor).Y;
+            var bodyCentreX = _root.ToLocal(geometry.BodyCenter).X;
             var layout = SakuraElementSlotLayout.FromBody(
                 geometry.BodySize,
+                bodyCentreX,
                 floorY,
-                _droplets.Size.Y * WaterPoolSurfaceFraction,
-                _fragments.Size.Y * EarthContactSurfaceFraction);
+                _spire.Size.Y * EarthContactSurfaceFraction);
             _fireSlot.Position = layout.Fire;
             _windSlot.Position = layout.Wind;
             _earthSlot.Position = layout.Earth;
             _waterSlot.Position = layout.Water;
+            _fireAmbientSlot.Position = layout.FireAmbient;
+            _windAmbientSlot.Position = layout.WindAmbient;
+            _waterAmbientSlot.Position = layout.WaterAmbient;
             _material.SetShaderParameter("region_size", _ember.Size);
             _material.SetShaderParameter("seed", Random.Shared.NextSingle() * 6.1f);
             _material.SetShaderParameter("state_alpha", 0f);
             _material.SetShaderParameter("summon_progress", 1f);
             _material.SetShaderParameter("summon_hold", 0f);
             _material.SetShaderParameter("trigger_progress", 0f);
-            _windMaterial.SetShaderParameter("region_size", _currents.Size);
+            _windMaterial.SetShaderParameter("region_size", _windSpirit.Size);
             _windMaterial.SetShaderParameter("seed", Random.Shared.NextSingle() * 6.1f);
             _windMaterial.SetShaderParameter("state_alpha", 0f);
             _windMaterial.SetShaderParameter("summon_progress", 1f);
             _windMaterial.SetShaderParameter("summon_hold", 0f);
             _windMaterial.SetShaderParameter("trigger_progress", 0f);
-            _waterMaterial.SetShaderParameter("region_size", _droplets.Size);
+            _waterMaterial.SetShaderParameter("region_size", _waterSpirit.Size);
             _waterMaterial.SetShaderParameter("seed", Random.Shared.NextSingle() * 6.1f);
             _waterMaterial.SetShaderParameter("state_alpha", 0f);
             _waterMaterial.SetShaderParameter("summon_progress", 1f);
             _waterMaterial.SetShaderParameter("summon_hold", 0f);
             _waterMaterial.SetShaderParameter("trigger_progress", 0f);
-            _earthMaterial.SetShaderParameter("region_size", _fragments.Size);
+            _earthMaterial.SetShaderParameter("region_size", _spire.Size);
             _earthMaterial.SetShaderParameter("seed", Random.Shared.NextSingle() * 6.1f);
             _earthMaterial.SetShaderParameter("state_alpha", 0f);
             _earthMaterial.SetShaderParameter("summon_progress", 1f);
             _earthMaterial.SetShaderParameter("summon_hold", 0f);
             _earthMaterial.SetShaderParameter("trigger_progress", 0f);
             _earthMaterial.SetShaderParameter("facing", ResolveFacingSign());
+            // Every uniform a tween will drive is written once here first: a ShaderMaterial
+            // reports a never-set uniform as Nil, and tweening from Nil crashes.
+            _earthMaterial.SetShaderParameter("ambient_alpha", 0f);
+            _earthMaterial.SetShaderParameter("ambient_boost", 0f);
+            _fireAmbientMaterial.SetShaderParameter("region_size", _fireAmbient.Size);
+            _fireAmbientMaterial.SetShaderParameter("seed", Random.Shared.NextSingle() * 6.1f);
+            _fireAmbientMaterial.SetShaderParameter("state_alpha", 0f);
+            _fireAmbientMaterial.SetShaderParameter("ambient_alpha", 0f);
+            _fireAmbientMaterial.SetShaderParameter("ambient_boost", 0f);
+            foreach (var (rect, material) in new[]
+                     {
+                         (_windAmbient, _windAmbientMaterial),
+                         (_waterAmbient, _waterAmbientMaterial)
+                     })
+            {
+                material.SetShaderParameter("region_size", rect.Size);
+                material.SetShaderParameter("seed", Random.Shared.NextSingle() * 6.1f);
+                material.SetShaderParameter("state_alpha", 0f);
+                material.SetShaderParameter("ambient_alpha", 0f);
+                material.SetShaderParameter("ambient_boost", 0f);
+            }
 
             _creature.PowerApplied += OnPowerChanged;
             _creature.PowerIncreased += OnPowerIncreased;
@@ -424,6 +525,7 @@ internal static class SakuraElementStateVisuals
             var next = SakuraElementState.ReadActive(_player);
             var previous = _activeStates;
             _activeStates = next;
+            ApplyAmbientPreference();
 
             RefreshFire(previous, next, animateEntry);
             RefreshWind(previous, next, animateEntry);
@@ -451,9 +553,14 @@ internal static class SakuraElementStateVisuals
             if (isActive && !wasActive)
             {
                 if (animateEntry && SakuraModConfig.IsCardVfxEnabled())
+                {
                     PlayQuickReveal();
+                    PlayAmbientBoost(_fireAmbientMaterial, ref _fireBoostTween, EntryAmbientBoost);
+                }
                 else
+                {
                     SetStateAlpha(1f);
+                }
             }
             else if (!isActive && wasActive)
             {
@@ -476,9 +583,14 @@ internal static class SakuraElementStateVisuals
             if (isActive && !wasActive)
             {
                 if (animateEntry && SakuraModConfig.IsCardVfxEnabled())
+                {
                     PlayWindQuickReveal();
+                    PlayAmbientBoost(_windAmbientMaterial, ref _windBoostTween, EntryAmbientBoost);
+                }
                 else
+                {
                     SetWindStateAlpha(1f);
+                }
             }
             else if (!isActive && wasActive)
             {
@@ -501,9 +613,14 @@ internal static class SakuraElementStateVisuals
             if (isActive && !wasActive)
             {
                 if (animateEntry && SakuraModConfig.IsCardVfxEnabled())
+                {
                     PlayWaterQuickReveal();
+                    PlayAmbientBoost(_waterAmbientMaterial, ref _waterBoostTween, EntryAmbientBoost);
+                }
                 else
+                {
                     SetWaterStateAlpha(1f);
+                }
             }
             else if (!isActive && wasActive)
             {
@@ -526,9 +643,14 @@ internal static class SakuraElementStateVisuals
             if (isActive && !wasActive)
             {
                 if (animateEntry && SakuraModConfig.IsCardVfxEnabled())
+                {
                     PlayEarthQuickReveal();
+                    PlayAmbientBoost(_earthMaterial, ref _earthBoostTween, EntryAmbientBoost);
+                }
                 else
+                {
                     SetEarthStateAlpha(1f);
+                }
             }
             else if (!isActive && wasActive)
             {
@@ -550,7 +672,7 @@ internal static class SakuraElementStateVisuals
             KillTween(ref _entryTween);
             KillTween(ref _exitTween);
             _ember.Visible = true;
-            _material.SetShaderParameter("state_alpha", 1f);
+            SetStateAlpha(1f);
             _material.SetShaderParameter("summon_progress", 0f);
             _material.SetShaderParameter("summon_hold", 0f);
             _ember.Scale = Vector2.One * 0.55f;
@@ -568,6 +690,7 @@ internal static class SakuraElementStateVisuals
                     _material.SetShaderParameter("summon_hold", value)),
                 1f, 0f, SummonDuration * 0.18f);
             _entryTween.Chain().TweenCallback(Callable.From(() => _entryTween = null));
+            PlayAmbientBoost(_fireAmbientMaterial, ref _fireBoostTween, EntryAmbientBoost);
         }
 
         internal void PlayWindSummon()
@@ -579,15 +702,15 @@ internal static class SakuraElementStateVisuals
 
             KillTween(ref _windEntryTween);
             KillTween(ref _windExitTween);
-            _currents.Visible = true;
-            _currents.Scale = Vector2.One;
-            _currents.Position = Vector2.Zero;
-            _windMaterial.SetShaderParameter("state_alpha", 1f);
+            _windSpirit.Visible = true;
+            _windSpirit.Scale = Vector2.One;
+            _windSpirit.Position = Vector2.Zero;
+            SetWindStateAlpha(1f);
             _windMaterial.SetShaderParameter("summon_progress", 0f);
             _windMaterial.SetShaderParameter("summon_hold", 0f);
             _windEntryTween = _root.CreateTween();
-            // Currents sweep in wide and tighten onto the orbit; the shader reads
-            // summon_progress as the gather radius, so no node position is reset.
+            // The vortex gathers in from wide and the ribbons are flung out last; the
+            // shader reads summon_progress for both, so no node position is reset.
             _windEntryTween.TweenMethod(Callable.From<float>(value =>
                     _windMaterial.SetShaderParameter("summon_progress", value)),
                 0f, 1f, SummonDuration * 0.74f)
@@ -599,6 +722,7 @@ internal static class SakuraElementStateVisuals
                     _windMaterial.SetShaderParameter("summon_hold", value)),
                 1f, 0f, SummonDuration * 0.17f);
             _windEntryTween.TweenCallback(Callable.From(() => _windEntryTween = null));
+            PlayAmbientBoost(_windAmbientMaterial, ref _windBoostTween, EntryAmbientBoost);
         }
 
         internal void PlayWindTrigger()
@@ -607,6 +731,7 @@ internal static class SakuraElementStateVisuals
                 return;
 
             _windMaterial.SetShaderParameter("trigger_progress", 0f);
+            PlayAmbientBoost(_windAmbientMaterial, ref _windBoostTween, TriggerAmbientBoost);
             var triggerTween = _root.CreateTween();
             triggerTween.TweenMethod(Callable.From<float>(value =>
                     _windMaterial.SetShaderParameter("trigger_progress", value)),
@@ -683,16 +808,16 @@ internal static class SakuraElementStateVisuals
 
             KillTween(ref _waterEntryTween);
             KillTween(ref _waterExitTween);
-            _droplets.Visible = true;
-            _droplets.Scale = Vector2.One;
-            _droplets.Position = Vector2.Zero;
-            _waterMaterial.SetShaderParameter("state_alpha", 1f);
+            _waterSpirit.Visible = true;
+            _waterSpirit.Scale = Vector2.One;
+            _waterSpirit.Position = Vector2.Zero;
+            SetWaterStateAlpha(1f);
             _waterMaterial.SetShaderParameter("summon_progress", 0f);
             _waterMaterial.SetShaderParameter("summon_hold", 0f);
             _waterEntryTween = _root.CreateTween();
-            // Scattered threads draw in and coalesce; the shader reads
-            // summon_progress as both the gather distance and the droplets' own
-            // mass, so nothing here repositions a node.
+            // Scattered drops draw in and fuse into the spirit's body; the shader reads
+            // summon_progress as both the gather distance and the body's own mass, so
+            // nothing here repositions a node.
             _waterEntryTween.TweenMethod(Callable.From<float>(value =>
                     _waterMaterial.SetShaderParameter("summon_progress", value)),
                 0f, 1f, SummonDuration * 0.74f)
@@ -704,6 +829,7 @@ internal static class SakuraElementStateVisuals
                     _waterMaterial.SetShaderParameter("summon_hold", value)),
                 1f, 0f, SummonDuration * 0.17f);
             _waterEntryTween.TweenCallback(Callable.From(() => _waterEntryTween = null));
+            PlayAmbientBoost(_waterAmbientMaterial, ref _waterBoostTween, EntryAmbientBoost);
         }
 
         internal void PlayEarthSummon()
@@ -715,19 +841,18 @@ internal static class SakuraElementStateVisuals
 
             KillTween(ref _earthEntryTween);
             KillTween(ref _earthExitTween);
-            _fragments.Visible = true;
-            _fragments.Scale = Vector2.One;
-            _fragments.Position = Vector2.Zero;
+            _spire.Visible = true;
+            _spire.Scale = Vector2.One;
+            _spire.Position = Vector2.Zero;
             _earthMaterial.SetShaderParameter("state_alpha", 1f);
             _earthMaterial.SetShaderParameter("summon_progress", 0f);
             _earthMaterial.SetShaderParameter("summon_hold", 0f);
             _earthEntryTween = _root.CreateTween();
-            // A crack opens, the stones heave up through it, the construct holds, then
-            // it splits back into the resting three. All four beats are segments of
-            // summon_progress inside the shader, so this is one linear drive: easing it
-            // would slide those boundaries around and blur the prelude into the heave.
-            // Nothing here moves a node — the stones start below the shader's contact
-            // line and are revealed by its ground clip, not by a position.
+            // The cracks open, then the shards heave up through them one by one and
+            // settle. Every beat is a segment of summon_progress inside the shader, so
+            // this is one linear drive: easing it would slide those boundaries around
+            // and blur the cracks into the heave. Nothing here moves a node — the shards
+            // start below the shader's contact line and are revealed by its ground clip.
             _earthEntryTween.TweenMethod(Callable.From<float>(value =>
                     _earthMaterial.SetShaderParameter("summon_progress", value)),
                 0f, 1f, SummonDuration);
@@ -735,8 +860,8 @@ internal static class SakuraElementStateVisuals
         }
 
         /// <summary>
-        /// Gathers the resting stones into a low wall in front of the character, holds
-        /// it, then breaks it apart.
+        /// Raises a low wall out of the ground in front of the cluster, holds it, then
+        /// breaks it apart.
         /// </summary>
         /// <remarks>
         /// Earth is the one element that needs restart handling. It has no counter, so
@@ -756,6 +881,7 @@ internal static class SakuraElementStateVisuals
                 return;
 
             KillTween(ref _earthTriggerTween);
+            PlayAmbientBoost(_earthMaterial, ref _earthBoostTween, TriggerAmbientBoost);
             // Sampled once per beat, so a standee turning mid-formation cannot mirror a
             // wall that is already forming.
             _earthMaterial.SetShaderParameter("facing", ResolveFacingSign());
@@ -782,6 +908,7 @@ internal static class SakuraElementStateVisuals
                 return;
 
             _waterMaterial.SetShaderParameter("trigger_progress", 0f);
+            PlayAmbientBoost(_waterAmbientMaterial, ref _waterBoostTween, TriggerAmbientBoost);
             var triggerTween = _root.CreateTween();
             triggerTween.TweenMethod(Callable.From<float>(value =>
                     _waterMaterial.SetShaderParameter("trigger_progress", value)),
@@ -890,6 +1017,7 @@ internal static class SakuraElementStateVisuals
                 return;
 
             _material.SetShaderParameter("trigger_progress", 0f);
+            PlayAmbientBoost(_fireAmbientMaterial, ref _fireBoostTween, TriggerAmbientBoost);
             var triggerTween = _root.CreateTween();
             triggerTween.TweenMethod(Callable.From<float>(value =>
                     _material.SetShaderParameter("trigger_progress", value)),
@@ -978,8 +1106,8 @@ internal static class SakuraElementStateVisuals
             KillTween(ref _entryTween);
             KillTween(ref _exitTween);
             _exitTween = _root.CreateTween().SetParallel();
-            _exitTween.TweenMethod(Callable.From<float>(value =>
-                    _material.SetShaderParameter("state_alpha", value)),
+            // Through SetStateAlpha so the embers leave with the flame.
+            _exitTween.TweenMethod(Callable.From<float>(SetStateAlpha),
                 1f, 0f, DismissDuration)
                 .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Cubic);
             _exitTween.TweenProperty(_ember, "position", new Vector2(0f, -18f), DismissDuration)
@@ -995,9 +1123,9 @@ internal static class SakuraElementStateVisuals
         private void PlayWindQuickReveal()
         {
             KillTween(ref _windEntryTween);
-            _currents.Visible = true;
-            _currents.Scale = Vector2.One;
-            _currents.Position = Vector2.Zero;
+            _windSpirit.Visible = true;
+            _windSpirit.Scale = Vector2.One;
+            _windSpirit.Position = Vector2.Zero;
             _windMaterial.SetShaderParameter("summon_progress", 1f);
             SetWindStateAlpha(0f);
             _windEntryTween = _root.CreateTween();
@@ -1011,17 +1139,16 @@ internal static class SakuraElementStateVisuals
             KillTween(ref _windEntryTween);
             KillTween(ref _windExitTween);
             _windExitTween = _root.CreateTween().SetParallel();
-            _windExitTween.TweenMethod(Callable.From<float>(value =>
-                    _windMaterial.SetShaderParameter("state_alpha", value)),
+            _windExitTween.TweenMethod(Callable.From<float>(SetWindStateAlpha),
                 1f, 0f, DismissDuration)
                 .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Sine);
             // Wind thins outward instead of drifting up the way the ember does.
-            _windExitTween.TweenProperty(_currents, "scale", new Vector2(1.22f, 0.68f), DismissDuration)
+            _windExitTween.TweenProperty(_windSpirit, "scale", new Vector2(1.22f, 0.68f), DismissDuration)
                 .SetEase(Tween.EaseType.Out);
             _windExitTween.Chain().TweenCallback(Callable.From(() =>
             {
-                _currents.Scale = Vector2.One;
-                _currents.Visible = false;
+                _windSpirit.Scale = Vector2.One;
+                _windSpirit.Visible = false;
                 _windExitTween = null;
             }));
         }
@@ -1029,9 +1156,9 @@ internal static class SakuraElementStateVisuals
         private void PlayWaterQuickReveal()
         {
             KillTween(ref _waterEntryTween);
-            _droplets.Visible = true;
-            _droplets.Scale = Vector2.One;
-            _droplets.Position = Vector2.Zero;
+            _waterSpirit.Visible = true;
+            _waterSpirit.Scale = Vector2.One;
+            _waterSpirit.Position = Vector2.Zero;
             _waterMaterial.SetShaderParameter("summon_progress", 1f);
             SetWaterStateAlpha(0f);
             _waterEntryTween = _root.CreateTween();
@@ -1045,21 +1172,20 @@ internal static class SakuraElementStateVisuals
             KillTween(ref _waterEntryTween);
             KillTween(ref _waterExitTween);
             _waterExitTween = _root.CreateTween().SetParallel();
-            _waterExitTween.TweenMethod(Callable.From<float>(value =>
-                    _waterMaterial.SetShaderParameter("state_alpha", value)),
+            _waterExitTween.TweenMethod(Callable.From<float>(SetWaterStateAlpha),
                 1f, 0f, DismissDuration)
                 .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Sine);
             // Water runs down and spreads as it goes, where the ember drifts up and
             // wind thins sideways. Each element leaves by its own logic.
-            _waterExitTween.TweenProperty(_droplets, "scale", new Vector2(1.14f, 0.76f), DismissDuration)
+            _waterExitTween.TweenProperty(_waterSpirit, "scale", new Vector2(1.14f, 0.76f), DismissDuration)
                 .SetEase(Tween.EaseType.Out);
-            _waterExitTween.TweenProperty(_droplets, "position", new Vector2(0f, 9f), DismissDuration)
+            _waterExitTween.TweenProperty(_waterSpirit, "position", new Vector2(0f, 9f), DismissDuration)
                 .SetEase(Tween.EaseType.In);
             _waterExitTween.Chain().TweenCallback(Callable.From(() =>
             {
-                _droplets.Scale = Vector2.One;
-                _droplets.Position = Vector2.Zero;
-                _droplets.Visible = false;
+                _waterSpirit.Scale = Vector2.One;
+                _waterSpirit.Position = Vector2.Zero;
+                _waterSpirit.Visible = false;
                 _waterExitTween = null;
             }));
         }
@@ -1067,9 +1193,9 @@ internal static class SakuraElementStateVisuals
         private void PlayEarthQuickReveal()
         {
             KillTween(ref _earthEntryTween);
-            _fragments.Visible = true;
-            _fragments.Scale = Vector2.One;
-            _fragments.Position = Vector2.Zero;
+            _spire.Visible = true;
+            _spire.Scale = Vector2.One;
+            _spire.Position = Vector2.Zero;
             _earthMaterial.SetShaderParameter("summon_progress", 1f);
             SetEarthStateAlpha(0f);
             _earthEntryTween = _root.CreateTween();
@@ -1084,36 +1210,90 @@ internal static class SakuraElementStateVisuals
             KillTween(ref _earthExitTween);
             // A live wall would otherwise keep driving the field while the mark fades.
             KillTween(ref _earthTriggerTween);
+            KillTween(ref _earthBoostTween);
             _earthMaterial.SetShaderParameter("trigger_progress", 0f);
+            _earthMaterial.SetShaderParameter("ambient_boost", 0f);
             _earthExitTween = _root.CreateTween().SetParallel();
             _earthExitTween.TweenMethod(Callable.From<float>(value =>
                     _earthMaterial.SetShaderParameter("state_alpha", value)),
                 1f, 0f, DismissDuration)
                 .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Sine);
-            // Stone sinks and settles wider as it goes: the ember drifts up, wind thins
-            // sideways, water runs down. Each element leaves by its own logic, and only
-            // earth leaves by going back into the ground it came out of.
-            _earthExitTween.TweenProperty(_fragments, "scale", new Vector2(1.04f, 0.82f), DismissDuration)
+            // The cluster sinks back as it goes: the ember drifts up, wind thins sideways,
+            // water runs down. Each element leaves by its own logic, and only earth leaves
+            // by going back into the ground it came out of.
+            _earthExitTween.TweenProperty(_spire, "scale", new Vector2(1.04f, 0.82f), DismissDuration)
                 .SetEase(Tween.EaseType.In);
-            _earthExitTween.TweenProperty(_fragments, "position", new Vector2(0f, 5f), DismissDuration)
+            _earthExitTween.TweenProperty(_spire, "position", new Vector2(0f, 5f), DismissDuration)
                 .SetEase(Tween.EaseType.In);
             _earthExitTween.Chain().TweenCallback(Callable.From(() =>
             {
-                _fragments.Scale = Vector2.One;
-                _fragments.Position = Vector2.Zero;
-                _fragments.Visible = false;
+                _spire.Scale = Vector2.One;
+                _spire.Position = Vector2.Zero;
+                _spire.Visible = false;
                 _earthExitTween = null;
             }));
         }
 
-        private void SetStateAlpha(float value) =>
-            _material.SetShaderParameter("state_alpha", Mathf.Clamp(value, 0f, 1f));
+        private void SetStateAlpha(float value)
+        {
+            var alpha = Mathf.Clamp(value, 0f, 1f);
+            _material.SetShaderParameter("state_alpha", alpha);
+            _fireAmbientMaterial.SetShaderParameter("state_alpha", alpha);
+        }
 
-        private void SetWindStateAlpha(float value) =>
-            _windMaterial.SetShaderParameter("state_alpha", Mathf.Clamp(value, 0f, 1f));
+        /// <summary>
+        /// Ambient layers are atmosphere, so they follow the optional card-VFX switch:
+        /// with it off the spirits keep the state readable on their own and the ambient
+        /// rests at zero. Re-read on every refresh, because the switch can change
+        /// between combats' state changes without remounting.
+        /// </summary>
+        private void ApplyAmbientPreference()
+        {
+            var enabled = SakuraModConfig.IsCardVfxEnabled();
+            _fireAmbient.Visible = enabled;
+            _windAmbient.Visible = enabled;
+            _waterAmbient.Visible = enabled;
+            _fireAmbientMaterial.SetShaderParameter("ambient_alpha", enabled ? FireAmbientRestAlpha : 0f);
+            _windAmbientMaterial.SetShaderParameter("ambient_alpha", enabled ? WindAmbientRestAlpha : 0f);
+            _waterAmbientMaterial.SetShaderParameter("ambient_alpha", enabled ? WaterAmbientRestAlpha : 0f);
+            _earthMaterial.SetShaderParameter("ambient_alpha", enabled ? EarthAmbientRestAlpha : 0f);
+        }
 
-        private void SetWaterStateAlpha(float value) =>
-            _waterMaterial.SetShaderParameter("state_alpha", Mathf.Clamp(value, 0f, 1f));
+        /// <summary>
+        /// Lifts an ambient layer to <paramref name="peak"/> and lets it fall back to rest.
+        /// Restarts cleanly when called again mid-fall.
+        /// </summary>
+        private void PlayAmbientBoost(ShaderMaterial material, ref Tween? tween, float peak)
+        {
+            KillTween(ref tween);
+            if (_disposed || !SakuraModConfig.IsCardVfxEnabled())
+                return;
+            material.SetShaderParameter("ambient_boost", 0f);
+            var boost = _root.CreateTween();
+            boost.TweenMethod(Callable.From<float>(value =>
+                    material.SetShaderParameter("ambient_boost", value)),
+                0f, peak, AmbientBoostRise)
+                .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+            boost.TweenMethod(Callable.From<float>(value =>
+                    material.SetShaderParameter("ambient_boost", value)),
+                peak, 0f, AmbientBoostFall)
+                .SetEase(Tween.EaseType.InOut).SetTrans(Tween.TransitionType.Sine);
+            tween = boost;
+        }
+
+        private void SetWindStateAlpha(float value)
+        {
+            var alpha = Mathf.Clamp(value, 0f, 1f);
+            _windMaterial.SetShaderParameter("state_alpha", alpha);
+            _windAmbientMaterial.SetShaderParameter("state_alpha", alpha);
+        }
+
+        private void SetWaterStateAlpha(float value)
+        {
+            var alpha = Mathf.Clamp(value, 0f, 1f);
+            _waterMaterial.SetShaderParameter("state_alpha", alpha);
+            _waterAmbientMaterial.SetShaderParameter("state_alpha", alpha);
+        }
 
         private void SetEarthStateAlpha(float value) =>
             _earthMaterial.SetShaderParameter("state_alpha", Mathf.Clamp(value, 0f, 1f));
@@ -1165,6 +1345,10 @@ internal static class SakuraElementStateVisuals
             KillTween(ref _earthEntryTween);
             KillTween(ref _earthExitTween);
             KillTween(ref _earthTriggerTween);
+            KillTween(ref _fireBoostTween);
+            KillTween(ref _earthBoostTween);
+            KillTween(ref _windBoostTween);
+            KillTween(ref _waterBoostTween);
         }
 
         private static void KillTween(ref Tween? tween)

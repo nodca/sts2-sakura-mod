@@ -31,7 +31,7 @@ internal static class SiegeEndTurnScenario
         var siege = await CombatScenarioContext.AddGeneratedCardToHandAsync<Siege>(combat, player);
         var blockBeforePlay = player.Creature.Block;
         await CombatScenarioContext.PlayCardAsync(siege);
-        var expectedFirstGain = SiegeRules.BlockAmount(SiegeRules.BaseBlock, enemyCount);
+        var expectedFirstGain = SiegeRules.BlockAmount(SiegeRules.BlockPerEnemy, enemyCount);
         var blockAtEnemyTurnEnd = player.Creature.Block;
         var hpBeforeResolution = enemies.ToDictionary(static enemy => enemy, static enemy => enemy.CurrentHp);
 
@@ -57,7 +57,7 @@ internal static class SiegeEndTurnScenario
         var secondSiege = await CombatScenarioContext.AddGeneratedCardToHandAsync<Siege>(combat, player);
         var blockBeforeSecondPlay = player.Creature.Block;
         await CombatScenarioContext.PlayCardAsync(secondSiege);
-        var expectedSecondGain = SiegeRules.BlockAmount(SiegeRules.BaseBlock, enemyCount);
+        var expectedSecondGain = SiegeRules.BlockAmount(SiegeRules.BlockPerEnemy, enemyCount);
         assertions.Equal(
             "siege_second_copy_has_unchanged_block",
             expectedSecondGain,

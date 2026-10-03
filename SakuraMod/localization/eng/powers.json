@@ -265,7 +265,7 @@
   "SAKURA_MOD_POWER_EARTH_SOVEREIGNTY_POWER.title": "Earth Sovereignty",
   "SAKURA_MOD_POWER_EARTH_SOVEREIGNTY_POWER.description": "Players cannot gain temporary or permanent Earth state.",
   "SAKURA_MOD_POWER_SHADOW_ECHO_POWER.title": "Shadow Echo",
-  "SAKURA_MOD_POWER_SHADOW_ECHO_POWER.description": "Shadow observes the type of the last card played by each player last turn and responds accordingly.",
+  "SAKURA_MOD_POWER_SHADOW_ECHO_POWER.description": "Acts based on the last card type each player played this turn. Each player triggers a separate response.\nAttack: Attack that player 3 times.\nSkill: Gain [gold]Block[/gold] and heal.\nPower: Gain [gold]Strength[/gold] and [gold]Block[/gold].\nNo cards played, or the last card was a Status or Curse: Perform a single heavy attack against that player.",
   "SAKURA_MOD_POWER_WOOD_ROOTED_POWER.title": "Rooted",
   "SAKURA_MOD_POWER_WOOD_ROOTED_POWER.description": "Equal to the number of cards in the target player's [gold]Exhaust Pile[/gold]. Strengthens Wood's attacks and Block.",
   "SAKURA_MOD_POWER_EARTHY_SEDIMENT_POWER.title": "Sediment",

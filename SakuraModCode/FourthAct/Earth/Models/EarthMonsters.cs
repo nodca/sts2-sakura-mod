@@ -15,6 +15,7 @@ using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.FourthAct.Earth.Intents;
 using SakuraMod.SakuraModCode.FourthAct.Earth.Powers;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using STS2RitsuLib.Scaffolding.Content;
@@ -33,10 +34,13 @@ public abstract class EarthMonsterBase : ModMonsterTemplate
 
 public sealed class ShadowMonster : EarthMonsterBase
 {
+    private const string EchoMoveId = "SHADOW_ECHO";
     protected override int BaseHp => EarthEnemyRules.ShadowHp;
     protected override int ToughHp => EarthEnemyRules.ShadowToughHp;
     public override string? CustomVisualsPath => EarthEnemyAssets.Shadow;
-    public override IEnumerable<string> AssetPaths => [CustomVisualsPath!];
+    public override IEnumerable<string> AssetPaths =>
+        new AbstractIntent[] { new SingleAttackIntent(0), new DefendIntent(), new HealIntent(), new BuffIntent() }
+            .SelectMany(static intent => intent.AssetPaths).Prepend(CustomVisualsPath!).Distinct();
 
     protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
         SakuraStandeeVisuals.Create(CustomVisualsPath!, "Shadow");
@@ -49,17 +53,70 @@ public sealed class ShadowMonster : EarthMonsterBase
 
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
-        var echo = new MoveState("SHADOW_ECHO", EchoAct, new UnknownIntent());
-        echo.FollowUpState = echo;
+        var echo = new MoveState(EchoMoveId, EchoAct,
+            new SingleAttackIntent(() => IsDeadly ? EarthEnemyRules.ShadowBiteA9Damage : EarthEnemyRules.ShadowBiteDamage))
+            { FollowUpStateId = EchoMoveId };
         return new MonsterMoveStateMachine([echo], echo);
+    }
+
+    internal void RefreshEchoIntent()
+    {
+        // Preserve temporary moves such as stun, and never replace a move during its execution.
+        if (!Creature.IsAlive || IsPerformingMove || NextMove.Id != EchoMoveId)
+            return;
+
+        var echo = Creature.GetPower<ShadowEchoPower>();
+        var intents = BuildEchoIntents(
+            CombatState.Players.Where(static player => player.Creature.IsAlive)
+                .Select(player => (player.Creature, echo?.GetIntentCardType(player.Creature))),
+            IsDeadly, IsTough);
+        SetMoveImmediate(new MoveState(EchoMoveId, EchoAct, intents.ToArray()) { FollowUpStateId = EchoMoveId });
+    }
+
+    internal static IReadOnlyList<AbstractIntent> BuildEchoIntents(
+        IEnumerable<(Creature Target, CardType? CardType)> players, bool deadly, bool tough)
+    {
+        List<AbstractIntent> intents = [];
+        var skills = 0;
+        var powers = 0;
+        foreach (var (target, cardType) in players)
+        {
+            switch (cardType)
+            {
+                case CardType.Attack:
+                    intents.Add(new ShadowAttackIntent(target,
+                        deadly ? EarthEnemyRules.ShadowClawsA9Damage : EarthEnemyRules.ShadowClawsDamage,
+                        EarthEnemyRules.ShadowClawsHits));
+                    break;
+                case CardType.Skill:
+                    skills++;
+                    break;
+                case CardType.Power:
+                    powers++;
+                    break;
+                default:
+                    intents.Add(new ShadowAttackIntent(target,
+                        deadly ? EarthEnemyRules.ShadowBiteA9Damage : EarthEnemyRules.ShadowBiteDamage, 1));
+                    break;
+            }
+        }
+
+        if (skills + powers > 0) intents.Add(new ShadowDefendIntent(
+            tough ? EarthEnemyRules.ShadowVeilA8Block : EarthEnemyRules.ShadowVeilBlock, skills,
+            tough ? EarthEnemyRules.ShadowSurgeA8Block : EarthEnemyRules.ShadowSurgeBlock, powers));
+        if (skills > 0) intents.Add(new ShadowHealIntent(
+            (deadly ? EarthEnemyRules.ShadowVeilA9Heal : EarthEnemyRules.ShadowVeilHeal) * skills));
+        if (powers > 0) intents.Add(new ShadowStrengthIntent(
+            (deadly ? EarthEnemyRules.ShadowSurgeA9Strength : EarthEnemyRules.ShadowSurgeStrength) * powers));
+        return intents;
     }
 
     private async Task EchoAct(IReadOnlyList<Creature> _)
     {
         var echo = Creature.GetPower<ShadowEchoPower>();
         var players = CombatState.Players.Where(p => p.Creature.IsAlive).ToList();
-        var triggeredSkill = false;
-        var triggeredPower = false;
+        var skillCount = 0;
+        var powerCount = 0;
 
         foreach (var player in players)
         {
@@ -77,11 +134,11 @@ public sealed class ShadowMonster : EarthMonsterBase
                     break;
 
                 case CardType.Skill:
-                    triggeredSkill = true;
+                    skillCount++;
                     break;
 
                 case CardType.Power:
-                    triggeredPower = true;
+                    powerCount++;
                     break;
 
                 default:
@@ -96,7 +153,7 @@ public sealed class ShadowMonster : EarthMonsterBase
             }
         }
 
-        if (triggeredSkill)
+        for (var i = 0; i < skillCount; i++)
         {
             var block = IsTough ? EarthEnemyRules.ShadowVeilA8Block : EarthEnemyRules.ShadowVeilBlock;
             var heal = IsDeadly ? EarthEnemyRules.ShadowVeilA9Heal : EarthEnemyRules.ShadowVeilHeal;
@@ -104,7 +161,7 @@ public sealed class ShadowMonster : EarthMonsterBase
             await CreatureCmd.Heal(Creature, heal);
         }
 
-        if (triggeredPower)
+        for (var i = 0; i < powerCount; i++)
         {
             var str = IsDeadly ? EarthEnemyRules.ShadowSurgeA9Strength : EarthEnemyRules.ShadowSurgeStrength;
             var block = IsTough ? EarthEnemyRules.ShadowSurgeA8Block : EarthEnemyRules.ShadowSurgeBlock;

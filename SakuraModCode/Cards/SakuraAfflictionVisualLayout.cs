@@ -270,7 +270,11 @@ internal static class SakuraAfflictionVisualLayout
         BorrowBoxes(ledger, container, main);
 
         SetCenteredContainer(container, targetSize);
-        SetScaledCenteredSquare(main, targetSize, 0.6f);
+        // These vines trace the card edges. Map each axis from the native face
+        // so a tall Sakura card does not push them sideways away from its border.
+        var fieldSize = Vector2.One * NativeSize.Y;
+        main.Scale = targetSize / NativeSize * 1.2f;
+        SetBox(main, new Rect2(fieldSize * main.Scale * -0.5f, fieldSize));
     }
 
     private static bool TryResolve(

@@ -964,7 +964,7 @@ public sealed class CardMechanicsSuite
         SakuraReleaseState.Apply(trueOrFalse, 0.5f);
 
         RegressionTestHarness.Require(
-            gale.DynamicVars.Damage.IntValue == 9
+            gale.DynamicVars.Damage.IntValue == 7
             && gale.DynamicVars["Cards"].IntValue == 3
             && gale.DynamicVars["ExtraCopies"].IntValue == 3
             && reflect.DynamicVars.Block.IntValue == 7
@@ -975,16 +975,16 @@ public sealed class CardMechanicsSuite
             "Expected Release to scale every Transparent Card dynamic value using the existing floor rule.");
 
         await gale.AfterCardExhausted(null!, gale, causedByEthereal: true);
-        Assert.Equal(9, gale.DynamicVars.Damage.IntValue);
+        Assert.Equal(7, gale.DynamicVars.Damage.IntValue);
         Assert.False(SpellRelease.CanRelease(gale));
         SakuraReleaseState.Apply(gale, 0.5f);
-        Assert.Equal(9, gale.DynamicVars.Damage.IntValue);
+        Assert.Equal(7, gale.DynamicVars.Damage.IntValue);
         SakuraReleaseState.Reset(gale);
         SakuraReleaseState.Reset(reflect);
         SakuraReleaseState.Reset(trueOrFalse);
 
         RegressionTestHarness.Require(
-            gale.DynamicVars.Damage.IntValue == 6
+            gale.DynamicVars.Damage.IntValue == 5
             && gale.DynamicVars["Cards"].IntValue == 2
             && gale.DynamicVars["ExtraCopies"].IntValue == 2
             && reflect.DynamicVars.Block.IntValue == 5
@@ -1009,7 +1009,7 @@ public sealed class CardMechanicsSuite
         Assert.Equal(0, first.EnergyCost.GetWithModifiers(CostModifiers.Local));
         first.EnergyCost.EndOfTurnCleanup();
         Assert.Equal(first.EnergyCost.Canonical, first.EnergyCost.GetWithModifiers(CostModifiers.Local));
-        Assert.Equal(9, first.DynamicVars.Damage.IntValue);
+        Assert.Equal(7, first.DynamicVars.Damage.IntValue);
         SakuraReleaseState.Apply(second, 0.5f);
         Assert.Equal(first.DynamicVars.Damage.IntValue, second.DynamicVars.Damage.IntValue);
 
@@ -1019,14 +1019,14 @@ public sealed class CardMechanicsSuite
             copy.DynamicVars[name].BaseValue = variable.BaseValue;
         SakuraReleaseState.CopyState(first, copy);
         SakuraReleaseState.Apply(copy, 0.5f);
-        Assert.Equal(9, copy.DynamicVars.Damage.IntValue);
+        Assert.Equal(7, copy.DynamicVars.Damage.IntValue);
         Assert.False(SpellRelease.CanRelease(copy));
 
         SakuraReleaseState.Reset(copy);
-        Assert.Equal(6, copy.DynamicVars.Damage.IntValue);
+        Assert.Equal(5, copy.DynamicVars.Damage.IntValue);
         Assert.True(SpellRelease.CanRelease(copy));
         Assert.False(SpellRelease.CanRelease(first));
-        Assert.Equal(9, first.DynamicVars.Damage.IntValue);
+        Assert.Equal(7, first.DynamicVars.Damage.IntValue);
     }
 
     [Fact]
@@ -1272,12 +1272,12 @@ public sealed class CardMechanicsSuite
             && gale.Rarity == CardRarity.Common
             && gale.Type == CardType.Attack
             && gale.CanonicalKeywords.SequenceEqual([SakuraKeywords.Wind])
-            && gale.DynamicVars.Damage.IntValue == 6
+            && gale.DynamicVars.Damage.IntValue == 5
             && gale.DynamicVars["Cards"].IntValue == 2
             && gale.DynamicVars["ExtraCopies"].IntValue == 2
             && GaleRules.CountsAsGale(gale)
-            && upgradedGale.DynamicVars.Damage.IntValue == 9,
-            "Expected Gale to cost 0, deal 6/9 damage, draw 2 every third play, and create 2 copies with Extra.");
+            && upgradedGale.DynamicVars.Damage.IntValue == 8,
+            "Expected Gale to cost 0, deal 5/8 damage, draw 2 every third play, and create 2 copies with Extra.");
 
         var upgradedAqua = RegressionTestHarness.MutableForCostTest(new Aqua());
         upgradedAqua.UpgradeInternal();
@@ -1424,21 +1424,23 @@ public sealed class CardMechanicsSuite
             && siege.DynamicVars.Block is BlockVar
             && !siege.DynamicVars.ContainsKey("ExtraBlock")
             && siege.DynamicVars.Weak.IntValue == 1
-            && SiegeRules.BlockPerEnemy == 2
-            && SiegeRules.BlockAmount(3, 0) == 3
-            && SiegeRules.BlockAmount(3, 1) == 5
-            && SiegeRules.BlockAmount(3, 2) == 7
+            && SiegeRules.BlockPerEnemy == 3
+            && SiegeRules.BlockAmount(3, 0) == 0
+            && SiegeRules.BlockAmount(3, 1) == 3
+            && SiegeRules.BlockAmount(3, 2) == 6
+            && SiegeRules.BlockAmount(4, 1) == 4
+            && SiegeRules.BlockAmount(4, 3) == 12
             && !SiegeRules.ShouldTrigger(0)
             && SiegeRules.ShouldTrigger(1)
             && SiegeRules.ExtraDamage(-1) == 0
             && SiegeRules.ExtraDamage(9) == 9
-            && upgradedSiege.DynamicVars.Block.IntValue == 5
+            && upgradedSiege.DynamicVars.Block.IntValue == 4
             && upgradedSiege.DynamicVars.Weak.IntValue == 1
             && new SiegePendingPower().StackType == PowerStackType.Counter
             && new SiegePendingPower().IsVisible
             && RegressionTestHarness.DeclaresMethod<SiegePendingPower>("BeforeSideTurnEnd")
             && RegressionTestHarness.DeclaresMethod<SiegePendingPower>("AfterSideTurnEnd"),
-            "Expected Siege to be a zero-cost Uncommon that gains 3-to-5 base Block plus 2 per enemy, resolves its lethal Extra damage before the enemy turn-end synchronization boundary, then applies Weak and removes itself after the native side-turn tick without persistent combat growth.");
+            "Expected Siege to be a zero-cost Uncommon that gains 3-to-4 Block per enemy with no flat base Block, resolves its lethal Extra damage before the enemy turn-end synchronization boundary, then applies Weak and removes itself after the native side-turn tick without persistent combat growth.");
 
         var shade = new Shade();
         var upgradedShade = RegressionTestHarness.MutableForCostTest(new Shade());
@@ -1608,13 +1610,16 @@ public sealed class CardMechanicsSuite
             && BladeRules.DamageBonusCount(2) == 1
             && BladeRules.DamageBonusCount(3) == 1
             && BladeRules.DamageBonusCount(4) == 2
-            && BladeRules.CountsForDamageBonus(new ClowSword())
-            && BladeRules.CountsForDamageBonus(new SakuraSword())
-            && BladeRules.CountsForDamageBonus(new Blade())
-            && !BladeRules.CountsForDamageBonus(new Hail())
+            && BladeRules.DamageBonusWeight(new ClowSword()) == 1
+            && BladeRules.DamageBonusWeight(new SakuraSword()) == 1
+            && BladeRules.DamageBonusWeight(new Blade()) == 2
+            && BladeRules.DamageBonusWeight(new Hail()) == 0
+            && BladeRules.DamageBonusCount(new CardModel[] { new ClowSword(), new SakuraSword() }.Sum(BladeRules.DamageBonusWeight)) == 1
+            && BladeRules.DamageBonusCount(new CardModel[] { new Blade() }.Sum(BladeRules.DamageBonusWeight)) == 1
+            && BladeRules.DamageBonusCount(new CardModel[] { new ClowSword(), new Blade(), new SakuraSword() }.Sum(BladeRules.DamageBonusWeight)) == 2
             && upgradedBlade.DynamicVars.CalculationBase.IntValue == 8
             && upgradedBlade.DynamicVars.ExtraDamage.IntValue == 4,
-            "Expected Blade to cost 2, upgrade from calculated 7 damage plus 2 per Sword or Blade pair to 8 damage plus 4 per pair, and add 2 attacks for Extra.");
+            "Expected Blade to cost 2, upgrade from calculated 7 damage plus 2 per two Swords or one Blade to 8 damage plus 4 per bonus, combine mixed plays, and add 2 attacks for Extra.");
 
         var mirage = new Mirage();
         var upgradedMirage = RegressionTestHarness.MutableForCostTest(new Mirage());
@@ -2035,8 +2040,8 @@ public sealed class CardMechanicsSuite
             SakuraSourceCardText.ElementStatesReferencedBy(new ClowFirey()).Contains(SakuraElement.Fire),
             "Expected Classic cards that explicitly enter an element state to explain that state.");
         RegressionTestHarness.Require(
-            SakuraSourceCardText.ElementStatesReferencedBy(new SakuraWave()).Count() == 4,
-            "Expected Sakura Wave hover text to reference all four Classic element states.");
+            !SakuraSourceCardText.ElementStatesReferencedBy(new SakuraWave()).Any(),
+            "Expected Sakura Wave to preview generated Clow cards instead of directly entering element states.");
         RegressionTestHarness.Require(
             SakuraSourceCardText.ReferencesMagicChargeTip(new ClowLock())
             && SakuraSourceCardText.ReferencesMagicChargeTip(new ClowChange()),

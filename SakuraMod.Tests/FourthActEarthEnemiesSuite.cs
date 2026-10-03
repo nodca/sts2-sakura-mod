@@ -1,12 +1,17 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Acts;
+using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.Rooms;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.FourthAct.Earth;
 using SakuraMod.SakuraModCode.FourthAct.Earth.Encounters;
+using SakuraMod.SakuraModCode.FourthAct.Earth.Intents;
 using SakuraMod.SakuraModCode.FourthAct.Earth.Models;
 using SakuraMod.SakuraModCode.FourthAct.Earth.Powers;
 using SakuraMod.SakuraModCode.FourthAct.Routing;
@@ -154,6 +159,74 @@ public sealed class FourthActEarthEnemiesSuite
         Assert.NotNull(patchAttr);
         Assert.NotNull(typeof(EarthBuriedCardShufflePatch).GetMethod("Prefix"));
         Assert.NotNull(typeof(EarthBuriedCardShufflePatch).GetMethod("Postfix"));
+    }
+
+    [Fact]
+    public void ShadowMixedMultiplayerIntentsAttackOnlyTheAttackPlayer()
+    {
+        var attacker = new Creature((Player)null!, 30, 30);
+        var skillPlayer = new Creature((Player)null!, 30, 30);
+        var otherSkillPlayer = new Creature((Player)null!, 30, 30);
+        var intents = ShadowMonster.BuildEchoIntents(
+            [(attacker, CardType.Attack), (skillPlayer, CardType.Skill), (otherSkillPlayer, CardType.Skill)], false, false);
+
+        var attack = Assert.Single(intents.OfType<ShadowAttackIntent>());
+        Assert.Same(attacker, attack.Target);
+        Assert.Equal(3, attack.Repeats);
+        Assert.Equal(21, attack.GetTotalDamage([], attacker));
+        Assert.Equal(32, Assert.Single(intents.OfType<ShadowDefendIntent>()).GetBlock(attacker));
+        Assert.Equal(12, Assert.Single(intents.OfType<ShadowHealIntent>()).Amount);
+        Assert.Empty(intents.OfType<BuffIntent>());
+    }
+
+    [Fact]
+    public void ShadowKeepsSeparateAttackTargetsAndSharedPowerResponse()
+    {
+        var attacker = new Creature((Player)null!, 30, 30);
+        var passingPlayer = new Creature((Player)null!, 30, 30);
+        var powerPlayer = new Creature((Player)null!, 30, 30);
+        var intents = ShadowMonster.BuildEchoIntents(
+            [(attacker, CardType.Attack), (passingPlayer, null), (powerPlayer, CardType.Power)], true, true);
+
+        var attacks = intents.OfType<ShadowAttackIntent>().ToArray();
+        Assert.Equal(2, attacks.Length);
+        Assert.Same(attacker, attacks[0].Target);
+        Assert.Equal(24, attacks[0].GetTotalDamage([], attacker));
+        Assert.Same(passingPlayer, attacks[1].Target);
+        Assert.Equal(1, attacks[1].Repeats);
+        Assert.Equal(32, attacks[1].GetTotalDamage([], passingPlayer));
+        Assert.Equal(14, Assert.Single(intents.OfType<ShadowDefendIntent>()).GetBlock(attacker));
+        Assert.Equal(4, Assert.Single(intents.OfType<ShadowStrengthIntent>()).Amount);
+        Assert.Empty(intents.OfType<HealIntent>());
+    }
+
+    [Theory]
+    [InlineData(false, false, 30, 9)]
+    [InlineData(true, true, 42, 12)]
+    public void ShadowEveryPowerPlayerAddsBlockAndStrength(bool deadly, bool tough, int block, int strength)
+    {
+        var players = Enumerable.Range(0, 3).Select(_ => new Creature((Player)null!, 30, 30)).ToArray();
+        var intents = ShadowMonster.BuildEchoIntents(
+            players.Select(player => (player, (CardType?)CardType.Power)), deadly, tough);
+
+        Assert.Empty(intents.OfType<AttackIntent>());
+        Assert.Equal(block, Assert.Single(intents.OfType<ShadowDefendIntent>()).GetBlock(players[0]));
+        Assert.Equal(strength, Assert.Single(intents.OfType<ShadowStrengthIntent>()).Amount);
+        Assert.Empty(intents.OfType<HealIntent>());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(CardType.Status)]
+    [InlineData(CardType.Curse)]
+    public void ShadowPassStatusAndCurseShowSingleHeavyAttack(CardType? lastCard)
+    {
+        var player = new Creature((Player)null!, 30, 30);
+        var intent = Assert.IsType<ShadowAttackIntent>(Assert.Single(
+            ShadowMonster.BuildEchoIntents([(player, lastCard)], false, false)));
+
+        Assert.Equal(1, intent.Repeats);
+        Assert.Equal(28, intent.GetTotalDamage([], player));
     }
 
     [Fact]

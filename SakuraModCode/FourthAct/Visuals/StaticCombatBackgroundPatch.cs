@@ -16,12 +16,15 @@ internal static class StaticCombatBackgroundPatch
 
         var painting = background.FindChild(StaticCombatBackgroundVisuals.RooftopPaintingNodeName, true, false) as TextureRect
             ?? background.FindChild(StaticCombatBackgroundVisuals.LightPaintingNodeName, true, false) as TextureRect
-            ?? background.FindChild(StaticCombatBackgroundVisuals.EarthPenguinParkPaintingNodeName, true, false) as TextureRect;
+            ?? background.FindChild(StaticCombatBackgroundVisuals.EarthPenguinParkPaintingNodeName, true, false) as TextureRect
+            ?? background.FindChild(StaticCombatBackgroundVisuals.FireTokyoTowerPaintingNodeName, true, false) as TextureRect;
         if (painting is not null)
         {
             StaticCombatBackgroundVisuals.Attach(painting, __instance, background);
             if (painting.Name == StaticCombatBackgroundVisuals.LightPaintingNodeName)
                 LightEternalDayVisuals.Attach(painting, __instance);
+            if (painting.Name == StaticCombatBackgroundVisuals.FireTokyoTowerPaintingNodeName)
+                TokyoTowerPetalVisuals.Attach(painting);
         }
     }
 }

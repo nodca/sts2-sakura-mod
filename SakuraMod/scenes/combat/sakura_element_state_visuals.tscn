@@ -1,9 +1,12 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/sakura_element_state_firey.gdshader" id="1_fire"]
 [ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/sakura_element_state_windy.gdshader" id="2_wind"]
 [ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/sakura_element_state_watery.gdshader" id="3_water"]
 [ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/sakura_element_state_earthy.gdshader" id="4_earth"]
+[ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/sakura_element_state_firey_ambient.gdshader" id="5_fire_ambient"]
+[ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/sakura_element_state_windy_ambient.gdshader" id="6_wind_ambient"]
+[ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/sakura_element_state_watery_ambient.gdshader" id="7_water_ambient"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fire"]
 shader = ExtResource("1_fire")
@@ -17,7 +20,7 @@ shader_parameter/seed = 0.0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_wind"]
 shader = ExtResource("2_wind")
-shader_parameter/region_size = Vector2(100, 132)
+shader_parameter/region_size = Vector2(140, 110)
 shader_parameter/state_alpha = 0.0
 shader_parameter/summon_progress = 1.0
 shader_parameter/summon_hold = 0.0
@@ -26,7 +29,7 @@ shader_parameter/seed = 0.0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_water"]
 shader = ExtResource("3_water")
-shader_parameter/region_size = Vector2(116, 80)
+shader_parameter/region_size = Vector2(170, 110)
 shader_parameter/state_alpha = 0.0
 shader_parameter/summon_progress = 1.0
 shader_parameter/summon_hold = 0.0
@@ -35,15 +38,47 @@ shader_parameter/seed = 0.0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_earth"]
 shader = ExtResource("4_earth")
-shader_parameter/region_size = Vector2(104, 72)
+shader_parameter/region_size = Vector2(184, 112)
 shader_parameter/state_alpha = 0.0
 shader_parameter/summon_progress = 1.0
 shader_parameter/summon_hold = 0.0
 shader_parameter/trigger_progress = 0.0
+shader_parameter/ambient_alpha = 0.0
+shader_parameter/ambient_boost = 0.0
 shader_parameter/facing = 1.0
 shader_parameter/seed = 0.0
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fire_ambient"]
+shader = ExtResource("5_fire_ambient")
+shader_parameter/region_size = Vector2(180, 200)
+shader_parameter/state_alpha = 0.0
+shader_parameter/ambient_alpha = 0.0
+shader_parameter/ambient_boost = 0.0
+shader_parameter/seed = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wind_ambient"]
+shader = ExtResource("6_wind_ambient")
+shader_parameter/region_size = Vector2(320, 140)
+shader_parameter/state_alpha = 0.0
+shader_parameter/ambient_alpha = 0.0
+shader_parameter/ambient_boost = 0.0
+shader_parameter/seed = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_water_ambient"]
+shader = ExtResource("7_water_ambient")
+shader_parameter/region_size = Vector2(220, 44)
+shader_parameter/state_alpha = 0.0
+shader_parameter/ambient_alpha = 0.0
+shader_parameter/ambient_boost = 0.0
+shader_parameter/seed = 0.0
+
 [node name="SakuraElementStateVisuals" type="Node2D"]
+
+[node name="FireAmbientSlot" type="Node2D" parent="."]
+
+[node name="WindAmbientSlot" type="Node2D" parent="."]
+
+[node name="WaterAmbientSlot" type="Node2D" parent="."]
 
 [node name="FireSlot" type="Node2D" parent="."]
 
@@ -61,26 +96,50 @@ offset_bottom = 56.0
 mouse_filter = 2
 material = SubResource("ShaderMaterial_fire")
 
-[node name="WindyCurrents" type="ColorRect" parent="WindSlot"]
-offset_left = -50.0
-offset_top = -66.0
-offset_right = 50.0
-offset_bottom = 66.0
+[node name="WindySpirit" type="ColorRect" parent="WindSlot"]
+offset_left = -70.0
+offset_top = -55.0
+offset_right = 70.0
+offset_bottom = 55.0
 mouse_filter = 2
 material = SubResource("ShaderMaterial_wind")
 
-[node name="WateryDroplets" type="ColorRect" parent="WaterSlot"]
-offset_left = -58.0
-offset_top = -40.0
-offset_right = 58.0
-offset_bottom = 40.0
+[node name="WaterySpirit" type="ColorRect" parent="WaterSlot"]
+offset_left = -85.0
+offset_top = -55.0
+offset_right = 85.0
+offset_bottom = 55.0
 mouse_filter = 2
 material = SubResource("ShaderMaterial_water")
 
-[node name="EarthyFragments" type="ColorRect" parent="EarthSlot"]
-offset_left = -52.0
-offset_top = -36.0
-offset_right = 52.0
-offset_bottom = 36.0
+[node name="EarthySpire" type="ColorRect" parent="EarthSlot"]
+offset_left = -92.0
+offset_top = -56.0
+offset_right = 92.0
+offset_bottom = 56.0
 mouse_filter = 2
 material = SubResource("ShaderMaterial_earth")
+
+[node name="FireyAmbient" type="ColorRect" parent="FireAmbientSlot"]
+offset_left = -90.0
+offset_top = -200.0
+offset_right = 90.0
+offset_bottom = 0.0
+mouse_filter = 2
+material = SubResource("ShaderMaterial_fire_ambient")
+
+[node name="WindyAmbient" type="ColorRect" parent="WindAmbientSlot"]
+offset_left = -160.0
+offset_top = -70.0
+offset_right = 160.0
+offset_bottom = 70.0
+mouse_filter = 2
+material = SubResource("ShaderMaterial_wind_ambient")
+
+[node name="WateryAmbient" type="ColorRect" parent="WaterAmbientSlot"]
+offset_left = -110.0
+offset_top = -22.0
+offset_right = 110.0
+offset_bottom = 22.0
+mouse_filter = 2
+material = SubResource("ShaderMaterial_water_ambient")

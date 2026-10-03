@@ -34,7 +34,7 @@ public sealed class SpellReleaseBgmSuite
             && SpellReleaseBgmPlayback.MusicChannel != SpellTurnBgmPlayback.MusicChannel,
             "Expected Spell Release to own a dedicated release channel instead of reusing Another Me or Spell Turn.");
         Assert.Equal(
-            new[] { "music/release.ogg", "music/release_2.ogg", "music/release_3.ogg", "music/release_4.ogg" },
+            new[] { "music/release.ogg", "music/release_2.ogg", "music/release_3.ogg", "music/release_4.ogg", "music/release_5.ogg" },
             SpellReleaseBgmPlayback.RelativePaths);
     }
 

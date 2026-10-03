@@ -11,7 +11,7 @@ public sealed class PackageVerifierSuite
 
         Assert.Equal("PASS", result.Status);
         Assert.Equal("SakuraMod", result.AssemblyName);
-        Assert.Equal(12, result.Files.Count);
+        Assert.Equal(13, result.Files.Count);
         Assert.All(result.Files, file => Assert.Matches("^[0-9a-f]{64}$", file.Sha256));
         Assert.Equal(3, result.PckPathCount);
     }
@@ -48,6 +48,7 @@ public sealed class PackageVerifierSuite
     [InlineData("release_2.ogg")]
     [InlineData("release_3.ogg")]
     [InlineData("release_4.ogg")]
+    [InlineData("release_5.ogg")]
     public async Task MissingSpellReleaseBgmFailsVerification(string fileName)
     {
         using var fixture = new PackageFixture();
@@ -177,7 +178,7 @@ public sealed class PackageVerifierSuite
             Directory.CreateDirectory(Path.GetDirectoryName(AnotherMeBgmPath)!);
             File.WriteAllBytes(AnotherMeBgmPath, "OggS"u8.ToArray());
             File.WriteAllBytes(SpellTurnBgmPath, "OggS"u8.ToArray());
-            foreach (var fileName in new[] { "release.ogg", "release_2.ogg", "release_3.ogg", "release_4.ogg" })
+            foreach (var fileName in new[] { "release.ogg", "release_2.ogg", "release_3.ogg", "release_4.ogg", "release_5.ogg" })
                 File.WriteAllBytes(Path.Combine(_root, "music", fileName), "OggS"u8.ToArray());
             Directory.CreateDirectory(Path.Combine(_root, "voices"));
             File.WriteAllBytes(Path.Combine(_root, "voices", "dream_wand.ogg"), "OggS"u8.ToArray());

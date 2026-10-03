@@ -38,15 +38,20 @@ public class ClowWave() : ClowCard(1, CardType.Power, CardRarity.Uncommon, Targe
 
 public class SakuraWave() : SakuraFormCard(1, CardType.Skill, TargetType.None)
 {
+    internal static IReadOnlyList<Type> GeneratedCardTypes { get; } =
+        [typeof(ClowWindy), typeof(ClowWatery), typeof(ClowFirey), typeof(ClowEarthy)];
+
     public override SakuraElementSet Elements => SakuraElementSet.Water;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await EnterElementState<ClassicEarthyPower>(choiceContext);
-        await EnterElementState<ClassicFireyPower>(choiceContext);
-        await EnterElementState<ClassicWateryPower>(choiceContext);
-        await EnterElementState<ClassicWindyPower>(choiceContext);
+        foreach (var type in GeneratedCardTypes)
+        {
+            var card = CombatState!.CreateCard(ModelDb.GetById<CardModel>(ModelDb.GetId(type)), Owner);
+            SakuraMagicCharge.SetFreeForRestOfTurn(card);
+            await SakuraGeneratedCardLifecycle.AddGeneratedCardToHand(card, choiceContext);
+        }
     }
 }
-

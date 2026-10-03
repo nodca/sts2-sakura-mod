@@ -160,14 +160,27 @@ internal static class AfflictionVisualLayoutScenario
             CardCmd.ClearAffliction(model);
             await ApplyAffliction<TAffliction>(player, model);
             results[affliction] = InspectGeometry(layout, affliction, card, assertions);
-            if (affliction == "bound")
+            if (affliction is "bound" or "tainted")
             {
                 card.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
-                results["bound_refresh"] = InspectGeometry(
+                results[$"{affliction}_refresh"] = InspectGeometry(
                     layout,
-                    "bound_refresh",
+                    $"{affliction}_refresh",
                     card,
                     assertions);
+            }
+
+            if (affliction == "tainted" && layout != "vanilla")
+            {
+                var ledger = SakuraCardMutationLedgers.For(card);
+                ledger.Restore(layout == "classic" ? SakuraCardRendererId.Classic : SakuraCardRendererId.Clear);
+                var main = RequireOverlay(card).GetChild<Control>(0).GetNode<Control>("vfx_container/main");
+                assertions.True(
+                    $"affliction_{layout}_tainted_native_scale_restored",
+                    Near(Vector2.One * 1.2f, main.Scale),
+                    $"Tainted native scale was not restored: {main.Scale}.");
+                card.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
+                results["tainted_reapplied"] = InspectGeometry(layout, "tainted", card, assertions);
             }
         }
     }
@@ -221,7 +234,7 @@ internal static class AfflictionVisualLayoutScenario
                 AssertRinging(layout, effectRoot, mask.Size, assertions);
             else if (affliction == "smog")
                 AssertSmog(layout, effectRoot, mask.Size, assertions);
-            else if (affliction == "tainted")
+            else if (affliction is "tainted" or "tainted_refresh")
                 AssertTainted(layout, effectRoot, mask.Size, assertions);
         }
 
@@ -347,11 +360,24 @@ internal static class AfflictionVisualLayoutScenario
         RuntimeAssertionCollector assertions)
     {
         var main = root.GetNode<Control>("vfx_container/main");
+        var faceRect = root.GetGlobalRect();
+        var mainRect = main.GetGlobalRect();
+        // The native vine field spans about 1.69 card widths. Preserve that
+        // clearance on narrow Sakura faces instead of deriving it from height.
         assertions.True(
-            $"affliction_{layout}_tainted_origin_profile",
+            $"affliction_{layout}_tainted_edge_clearance",
+            mainRect.Size.X >= faceRect.Size.X
+            && mainRect.Size.X <= faceRect.Size.X * 1.7f + GeometryTolerance,
+            $"Tainted field width {mainRect.Size.X} exceeds the native clearance for face width {faceRect.Size.X}.");
+        assertions.True(
+            $"affliction_{layout}_tainted_centered",
+            Near(mainRect.GetCenter(), faceRect.GetCenter()),
+            $"Tainted field center {mainRect.GetCenter()} differs from face center {faceRect.GetCenter()}.");
+        assertions.True(
+            $"affliction_{layout}_tainted_vertical_coverage",
             Near(Vector2.Zero, main.PivotOffset)
-            && Near(new Vector2(size.Y * -0.6f, size.Y * -0.6f), main.Position),
-            $"Tainted main geometry was {main.Position}/{main.PivotOffset}.");
+            && Mathf.Abs(mainRect.Size.Y - faceRect.Size.Y * 1.2f) <= GeometryTolerance,
+            $"Tainted vertical coverage was {mainRect.Size.Y} for face height {faceRect.Size.Y}.");
     }
 
     private static string[] SnapshotNodes(Node root)

@@ -171,8 +171,9 @@ public sealed class FireEnemyRulesSuite
         Assert.DoesNotContain("AnimationPlayer", layerScene);
         Assert.DoesNotContain("ShaderMaterial", layerScene);
         Assert.DoesNotContain("VideoStream", layerScene);
-        Assert.Equal(2048, BinaryPrimitives.ReadInt32BigEndian(header[16..20]));
-        Assert.Equal(960, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
+        Assert.Contains(StaticCombatBackgroundVisuals.FireTokyoTowerPaintingNodeName, layerScene);
+        Assert.Equal((int)StaticCombatBackgroundVisuals.CanvasWidth, BinaryPrimitives.ReadInt32BigEndian(header[16..20]));
+        Assert.Equal((int)StaticCombatBackgroundVisuals.CanvasHeight, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
         Assert.Equal(8, header[24]);
         Assert.Equal(2, header[25]);
         Assert.Contains(

@@ -81,10 +81,10 @@ internal static class BladeRules
     private const int CardsPerDamageBonus = 2;
 
     public static decimal DamageBonusCount(CardModel card, Creature? _) =>
-        DamageBonusCount(PlayedSwordOrBladeCount(card));
+        DamageBonusCount(PlayedSwordWeight(card));
 
-    internal static int DamageBonusCount(int playedSwordCount) =>
-        Math.Max(0, playedSwordCount / CardsPerDamageBonus);
+    internal static int DamageBonusCount(int playedSwordWeight) =>
+        Math.Max(0, playedSwordWeight / CardsPerDamageBonus);
 
     public static int HitCount(CardModel card) =>
         card.DynamicVars.TryGetValue("Hits", out var hits)
@@ -99,12 +99,12 @@ internal static class BladeRules
         return Math.Max(0, hits);
     }
 
-    internal static bool CountsForDamageBonus(CardModel card) =>
-        card is Blade
-        || (SakuraCardCatalog.TryGetMetadata(card, out var metadata)
-            && metadata.Identity == SourceCardIdentity.Sword);
+    internal static int DamageBonusWeight(CardModel card) =>
+        card is Blade ? 2
+        : SakuraCardCatalog.TryGetMetadata(card, out var metadata)
+            && metadata.Identity == SourceCardIdentity.Sword ? 1 : 0;
 
-    private static int PlayedSwordOrBladeCount(CardModel card)
+    private static int PlayedSwordWeight(CardModel card)
     {
         if (card.Owner is not { } owner || card.CombatState is null)
             return 0;
@@ -112,6 +112,6 @@ internal static class BladeRules
         return CombatManager.Instance.History.CardPlaysFinished
             .Where(entry => entry is CardPlayFinishedEntry { CardPlay.Card.Owner: var cardOwner } && cardOwner == owner)
             .Select(entry => ((CardPlayFinishedEntry)entry).CardPlay.Card)
-            .Count(CountsForDamageBonus);
+            .Sum(DamageBonusWeight);
     }
 }

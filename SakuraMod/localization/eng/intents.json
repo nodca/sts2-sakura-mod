@@ -7,5 +7,10 @@
   "SAKURA_MOD_SUMMON_SLEEP.description": "Windy will summon Sleep into the attendant slot.",
   "SAKURA_MOD_FORMAT_DAMAGE_RANGE": "{Min}-{Max}",
   "SAKURA_MOD_STEAL_BLOCK.title": "Tidal Draw",
-  "SAKURA_MOD_STEAL_BLOCK.description": "After attacking, this enemy removes all remaining Block and stores the amount."
+  "SAKURA_MOD_STEAL_BLOCK.description": "After attacking, this enemy removes all remaining Block and stores the amount.",
+  "SAKURA_MOD_SHADOW_ATTACK_SINGLE.description": "Intends to deal [red]{Damage}[/red] damage to [gold]{Target}[/gold].",
+  "SAKURA_MOD_SHADOW_ATTACK_MULTI.description": "Intends to deal [red]{Damage}[/red] damage to [gold]{Target}[/gold] [red]{Repeat}[/red] times.",
+  "SAKURA_MOD_SHADOW_DEFEND.description": "Intends to gain [gold]{Amount}[/gold] [gold]Block[/gold].",
+  "SAKURA_MOD_SHADOW_HEAL.description": "Intends to heal [green]{Amount}[/green] HP.",
+  "SAKURA_MOD_SHADOW_STRENGTH.description": "Intends to gain [gold]{Amount}[/gold] [gold]Strength[/gold]."
 }

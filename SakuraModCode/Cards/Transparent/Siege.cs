@@ -18,7 +18,7 @@ public class Siege() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new BlockVar(SiegeRules.BaseBlock, ValueProp.Move),
+        new BlockVar(SiegeRules.BlockPerEnemy, ValueProp.Move),
         new PowerVar<WeakPower>(SiegeRules.WeakAmount)
     ];
 
@@ -39,18 +39,16 @@ public class Siege() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.
         pending?.QueueEffect(activation.IsActive);
     }
 
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(2);
+    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(1);
 }
 
 internal static class SiegeRules
 {
-    internal const int BaseBlock = 3;
-    internal const int BlockPerEnemy = 2;
+    internal const int BlockPerEnemy = 3;
     internal const int WeakAmount = 1;
 
-    internal static int BlockAmount(int baseBlock, int enemyCount) =>
-        Math.Max(0, baseBlock)
-        + BlockPerEnemy * Math.Max(0, enemyCount);
+    internal static int BlockAmount(int blockPerEnemy, int enemyCount) =>
+        Math.Max(0, blockPerEnemy) * Math.Max(0, enemyCount);
 
     internal static bool ShouldTrigger(int block) => block > 0;
 

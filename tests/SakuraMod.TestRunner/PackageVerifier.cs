@@ -48,6 +48,7 @@ public sealed class PackageVerifier(IPckInspector pckInspector)
         "music/release_2.ogg",
         "music/release_3.ogg",
         "music/release_4.ogg",
+        "music/release_5.ogg",
         "voices/dream_wand.ogg",
         "voices/stabilize.ogg",
         "voices/cards/sword.ogg"

@@ -18,7 +18,7 @@ public class Gale() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
         [SakuraCardHoverTips.TemporaryTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(6, ValueProp.Move),
+        new DamageVar(5, ValueProp.Move),
         new GalePlaysUntilDrawVar(),
         new CardsVar("Cards", 2),
         new CardsVar("ExtraCopies", 2)

@@ -2526,6 +2526,7 @@ public sealed class ResourceContractSuite
     [InlineData("release_2.ogg")]
     [InlineData("release_3.ogg")]
     [InlineData("release_4.ogg")]
+    [InlineData("release_5.ogg")]
     public void SpellReleaseBgmResourceRemainsComplete(string fileName)
     {
         var relativePath = $"SakuraMod/music/{fileName}";
