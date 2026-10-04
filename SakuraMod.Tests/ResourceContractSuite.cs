@@ -1143,7 +1143,7 @@ public sealed class ResourceContractSuite
             "Expected exactly one Snow blizzard session per card entry point.");
 
         var activatedIndex = snow.IndexOf("Task PlayActivatedCard(", StringComparison.Ordinal);
-        var helperIndex = snow.IndexOf("private async Task ResolveSnowMechanics(", StringComparison.Ordinal);
+        var helperIndex = snow.IndexOf("private async Task<List<Creature>> ResolveSnowMechanics(", StringComparison.Ordinal);
         var sakuraIndex = snow.IndexOf("class SakuraSnow", StringComparison.Ordinal);
         RegressionTestHarness.Require(
             activatedIndex >= 0
@@ -1197,7 +1197,7 @@ public sealed class ResourceContractSuite
         // the shared cel assets, so adding a snow scene means adding it once.
         RegressionTestHarness.Require(
             assets.Contains("ClowSnow or SakuraSnow => SnowPaths", StringComparison.Ordinal)
-            && assets.Contains("[.. SnowBlizzardVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths]", StringComparison.Ordinal),
+            && assets.Contains("[.. SnowBlizzardVfx.AssetPaths, .. FreezeShellVisual.AssetPaths, .. CelVfxSession.SharedAssetPaths]", StringComparison.Ordinal),
             "Expected both Snow cards to route through one blizzard asset group built from the session's own paths.");
         // The group is warmed before combat, so the first blizzard never loads
         // synchronously on the play path.
@@ -1424,7 +1424,7 @@ public sealed class ResourceContractSuite
         // once.
         RegressionTestHarness.Require(
             assets.Contains("ClowFreeze or SakuraFreeze => FreezePaths", StringComparison.Ordinal)
-            && assets.Contains("[.. FreezeCageVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths]", StringComparison.Ordinal),
+            && assets.Contains("[.. FreezeCageVfx.AssetPaths, .. FreezeShellVisual.AssetPaths, .. CelVfxSession.SharedAssetPaths]", StringComparison.Ordinal),
             "Expected both Freeze cards to route through one cage asset group built from the session's own paths.");
         // The group is warmed before combat, so the first prison never loads
         // synchronously on the play path.

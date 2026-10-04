@@ -28,7 +28,7 @@
   "SAKURAMOD-LONER.title": "独行",
   "SAKURAMOD-LONER.description": "牌组中每少 1 张同名牌，其数值提高20%。",
   "SAKURAMOD-FROSTBITE.title": "冻伤",
-  "SAKURAMOD-FROSTBITE.description": "每层使受到的攻击伤害提高 10%。\n每 6 层转化为 1 层[gold]冻结[/gold]。\n在其回合结束时失去 1 层。",
+  "SAKURAMOD-FROSTBITE.description": "每层使受到的攻击伤害增加 10%。\n初始每 5 层转化为 1 层[red]冻结[/red]。\n每转化 1 层[red]冻结[/red]，该生物本场战斗转化所需[gold]冻伤[/gold]增加 1 层。\n在其回合结束时失去 1 层[gold]冻伤[/gold]。",
   "SAKURAMOD-FADE.title": "消逝",
   "SAKURAMOD-FADE.description": "回合结束时，若此牌在手牌中，将其移出本场战斗。"
 }

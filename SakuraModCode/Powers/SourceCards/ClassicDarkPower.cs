@@ -40,6 +40,9 @@ public class ClassicDarkPower : SakuraPowerModel
         if (Owner.Side != side || !participants.Contains(Owner) || Owner.Player is not { } player || Amount <= 0)
             return;
 
+        // Keep later turn-end effects waiting until this network-synchronized choice resolves.
+        choiceContext = new BlockingPlayerChoiceContext();
+
         var selected = (await CardSelectCmd.FromHand(
             choiceContext,
             player,

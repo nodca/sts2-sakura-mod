@@ -65,6 +65,5 @@ public class ClassicTwinPower : SakuraPowerModel
         && CardsDoubledThisTurn[this] < Amount
         && card.Owner?.Creature == Owner
         && card is SakuraSourceCard { IsClowCard: true }
-        && !card.IsClone
         && !card.IsDupe;
 }

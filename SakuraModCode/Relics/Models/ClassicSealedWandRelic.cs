@@ -36,7 +36,7 @@ public class ClassicSealedWandRelic : SakuraRelicModel
     private const string RemainingChargeVar = "RemainingCharge";
 
     private const int DefaultBaseTrigger = 40;
-    private const int DefaultTriggerIncrease = 10;
+    private const int DefaultTriggerIncrease = 20;
     private const int DefaultBaseChargeGain = 3;
     private const int DefaultEliteBossExtraGain = 2;
     private const int DefaultSealExtraGain = 2;

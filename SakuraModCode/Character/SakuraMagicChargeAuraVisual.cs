@@ -27,6 +27,7 @@ internal static class SakuraMagicChargeAuraVisualPatch
         SakuraElementStateVisuals.Mount(__instance);
         SakuraKeroCombatCompanion.Mount(__instance);
         FourthActCombatFeedbackVisuals.Mount(__instance);
+        FreezeShellVisual.Mount(__instance.Entity);
     }
 }
 

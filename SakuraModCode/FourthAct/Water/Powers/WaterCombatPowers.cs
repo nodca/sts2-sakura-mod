@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
@@ -19,6 +20,17 @@ public sealed class WaterFrozenPower : SakuraPowerModel
     protected override string IconFileName => "fourth_act/water_frozen.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
+    public override Task AfterApplied(Creature? applier, CardModel? cardSource)
+    {
+        FreezeShellVisual.Mount(Owner);
+        return Task.CompletedTask;
+    }
+    public override Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature target,
+        DamageResult result, ValueProp props, Creature? dealer, CardModel? cardSource)
+    {
+        if (target == Owner && result.TotalDamage > 0) FreezeShellVisual.NotifyHit(Owner);
+        return Task.CompletedTask;
+    }
     public override bool ShouldPlay(CardModel card, AutoPlayType autoPlayType) =>
         card.Owner?.Creature != Owner || autoPlayType != AutoPlayType.None;
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)

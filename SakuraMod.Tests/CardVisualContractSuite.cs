@@ -40,7 +40,7 @@ public sealed class CardVisualContractSuite
                 [AquaWaterSphereVfx.ScenePath, AquaWaterSphereVfx.TargetScenePath, .. sharedCelPaths]),
             new VfxCase(
                 new Hail(),
-                [HailIceShardVfx.ScenePath, HailIceShardVfx.TargetScenePath, .. sharedCelPaths]),
+                [HailIceShardVfx.ScenePath, HailIceShardVfx.TargetScenePath, FreezeShellVisual.ShaderPath, .. sharedCelPaths]),
             new VfxCase(
                 new Blaze(),
                 [BlazeFireColumnVfx.ScenePath, .. sharedCelPaths]),
@@ -138,10 +138,10 @@ public sealed class CardVisualContractSuite
         {
             new VfxCase(
                 new ClowSnow(),
-                [SnowBlizzardVfx.ScenePath, SnowBlizzardVfx.TargetScenePath, .. sharedCelPaths]),
+                [SnowBlizzardVfx.ScenePath, SnowBlizzardVfx.TargetScenePath, FreezeShellVisual.ShaderPath, .. sharedCelPaths]),
             new VfxCase(
                 new SakuraSnow(),
-                [SnowBlizzardVfx.ScenePath, SnowBlizzardVfx.TargetScenePath, .. sharedCelPaths])
+                [SnowBlizzardVfx.ScenePath, SnowBlizzardVfx.TargetScenePath, FreezeShellVisual.ShaderPath, .. sharedCelPaths])
         };
 
         foreach (var testCase in cases)
@@ -162,10 +162,10 @@ public sealed class CardVisualContractSuite
         {
             new VfxCase(
                 new ClowFreeze(),
-                [FreezeCageVfx.ScenePath, FreezeCageVfx.TargetScenePath, .. sharedCelPaths]),
+                [FreezeCageVfx.ScenePath, FreezeCageVfx.TargetScenePath, FreezeShellVisual.ShaderPath, .. sharedCelPaths]),
             new VfxCase(
                 new SakuraFreeze(),
-                [FreezeCageVfx.ScenePath, FreezeCageVfx.TargetScenePath, .. sharedCelPaths])
+                [FreezeCageVfx.ScenePath, FreezeCageVfx.TargetScenePath, FreezeShellVisual.ShaderPath, .. sharedCelPaths])
         };
 
         foreach (var testCase in cases)

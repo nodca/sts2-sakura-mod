@@ -35,6 +35,7 @@ public class ClowSnow() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Unc
         new SakuraCombatHistoryDamageVar(4, ValueProp.Move, SakuraSnowRules.PlayedWateryCards),
         new SakuraSourceDamageVar(SakuraSnowRules.PerCardDamageVar, 4, ValueProp.Move),
         new SakuraCombatHistoryCountVar(SakuraSnowRules.PlayedWateryCards),
+        new PowerVar<SakuraFrostbitePower>(2),
         new DynamicVar("ExtraDamage", ExtraDamage)
     ];
 
@@ -43,7 +44,10 @@ public class ClowSnow() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Unc
             this,
             Owner.Creature,
             CombatState!.HittableEnemies.ToList(),
-            cues => ResolveSnowMechanics(choiceContext, play, cues));
+            async cues => await SakuraSnowRules.ApplyFrostbite(
+                choiceContext,
+                this,
+                await ResolveSnowMechanics(choiceContext, cues)));
 
     protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         SnowBlizzardVfx.PlayOrResolveAsync(
@@ -52,29 +56,30 @@ public class ClowSnow() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Unc
             CombatState!.HittableEnemies.ToList(),
             async cues =>
             {
-                await ResolveSnowMechanics(choiceContext, play, cues);
+                var receivers = await ResolveSnowMechanics(choiceContext, cues);
                 cues.Finale();
-                await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies.ToList(), ExtraDamage);
+                receivers.AddRange(SakuraSnowRules.FrostbiteReceivers(
+                    await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies.ToList(), ExtraDamage)));
+                await SakuraSnowRules.ApplyFrostbite(choiceContext, this, receivers);
             });
 
-    private async Task ResolveSnowMechanics(
+    private async Task<List<Creature>> ResolveSnowMechanics(
         PlayerChoiceContext choiceContext,
-        CardPlay play,
         SnowBlizzardVfx.Cues cues)
     {
+        var receivers = new List<Creature>();
         var count = SakuraSnowRules.PlayedWateryCards(this);
         for (var i = 0; i < count; i++)
         {
             var target = Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
             if (target is null)
-                return;
+                break;
 
             cues.Impact(target);
-            await SakuraSnowRules.ApplyFrostbite(
-                choiceContext,
-                this,
-                await DealDamage(choiceContext, target, SnowDamage()));
+            receivers.AddRange(SakuraSnowRules.FrostbiteReceivers(
+                await DealDamage(choiceContext, target, SnowDamage())));
         }
+        return receivers;
     }
 
     protected override void OnUpgrade()
@@ -93,7 +98,8 @@ public class SakuraSnow() : SakuraFormCard(1, CardType.Attack, TargetType.AllEne
     [
         new SakuraCombatHistoryDamageVar(5, ValueProp.Move, SakuraSnowRules.PlayedWateryCards),
         new SakuraSourceDamageVar(SakuraSnowRules.PerCardDamageVar, 5, ValueProp.Move),
-        new SakuraCombatHistoryCountVar(SakuraSnowRules.PlayedWateryCards)
+        new SakuraCombatHistoryCountVar(SakuraSnowRules.PlayedWateryCards),
+        new PowerVar<SakuraFrostbitePower>(2)
     ];
 
     protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -103,6 +109,7 @@ public class SakuraSnow() : SakuraFormCard(1, CardType.Attack, TargetType.AllEne
             CombatState!.HittableEnemies.ToList(),
             async cues =>
             {
+                var receivers = new List<Creature>();
                 var count = SakuraSnowRules.PlayedWateryCards(this);
                 for (var i = 0; i < count; i++)
                 {
@@ -111,13 +118,11 @@ public class SakuraSnow() : SakuraFormCard(1, CardType.Attack, TargetType.AllEne
                     var targets = CombatState!.HittableEnemies.ToList();
                     foreach (var target in targets)
                         cues.Impact(target);
-                    await SakuraSnowRules.ApplyFrostbite(
-                        choiceContext,
-                        this,
-                        await DealDamageToEnemies(choiceContext, targets, SnowDamage()));
+                    receivers.AddRange(SakuraSnowRules.FrostbiteReceivers(
+                        await DealDamageToEnemies(choiceContext, targets, SnowDamage())));
                 }
+                await SakuraSnowRules.ApplyFrostbite(choiceContext, this, receivers);
             });
 
     private int SnowDamage() => ReleasedValue(SakuraSnowRules.PerCardDamageVar);
 }
-

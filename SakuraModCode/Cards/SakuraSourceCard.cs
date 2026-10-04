@@ -926,9 +926,9 @@ internal static class SakuraSnowRules
     public static async Task ApplyFrostbite(
         PlayerChoiceContext choiceContext,
         SakuraSourceCard source,
-        AttackCommand? attack)
+        IEnumerable<Creature> receivers)
     {
-        foreach (var target in FrostbiteReceivers(attack))
+        foreach (var target in receivers.Distinct())
         {
             if (!target.IsAlive || target.Side == source.Owner.Creature.Side)
                 continue;
@@ -936,7 +936,7 @@ internal static class SakuraSnowRules
             await PowerCmd.Apply<SakuraFrostbitePower>(
                 choiceContext,
                 target,
-                1,
+                source.DynamicVars["SakuraFrostbitePower"].IntValue,
                 source.Owner.Creature,
                 source,
                 false);

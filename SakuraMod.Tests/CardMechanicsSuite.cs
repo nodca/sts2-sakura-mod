@@ -1356,17 +1356,22 @@ public sealed class CardMechanicsSuite
             && SakuraSnowRules.ShouldApplyFrostbite(unblockedHit),
             "Expected Snow Frostbite to trigger once from a positive unblocked damage result, not damage magnitude.");
         RegressionTestHarness.Require(
-            SakuraFrostbitePower.ConvertToFreeze(5) == (0, 5)
-            && SakuraFrostbitePower.ConvertToFreeze(6) == (1, 0)
-            && SakuraFrostbitePower.ConvertToFreeze(11) == (1, 5)
-            && SakuraFrostbitePower.ConvertToFreeze(12) == (2, 0)
-            && SakuraFrostbitePower.ConvertToFreeze(14) == (2, 2)
-            && SakuraFrostbitePower.ConvertToFreeze(17) == (2, 5)
-            && ClassicFreezePower.BlockGain == 5
+            ClassicFreezePower.BlockPerSkip == 10
             && new ClassicFreezePower().StackType == PowerStackType.Counter
             && RegressionTestHarness.DeclaresMethod<ClassicFreezePower>("AfterSideTurnEnd")
-            && !RegressionTestHarness.DeclaresMethod<ClassicFreezePower>("BeforeSideTurnStart"),
-            "Expected every 6 Frostbite to become 1 multi-turn Freeze stack while preserving the remainder.");
+            && RegressionTestHarness.DeclaresMethod<ClassicFreezePower>("AfterSideTurnStart"),
+            "Expected enemy Freeze to grant a flat 10 Block per skipped action and expire across its side turns.");
+        RegressionTestHarness.Require(
+            SakuraFrostbitePower.ConvertToFreeze(4, 5) == (0, 4)
+            && SakuraFrostbitePower.ConvertToFreeze(5, 5) == (1, 0)
+            && SakuraFrostbitePower.ConvertToFreeze(10, 5) == (1, 5)
+            && SakuraFrostbitePower.ConvertToFreeze(11, 5) == (2, 0)
+            && SakuraFrostbitePower.ConvertToFreeze(12, 5) == (2, 1)
+            && SakuraFrostbitePower.ConvertToFreeze(18, 5) == (3, 0)
+            && SakuraFrostbitePower.ConvertToFreeze(26, 5) == (4, 0)
+            && SakuraFrostbitePower.ConvertToFreeze(6, 7) == (0, 6)
+            && SakuraFrostbitePower.ConvertToFreeze(7, 7) == (1, 0),
+            "Expected player and enemy Freeze conversion to consume increasing thresholds 5, 6, 7, 8 and preserve the remainder.");
 
         var clowFlower = new ClowFlower();
         var upgradedClowFlower = RegressionTestHarness.MutableForCostTest(new ClowFlower());

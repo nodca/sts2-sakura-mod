@@ -8,7 +8,7 @@ internal static class SakuraCardVfxAssets
     private static readonly IReadOnlyList<string> ArrowPaths =
         [.. ArrowBowProjectileVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> HailPaths =
-        [.. HailIceShardVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+        [.. HailIceShardVfx.AssetPaths, .. FreezeShellVisual.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> BlazePaths =
         [.. BlazeFireColumnVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> SwordPaths =
@@ -18,9 +18,9 @@ internal static class SakuraCardVfxAssets
     private static readonly IReadOnlyList<string> CloudRainPaths =
         [.. CloudRainWeatherVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> SnowPaths =
-        [.. SnowBlizzardVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+        [.. SnowBlizzardVfx.AssetPaths, .. FreezeShellVisual.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> FreezePaths =
-        [.. FreezeCageVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+        [.. FreezeCageVfx.AssetPaths, .. FreezeShellVisual.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     // The line burst stays declared: it is Song's hit feedback whenever the staff is not drawn.
     private static readonly IReadOnlyList<string> SongPaths =
         [.. SongStaffVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths, .. SakuraNativeHitFx.LineBurstAssetPaths];

@@ -42,6 +42,7 @@
         <Compile Remove="tests/**" />
         <Compile Remove="tools/**" />
         <Compile Remove="output/**" />
+        <Compile Remove="artifacts/**" />
         <Compile Remove="tmp/**" />
         <Compile Remove="docs/**" />
         <Compile Remove=".cs" />

@@ -15,8 +15,8 @@
   "SAKURA_MOD_POWER_SWING_DAMAGE_WINDOW_POWER.description": "你的攻击对拥有[gold]虚弱[/gold]的敌人造成 {Amount} 倍伤害，持续至本回合结束。",
   "SAKURA_MOD_POWER_SWING_DAMAGE_WINDOW_POWER.smartDescription": "对拥有[gold]虚弱[/gold]的敌人造成 {Amount} 倍伤害。",
   "SAKURA_MOD_POWER_SAKURA_FROSTBITE_POWER.title": "冻伤",
-  "SAKURA_MOD_POWER_SAKURA_FROSTBITE_POWER.description": "每层使受到的攻击伤害提高 10%。\n每 6 层转化为 1 层[gold]冻结[/gold]。\n在其回合结束时失去 1 层。",
-  "SAKURA_MOD_POWER_SAKURA_FROSTBITE_POWER.smartDescription": "每层使受到的攻击伤害提高 10%。每 6 层转化为 1 层[gold]冻结[/gold]。",
+  "SAKURA_MOD_POWER_SAKURA_FROSTBITE_POWER.description": "每层使受到的攻击伤害增加 10%。\n初始每 5 层转化为 1 层[red]冻结[/red]。\n每转化 1 层[red]冻结[/red]，该生物本场战斗转化所需[gold]冻伤[/gold]增加 1 层。\n在其回合结束时失去 1 层[gold]冻伤[/gold]。",
+  "SAKURA_MOD_POWER_SAKURA_FROSTBITE_POWER.smartDescription": "每层使受到的攻击伤害增加 10%。\n当前每 {FreezeThreshold} 层转化为 1 层[red]冻结[/red]。\n每转化 1 层[red]冻结[/red]，该生物本场战斗转化所需[gold]冻伤[/gold]增加 1 层。\n在其回合结束时失去 1 层[gold]冻伤[/gold]。",
   "SAKURA_MOD_POWER_SAKURA_TEMPORARY_DEXTERITY_POWER.title": "临时敏捷",
   "SAKURA_MOD_POWER_SAKURA_TEMPORARY_DEXTERITY_POWER.description": "本回合内，从牌获得的格挡变化。回合结束时移除。",
   "SAKURA_MOD_POWER_SAKURA_TEMPORARY_DEXTERITY_POWER.smartDescription": "本回合格挡变化。",
@@ -168,8 +168,8 @@
   "SAKURA_MOD_POWER_CLASSIC_FLOAT_SAKURA_POWER.description": "每当获得格挡时，额外获得格挡。所有来源的格挡均可触发。",
   "SAKURA_MOD_POWER_CLASSIC_FLOAT_SAKURA_POWER.smartDescription": "获得格挡：额外获得 {Amount} 点。",
   "SAKURA_MOD_POWER_CLASSIC_FREEZE_POWER.title": "冻结",
-  "SAKURA_MOD_POWER_CLASSIC_FREEZE_POWER.description": "若该敌人意图为攻击，则改为跳过行动并获得 5 点[gold]格挡[/gold]。\n在其回合结束时失去 1 层。",
-  "SAKURA_MOD_POWER_CLASSIC_FREEZE_POWER.smartDescription": "若该敌人意图为攻击，则改为跳过行动并获得 5 点[gold]格挡[/gold]。还剩 {Amount} 个敌方回合。",
+  "SAKURA_MOD_POWER_CLASSIC_FREEZE_POWER.description": "该生物跳过行动，每次跳过行动时获得 10 点[gold]格挡[/gold]。",
+  "SAKURA_MOD_POWER_CLASSIC_FREEZE_POWER.smartDescription": "该生物跳过行动，每次跳过行动时获得 10 点[gold]格挡[/gold]。",
   "SAKURA_MOD_POWER_CLASSIC_TIME_POWER.title": "时间停止",
   "SAKURA_MOD_POWER_CLASSIC_TIME_POWER.description": "跳过行动，直到自然结束。",
   "SAKURA_MOD_POWER_CLASSIC_TIME_POWER.smartDescription": "时间停止 {Amount}。",
@@ -272,5 +272,7 @@
   "SAKURA_MOD_POWER_EARTHY_SEDIMENT_POWER.description": "层数等于上回合进入该玩家弃牌堆的牌数。强化地鸣的伤害。",
   "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.title": "迷途",
   "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.description": "每回合首次受到的攻击伤害减半。[gold]地元素牌[/gold]造成的伤害不受影响，也不会消耗这次减半。",
-  "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.smartDescription": "每回合首次受到的攻击伤害减半。[gold]地元素牌[/gold]造成的伤害不受影响，也不会消耗这次减半。"
+  "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.smartDescription": "每回合首次受到的攻击伤害减半。[gold]地元素牌[/gold]造成的伤害不受影响，也不会消耗这次减半。",
+  "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.title": "冻结抗性",
+  "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.description": "本场战斗，每次转化为冻结所需的冻伤增加 {Amount} 层。"
 }

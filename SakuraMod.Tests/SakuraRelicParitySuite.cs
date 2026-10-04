@@ -142,13 +142,13 @@ public sealed class SakuraRelicParitySuite
     }
 
     [Fact]
-    public void SealedWandConversionThresholdsIncreaseByTen()
+    public void SealedWandConversionThresholdsIncreaseByTwenty()
     {
         RegressionTestHarness.Require(
             ClassicSealedWandRelic.TriggerThresholdFor(0) == 40
-            && ClassicSealedWandRelic.TriggerThresholdFor(1) == 50
-            && ClassicSealedWandRelic.TriggerThresholdFor(2) == 60,
-            "Expected Sealed Wand conversion thresholds to be 40, 50, and 60 after each Sakura conversion.");
+            && ClassicSealedWandRelic.TriggerThresholdFor(1) == 60
+            && ClassicSealedWandRelic.TriggerThresholdFor(2) == 80,
+            "Expected Sealed Wand conversion thresholds to be 40, 60, and 80 after each Sakura conversion.");
     }
 
     [Fact]
@@ -233,11 +233,11 @@ public sealed class SakuraRelicParitySuite
         RegressionTestHarness.Require(
             ClassicSealedWandRelic.DefaultReturnRechargeAmount == 30
             && returnCard.DynamicVars["Magic"].IntValue == 30
-            && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(40, 40, 10) == 30
-            && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(50, 40, 10) == 30
-            && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(60, 40, 10) == 37
-            && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(35, 35, 10) == 26
-            && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(45, 35, 10) == 26,
+            && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(40, 40, 20) == 30
+            && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(60, 40, 20) == 30
+            && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(80, 40, 20) == 45
+            && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(35, 35, 20) == 26
+            && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(55, 35, 20) == 26,
             "Expected Sakura Return previews and runtime refunds to use 75% of the previous wand conversion cost.");
     }
 

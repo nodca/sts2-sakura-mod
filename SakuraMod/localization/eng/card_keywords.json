@@ -28,7 +28,7 @@
   "SAKURAMOD-LONER.title": "Loner",
   "SAKURAMOD-LONER.description": "For each missing copy of this card in your deck, its value increases by 20%.",
   "SAKURAMOD-FROSTBITE.title": "Frostbite",
-  "SAKURAMOD-FROSTBITE.description": "Takes 10% more attack damage per stack.\nEvery 6 stacks become 1 [gold]Freeze[/gold].\nLoses 1 stack at the end of its turn.",
+  "SAKURAMOD-FROSTBITE.description": "Takes 10% more attack damage per stack.\nInitially converts every 5 stacks into 1 [red]Freeze[/red].\nEach converted stack of [red]Freeze[/red] increases this creature's [gold]Frostbite[/gold] requirement by 1 for this combat.\nLoses 1 stack of [gold]Frostbite[/gold] at the end of its turn.",
   "SAKURAMOD-FADE.title": "Fade",
   "SAKURAMOD-FADE.description": "At the end of your turn, if this card is in your [gold]Hand[/gold], remove it from combat."
 }

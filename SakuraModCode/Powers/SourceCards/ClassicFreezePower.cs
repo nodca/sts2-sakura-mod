@@ -29,14 +29,29 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class ClassicFreezePower : SakuraPowerModel
 {
-    internal const int BlockGain = 5;
+    // Flat per skipped action: n stacks give n skips and 10 * n Block in total.
+    internal const int BlockPerSkip = 10;
 
     protected override string IconFileName => "freeze_power.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
     public override async Task AfterApplied(Creature? applier, CardModel? cardSource) =>
-        await FreezeCurrentAttackIntent();
+        await FreezeCurrentIntent();
+
+    public override Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature target,
+        DamageResult result, ValueProp props, Creature? dealer, CardModel? cardSource)
+    {
+        if (target == Owner && result.TotalDamage > 0)
+            FreezeShellVisual.NotifyHit(Owner);
+        return Task.CompletedTask;
+    }
+
+    public override async Task AfterSideTurnStart(
+        CombatSide side,
+        IReadOnlyList<Creature> participants,
+        ICombatState combatState) =>
+        await FreezeCurrentIntent();
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
@@ -49,17 +64,17 @@ public class ClassicFreezePower : SakuraPowerModel
             return;
         }
 
-        await FreezeCurrentAttackIntent();
         await PowerCmd.Decrement(this);
     }
 
-    private async Task FreezeCurrentAttackIntent()
+    private async Task FreezeCurrentIntent()
     {
-        if (!Owner.IsMonster || Owner.Monster?.IntendsToAttack != true)
+        FreezeShellVisual.Mount(Owner);
+        if (Amount <= 0 || !Owner.IsAlive || !Owner.IsMonster || Owner.IsStunned)
             return;
 
         await CreatureCmd.Stun(Owner);
-        await CreatureCmd.GainBlock(Owner, BlockGain, SakuraPowerValueProps.Block, null, false);
+        if (Owner.IsStunned)
+            await CreatureCmd.GainBlock(Owner, BlockPerSkip, SakuraPowerValueProps.Block, null, false);
     }
 }
-
