@@ -104,7 +104,8 @@ public class SakuraCloud() : SakuraFormCard(1, CardType.Skill, TargetType.None)
     private async Task ResolveCloudMechanics(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await GainBlock(play, CalculatedBlock());
-        await SakuraCloudEffects.AddRainToHand(Owner, choiceContext, freeForCombat: true);
+        if (Owner.Creature.GetPower<ClassicWateryPower>()?.Amount > 0)
+            await SakuraCloudEffects.AddRainToHand(Owner, choiceContext, freeForCombat: true);
     }
 
     private int CalculatedBlock() =>

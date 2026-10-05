@@ -31,8 +31,8 @@ public sealed class SakuraCombatArtSuite
         RegressionTestHarness.Require(
             !new SakuraModConfig().UseChibiCombatArt
             && !defaultBinding.CreateDefaultValue()
-            && new SakuraModConfig().EnableCardBgm
-            && cardBgmDefaultBinding.CreateDefaultValue()
+            && !new SakuraModConfig().EnableCardBgm
+            && !cardBgmDefaultBinding.CreateDefaultValue()
             && new SakuraModConfig().EnableCardVfx
             && cardVfxDefaultBinding.CreateDefaultValue()
             && section.Entries.Count == 1

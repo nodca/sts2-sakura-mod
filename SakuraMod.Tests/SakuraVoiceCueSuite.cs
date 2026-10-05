@@ -7,7 +7,7 @@ using System.Text.Json;
 public sealed class SakuraVoiceCueSuite
 {
     [Fact]
-    public void VoiceSettingUsesOneDefaultOnRitsuToggle()
+    public void VoiceSettingUsesOneDefaultOffRitsuToggle()
     {
         var page = SakuraModConfig.BuildSettingsPageForTests();
         var section = Assert.Single(
@@ -17,9 +17,9 @@ public sealed class SakuraVoiceCueSuite
         var defaultBinding = Assert.IsAssignableFrom<IDefaultModSettingsValueBinding<bool>>(toggle.Binding);
 
         RegressionTestHarness.Require(
-            new SakuraModConfig().EnableSakuraVoice
-            && defaultBinding.CreateDefaultValue(),
-            "Expected one RitsuLib-backed Sakura voice toggle with a true default.");
+            !new SakuraModConfig().EnableSakuraVoice
+            && !defaultBinding.CreateDefaultValue(),
+            "Expected one RitsuLib-backed Sakura voice toggle with a false default.");
 
         foreach (var locale in new[] { "eng", "zhs" })
         {

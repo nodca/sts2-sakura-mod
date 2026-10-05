@@ -184,9 +184,9 @@ public sealed class CardMechanicsSuite
             "SakuraMod/localization/zhs/cards.json"));
 
         RegressionTestHarness.Require(
-            Enumerable.Range(0, 8)
+            Enumerable.Range(0, 15)
                 .Select(GaleRules.PlaysUntilNextDraw)
-                .SequenceEqual([3, 2, 1, 3, 2, 1, 3, 2]),
+                .SequenceEqual([2, 1, 3, 2, 1, 4, 3, 2, 1, 5, 4, 3, 2, 1, 6]),
             "Expected Gale to display the number of Gale plays remaining before its next two-card draw.");
         RegressionTestHarness.Require(
             englishCards.Contains("{PlaysUntilDraw:diff()}", StringComparison.Ordinal)
@@ -1236,13 +1236,10 @@ public sealed class CardMechanicsSuite
 
         RegressionTestHarness.Require(
             !GaleRules.ShouldDrawAfterPlay(-1)
-            && !GaleRules.ShouldDrawAfterPlay(0)
-            && !GaleRules.ShouldDrawAfterPlay(1)
-            && !GaleRules.ShouldDrawAfterPlay(2)
-            && GaleRules.ShouldDrawAfterPlay(3)
-            && !GaleRules.ShouldDrawAfterPlay(4)
-            && GaleRules.ShouldDrawAfterPlay(6),
-            "Expected Gale to draw after every third owner-played Gale this combat.");
+            && Enumerable.Range(0, 28)
+                .Where(GaleRules.ShouldDrawAfterPlay)
+                .SequenceEqual([2, 5, 9, 14, 20, 27]),
+            "Expected Gale to draw after successive groups of 2, 3, 4, 5, 6, and 7 owner-played Gale cards this combat.");
     }
 
     [Fact]
@@ -1277,7 +1274,7 @@ public sealed class CardMechanicsSuite
             && gale.DynamicVars["ExtraCopies"].IntValue == 2
             && GaleRules.CountsAsGale(gale)
             && upgradedGale.DynamicVars.Damage.IntValue == 8,
-            "Expected Gale to cost 0, deal 5/8 damage, draw 2 every third play, and create 2 copies with Extra.");
+            "Expected Gale to cost 0, deal 5/8 damage, draw 2 with increasing play requirements, and create 2 copies with Extra.");
 
         var upgradedAqua = RegressionTestHarness.MutableForCostTest(new Aqua());
         upgradedAqua.UpgradeInternal();

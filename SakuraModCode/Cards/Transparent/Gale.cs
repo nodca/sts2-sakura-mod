@@ -21,6 +21,7 @@ public class Gale() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
         new DamageVar(5, ValueProp.Move),
         new GalePlaysUntilDrawVar(),
         new CardsVar("Cards", 2),
+        new CardsVar("DrawRequirementIncrease", 1),
         new CardsVar("ExtraCopies", 2)
     ];
 
@@ -64,7 +65,7 @@ public class Gale() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
 
 internal static class GaleRules
 {
-    private const int PlaysPerDraw = 3;
+    internal const int InitialPlaysPerDraw = 2;
 
     internal static int PlayedCount(Player owner) =>
         SakuraCombatHistory.PlayedCardsThisCombat(owner, CountsAsGale);
@@ -72,16 +73,23 @@ internal static class GaleRules
     internal static bool CountsAsGale(CardModel card) => card is Gale;
 
     internal static bool ShouldDrawAfterPlay(int playedCount) =>
-        playedCount > 0 && playedCount % PlaysPerDraw == 0;
+        playedCount > 0 && PlaysUntilNextDraw(playedCount - 1) == 1;
 
     internal static int PlaysUntilNextDraw(int playedCount)
     {
-        var remainder = Math.Max(0, playedCount) % PlaysPerDraw;
-        return remainder == 0 ? PlaysPerDraw : PlaysPerDraw - remainder;
+        var remainingPlays = Math.Max(0, playedCount);
+        var requiredPlays = InitialPlaysPerDraw;
+        while (remainingPlays >= requiredPlays)
+        {
+            remainingPlays -= requiredPlays;
+            requiredPlays++;
+        }
+
+        return requiredPlays - remainingPlays;
     }
 }
 
-internal sealed class GalePlaysUntilDrawVar() : DynamicVar("PlaysUntilDraw", 3)
+internal sealed class GalePlaysUntilDrawVar() : DynamicVar("PlaysUntilDraw", GaleRules.InitialPlaysPerDraw)
 {
     public override void UpdateCardPreview(
         CardModel card,

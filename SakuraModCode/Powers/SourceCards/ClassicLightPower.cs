@@ -93,4 +93,3 @@ public class ClassicLightPower : SakuraLightPowerBase, IMaxHandSizeModifier
     private bool IsOwnedVoid(CardModel? card) =>
         card is MegaCrit.Sts2.Core.Models.Cards.Void && card.Owner?.Creature == Owner;
 }
-

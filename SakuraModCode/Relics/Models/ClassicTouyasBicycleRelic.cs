@@ -44,4 +44,3 @@ public class ClassicTouyasBicycleRelic : SakuraRelicModel
         await SakuraMagicCharge.GainMagic(choiceContext, Owner, DynamicVars["MagicCharge"].IntValue);
     }
 }
-

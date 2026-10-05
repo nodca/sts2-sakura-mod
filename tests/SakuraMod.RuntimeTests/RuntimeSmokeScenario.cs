@@ -1216,17 +1216,17 @@ internal static class RuntimeSmokeScenario
             "settings_sakura_voice_binding_shared_with_character_select",
             ReferenceEquals(toggle?.Binding, SakuraModConfig.EnableSakuraVoiceBinding));
         assertions.True(
-            "settings_sakura_voice_default_on",
-            toggle?.Binding is IDefaultModSettingsValueBinding<bool> defaults && defaults.CreateDefaultValue());
-        assertions.Equal("settings_sakura_voice_binding_reads", true, toggle?.Binding.Read() ?? false);
+            "settings_sakura_voice_default_off",
+            toggle?.Binding is IDefaultModSettingsValueBinding<bool> defaults && !defaults.CreateDefaultValue());
+        assertions.Equal("settings_sakura_voice_binding_reads", false, toggle?.Binding.Read() ?? false);
         assertions.True(
-            "settings_sakura_card_bgm_default_on",
-            new SakuraModConfig().EnableCardBgm
+            "settings_sakura_card_bgm_default_off",
+            !new SakuraModConfig().EnableCardBgm
             && SakuraModConfig.EnableCardBgmBinding is IDefaultModSettingsValueBinding<bool> cardBgmDefaults
-            && cardBgmDefaults.CreateDefaultValue());
+            && !cardBgmDefaults.CreateDefaultValue());
         assertions.Equal(
             "settings_sakura_card_bgm_binding_reads",
-            true,
+            false,
             SakuraModConfig.EnableCardBgmBinding.Read());
         assertions.True(
             "settings_sakura_card_vfx_default_on",

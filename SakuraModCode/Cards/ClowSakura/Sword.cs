@@ -85,7 +85,7 @@ public class ClowSword() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ba
 public class SakuraSword() : SakuraFormCard(1, CardType.Attack, TargetType.AnyEnemy)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(16, ValueProp.Move), new DynamicVar("Magic", 25)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(16, ValueProp.Move), new DynamicVar("Magic", 10)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
