@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
@@ -29,12 +30,8 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class ClassicSakuraWoodPower : ClassicWoodPower
 {
-    public const int StrengthLoss = 4;
-    public const int PoisonPerTrigger = 2;
-
     protected override string IconFileName => "wood_power_sakuracard.png";
-    protected override bool AppliesBothBranches => true;
+    public override PowerStackType StackType => PowerStackType.Single;
 
-    protected override int PoisonAmount(int strengthLoss) =>
-        strengthLoss / StrengthLoss * PoisonPerTrigger;
+    protected override int PoisonAmount() => Owner.GetPower<ThornsPower>()?.Amount ?? 0;
 }

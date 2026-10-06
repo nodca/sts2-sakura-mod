@@ -30,5 +30,8 @@ namespace SakuraMod.SakuraModCode.Powers;
 public class ClassicEarthyPermanentPower : SakuraPermanentElementPower
 {
     protected override string IconFileName => "earthy_power_sakuracard.png";
+
+    protected override CardModel CreateSpell(ICombatState combatState, Player player) =>
+        combatState.CreateCard<SpellLeiDi>(player);
 }
 

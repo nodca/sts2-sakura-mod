@@ -16,7 +16,7 @@ public class Flight() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
 {
     public override bool GainsBlock => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(6, ValueProp.Move), new PowerVar<SakuraTemporaryDexterityPower>(2), new EnergyVar(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(8, ValueProp.Move), new PowerVar<SakuraTemporaryDexterityPower>(2), new EnergyVar(2)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {

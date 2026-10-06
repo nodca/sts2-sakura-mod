@@ -39,7 +39,7 @@ public class ClowVoice() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Com
         await AddVoiceCopies(choiceContext, 3, PileType.Discard);
 
     protected override async Task OnTurnEndInHand(PlayerChoiceContext choiceContext) =>
-        await CreatureCmd.GainBlock(Owner.Creature, ReleasedBlock(), ValueProp.Move, null, false);
+        await CreatureCmd.GainBlock(Owner.Creature, ReleasedBlock() + ClassicVoicePower.BlockBonus(Owner.Creature), ValueProp.Move, null, false);
 
     public override async Task AfterCardDrawn(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
     {
@@ -72,7 +72,10 @@ public class SakuraVoice() : SakuraFormCard(1, CardType.Power, TargetType.None)
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 1)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
         await ApplyPower<ClassicVoicePower>(choiceContext, Owner.Creature, ReleasedMagic());
+        await ClassicVoicePower.AddVoicesToHand(Owner, ReleasedMagic());
+    }
 }
 

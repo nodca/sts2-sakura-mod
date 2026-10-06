@@ -152,10 +152,10 @@ internal static class SakuraSourceCardText
     internal static Type? GeneratedSpellPreviewType(SakuraSourceCard card) =>
         card switch
         {
-            ClowEarthy => typeof(SpellLeiDi),
-            ClowFirey => typeof(SpellHuoShen),
-            ClowWatery => typeof(SpellShuiLong),
-            ClowWindy => typeof(SpellFengHua),
+            ClowEarthy or SakuraEarthy => typeof(SpellLeiDi),
+            ClowFirey or SakuraFirey => typeof(SpellHuoShen),
+            ClowWatery or SakuraWatery => typeof(SpellShuiLong),
+            ClowWindy or SakuraWindy => typeof(SpellFengHua),
             _ => null
         };
 

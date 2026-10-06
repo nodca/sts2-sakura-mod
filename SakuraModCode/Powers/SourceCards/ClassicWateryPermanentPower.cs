@@ -30,5 +30,8 @@ namespace SakuraMod.SakuraModCode.Powers;
 public class ClassicWateryPermanentPower : SakuraPermanentElementPower
 {
     protected override string IconFileName => "watery_power_sakuracard.png";
+
+    protected override CardModel CreateSpell(ICombatState combatState, Player player) =>
+        combatState.CreateCard<SpellShuiLong>(player);
 }
 

@@ -1464,13 +1464,13 @@ public sealed class CardMechanicsSuite
         var upgradedFlight = RegressionTestHarness.MutableForCostTest(new Flight());
         upgradedFlight.UpgradeInternal();
         RegressionTestHarness.Require(
-            flight.DynamicVars.Block.IntValue == 6
+            flight.DynamicVars.Block.IntValue == 8
             && flight.DynamicVars["SakuraTemporaryDexterityPower"].IntValue == 2
             && flight.DynamicVars.Energy.IntValue == 2
-            && upgradedFlight.DynamicVars.Block.IntValue == 9
+            && upgradedFlight.DynamicVars.Block.IntValue == 11
             && upgradedFlight.DynamicVars["SakuraTemporaryDexterityPower"].IntValue == 3
             && upgradedFlight.DynamicVars.Energy.IntValue == 2,
-            "Expected Flight to gain 6 Block and 2 Temporary Dexterity, upgrade to 9 Block and 3 Temporary Dexterity, and retain its 2-Energy Extra Effect.");
+            "Expected Flight to gain 8 Block and 2 Temporary Dexterity, upgrade to 11 Block and 3 Temporary Dexterity, and retain its 2-Energy Extra Effect.");
 
         var snooze = new Snooze();
         var upgradedSnooze = RegressionTestHarness.MutableForCostTest(new Snooze());
@@ -2022,8 +2022,12 @@ public sealed class CardMechanicsSuite
             && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowFirey()) == typeof(SpellHuoShen)
             && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowWatery()) == typeof(SpellShuiLong)
             && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowWindy()) == typeof(SpellFengHua)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraEarthy()) == typeof(SpellLeiDi)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraFirey()) == typeof(SpellHuoShen)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraWatery()) == typeof(SpellShuiLong)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraWindy()) == typeof(SpellFengHua)
             && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowSword()) is null,
-            "Expected the four Clow element-state cards to preview only their generated spell cards.");
+            "Expected the four Clow and Sakura element-state cards to preview only their generated spell cards.");
         RegressionTestHarness.Require(
             new ClowEarthy().CanonicalKeywords.Contains(CardKeyword.Retain)
             && new ClowFirey().CanonicalKeywords.Contains(CardKeyword.Retain)
@@ -2137,24 +2141,22 @@ public sealed class CardMechanicsSuite
             && clowWood.Rarity == CardRarity.Uncommon
             && clowWood.EnergyCost.Canonical == 1
             && clowWood.DynamicVars["ThornsPower"].IntValue == 2
-            && clowWood.DynamicVars["PoisonPower"].IntValue == 3
-            && clowWood.DynamicVars["StrengthLoss"].IntValue == 2
+            && clowWood.DynamicVars["PoisonPower"].IntValue == 1
             && upgradedClowWood.DynamicVars["ThornsPower"].IntValue == 4
-            && upgradedClowWood.DynamicVars["PoisonPower"].IntValue == 3
-            && upgradedClowWood.DynamicVars["StrengthLoss"].IntValue == 2
+            && upgradedClowWood.DynamicVars["PoisonPower"].IntValue == 1
             && !SakuraCardModel.HasMagicChargeExtraEffect(clowWood)
             && sakuraWood.Type == CardType.Power
             && sakuraWood.TargetType == TargetType.None
             && sakuraWood.Rarity == CardRarity.Token
             && sakuraWood.EnergyCost.Canonical == 1
             && sakuraWood.DynamicVars["ThornsPower"].IntValue == 4
-            && sakuraWood.DynamicVars["PoisonPower"].IntValue == 2
-            && sakuraWood.DynamicVars["StrengthLoss"].IntValue == 4
             && new ClassicWoodPower().Type == PowerType.Buff
+            && new ClassicWoodPower().StackType == PowerStackType.Counter
             && new ClassicSakuraWoodPower().Type == PowerType.Buff
-            && RegressionTestHarness.DeclaresMethod<ClassicWoodPower>("BeforeSideTurnStart")
-            && RegressionTestHarness.DeclaresMethod<PoisonPower>("AfterSideTurnStart"),
-            "Expected Clow Wood to seed 3 Poison or reduce Strength, Sakura Wood to apply 2 Poison and reduce Strength before native Poison resolves, and both cards to use the requested costs and types.");
+            && new ClassicSakuraWoodPower().StackType == PowerStackType.Single
+            && RegressionTestHarness.DeclaresMethod<ClassicWoodPower>("BeforeDamageReceived")
+            && RegressionTestHarness.DeclaresMethod<ThornsPower>("BeforeDamageReceived"),
+            "Expected Clow Wood to grant Thorns and poison attackers per hit, Sakura Wood to poison attackers by current Thorns, both triggering on the native Thorns timing.");
     }
 
     [Fact]

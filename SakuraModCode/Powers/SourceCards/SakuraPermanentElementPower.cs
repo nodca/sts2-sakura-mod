@@ -30,7 +30,21 @@ namespace SakuraMod.SakuraModCode.Powers;
 public abstract class SakuraPermanentElementPower : SakuraPowerModel
 {
     public override PowerType Type => PowerType.Buff;
-    public override PowerStackType StackType => PowerStackType.Single;
+    public override PowerStackType StackType => PowerStackType.Counter;
     protected override bool IsVisibleInternal => false;
+
+    protected abstract CardModel CreateSpell(ICombatState combatState, Player player);
+
+    // Mirrors native InfiniteBladesPower: one spell per stack before the turn's hand draw.
+    public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
+    {
+        if (Owner.Player != player || Amount <= 0)
+            return;
+
+        var spells = new List<CardModel>();
+        for (var i = 0; i < Amount; i++)
+            spells.Add(CreateSpell(combatState, player));
+        await CardPileCmd.AddGeneratedCardsToCombat(spells, PileType.Hand, player);
+    }
 }
 

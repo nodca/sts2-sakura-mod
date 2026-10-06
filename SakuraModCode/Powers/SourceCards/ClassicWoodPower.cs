@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
@@ -29,58 +30,30 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class ClassicWoodPower : SakuraPowerModel
 {
-    public const int DefaultStrengthLoss = 2;
-    public const int InitialPoison = 3;
-
     protected override string IconFileName => "wood_power.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [HoverTipFactory.FromPower<PoisonPower>()];
 
-    public override async Task BeforeSideTurnStart(
+    // Mirrors the native ThornsPower trigger, so fully blocked attacks still count.
+    public override async Task BeforeDamageReceived(
         PlayerChoiceContext choiceContext,
-        CombatSide side,
-        IReadOnlyList<Creature> participants,
-        ICombatState combatState)
+        Creature target,
+        decimal amount,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource)
     {
-        if (side != CombatSide.Enemy || Owner.Side != CombatSide.Player || Amount <= 0)
+        if (target != Owner || dealer is not { IsAlive: true } || !props.IsPoweredAttack())
             return;
 
-        var poisonTargets = new List<Creature>();
-        var strengthLossTargets = new List<Creature>();
-        foreach (var enemy in combatState.Enemies.Where(static enemy => enemy.IsAlive))
-        {
-            if (AppliesBothBranches)
-            {
-                poisonTargets.Add(enemy);
-                strengthLossTargets.Add(enemy);
-            }
-            else if (enemy.GetPower<PoisonPower>() is { Amount: > 0 })
-            {
-                strengthLossTargets.Add(enemy);
-            }
-            else
-            {
-                poisonTargets.Add(enemy);
-            }
-        }
+        var poison = PoisonAmount();
+        if (poison <= 0)
+            return;
 
-        var poisonAmount = PoisonAmount(Amount);
-        if (poisonTargets.Count > 0 && poisonAmount > 0)
-            // BeforeSideTurnStart runs before the vanilla PoisonPower trigger.
-            await PowerCmd.Apply<PoisonPower>(choiceContext, poisonTargets, poisonAmount, Owner, null, false);
-
-        if (strengthLossTargets.Count > 0)
-            await PowerCmd.Apply<ClassicTemporaryStrengthLossPower>(
-                choiceContext,
-                strengthLossTargets,
-                Amount,
-                Owner,
-                null,
-                false);
+        Flash();
+        await PowerCmd.Apply<PoisonPower>(choiceContext, dealer, poison, Owner, null);
     }
 
-    protected virtual bool AppliesBothBranches => false;
-
-    protected virtual int PoisonAmount(int strengthLoss) =>
-        strengthLoss / DefaultStrengthLoss * InitialPoison;
+    protected virtual int PoisonAmount() => Amount;
 }

@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
@@ -28,19 +29,19 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class ClowWood() : ClowCard(1, CardType.Power, CardRarity.Uncommon, TargetType.None)
 {
     private const int BaseThorns = 2;
+    private const int PoisonPerHit = 1;
 
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new PowerVar<ThornsPower>(BaseThorns),
-        new PowerVar<PoisonPower>(ClassicWoodPower.InitialPoison),
-        new PowerVar<StrengthPower>("StrengthLoss", ClassicWoodPower.DefaultStrengthLoss)
+        new PowerVar<PoisonPower>(PoisonPerHit)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await ApplyPower<ThornsPower>(choiceContext, Owner.Creature, DynamicVars["ThornsPower"].IntValue);
-        await ApplyPower<ClassicWoodPower>(choiceContext, Owner.Creature, DynamicVars["StrengthLoss"].IntValue);
+        await ApplyPower<ClassicWoodPower>(choiceContext, Owner.Creature, DynamicVars["PoisonPower"].IntValue);
     }
 
     protected override void OnUpgrade() => DynamicVars["ThornsPower"].UpgradeValueBy(2);
@@ -51,17 +52,12 @@ public class SakuraWood() : SakuraFormCard(1, CardType.Power, TargetType.None)
     private const int BaseThorns = 4;
 
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars =>
-    [
-        new PowerVar<ThornsPower>(BaseThorns),
-        new PowerVar<PoisonPower>(ClassicSakuraWoodPower.PoisonPerTrigger),
-        new PowerVar<StrengthPower>("StrengthLoss", ClassicSakuraWoodPower.StrengthLoss)
-    ];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<ThornsPower>(BaseThorns)];
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [HoverTipFactory.FromPower<PoisonPower>()];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await ApplyPower<ThornsPower>(choiceContext, Owner.Creature, DynamicVars["ThornsPower"].IntValue);
-        await ApplyPower<ClassicSakuraWoodPower>(choiceContext, Owner.Creature, DynamicVars["StrengthLoss"].IntValue);
+        await ApplyPower<ClassicSakuraWoodPower>(choiceContext, Owner.Creature, 1);
     }
 }
-
