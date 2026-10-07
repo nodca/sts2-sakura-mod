@@ -1878,9 +1878,18 @@ public sealed class CardMechanicsSuite
             && clowTime.Elements == SakuraElementSet.Water
             && clowTime.CanonicalKeywords.Contains(CardKeyword.Exhaust)
             && !clowTime.CanonicalKeywords.Contains(CardKeyword.Retain)
-            && clowTime.EnergyCost.Canonical == 1
-            && upgradedClowTime.Keywords.Contains(CardKeyword.Retain)
-            && upgradedClowTime.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
+            && clowTime.EnergyCost.Canonical == 0
+            && clowTime.DynamicVars.Cards.IntValue == 2
+            && clowTime.DynamicVars["ClassicTimeStasisPower"].IntValue == 1
+            && upgradedClowTime.DynamicVars["ClassicTimeStasisPower"].IntValue == 2
+            && SakuraSourceCardText.ReferencesTimeStasisTip(clowTime)
+            && upgradedClowTime.Keywords.Contains(CardKeyword.Exhaust)
+            && !upgradedClowTime.Keywords.Contains(CardKeyword.Retain)
+            && upgradedClowTime.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0
+            && clowTimeSource.Contains("PowerCmd.Apply<ClassicTimeStasisPower>", StringComparison.Ordinal)
+            && !clowTimeSource.Contains("EnergyNextTurnPower", StringComparison.Ordinal)
+            && !clowTimeSource.Contains("BlockNextTurnPower", StringComparison.Ordinal)
+            && !clowTimeSource.Contains("GetResultPileTypeForCardPlay", StringComparison.Ordinal)
             && !clowTimeSource.Contains("AddVoid", StringComparison.Ordinal)
             && transparentTimeSource.Contains("PlayerCmd.EndTurn", StringComparison.Ordinal)
             && !clowTimeSource.Contains("PlayerCmd.EndTurn", StringComparison.Ordinal)
@@ -1889,8 +1898,15 @@ public sealed class CardMechanicsSuite
             && RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldFlush")
             && RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldClearBlock")
             && RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldPlayerResetEnergy")
-            && RegressionTestHarness.DeclaresMethod<SakuraElementStatePower>("PreserveForNextTurn"),
-            "Expected only Transparent Time to end the turn; Clow Time should preserve hand/resources without ending it, add no Void, gain Retain when upgraded, and avoid Exhaust on Extra.");
+            && RegressionTestHarness.DeclaresMethod<SakuraElementStatePower>("PreserveForNextTurn")
+            && new ClassicTimeStasisPower().StackType == PowerStackType.Counter
+            && !clowTimeSource.Contains("GetPowerAmount<ClassicTimeStasisPower>()", StringComparison.Ordinal)
+            && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("ShouldFlush")
+            && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("ShouldClearBlock")
+            && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("ShouldPlayerResetEnergy")
+            && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("TryModifyPowerAmountReceived")
+            && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("BeforeSideTurnEnd"),
+            "Expected only Transparent Time to end the turn; Clow Time should cost 0, apply 1 Freeze Frame (2 upgraded) that stacks, resolve it at turn end, add no Void, draw on Extra, and keep Exhaust without Retain.");
     }
 
     [Fact]
@@ -2213,7 +2229,7 @@ public sealed class CardMechanicsSuite
 
         RegressionTestHarness.Require(
             choice.EnergyCost.Canonical == 0
-            && choice.Rarity == CardRarity.Rare
+            && choice.Rarity == CardRarity.Uncommon
             && choice.DynamicVars["ManifestCards"].IntValue == 1
             && choice.DynamicVars["DrawCards"].IntValue == 2
             && upgradedChoice.DynamicVars["ManifestCards"].IntValue == 2

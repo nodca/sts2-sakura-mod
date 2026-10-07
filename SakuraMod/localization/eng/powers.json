@@ -59,7 +59,7 @@
   "SAKURA_MOD_POWER_LABYRINTH_POWER.title": "Labyrinth",
   "SAKURA_MOD_POWER_LABYRINTH_POWER.description": "ALL creatures take half damage from the first attack hit each turn. Damage from [gold]Earthy[/gold] cards is unaffected and does not consume this reduction.\nThe first [gold]Earthy[/gold] card you play each turn costs 1 less Energy.",
   "SAKURA_MOD_POWER_LABYRINTH_POWER.smartDescription": "ALL creatures take half damage from the first attack hit each turn. Damage from [gold]Earthy[/gold] cards is unaffected and does not consume this reduction.\nThe first [gold]Earthy[/gold] card you play each turn costs 1 less Energy.",
-  "SAKURA_MOD_POWER_TIME_STOP_POWER.title": "Time",
+  "SAKURA_MOD_POWER_TIME_STOP_POWER.title": "Extra Turn",
   "SAKURA_MOD_POWER_TIME_STOP_POWER.description": "You will take an extra turn before enemies act.",
   "SAKURA_MOD_POWER_TIME_STOP_POWER.smartDescription": "Take an extra turn.",
   "SAKURA_MOD_POWER_CLASSIC_MAGIC_CHARGE_POWER.title": "Magic Charge",
@@ -173,6 +173,9 @@
   "SAKURA_MOD_POWER_CLASSIC_TIME_POWER.title": "Time",
   "SAKURA_MOD_POWER_CLASSIC_TIME_POWER.description": "Skips actions until it expires.",
   "SAKURA_MOD_POWER_CLASSIC_TIME_POWER.smartDescription": "Time {Amount}.",
+  "SAKURA_MOD_POWER_CLASSIC_TIME_STASIS_POWER.title": "Freeze Frame",
+  "SAKURA_MOD_POWER_CLASSIC_TIME_STASIS_POWER.description": "At the end of your turn, keep your [gold]Hand[/gold], [gold]Block[/gold], unspent Energy and Element states for next turn.\nEnemy debuffs do not decrease.\nAt the start of your turn, reduce this by 1.",
+  "SAKURA_MOD_POWER_CLASSIC_TIME_STASIS_POWER.smartDescription": "At the end of your next {Amount} turns, keep your [gold]Hand[/gold], [gold]Block[/gold], unspent Energy and Element states.\nMeanwhile, enemy debuffs do not decrease.",
   "SAKURA_MOD_POWER_CLASSIC_SILENT_PENDING_POWER.title": "Silent",
   "SAKURA_MOD_POWER_CLASSIC_SILENT_PENDING_POWER.description": "At the start of your next turn, you cannot play Attack cards that turn.",
   "SAKURA_MOD_POWER_CLASSIC_SILENT_PENDING_POWER.smartDescription": "Next turn: cannot play Attacks.",
@@ -274,5 +277,7 @@
   "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.description": "Take half damage from the first attack hit each turn. Damage from [gold]Earthy[/gold] cards is unaffected and does not consume this reduction.",
   "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.smartDescription": "Take half damage from the first attack hit each turn. Damage from [gold]Earthy[/gold] cards is unaffected and does not consume this reduction.",
   "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.title": "Freeze Resistance",
-  "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.description": "Requires {Amount} additional Frostbite stacks per Freeze conversion this combat."
+  "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.description": "Requires {Amount} additional Frostbite stacks per Freeze conversion this combat.",
+  "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.title": "Advance",
+  "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.description": "Draw {Amount} fewer cards at the start of your next turn."
 }

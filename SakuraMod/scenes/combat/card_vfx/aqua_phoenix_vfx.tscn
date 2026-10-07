@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Shader" uid="uid://4ui52ow0q4q3" path="res://SakuraMod/shaders/card_vfx/aqua_phoenix.gdshader" id="1_aqua"]
 
@@ -32,6 +32,24 @@ shader_parameter/opacity = 0.0
 
 [sub_resource type="Curve" id="Curve_tail"]
 _data = [Vector2(0, 1), 0.0, -0.6, 0, 0, Vector2(1, 0.22), -0.6, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tail_branch"]
+resource_local_to_scene = true
+shader = ExtResource("1_aqua")
+shader_parameter/mode = 3.0
+shader_parameter/elapsed = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/form = 0.0
+shader_parameter/spread = 0.0
+shader_parameter/dissolve = 0.0
+shader_parameter/freeze = 0.0
+shader_parameter/shatter = 0.0
+shader_parameter/empowered = 0.0
+shader_parameter/opacity = 0.0
+
+[sub_resource type="Curve" id="Curve_tail_branch"]
+_data = [Vector2(0, 1), 0.0, -0.8, 0, 0, Vector2(1, 0.15), -0.8, 0.0, 0, 0]
 point_count = 2
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_bird"]
@@ -81,6 +99,18 @@ offset_bottom = 62.0
 pivot_offset = Vector2(160, 62)
 mouse_filter = 2
 color = Color(1, 1, 1, 1)
+
+[node name="TailBranch" type="Line2D" parent="."]
+unique_name_in_owner = true
+visible = false
+material = SubResource("ShaderMaterial_tail_branch")
+width = 25.0
+width_curve = SubResource("Curve_tail_branch")
+default_color = Color(1, 1, 1, 1)
+texture_mode = 2
+joint_mode = 2
+begin_cap_mode = 2
+end_cap_mode = 2
 
 [node name="Tail" type="Line2D" parent="."]
 unique_name_in_owner = true

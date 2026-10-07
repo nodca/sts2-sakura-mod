@@ -29,9 +29,10 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public abstract class SakuraElementStatePower : SakuraPowerModel
 {
-    // Set only from synced card-play flow (Clow/Transparent Time, TimeStop) and
-    // consumed in the synced AfterSideTurnEnd; both machines see the same
-    // set/consume sequence, so the flag never gates a one-sided command.
+    // Set only from synced flow (Transparent Time's card play, TimeStop, Clow Time's
+    // stasis in BeforeSideTurnEnd) and consumed in the synced AfterSideTurnEnd; both
+    // machines see the same set/consume sequence, so the flag never gates a
+    // one-sided command.
     private bool _preserveForNextTurn;
 
     public override PowerType Type => PowerType.Buff;

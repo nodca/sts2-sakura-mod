@@ -52,14 +52,10 @@ public class ClassicSleepPower : SakuraPowerModel
             || !SakuraSleepMove.WasConsumedBy(Owner))
             return;
 
-        if (Amount > 1)
-        {
-            await PowerCmd.Decrement(this);
+        // Decrement, not Remove, so Clow Time's stasis can hold the last stack.
+        await PowerCmd.Decrement(this);
+        if (Amount > 0)
             SakuraSleepMove.Renew(Owner);
-            return;
-        }
-
-        await PowerCmd.Remove(this);
     }
 
     public override Task AfterRemoved(Creature oldOwner)

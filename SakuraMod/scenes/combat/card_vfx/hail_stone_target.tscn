@@ -1,0 +1,31 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/hail_stone.gdshader" id="1_stone"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_stone"]
+resource_local_to_scene = true
+shader = ExtResource("1_stone")
+shader_parameter/radius = 80.0
+shader_parameter/draw_size = Vector2(420, 480)
+shader_parameter/floor_y = 200.0
+shader_parameter/elapsed = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/spike = 0.9
+shader_parameter/formation = 0.0
+shader_parameter/squash = 0.0
+shader_parameter/crack = 0.0
+shader_parameter/split = 0.0
+shader_parameter/shatter = 0.0
+shader_parameter/opacity = 1.0
+
+[node name="HailStoneTarget" type="Node2D"]
+
+[node name="StoneBody" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_stone")
+offset_left = -210.0
+offset_top = -240.0
+offset_right = 210.0
+offset_bottom = 240.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)

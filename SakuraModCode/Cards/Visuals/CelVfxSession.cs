@@ -453,6 +453,16 @@ internal abstract class CelVfxSession : IDisposable
         }
     }
 
+    /// <summary>
+    /// Called once per process frame while the clock runs, with the real frame
+    /// delta (also during a cel hold), after the clock has advanced. Phase tweens
+    /// only run while their beat lasts; this keeps per-frame presentation state
+    /// such as follow-through settling between beats. Default: nothing.
+    /// </summary>
+    protected virtual void OnFrame(float delta)
+    {
+    }
+
     protected Tween Track(Tween tween)
     {
         ArgumentNullException.ThrowIfNull(tween);
@@ -483,6 +493,8 @@ internal abstract class CelVfxSession : IDisposable
                     _holdRemaining = Math.Max(0f, _holdRemaining - delta);
                 else
                     _elapsed += delta;
+                if (IsActive())
+                    OnFrame(delta);
             }
 
             if (IsActive())

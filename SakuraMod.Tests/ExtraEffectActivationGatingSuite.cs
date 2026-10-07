@@ -42,8 +42,7 @@ public sealed class ExtraEffectActivationGatingSuite
         var reworkedGates = new (string RelativePath, string RemovedToken)[]
         {
             ("SakuraModCode/Cards/ClowSakura/Arrow.cs", "SakuraMagicCharge.CanSpendMagic(Owner)"),
-            ("SakuraModCode/Cards/ClowSakura/Rain.cs", "SakuraExtraEffectTransaction.CanActivate(Owner)"),
-            ("SakuraModCode/Cards/ClowSakura/Time.cs", "SakuraExtraEffectTransaction.CanActivate(Owner)")
+            ("SakuraModCode/Cards/ClowSakura/Rain.cs", "SakuraExtraEffectTransaction.CanActivate(Owner)")
         };
 
         foreach (var (relativePath, removedToken) in reworkedGates)
@@ -95,6 +94,12 @@ public sealed class ExtraEffectActivationGatingSuite
             ResultPileForCardPlay(RegressionTestHarness.MutableForCostTest(new ClowRain())) == PileType.Exhaust
             && ResultPileForCardPlay(RegressionTestHarness.MutableForCostTest(new ClowTime())) == PileType.Exhaust,
             "Expected Rain and Time to keep consuming themselves outside an active Extra Effect.");
+
+        RegressionTestHarness.Require(
+            ResultPileForCardPlay(RegressionTestHarness.MutableForCostTest(new ClowTime())) == PileType.Exhaust
+            && !File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/ClowSakura/Time.cs"))
+                .Contains("GetResultPileTypeForCardPlay", StringComparison.Ordinal),
+            "Expected Time to Exhaust regardless of its Extra Effect, which now draws instead.");
     }
 
     [Fact]

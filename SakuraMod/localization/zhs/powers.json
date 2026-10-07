@@ -173,6 +173,9 @@
   "SAKURA_MOD_POWER_CLASSIC_TIME_POWER.title": "时间停止",
   "SAKURA_MOD_POWER_CLASSIC_TIME_POWER.description": "跳过行动，直到自然结束。",
   "SAKURA_MOD_POWER_CLASSIC_TIME_POWER.smartDescription": "时间停止 {Amount}。",
+  "SAKURA_MOD_POWER_CLASSIC_TIME_STASIS_POWER.title": "定格",
+  "SAKURA_MOD_POWER_CLASSIC_TIME_STASIS_POWER.description": "回合结束时，保留你的[gold]手牌[/gold]、[gold]格挡[/gold]、未用完的能量和元素状态至下回合。\n所有敌人的负面效果不会减少。\n在你的回合开始时，减少 1 层。",
+  "SAKURA_MOD_POWER_CLASSIC_TIME_STASIS_POWER.smartDescription": "接下来 {Amount} 个回合结束时，保留你的[gold]手牌[/gold]、[gold]格挡[/gold]、未用完的能量和元素状态。\n在此期间，所有敌人的负面效果不会减少。",
   "SAKURA_MOD_POWER_CLASSIC_SILENT_PENDING_POWER.title": "静",
   "SAKURA_MOD_POWER_CLASSIC_SILENT_PENDING_POWER.description": "在你的下回合开始时，你本回合不能打出攻击牌。",
   "SAKURA_MOD_POWER_CLASSIC_SILENT_PENDING_POWER.smartDescription": "下回合不能打出攻击牌。",
@@ -274,5 +277,7 @@
   "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.description": "每回合首次受到的攻击伤害减半。[gold]地元素牌[/gold]造成的伤害不受影响，也不会消耗这次减半。",
   "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.smartDescription": "每回合首次受到的攻击伤害减半。[gold]地元素牌[/gold]造成的伤害不受影响，也不会消耗这次减半。",
   "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.title": "冻结抗性",
-  "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.description": "本场战斗，每次转化为冻结所需的冻伤增加 {Amount} 层。"
+  "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.description": "本场战斗，每次转化为冻结所需的冻伤增加 {Amount} 层。",
+  "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.title": "预支",
+  "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.description": "下回合开始时少抽 {Amount} 张牌。"
 }

@@ -41,14 +41,10 @@ public class ClassicTimePower : SakuraPowerModel
         if (Owner.Side != side || !participants.Contains(Owner))
             return;
 
-        if (Amount > 1)
-        {
+        // Decrement, not Remove, so Clow Time's stasis can hold the last stack.
+        await PowerCmd.Decrement(this);
+        if (Amount > 0)
             await StunOwner();
-            await PowerCmd.Decrement(this);
-            return;
-        }
-
-        await PowerCmd.Remove(this);
     }
 
     public override Task AfterRemoved(Creature oldOwner)

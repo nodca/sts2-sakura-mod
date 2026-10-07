@@ -125,12 +125,13 @@ internal static class SpellTurnTransformationScenario
             .SingleOrDefault(node => node.Name == name);
         ShaderMaterial? ice = null;
         var gameplayCalls = 0;
-        await HailIceShardVfx.PlayOrResolveAsync(ModelDb.Card<Hail>(), null, [target], cues =>
+        await HailStormVfx.PlayOrResolveAsync(ModelDb.Card<Hail>(), null, [target], 5, 5, cues =>
         {
             gameplayCalls++;
-            var root = Find("SakuraHailIceShardVfx")
+            var root = Find("SakuraHailStormVfx")
                 ?? throw new InvalidOperationException("Hail presentation failed to mount.");
-            ice = (ShaderMaterial)root.GetNode<ColorRect>("Shards/HailIce1/ShardBody").Material;
+            ice = (ShaderMaterial)root.GetNode<ColorRect>("Stones/HailStone1/StoneBody").Material;
+            assertions.Equal("hail_finisher_has_landed_before_gameplay", 1f, ice.GetShaderParameter("formation").AsSingle());
             cues.Impact(target);
             assertions.Equal("hail_first_hit_cracks_immediately", 1f, ice.GetShaderParameter("crack").AsSingle());
             var grains = root.GetNode<Node2D>("Debris").GetChildCount();
@@ -144,7 +145,7 @@ internal static class SpellTurnTransformationScenario
             () => ice is not null && ice.GetShaderParameter("split").AsSingle() > 0f,
             "Hail first-hit fracture movement");
         assertions.Equal("hail_one_hit_reaches_complete_fracture_path", 1f, ice!.GetShaderParameter("split").AsSingle());
-        await CombatScenarioContext.WaitUntilAsync(() => Find("SakuraHailIceShardVfx") is null, "Hail cleanup");
+        await CombatScenarioContext.WaitUntilAsync(() => Find("SakuraHailStormVfx") is null, "Hail cleanup");
         assertions.Equal("hail_gameplay_resolves_once", 1, gameplayCalls);
 
         foreach (var frozen in new[] { false, true })
@@ -261,8 +262,8 @@ internal static class SpellTurnTransformationScenario
         var scenePaths = new[]
         {
             AquaPhoenixVfx.ScenePath,
-            HailIceShardVfx.ScenePath,
-            HailIceShardVfx.TargetScenePath,
+            HailStormVfx.ScenePath,
+            HailStormVfx.StoneScenePath,
             BlazePhoenixVfx.ScenePath,
             TimeStopVfx.ScenePath,
             SakuraSwordBladeVfx.ScenePath,

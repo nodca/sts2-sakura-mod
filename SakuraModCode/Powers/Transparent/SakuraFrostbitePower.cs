@@ -81,12 +81,7 @@ public class SakuraFrostbitePower : SakuraPowerModel
         if (side != Owner.Side || !participants.Contains(Owner))
             return;
 
-        if (Amount <= 1)
-        {
-            await PowerCmd.Remove(this);
-            return;
-        }
-
+        // Decrement, not Remove, so Clow Time's stasis can hold the last stack.
         await PowerCmd.Decrement(this);
     }
 

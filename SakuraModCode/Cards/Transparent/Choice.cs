@@ -18,7 +18,7 @@ using STS2RitsuLib.Cards.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, SakuraKeywords.Manifest];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("ManifestCards", 1), new CardsVar("DrawCards", 2)];
@@ -53,8 +53,11 @@ public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
         }
     }
 
-    private async Task Draw(PlayerChoiceContext choiceContext, int amount) =>
+    private async Task Draw(PlayerChoiceContext choiceContext, int amount)
+    {
         await CardPileCmd.Draw(choiceContext, amount, Owner, false);
+        await PowerCmd.Apply<ChoiceDrawDebtPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this);
+    }
 
     protected override void OnUpgrade()
     {

@@ -36,6 +36,8 @@ internal sealed class BlazePhoenixVfx : CelVfxSession
     // Beat timeline after the shared prelude (design D3/D4).
     internal const float FuelDuration = 0.35f;
     internal const float FormDuration = 0.25f;
+    // The formed bird hovers in its raised-wing pose long enough to be read.
+    internal const float PoseHold = 0.15f;
     internal const float DiveDuration = 0.25f;
     internal const float TailDuration = 0.45f;
     internal const float AshDuration = 0.75f;
@@ -62,8 +64,9 @@ internal sealed class BlazePhoenixVfx : CelVfxSession
     // Layout, in screen pixels.
     private const float GatherAboveHead = 110f;
     private const float GatherForward = 50f;
-    private const float GatherMinTop = 200f;
-    private const float DiveArcHeight = 170f;
+    private const float GatherMinTop = 250f;
+    private const float DiveArcHeight = 120f;
+    private const float HoldLift = 6f;
     private const float FlareRaise = 0.10f;
     private const float RestPitch = -0.12f;
 
@@ -90,6 +93,11 @@ internal sealed class BlazePhoenixVfx : CelVfxSession
     private readonly float _birdScale;
     private readonly float _facing;
     private readonly List<(Line2D Ribbon, Node2D Head)> _streams = [];
+    // Plumage follow-through for the flying bird and the strike flare's fling.
+    private readonly CelVfxFollowThrough _birdLag = new();
+    private readonly CelVfxFollowThrough _strikeLag = new();
+    private float _birdSpread;
+    private float _strikeSpread;
     private Sprite2D? _gatherGlow;
     private bool _struck;
     private bool _faded;
@@ -130,6 +138,8 @@ internal sealed class BlazePhoenixVfx : CelVfxSession
             material.SetShaderParameter("empowered", fuel.Empowered ? 1f : 0f);
             material.SetShaderParameter("form", 0f);
             material.SetShaderParameter("spread", 0f);
+            material.SetShaderParameter("sway", 0f);
+            material.SetShaderParameter("flex", 0f);
             material.SetShaderParameter("dissolve", 0f);
             material.SetShaderParameter("opacity", 0f);
         }
@@ -152,6 +162,23 @@ internal sealed class BlazePhoenixVfx : CelVfxSession
 
     private float Elapsed => _birdMaterial.GetShaderParameter("elapsed").AsSingle();
 
+    /// <summary>Follow-through from the motion actually applied this frame.</summary>
+    protected override void OnFrame(float delta)
+    {
+        _birdLag.Update(delta, _bird.Rotation, _birdSpread, _facing);
+        _birdMaterial.SetShaderParameter("sway", _birdLag.Sway);
+        _birdMaterial.SetShaderParameter("flex", _birdLag.Flex);
+        // The flare does not turn; only its fling drives the lag.
+        _strikeLag.Update(delta, 0f, _strikeSpread, 1f);
+        _strikeMaterial.SetShaderParameter("flex", _strikeLag.Flex);
+    }
+
+    private void SetBirdSpread(float spread)
+    {
+        _birdSpread = spread;
+        _birdMaterial.SetShaderParameter("spread", spread);
+    }
+
     // --- Pure timing and strength ---------------------------------------------
 
     /// <summary>Fuel streams drawn for an exhaust count: one per card, capped.</summary>
@@ -172,7 +199,7 @@ internal sealed class BlazePhoenixVfx : CelVfxSession
 
     /// <summary>Body length after the shared prelude, excluding the ash that overlaps the tail.</summary>
     internal static float BodySeconds(int exhaustCount) =>
-        FuelSeconds(exhaustCount) + FormDuration + DiveDuration + TailDuration;
+        FuelSeconds(exhaustCount) + FormDuration + PoseHold + DiveDuration + TailDuration;
 
     /// <summary>When stream <paramref name="index"/> leaves the pile, inside the fixed fuel window.</summary>
     internal static float StreamStart(int index, int streams) =>
@@ -298,7 +325,7 @@ internal sealed class BlazePhoenixVfx : CelVfxSession
         FloorClearance: 0f);
 
     /// <summary>
-    /// Shared wand prelude, then fuel, form and dive. Each beat is its own tracked
+    /// Shared wand prelude, then fuel, form, the held pose and dive. Each beat is its own tracked
     /// Tween, fully configured before the await that lets it start; appending to a
     /// Tween after it has run would throw inside the awaited card action.
     /// </summary>
@@ -321,6 +348,11 @@ internal sealed class BlazePhoenixVfx : CelVfxSession
         if (!await WaitActive(FormDuration))
             return false;
         ReleaseFuel();
+
+        var hold = Track(Root.CreateTween());
+        hold.TweenMethod(Callable.From<float>(UpdateHold), 0f, 1f, PoseHold);
+        if (!await WaitActive(PoseHold))
+            return false;
 
         var dive = Track(Root.CreateTween());
         dive.TweenMethod(Callable.From<float>(UpdateDive), 0f, 1f, DiveDuration);
@@ -470,7 +502,7 @@ internal sealed class BlazePhoenixVfx : CelVfxSession
     {
         var form = EaseOut(u);
         _birdMaterial.SetShaderParameter("form", form);
-        _birdMaterial.SetShaderParameter("spread", EaseBack(u));
+        SetBirdSpread(EaseBack(u));
         _bird.GlobalPosition = _gather + new Vector2(0f, -8f * form);
         _bird.Scale = new Vector2(_facing, 1f) * _birdScale * Mathf.Lerp(0.6f, 1f, form);
         // The gathered fuel swells into the forming body and fades under it.
@@ -481,10 +513,18 @@ internal sealed class BlazePhoenixVfx : CelVfxSession
         }
     }
 
+    /// <summary>The held pose hovers rather than freezes: a small lift and breath.</summary>
+    private void UpdateHold(float u)
+    {
+        var lift = MathF.Sin(Mathf.Pi * u);
+        _bird.GlobalPosition = _gather + new Vector2(0f, -8f - HoldLift * lift);
+        _bird.Scale = new Vector2(_facing, 1f) * _birdScale * (1f + 0.02f * lift);
+    }
+
     private void UpdateDive(float u)
     {
         var path = EaseInOut(u);
-        _birdMaterial.SetShaderParameter("spread", Mathf.Lerp(1f, 0.55f, path));
+        SetBirdSpread(Mathf.Lerp(1f, 0.55f, path));
         _bird.GlobalPosition = Bezier(_gather, _diveControl, _target, path);
         var tangent = BezierTangent(_gather, _diveControl, _target, path);
         // With a mirrored body, local +X points along -X, so the heading turns by pi.
@@ -549,7 +589,8 @@ internal sealed class BlazePhoenixVfx : CelVfxSession
         var open = Math.Clamp(age / FlareOpen, 0f, 1f);
         var burn = Math.Clamp((age - FlareFormIn) / FlareBurn, 0f, 1f);
         _strikeMaterial.SetShaderParameter("form", EaseOut(Math.Clamp(age / FlareFormIn, 0f, 1f)));
-        _strikeMaterial.SetShaderParameter("spread", EaseBack(open));
+        _strikeSpread = EaseBack(open);
+        _strikeMaterial.SetShaderParameter("spread", _strikeSpread);
         _strikeMaterial.SetShaderParameter("dissolve", burn);
         // The flare lifts away as it burns: fire rises.
         _strike.GlobalPosition = _target + new Vector2(0f, -FlareLift * burn);

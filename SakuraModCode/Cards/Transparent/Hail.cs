@@ -43,7 +43,7 @@ public class Hail() : TransparentCard(1, CardType.Attack, CardRarity.Uncommon, T
         var damage = HailRules.TotalDamage(this, spent);
         var frostbite = DynamicVars["SakuraFrostbitePower"].IntValue;
         var targets = CombatState!.HittableEnemies.ToList();
-        await HailIceShardVfx.PlayOrResolveAsync(this, Owner.Creature, targets, async cues =>
+        await HailStormVfx.PlayOrResolveAsync(this, Owner.Creature, targets, spent, maxSpend, async cues =>
         {
             foreach (var target in targets)
             {

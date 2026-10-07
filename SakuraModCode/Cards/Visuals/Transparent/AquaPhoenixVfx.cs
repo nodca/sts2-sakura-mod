@@ -36,7 +36,10 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
     internal const float VortexOpen = 0.10f;
     internal const float RiseStart = 0.03f;
     internal const float ApexAt = 0.18f;
-    internal const float FirstReach = 0.40f;
+    // The card-face pose is held this long before the dive, drifting up a little.
+    internal const float PoseHold = 0.08f;
+    internal const float HeldUntil = ApexAt + PoseHold;
+    internal const float FirstReach = 0.40f + PoseHold;
     internal const float SweepSpacing = 0.075f;
     internal const float SweepSpanCap = 0.30f;
     internal const float TailDuration = 0.30f;
@@ -63,6 +66,7 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
     private const float VortexForward = 1.2f;
     private const float VortexDrop = 4f;
     private static readonly Vector2 ApexOffset = new(150f, -320f);
+    private const float HoldDrift = 6f;
     private const float ApexMinTop = 220f;
     private const float HelixRadius = 92f;
     private const float HelixLift = 170f;
@@ -74,6 +78,16 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
     private const float TailWidth = 46f;
     private const float TailWave = 20f;
     private const float TailWavelength = 170f;
+    // Once the tail detaches, a narrower stream parts from it and both ends roll
+    // back on themselves like the wing's wave lips.
+    internal const float BranchStart = 0.40f;
+    private const float BranchSpread = 56f;
+    private const float BranchWidthShare = 0.55f;
+    internal const float CurlStart = 0.62f;
+    private const float CurlRadiusMain = 44f;
+    private const float CurlRadiusBranch = 30f;
+    internal const float CurlTurn = 1.5f * MathF.PI;
+    private const float CurlShrink = 0.6f;
     private const float BirdScale = 1.12f;
     private const float SweepScale = 0.84f;
     private const float SweepSpread = 0.12f;
@@ -101,6 +115,9 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
     private readonly IReadOnlyList<Creature> _targets;
     private readonly bool _empowered;
     private readonly float _forward;
+    // Plumage follow-through: the bird's turns and wing folding.
+    private readonly CelVfxFollowThrough _birdLag = new();
+    private float _birdSpread;
     private readonly Vector2 _vortexCentre;
     private readonly Vector2 _apex;
     private readonly float[] _arrivals;
@@ -116,10 +133,12 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
 
     private readonly Node2D _vortex;
     private readonly Line2D _tail;
+    private readonly Line2D _tailBranch;
     private readonly Node2D _bird;
     private readonly Node2D _ice;
     private readonly ShaderMaterial _vortexMaterial;
     private readonly ShaderMaterial _tailMaterial;
+    private readonly ShaderMaterial _tailBranchMaterial;
     private readonly ShaderMaterial _birdMaterial;
 
     private float _t;
@@ -151,10 +170,12 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
 
         _vortex = root.GetNode<Node2D>("%Vortex");
         _tail = root.GetNode<Line2D>("%Tail");
+        _tailBranch = root.GetNode<Line2D>("%TailBranch");
         _bird = root.GetNode<Node2D>("%Bird");
         _ice = root.GetNode<Node2D>("%Ice");
         _vortexMaterial = CelVfxGeometry.DuplicateMaterial(root.GetNode<ColorRect>("%VortexBody"), "aqua vortex");
         _tailMaterial = CelVfxGeometry.DuplicateMaterial(_tail, "aqua tail");
+        _tailBranchMaterial = CelVfxGeometry.DuplicateMaterial(_tailBranch, "aqua tail branch");
         _birdMaterial = CelVfxGeometry.DuplicateMaterial(root.GetNode<ColorRect>("%BirdBody"), "aqua phoenix body");
 
         var count = targets.Count;
@@ -171,7 +192,7 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
         _splashMaterials = new ShaderMaterial?[count];
 
         var seed = (float)Random.Shared.NextDouble() * 6.1f;
-        foreach (var material in new[] { _vortexMaterial, _tailMaterial, _birdMaterial })
+        foreach (var material in new[] { _vortexMaterial, _tailMaterial, _tailBranchMaterial, _birdMaterial })
         {
             material.SetShaderParameter("seed", seed);
             // The vortex flash is the Energy payoff; it is switched on only when ice returns.
@@ -214,10 +235,10 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
             _splashMaterials[i] = material;
         }
 
-        // Flight keys: rise out of the helix, the held card pose, every hit point,
-        // then on past the last enemy.
-        var points = new List<Vector2> { Helix(RiseStart), _apex };
-        var times = new List<float> { RiseStart, ApexAt };
+        // Flight keys: rise out of the helix, the held card pose (entered and left
+        // a little higher), every hit point, then on past the last enemy.
+        var points = new List<Vector2> { Helix(RiseStart), _apex, _apex + new Vector2(0f, -HoldDrift) };
+        var times = new List<float> { RiseStart, ApexAt, HeldUntil };
         for (var i = 0; i < count; i++)
         {
             points.Add(hits[i]);
@@ -239,14 +260,23 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
         _vortex.Visible = false;
         _bird.Visible = false;
         _tail.Visible = false;
+        _tailBranch.Visible = false;
     }
 
     protected override IEnumerable<ShaderMaterial> Materials =>
-        new[] { _vortexMaterial, _tailMaterial, _birdMaterial }
+        new[] { _vortexMaterial, _tailMaterial, _tailBranchMaterial, _birdMaterial }
             .Concat(_splashMaterials.OfType<ShaderMaterial>());
 
     // Covers the prelude, the sweep, slow gameplay between hits, and the ice return.
     protected override float MaximumLifetime => 8.0f;
+
+    /// <summary>Follow-through from the motion actually applied this frame.</summary>
+    protected override void OnFrame(float delta)
+    {
+        _birdLag.Update(delta, _bird.Rotation, _birdSpread, _forward);
+        _birdMaterial.SetShaderParameter("sway", _birdLag.Sway);
+        _birdMaterial.SetShaderParameter("flex", _birdLag.Flex);
+    }
 
     // --- Pure timing ----------------------------------------------------------
 
@@ -541,11 +571,14 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
         var pitch = Math.Clamp(heading, -1.05f, 0.55f) * 0.75f;
         if (t < ApexAt)
             pitch = Mathf.Lerp(-0.80f, -0.30f, EaseInOut(rise));
+        else
+            // Level in the held pose, then turn onto the heading as the dive starts.
+            pitch = Mathf.Lerp(-0.30f, pitch, Mathf.SmoothStep(HeldUntil, HeldUntil + 0.06f, t));
         _bird.Rotation = _forward * (pitch + 0.45f * EaseInOut(collapse));
 
         var speed = Math.Clamp(velocity.Length() / 6000f, 0f, 1f);
         var grow = Mathf.Lerp(0.55f, 1f, EaseOut(rise));
-        dive = EaseInOut(Math.Clamp((t - ApexAt - 0.03f) / (FirstReach - ApexAt - 0.03f), 0f, 1f));
+        dive = EaseInOut(Math.Clamp((t - HeldUntil - 0.03f) / (FirstReach - HeldUntil - 0.03f), 0f, 1f));
         var size = Mathf.Lerp(BirdScale, SweepScale, dive) * grow;
         _bird.Scale = new Vector2(_forward * size * (1f + 0.12f * speed), size * (1f - 0.06f * speed));
 
@@ -555,6 +588,7 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
         var spread = EaseBack(Mathf.SmoothStep(0.35f, 1f, rise));
         if (t > ApexAt)
             spread = Mathf.Lerp(1f, SweepSpread, dive);
+        _birdSpread = spread;
         _birdMaterial.SetShaderParameter("spread", spread);
         _birdMaterial.SetShaderParameter("dissolve", collapse);
         _birdMaterial.SetShaderParameter("opacity", 1f);
@@ -565,13 +599,27 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
     {
         _tail.Visible = _bird.Visible;
         if (!_tail.Visible)
+        {
+            _tailBranch.Visible = false;
             return;
+        }
 
-        _tail.Points = TailPath(t);
+        _tail.Points = TailPath(t, out var branch);
         _tail.Width = TailWidth * grow * Mathf.Lerp(1f, 0.9f, dive);
-        _tailMaterial.SetShaderParameter("form", Math.Clamp((t - RiseStart) / (ApexAt - RiseStart) * 2f, 0f, 1f));
-        _tailMaterial.SetShaderParameter("dissolve", collapse * collapse);
-        _tailMaterial.SetShaderParameter("opacity", 1f - Mathf.SmoothStep(0.6f, 1f, collapse));
+        _tailBranch.Visible = branch.Length >= 4;
+        if (_tailBranch.Visible)
+        {
+            _tailBranch.Points = branch;
+            _tailBranch.Width = _tail.Width * BranchWidthShare;
+        }
+
+        var form = Math.Clamp((t - RiseStart) / (ApexAt - RiseStart) * 2f, 0f, 1f);
+        foreach (var material in new[] { _tailMaterial, _tailBranchMaterial })
+        {
+            material.SetShaderParameter("form", form);
+            material.SetShaderParameter("dissolve", collapse * collapse);
+            material.SetShaderParameter("opacity", 1f - Mathf.SmoothStep(0.6f, 1f, collapse));
+        }
     }
 
     private void UpdateSplashes(float t)
@@ -688,6 +736,8 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
         if (segment == 0)
             u = 1f - (1f - u) * (1f - u); // Decelerate into the held pose.
         else if (segment == 1)
+            return _keyPoints[1].Lerp(_keyPoints[2], EaseInOut(u)); // Drift in the held pose.
+        else if (segment == 2)
             u *= 0.6f + 0.4f * u; // Ease into the dive without arriving at a blur.
 
         var p0 = segment == 0 ? Helix(_keyTimes[0] - 0.03f) : _keyPoints[segment - 1];
@@ -700,11 +750,13 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
     /// <summary>
     /// The tail walks back along the flight by arc length, so it keeps a fixed
     /// length whatever the speed: coiled into the vortex while rising, trailing
-    /// the bird as a wavy water ribbon once it sweeps.
+    /// the bird as a wavy water ribbon once it sweeps. Once detached, a narrower
+    /// stream parts from it (<paramref name="branch"/>, empty while attached) and
+    /// both ends roll back into curls that turn opposite ways.
     /// </summary>
-    private Vector2[] TailPath(float time)
+    private Vector2[] TailPath(float time, out Vector2[] branch)
     {
-        var detach = Mathf.SmoothStep(ApexAt, FirstReach, time);
+        var detach = Mathf.SmoothStep(HeldUntil, FirstReach, time);
         var length = Mathf.Lerp(TailLengthAttached, TailLength, detach);
         // The tail drains into the collapsing body rather than lingering.
         length *= 1f - 0.85f * Mathf.SmoothStep(_lastArrival, _lastArrival + TailDuration * 0.8f, time);
@@ -729,18 +781,74 @@ internal sealed class AquaPhoenixVfx : CelVfxSession
             }
         }
 
-        var wavy = new Vector2[points.Count];
-        for (var i = 0; i < points.Count; i++)
+        var count = points.Count;
+        var wavy = new Vector2[count];
+        var normals = new Vector2[count];
+        var waves = new float[count];
+        for (var i = 0; i < count; i++)
         {
             var a = points[Math.Max(i - 1, 0)];
-            var b = points[Math.Min(i + 1, points.Count - 1)];
-            var normal = (b - a).Normalized().Orthogonal();
+            var b = points[Math.Min(i + 1, count - 1)];
+            normals[i] = (b - a).Normalized().Orthogonal();
             var s = i * step;
             var envelope = Mathf.SmoothStep(0f, 120f, s) * detach;
-            var wave = MathF.Sin(s / TailWavelength * Mathf.Tau - time * 22f) * TailWave * envelope;
-            wavy[i] = points[i] + normal * wave;
+            waves[i] = MathF.Sin(s / TailWavelength * Mathf.Tau - time * 22f) * TailWave * envelope;
+            wavy[i] = points[i] + normals[i] * waves[i];
         }
+
+        // The branch leaves the main stream toward the floor on either arena side,
+        // and its wave swaps phase so the two streams breathe apart.
+        var first = (int)MathF.Round(BranchStart * (count - 1));
+        var parted = new List<Vector2>();
+        if (detach > 0.02f && count - first >= 4)
+        {
+            for (var i = first; i < count; i++)
+            {
+                var along = i / (float)(count - 1);
+                var apart = Mathf.SmoothStep(BranchStart, 1f, along) * detach;
+                var swap = Mathf.SmoothStep(BranchStart, BranchStart + 0.3f, along);
+                parted.Add(points[i] + normals[i] * (waves[i] * (1f - 2f * swap) + _forward * BranchSpread * apart));
+            }
+        }
+        branch = [.. parted];
+
+        // Curls keep their size against the short draining tail.
+        var curlScale = Math.Clamp(length / TailLength, 0.3f, 1f);
+        Recurl(wavy, step, CurlRadiusMain * curlScale, _forward, detach);
+        Recurl(branch, step, CurlRadiusBranch * curlScale, -_forward, detach);
         return wavy;
+    }
+
+    /// <summary>
+    /// Re-lays the stream past <see cref="CurlStart"/> of its length on a spiral
+    /// that leaves along the stream's heading and winds <see cref="CurlTurn"/>
+    /// toward <paramref name="side"/>, shrinking as it closes. Each point keeps
+    /// its arc distance, so the stream's length and texture mapping hold;
+    /// <paramref name="amount"/> blends from the straight stream.
+    /// </summary>
+    internal static void Recurl(Vector2[] points, float step, float radius, float side, float amount)
+    {
+        var count = points.Length;
+        if (count < 4 || amount <= 0f || radius <= 0f)
+            return;
+        var start = (int)MathF.Ceiling(CurlStart * (count - 1));
+        if (start < 1 || start >= count - 1)
+            return;
+
+        var origin = points[start];
+        var heading = (points[start] - points[start - 1]).Normalized();
+        var centre = origin + new Vector2(-heading.Y, heading.X) * side * radius;
+        var startAngle = (origin - centre).Angle();
+        var theta = 0f;
+        for (var i = start + 1; i < count; i++)
+        {
+            var current = radius * (1f - CurlShrink * theta / CurlTurn);
+            theta = Math.Min(theta + step / Math.Max(current, 1f), CurlTurn);
+            var r = radius * (1f - CurlShrink * theta / CurlTurn);
+            var angle = startAngle + side * theta;
+            var curled = centre + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * r;
+            points[i] = points[i].Lerp(curled, amount);
+        }
     }
 
     // --- Ice ------------------------------------------------------------------

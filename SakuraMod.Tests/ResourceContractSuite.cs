@@ -364,6 +364,7 @@ public sealed class ResourceContractSuite
         var backBufferIndex = scene.IndexOf(
             "[node name=\"StableCombatFrame\" type=\"BackBufferCopy\"", StringComparison.Ordinal);
         var vortexIndex = scene.IndexOf("[node name=\"VortexBody\" type=\"ColorRect\" parent=\"Vortex\"", StringComparison.Ordinal);
+        var branchIndex = scene.IndexOf("[node name=\"TailBranch\" type=\"Line2D\"", StringComparison.Ordinal);
         var tailIndex = scene.IndexOf("[node name=\"Tail\" type=\"Line2D\"", StringComparison.Ordinal);
         var birdIndex = scene.IndexOf("[node name=\"BirdBody\" type=\"ColorRect\" parent=\"Bird\"", StringComparison.Ordinal);
         var splashIndex = scene.IndexOf("[node name=\"SplashBody\" type=\"ColorRect\" parent=\"Splashes/SplashTemplate\"", StringComparison.Ordinal);
@@ -371,21 +372,22 @@ public sealed class ResourceContractSuite
         RegressionTestHarness.Require(
             backBufferIndex >= 0
             && vortexIndex > backBufferIndex
-            && tailIndex > vortexIndex
+            && branchIndex > vortexIndex
+            && tailIndex > branchIndex
             && birdIndex > tailIndex
             && splashIndex > birdIndex
             && iceIndex > splashIndex
             && scene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
             && scene.Contains("mouse_filter = 2", StringComparison.Ordinal),
-            "Expected one stable frame copy before the vortex, tail, bird, splash, and ice layers, with local materials and ignored input.");
+            "Expected one stable frame copy before the vortex, tail branch, tail, bird, splash, and ice layers, with local materials and ignored input.");
         RegressionTestHarness.Require(
-            scene.Split("visible = false").Length - 1 == 4
-            && scene.Split("shader_parameter/form = 0.0").Length - 1 == 4
-            && scene.Split("shader_parameter/opacity = 0.0").Length - 1 == 4
+            scene.Split("visible = false").Length - 1 == 5
+            && scene.Split("shader_parameter/form = 0.0").Length - 1 == 5
+            && scene.Split("shader_parameter/opacity = 0.0").Length - 1 == 5
             && scene.Contains("shader_parameter/mode = 2.0", StringComparison.Ordinal)
             && scene.Contains("shader_parameter/mode = 3.0", StringComparison.Ordinal)
             && scene.Contains("shader_parameter/mode = 1.0", StringComparison.Ordinal),
-            "Expected the shipped vortex, tail, bird, and splash template to start hidden, each in its own mode.");
+            "Expected the shipped vortex, both tail streams, bird, and splash template to start hidden, each in its own mode.");
 
         foreach (var uniform in new[]
                  {
@@ -474,34 +476,52 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
-    public void HailIceShardKeepsLocalFractureResourcesAndGameplayRouting()
+    public void HailStormShipsHiddenAndKeepsGameplayRouting()
     {
         var rootScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/combat/card_vfx/hail_ice_shard_vfx.tscn"));
-        var targetScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/combat/card_vfx/hail_ice_shard_target.tscn"));
-        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/shaders/card_vfx/hail_ice_shard.gdshader"));
+            "SakuraMod/scenes/combat/card_vfx/hail_storm_vfx.tscn"));
+        var stoneScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/card_vfx/hail_stone_target.tscn"));
+        var stoneShader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/hail_stone.gdshader"));
+        var shared = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/hail_stone.gdshaderinc"));
+        var vfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/HailStormVfx.cs"));
         var hail = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Hail.cs"));
-        var backBufferIndex = rootScene.IndexOf("type=\"BackBufferCopy\"", StringComparison.Ordinal);
-        var shardsIndex = rootScene.IndexOf("[node name=\"Shards\"", StringComparison.Ordinal);
-        RegressionTestHarness.Require(backBufferIndex >= 0 && shardsIndex > backBufferIndex
-            && rootScene.Contains("mouse_filter = 2", StringComparison.Ordinal)
-            && targetScene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
-            && targetScene.Contains("shader_parameter/formation = 0.0", StringComparison.Ordinal)
-            && targetScene.Contains("shader_parameter/split = 0.0", StringComparison.Ordinal),
-            "Expected a hidden, local ice field behind one stable frame copy.");
-        foreach (var uniform in new[] { "elapsed", "seed", "formation", "crack", "split", "shatter", "opacity" })
-            Assert.Contains($"uniform float {uniform}", shader, StringComparison.Ordinal);
+
         RegressionTestHarness.Require(
-            shader.Contains("uniform vec2 draw_size", StringComparison.Ordinal)
-            && shader.Contains("uniform vec2 region_size", StringComparison.Ordinal)
-            && shader.Contains("cel_vfx.gdshaderinc", StringComparison.Ordinal)
-            && shader.Contains("SCREEN_PIXEL_SIZE", StringComparison.Ordinal)
-            && !shader.Contains("TIME", StringComparison.Ordinal),
-            "Expected the fragment canvas to retain the block's own geometry and shared screen-pixel budget.");
-        Assert.Contains("HailIceShardVfx.PlayOrResolveAsync(this, Owner.Creature, targets", hail, StringComparison.Ordinal);
+            rootScene.Contains("type=\"MultiMeshInstance2D\"", StringComparison.Ordinal)
+            && rootScene.Contains("shader_parameter/formation = 0.0", StringComparison.Ordinal)
+            && rootScene.Contains("mouse_filter = 2", StringComparison.Ordinal)
+            && stoneScene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
+            && stoneScene.Contains("shader_parameter/formation = 0.0", StringComparison.Ordinal)
+            && stoneScene.Contains("shader_parameter/crack = 0.0", StringComparison.Ordinal)
+            && stoneScene.Contains("shader_parameter/split = 0.0", StringComparison.Ordinal),
+            "Expected the cloud, volley and finishing stones to ship hidden with local materials.");
+        foreach (var uniform in new[] { "elapsed", "seed", "formation", "squash", "crack", "split", "shatter", "opacity" })
+            Assert.Contains($"uniform float {uniform}", stoneShader, StringComparison.Ordinal);
+        foreach (var shader in Directory.GetFiles(
+                     Path.GetDirectoryName(RegressionTestHarness.FindRepoFile("SakuraMod/shaders/card_vfx/hail_stone.gdshader"))!,
+                     "hail_*.gdshader*"))
+        {
+            var text = File.ReadAllText(shader);
+            RegressionTestHarness.Require(
+                !text.Contains("TIME", StringComparison.Ordinal)
+                && !text.Contains("hint_screen_texture", StringComparison.Ordinal),
+                $"Expected {Path.GetFileName(shader)} to take time from the session and draw opaque cel ice.");
+        }
+        RegressionTestHarness.Require(
+            shared.Contains("float hail_stone_sd", StringComparison.Ordinal)
+            && stoneShader.Contains("hail_stone.gdshaderinc", StringComparison.Ordinal),
+            "Expected one shared hailstone shape for the volley and the finishing stones.");
+
+        // Native damage already shakes the screen by unblocked amount (D7).
+        foreach (var shake in new[] { "ScreenShake", "ScreenRumble", "DoHitStop" })
+            Assert.DoesNotContain(shake, vfx, StringComparison.Ordinal);
+
+        Assert.Contains("HailStormVfx.PlayOrResolveAsync(this, Owner.Creature, targets, spent, maxSpend", hail, StringComparison.Ordinal);
         var loopIndex = hail.IndexOf("foreach (var target in targets)", StringComparison.Ordinal);
         var impactIndex = hail.IndexOf("cues.Impact(target)", loopIndex, StringComparison.Ordinal);
         var attackIndex = hail.IndexOf("SakuraActions.Attack(", loopIndex, StringComparison.Ordinal);
@@ -511,23 +531,70 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
-    public void HailOutroPreservesTheLastHitWithoutRestartingFinishedFractures()
+    public void HailStormScalesWithChargeInsideAFixedBeat()
     {
-        var full = HailIceShardVfx.ReleaseSeconds(2f, 2f);
-        var partial = HailIceShardVfx.ReleaseSeconds(2.2f, 2f);
-        var finished = HailIceShardVfx.ReleaseSeconds(3f, 2f);
-        Assert.InRange(full, 0.45f, 0.60f);
-        Assert.True(Math.Abs(full - partial - 0.2f) < 1e-5f);
-        Assert.InRange(finished, 0f, 0.10f);
-        Assert.Equal(finished, HailIceShardVfx.ReleaseSeconds(0f, -10f));
+        Assert.Equal(0f, HailStormVfx.Strength(0, 5));
+        Assert.Equal(0.6f, HailStormVfx.Strength(3, 5), 5);
+        Assert.Equal(1f, HailStormVfx.Strength(5, 5));
+        Assert.Equal(1f, HailStormVfx.Strength(9, 5));
+        Assert.Equal(0f, HailStormVfx.Strength(3, 0));
+
+        for (var targets = 1; targets <= 8; targets++)
+        {
+            var previous = 0;
+            for (var spent = 0; spent <= 5; spent++)
+            {
+                var perTarget = HailStormVfx.VolleyPerTarget(HailStormVfx.Strength(spent, 5), targets);
+                Assert.InRange(perTarget, HailStormVfx.MinPerTarget, HailStormVfx.MaxPerTarget);
+                Assert.True(perTarget >= previous, $"Volley shrank with more charge at {targets} targets.");
+                Assert.True(perTarget * targets <= HailStormVfx.MaxVolley, $"Volley over budget at {targets} targets.");
+                previous = perTarget;
+            }
+        }
+        Assert.True(HailStormVfx.VolleyPerTarget(1f, 1) >= 2 * HailStormVfx.VolleyPerTarget(0f, 1));
+        Assert.Equal(0.85f, HailStormVfx.FinisherScale(0f), 5);
+        Assert.Equal(1.25f, HailStormVfx.FinisherScale(1f), 5);
+        Assert.True(HailStormVfx.CloudHeight(1f) > HailStormVfx.CloudHeight(0f));
+
+        // The body before the damage frame is a constant, never a function of charge or targets.
+        Assert.InRange(HailStormVfx.FinisherContact, 0.70f, 0.78f);
+        // The longest volley fall (cloud to floor across a tall stage) still lands before the finishers.
+        Assert.True(HailStormVfx.VolleyStart + HailStormVfx.VolleyWindow + HailStormVfx.FallTime(700f)
+            < HailStormVfx.FinisherContact + 0.05f);
+    }
+
+    [Fact]
+    public void HailFragmentsFlyAlongTheShaderFractureWedges()
+    {
+        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/hail_stone.gdshader"));
+        Assert.Contains("const float SITE_ANGLE_0 = -1.2208;", shader, StringComparison.Ordinal);
+        Assert.Contains("const float SITE_ANGLE_STEP = 1.2566371;", shader, StringComparison.Ordinal);
+        Assert.Equal(-1.2208f, HailStormVfx.FragmentDirection(0).Angle(), 4);
+        Assert.Equal(-1.2208f + 1.2566371f, HailStormVfx.FragmentDirection(1).Angle(), 4);
+    }
+
+    [Fact]
+    public void HailOutroWaitsOnlyForTheUnplayedTail()
+    {
+        const float fade = HailStormVfx.FadeDuration;
+        // Right after the last hit the fracture is the longer tail.
+        Assert.Equal(HailStormVfx.ContactPause + HailStormVfx.ShatterDuration + fade,
+            HailStormVfx.ReleaseSeconds(2f, 2f), 5);
+        // Part-way through, only the remainder of the fracture or a full dispersal is left.
+        Assert.Equal(HailStormVfx.CloudDisperse + fade, HailStormVfx.ReleaseSeconds(2.2f, 2f), 5);
+        // Long after (slow gameplay) or with no hit at all, only the dispersal plays.
+        Assert.Equal(HailStormVfx.CloudDisperse + fade, HailStormVfx.ReleaseSeconds(5f, 2f), 5);
+        Assert.Equal(HailStormVfx.CloudDisperse + fade, HailStormVfx.ReleaseSeconds(1f, float.NegativeInfinity), 5);
     }
 
     [Fact]
     public void AquaSweepKeepsTheFirstHitShortAndTheSweepBounded()
     {
-        // Measured from the card play: the shared prelude's blocking lead, then body time.
+        // Measured from the card play: the shared prelude's blocking lead, then body time
+        // (including the held card-face pose).
         Assert.InRange(
-            AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.ArrivalTime(0, 1), 0.50f, 0.60f);
+            AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.ArrivalTime(0, 1), 0.60f, 0.68f);
         for (var count = 1; count <= 8; count++)
         {
             Assert.Equal(AquaPhoenixVfx.FirstReach, AquaPhoenixVfx.ArrivalTime(0, count), 5);
@@ -540,10 +607,11 @@ public sealed class ResourceContractSuite
         Assert.Equal(AquaPhoenixVfx.SweepSpanCap, AquaPhoenixVfx.SweepSpan(8), 5);
         Assert.Equal(0f, AquaPhoenixVfx.SweepSpan(1));
 
-        // Approved plate totals after play (D6): 1 enemy, 5 enemies, 3 enemies with 2 Frostbite.
-        Assert.InRange(AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.PlannedBodySeconds(1, 0), 0.95f, 1.00f);
-        Assert.InRange(AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.PlannedBodySeconds(5, 0), 1.25f, 1.30f);
-        Assert.InRange(AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.PlannedBodySeconds(3, 2), 1.52f, 1.56f);
+        // Approved plate totals after play: 1 enemy, 5 enemies, 3 enemies with 2 Frostbite,
+        // each carrying the held pose.
+        Assert.InRange(AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.PlannedBodySeconds(1, 0), 1.03f, 1.08f);
+        Assert.InRange(AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.PlannedBodySeconds(5, 0), 1.33f, 1.38f);
+        Assert.InRange(AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.PlannedBodySeconds(3, 2), 1.60f, 1.64f);
         Assert.True(
             AquaPhoenixVfx.PlannedBodySeconds(1, 0) < BlazePhoenixVfx.BodySeconds(1),
             "Expected the frequently played Aqua to stay shorter than Blaze.");
@@ -859,8 +927,8 @@ public sealed class ResourceContractSuite
             Assert.Equal(BlazePhoenixVfx.BodySeconds(1), BlazePhoenixVfx.BodySeconds(count), 4);
         }
         Assert.Equal(0f, BlazePhoenixVfx.FuelSeconds(0));
-        Assert.InRange(BlazePhoenixVfx.BodySeconds(0), 0.90f, 1.00f);
-        Assert.InRange(BlazePhoenixVfx.BodySeconds(5), 1.25f, 1.35f);
+        Assert.InRange(BlazePhoenixVfx.BodySeconds(0), 1.05f, 1.15f);
+        Assert.InRange(BlazePhoenixVfx.BodySeconds(5), 1.40f, 1.50f);
     }
 
     [Fact]

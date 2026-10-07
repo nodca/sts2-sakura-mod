@@ -35,7 +35,7 @@ internal enum ArrowWeight
 /// travelling to the creature that hit actually struck.
 /// </summary>
 /// <remarks>
-/// Unlike <see cref="HailIceShardVfx"/>, which builds one visual per target
+/// Unlike <see cref="HailStormVfx"/>, which builds one finishing stone per target
 /// before gameplay runs, this session cannot know its targets up front — Arrow
 /// strikes random enemies, so the creature is only known once the engine has
 /// resolved it. Each <see cref="Cues.Loose"/> therefore resolves the target on

@@ -10,7 +10,7 @@ internal static class SakuraCardVfxAssets
     private static readonly IReadOnlyList<string> AquaPaths =
         [.. AquaPhoenixVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> HailPaths =
-        [.. HailIceShardVfx.AssetPaths, .. FreezeShellVisual.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+        [.. HailStormVfx.AssetPaths, .. FreezeShellVisual.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> TimePaths =
         [.. TimeStopVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> BlazePaths =

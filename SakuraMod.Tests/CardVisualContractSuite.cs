@@ -40,7 +40,7 @@ public sealed class CardVisualContractSuite
                 [AquaPhoenixVfx.ScenePath, .. sharedCelPaths]),
             new VfxCase(
                 new Hail(),
-                [HailIceShardVfx.ScenePath, HailIceShardVfx.TargetScenePath, FreezeShellVisual.ShaderPath, .. sharedCelPaths]),
+                [HailStormVfx.ScenePath, HailStormVfx.StoneScenePath, FreezeShellVisual.ShaderPath, .. sharedCelPaths]),
             new VfxCase(
                 new Blaze(),
                 [BlazePhoenixVfx.ScenePath, .. sharedCelPaths]),
@@ -107,7 +107,7 @@ public sealed class CardVisualContractSuite
     {
         foreach (var relativePath in new[]
                  {
-                     "SakuraModCode/Cards/Visuals/Transparent/HailIceShardVfx.cs",
+                     "SakuraModCode/Cards/Visuals/Transparent/HailStormVfx.cs",
                      "SakuraModCode/Cards/Visuals/Transparent/BlazePhoenixVfx.cs",
                      "SakuraModCode/Cards/Visuals/Transparent/TimeStopVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/SakuraSwordBladeVfx.cs",

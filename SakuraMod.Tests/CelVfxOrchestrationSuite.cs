@@ -3,6 +3,73 @@ using SakuraMod.SakuraModCode.Cards;
 public sealed class CelVfxOrchestrationSuite
 {
     [Fact]
+    public void FollowThroughIsZeroAtRestAndBoundedUnderMotion()
+    {
+        var lag = new CelVfxFollowThrough();
+        for (var i = 0; i < 120; i++)
+            lag.Update(1f / 60f, 0.4f, 1f, 1f);
+        Assert.Equal(0f, lag.Sway);
+        Assert.Equal(0f, lag.Flex);
+
+        // A violent turn and wing fling saturate but never exceed the shader range.
+        var rotation = 0f;
+        var spread = 0f;
+        for (var i = 0; i < 30; i++)
+        {
+            rotation += 0.5f;
+            spread = Math.Min(spread + 0.2f, 1f);
+            lag.Update(1f / 60f, rotation, spread, 1f);
+            Assert.InRange(lag.Sway, -1f, 1f);
+            Assert.InRange(lag.Flex, -1f, 1f);
+        }
+    }
+
+    [Fact]
+    public void FollowThroughTrailsTheTurnThenSettles()
+    {
+        var lag = new CelVfxFollowThrough();
+        lag.Update(1f / 60f, 0f, 0f, 1f);
+        var rotation = 0f;
+        for (var i = 0; i < 6; i++)
+        {
+            rotation += 0.08f;
+            lag.Update(1f / 60f, rotation, 0f, 1f);
+        }
+        // Turning clockwise: the plumage lags the other way.
+        Assert.True(lag.Sway < -0.2f, $"Expected a trailing lag, got {lag.Sway}.");
+
+        // A mirrored creature turning the same way on screen lags the other way in its own frame.
+        var mirrored = new CelVfxFollowThrough();
+        mirrored.Update(1f / 60f, 0f, 0f, -1f);
+        rotation = 0f;
+        for (var i = 0; i < 6; i++)
+        {
+            rotation += 0.08f;
+            mirrored.Update(1f / 60f, rotation, 0f, -1f);
+        }
+        Assert.True(mirrored.Sway > 0.2f, $"Expected the mirrored lag to flip, got {mirrored.Sway}.");
+
+        for (var i = 0; i < 30; i++)
+            lag.Update(1f / 60f, rotation, 0f, 1f);
+        Assert.InRange(lag.Sway, -0.02f, 0.02f);
+    }
+
+    [Fact]
+    public void FollowThroughSurvivesAFrameHitch()
+    {
+        var lag = new CelVfxFollowThrough();
+        lag.Update(1f / 60f, 0f, 0f, 1f);
+        lag.Update(0.2f, 0.3f, 0.5f, 1f);
+        Assert.True(float.IsFinite(lag.Sway) && float.IsFinite(lag.Flex));
+        Assert.InRange(lag.Sway, -1f, 1f);
+        Assert.InRange(lag.Flex, -1f, 1f);
+        for (var i = 0; i < 60; i++)
+            lag.Update(1f / 60f, 0.3f, 0.5f, 1f);
+        Assert.InRange(lag.Sway, -0.02f, 0.02f);
+        Assert.InRange(lag.Flex, -0.02f, 0.02f);
+    }
+
+    [Fact]
     public async Task SuccessfulPlaybackPreservesPreludeCueGameplayAndOutroOrder()
     {
         var events = new List<string>();

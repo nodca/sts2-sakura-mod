@@ -134,6 +134,9 @@ internal static class SakuraSourceCardText
         if (ReferencesBufferTip(card))
             tips.Add(HoverTipFactory.FromPower<BufferPower>());
 
+        if (ReferencesTimeStasisTip(card))
+            tips.Add(HoverTipFactory.FromPower<ClassicTimeStasisPower>());
+
         foreach (var key in StaticTipKeys(card))
             tips.Add(StaticTip(key));
         var keywordTips = KeywordTips(card).ToArray();
@@ -176,6 +179,9 @@ internal static class SakuraSourceCardText
 
     internal static bool ReferencesBufferTip(SakuraSourceCard card) =>
         card is ClowSilent or SakuraSilent;
+
+    internal static bool ReferencesTimeStasisTip(SakuraSourceCard card) =>
+        card is ClowTime;
 
     internal static IEnumerable<string> StaticTipKeys(SakuraSourceCard card)
     {

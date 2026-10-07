@@ -1,0 +1,46 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/hail_pellet.gdshader" id="1_pellet"]
+[ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/hail_cloud.gdshader" id="2_cloud"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_pellet"]
+resource_local_to_scene = true
+shader = ExtResource("1_pellet")
+shader_parameter/elapsed = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cloud"]
+resource_local_to_scene = true
+shader = ExtResource("2_cloud")
+shader_parameter/region_size = Vector2(900, 150)
+shader_parameter/elapsed = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/formation = 0.0
+shader_parameter/dispersal = 0.0
+shader_parameter/strength = 0.0
+shader_parameter/opacity = 1.0
+
+[node name="HailStormVfx" type="Node2D"]
+
+[node name="Volley" type="MultiMeshInstance2D" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_pellet")
+
+[node name="Stones" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Debris" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Cloud" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_cloud")
+offset_right = 900.0
+offset_bottom = 150.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="InputPassThrough" type="Control" parent="."]
+layout_mode = 0
+offset_right = 1.0
+offset_bottom = 1.0
+mouse_filter = 2

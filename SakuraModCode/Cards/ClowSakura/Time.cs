@@ -25,43 +25,22 @@ using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class ClowTime() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.None)
+public class ClowTime() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Rare, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Water;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2), new PowerVar<ClassicTimeStasisPower>(1)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        await PowerCmd.Apply<ClassicTimeStasisPower>(choiceContext, Owner.Creature, ReleasedValue("ClassicTimeStasisPower"), Owner.Creature, this, false);
+
+    protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await PowerCmd.Apply<RetainHandPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
-
-        if (Owner.Creature.Block > 0)
-            await PowerCmd.Apply<BlockNextTurnPower>(choiceContext, Owner.Creature, Owner.Creature.Block, Owner.Creature, this, false);
-
-        var energy = Owner.PlayerCombatState?.Energy ?? 0;
-        if (energy > 0)
-            await PowerCmd.Apply<EnergyNextTurnPower>(choiceContext, Owner.Creature, energy, Owner.Creature, this, false);
-
-        SakuraElementStatePower.PreserveAllForNextTurn(Owner.Creature);
+        await PlayCard(choiceContext, play);
+        await CardPileCmd.Draw(choiceContext, ReleasedValue("Cards"), Owner, false);
     }
 
-    protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        PlayCard(choiceContext, play);
-
-    protected override PileType GetResultPileTypeForCardPlay()
-    {
-        var usesExtra = SakuraExtraEffectTransaction.ShouldShowAsActive(this);
-        return usesExtra ? PileType.Discard : base.GetResultPileTypeForCardPlay();
-    }
-
-    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await base.AfterCardPlayed(choiceContext, play);
-
-        if (play.Card == this)
-            SakuraElementStatePower.PreserveAllForNextTurn(Owner.Creature);
-    }
-
-    protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Retain);
+    protected override void OnUpgrade() => DynamicVars["ClassicTimeStasisPower"].UpgradeValueBy(1);
 }
 
 public class SakuraTime() : SakuraFormCard(1, CardType.Skill, TargetType.AllEnemies)
