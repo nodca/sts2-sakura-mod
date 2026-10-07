@@ -42,8 +42,9 @@ public class Transfer() : TransparentExtraEffectCard(2, CardType.Skill, CardRari
             {
                 foreach (var target in targets)
                 {
-                    cues.Exchange(target);
+                    await cues.PullOutAsync(target);
                     await PowerCmd.Apply<StrengthPower>(choiceContext, target, -DynamicVars["EnemyStrengthLoss"].IntValue, Owner.Creature, this, false);
+                    await cues.DeliverAsync(target);
                     await PowerCmd.Apply<StrengthPower>(choiceContext, Owner.Creature, DynamicVars["StrengthGain"].IntValue, Owner.Creature, this, false);
                     await PowerCmd.Apply<DexterityPower>(choiceContext, Owner.Creature, DynamicVars["DexterityGain"].IntValue, Owner.Creature, this, false);
                 }

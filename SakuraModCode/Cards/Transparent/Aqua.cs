@@ -26,31 +26,22 @@ public class Aqua() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
         SakuraExtraEffectActivation activation)
     {
         var targets = CombatState!.HittableEnemies.ToList();
-        var waterVfx = AquaWaterSphereVfx.TryCreate(targets, Owner.Creature);
-        int frostbiteEnemies;
-        try
+        IReadOnlyList<Creature> frostbitten = [];
+        await AquaPhoenixVfx.PlayOrResolveAsync(this, Owner.Creature, targets, activation.IsActive, async cues =>
         {
-            if (waterVfx is not null)
-                await waterVfx.PlayPrelude();
             foreach (var enemy in targets)
             {
-                waterVfx?.Impact(enemy);
+                await cues.ReachAsync(enemy);
                 await SakuraActions.Attack(choiceContext, this, enemy, DynamicVars.Damage.IntValue);
             }
 
             // Read Frostbite after every attack resolves: attacks can kill the
             // enemy holding Frostbite, and the rules filter on IsAlive.
-            // The visual session is disposed by the finally below, so the freeze
-            // beat has to start here rather than after it.
-            frostbiteEnemies = AquaRules.FrostbiteEnemyCount(targets);
-            if (AquaRules.FrostbiteEnemyForPresentation(targets) is { } frozen)
-                waterVfx?.PlayFreeze(frozen);
-        }
-        finally
-        {
-            waterVfx?.Release();
-        }
+            frostbitten = AquaRules.FrostbiteEnemies(targets);
+            cues.Return(frostbitten);
+        });
 
+        var frostbiteEnemies = frostbitten.Count;
         if (frostbiteEnemies <= 0)
             return;
 
@@ -71,18 +62,12 @@ public class Aqua() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
 
 internal static class AquaRules
 {
-    internal static int FrostbiteEnemyCount(IEnumerable<Creature> enemies) =>
-        enemies.Count(HasFrostbite);
+    /// <summary>Live enemies still holding Frostbite, in gameplay order.</summary>
+    internal static IReadOnlyList<Creature> FrostbiteEnemies(IEnumerable<Creature> enemies) =>
+        enemies.Where(HasFrostbite).ToList();
 
-    /// <summary>
-    /// A live Frostbite enemy for the freeze presentation beat, preferring the
-    /// highest stack. Presentation only; it never changes reward amounts.
-    /// </summary>
-    internal static Creature? FrostbiteEnemyForPresentation(IEnumerable<Creature> enemies) =>
-        enemies
-            .Where(HasFrostbite)
-            .OrderByDescending(static enemy => enemy.GetPower<SakuraFrostbitePower>()!.Amount)
-            .FirstOrDefault();
+    internal static int FrostbiteEnemyCount(IEnumerable<Creature> enemies) =>
+        FrostbiteEnemies(enemies).Count;
 
     internal static int DrawCount(int frostbiteEnemyCount) =>
         Math.Max(0, frostbiteEnemyCount);

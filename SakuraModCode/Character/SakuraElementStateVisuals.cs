@@ -33,7 +33,7 @@ internal readonly record struct SakuraElementSlotLayout(
     /// which also keeps it above that strip. One shared lift, so every ground-rooted
     /// mark agrees on where the ground is.
     /// </summary>
-    private const float GroundVisualLift = 44f;
+    internal const float GroundVisualLift = 44f;
     /// <summary>
     /// Gap between the hitbox's right edge and the earth cluster's axis. The HP bar is
     /// as wide as the hitbox, so measuring from that edge keeps the cluster beside the
@@ -122,8 +122,6 @@ internal static class SakuraElementStateVisuals
 {
     internal const string ScenePath =
         MainFile.ResPath + "/scenes/combat/sakura_element_state_visuals.tscn";
-    internal const string ShaderPath =
-        MainFile.ResPath + "/shaders/card_vfx/sakura_element_state_firey.gdshader";
     internal const string WindShaderPath =
         MainFile.ResPath + "/shaders/card_vfx/sakura_element_state_windy.gdshader";
     internal const string WaterShaderPath =
@@ -141,7 +139,6 @@ internal static class SakuraElementStateVisuals
 
     private const string RootName = "SakuraElementStateVisuals";
     private const string FireSlotName = "FireSlot";
-    private const string FireyEmberName = "FireyEmber";
     private const string WindSlotName = "WindSlot";
     private const string WindySpiritName = "WindySpirit";
     private const string WaterSlotName = "WaterSlot";
@@ -174,6 +171,12 @@ internal static class SakuraElementStateVisuals
     private const float EntryAmbientBoost = 1f;
     private const float TriggerAmbientBoost = 0.6f;
     private const float TriggerDuration = 0.26f;
+    /// <summary>
+    /// Where the native flame's base sits below the fire slot. The stack grows upward
+    /// from its root, so this keeps the slot inside the lower half of the flame — the
+    /// trigger sparks leave from inside it — while the flame clears the head below.
+    /// </summary>
+    private static readonly Vector2 FlameOffset = new(0f, 10f);
     private const float WindTriggerDuration = 0.3f;
     /// <summary>
     /// Longer than the other two because the merge has to read as three beats —
@@ -207,7 +210,7 @@ internal static class SakuraElementStateVisuals
 
     internal static IEnumerable<string> AssetPaths =>
         [
-            ScenePath, ShaderPath, WindShaderPath, WaterShaderPath, EarthShaderPath,
+            ScenePath, WindShaderPath, WaterShaderPath, EarthShaderPath,
             FireAmbientShaderPath, WindAmbientShaderPath, WaterAmbientShaderPath,
             CommonShaderIncludePath
         ];
@@ -331,8 +334,12 @@ internal static class SakuraElementStateVisuals
         private readonly Creature _creature;
         private readonly ICombatState _combatState;
         private readonly Node2D _fireSlot;
-        private readonly ColorRect _ember;
-        private readonly ShaderMaterial _material;
+        /// <summary>
+        /// Null when the native fire resources are missing: the fire spirit is then
+        /// absent and every fire beat below is a no-op, while the HUD still shows the
+        /// state and the fire ambient still plays.
+        /// </summary>
+        private readonly SakuraNativeSteppedFire? _flame;
         private readonly Node2D _windSlot;
         private readonly ColorRect _windSpirit;
         private readonly ShaderMaterial _windMaterial;
@@ -353,6 +360,11 @@ internal static class SakuraElementStateVisuals
         private readonly ShaderMaterial _waterAmbientMaterial;
         private Tween? _entryTween;
         private Tween? _exitTween;
+        /// <summary>
+        /// Held because fire can trigger on consecutive attacks; a second pulse restarts
+        /// cleanly instead of stacking on the first.
+        /// </summary>
+        private Tween? _fireTriggerTween;
         private Tween? _windEntryTween;
         private Tween? _windExitTween;
         private Tween? _waterEntryTween;
@@ -388,10 +400,14 @@ internal static class SakuraElementStateVisuals
             _creature = player.Creature;
             _combatState = combatState;
             _fireSlot = root.GetNode<Node2D>(FireSlotName);
-            _ember = root.GetNode<ColorRect>($"{FireSlotName}/{FireyEmberName}");
-            _material = _ember.Material?.Duplicate() as ShaderMaterial
-                ?? throw new InvalidOperationException("Sakura fire state VFX requires a ShaderMaterial.");
-            _ember.Material = _material;
+            _flame = SakuraNativeSteppedFire.TryCreate();
+            if (_flame is { } flame)
+            {
+                flame.Root.Position = FlameOffset;
+                flame.Root.Visible = false;
+                flame.Root.Modulate = new Color(1f, 1f, 1f, 0f);
+                _fireSlot.AddChild(flame.Root);
+            }
             _windSlot = root.GetNode<Node2D>(WindSlotName);
             _windSpirit = root.GetNode<ColorRect>($"{WindSlotName}/{WindySpiritName}");
             _windMaterial = _windSpirit.Material?.Duplicate() as ShaderMaterial
@@ -448,12 +464,7 @@ internal static class SakuraElementStateVisuals
             _fireAmbientSlot.Position = layout.FireAmbient;
             _windAmbientSlot.Position = layout.WindAmbient;
             _waterAmbientSlot.Position = layout.WaterAmbient;
-            _material.SetShaderParameter("region_size", _ember.Size);
-            _material.SetShaderParameter("seed", Random.Shared.NextSingle() * 6.1f);
-            _material.SetShaderParameter("state_alpha", 0f);
-            _material.SetShaderParameter("summon_progress", 1f);
-            _material.SetShaderParameter("summon_hold", 0f);
-            _material.SetShaderParameter("trigger_progress", 0f);
+            _flame?.StartIdle();
             _windMaterial.SetShaderParameter("region_size", _windSpirit.Size);
             _windMaterial.SetShaderParameter("seed", Random.Shared.NextSingle() * 6.1f);
             _windMaterial.SetShaderParameter("state_alpha", 0f);
@@ -671,25 +682,23 @@ internal static class SakuraElementStateVisuals
 
             KillTween(ref _entryTween);
             KillTween(ref _exitTween);
-            _ember.Visible = true;
+            if (_flame is not { } flame)
+            {
+                PlayAmbientBoost(_fireAmbientMaterial, ref _fireBoostTween, EntryAmbientBoost);
+                return;
+            }
+            flame.Root.Position = FlameOffset;
+            flame.Root.Scale = Vector2.One * 0.22f;
             SetStateAlpha(1f);
-            _material.SetShaderParameter("summon_progress", 0f);
-            _material.SetShaderParameter("summon_hold", 0f);
-            _ember.Scale = Vector2.One * 0.55f;
-            _entryTween = _root.CreateTween().SetParallel();
-            _entryTween.TweenMethod(Callable.From<float>(value =>
-                    _material.SetShaderParameter("summon_progress", value)),
-                0f, 1f, SummonDuration * 0.72f)
-                .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
-            _entryTween.TweenProperty(_ember, "scale", Vector2.One, SummonDuration * 0.72f)
+            // The flame grows from its base, overshoots and settles, then the light
+            // behind it flares once — the iconic card lighting it.
+            _entryTween = _root.CreateTween();
+            _entryTween.TweenProperty(flame.Root, "scale", Vector2.One, SummonDuration * 0.72f)
                 .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
-            _entryTween.Chain().TweenMethod(Callable.From<float>(value =>
-                    _material.SetShaderParameter("summon_hold", value)),
-                0f, 1f, SummonDuration * 0.1f);
-            _entryTween.Chain().TweenMethod(Callable.From<float>(value =>
-                    _material.SetShaderParameter("summon_hold", value)),
-                1f, 0f, SummonDuration * 0.18f);
-            _entryTween.Chain().TweenCallback(Callable.From(() => _entryTween = null));
+            _entryTween.TweenProperty(flame.Glow, "modulate:a", 1f, SummonDuration * 0.1f);
+            _entryTween.TweenProperty(flame.Glow, "modulate:a", SakuraNativeSteppedFire.GlowRestAlpha,
+                SummonDuration * 0.18f);
+            _entryTween.TweenCallback(Callable.From(() => _entryTween = null));
             PlayAmbientBoost(_fireAmbientMaterial, ref _fireBoostTween, EntryAmbientBoost);
         }
 
@@ -1016,13 +1025,23 @@ internal static class SakuraElementStateVisuals
             if (_disposed || !GodotObject.IsInstanceValid(_root) || !SakuraModConfig.IsCardVfxEnabled())
                 return;
 
-            _material.SetShaderParameter("trigger_progress", 0f);
             PlayAmbientBoost(_fireAmbientMaterial, ref _fireBoostTween, TriggerAmbientBoost);
-            var triggerTween = _root.CreateTween();
-            triggerTween.TweenMethod(Callable.From<float>(value =>
-                    _material.SetShaderParameter("trigger_progress", value)),
-                0f, 1f, TriggerDuration)
-                .SetEase(Tween.EaseType.Out);
+            if (_flame is { } flame)
+            {
+                // The flame swells and its light flares as the sparks leave it.
+                KillTween(ref _fireTriggerTween);
+                flame.Root.Scale = Vector2.One;
+                _fireTriggerTween = _root.CreateTween().SetParallel();
+                _fireTriggerTween.TweenProperty(flame.Root, "scale", Vector2.One * 1.22f, TriggerDuration * 0.3f)
+                    .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
+                _fireTriggerTween.TweenProperty(flame.Root, "scale", Vector2.One, TriggerDuration * 0.7f)
+                    .SetDelay(TriggerDuration * 0.3f)
+                    .SetEase(Tween.EaseType.InOut).SetTrans(Tween.TransitionType.Sine);
+                _fireTriggerTween.TweenProperty(flame.Glow, "modulate:a", 1f, TriggerDuration * 0.3f);
+                _fireTriggerTween.TweenProperty(flame.Glow, "modulate:a", SakuraNativeSteppedFire.GlowRestAlpha,
+                        TriggerDuration * 0.7f)
+                    .SetDelay(TriggerDuration * 0.3f);
+            }
 
             if (NCombatRoom.Instance is not { } room
                 || room.GetCreatureNode(_creature) is null)
@@ -1090,14 +1109,17 @@ internal static class SakuraElementStateVisuals
         private void PlayQuickReveal()
         {
             KillTween(ref _entryTween);
-            _ember.Visible = true;
-            _ember.Scale = Vector2.One * 0.64f;
             SetStateAlpha(0f);
             _entryTween = _root.CreateTween().SetParallel();
             _entryTween.TweenMethod(Callable.From<float>(SetStateAlpha), 0f, 1f, QuickRevealDuration)
                 .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
-            _entryTween.TweenProperty(_ember, "scale", Vector2.One, QuickRevealDuration)
-                .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
+            if (_flame is { } flame)
+            {
+                flame.Root.Position = FlameOffset;
+                flame.Root.Scale = Vector2.One * 0.64f;
+                _entryTween.TweenProperty(flame.Root, "scale", Vector2.One, QuickRevealDuration)
+                    .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
+            }
             _entryTween.Chain().TweenCallback(Callable.From(() => _entryTween = null));
         }
 
@@ -1110,12 +1132,15 @@ internal static class SakuraElementStateVisuals
             _exitTween.TweenMethod(Callable.From<float>(SetStateAlpha),
                 1f, 0f, DismissDuration)
                 .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Cubic);
-            _exitTween.TweenProperty(_ember, "position", new Vector2(0f, -18f), DismissDuration)
-                .SetEase(Tween.EaseType.Out);
+            if (_flame is { } flame)
+            {
+                _exitTween.TweenProperty(flame.Root, "position", FlameOffset + new Vector2(0f, -18f), DismissDuration)
+                    .SetEase(Tween.EaseType.Out);
+            }
             _exitTween.Chain().TweenCallback(Callable.From(() =>
             {
-                _ember.Position = Vector2.Zero;
-                _ember.Visible = false;
+                if (_flame is { } settled)
+                    settled.Root.Position = FlameOffset;
                 _exitTween = null;
             }));
         }
@@ -1237,7 +1262,11 @@ internal static class SakuraElementStateVisuals
         private void SetStateAlpha(float value)
         {
             var alpha = Mathf.Clamp(value, 0f, 1f);
-            _material.SetShaderParameter("state_alpha", alpha);
+            if (_flame is { } flame)
+            {
+                flame.Root.Modulate = new Color(1f, 1f, 1f, alpha);
+                flame.Root.Visible = alpha > 0f;
+            }
             _fireAmbientMaterial.SetShaderParameter("state_alpha", alpha);
         }
 
@@ -1338,6 +1367,8 @@ internal static class SakuraElementStateVisuals
             _root.TreeExiting -= OnTreeExiting;
             KillTween(ref _entryTween);
             KillTween(ref _exitTween);
+            KillTween(ref _fireTriggerTween);
+            _flame?.StopIdle();
             KillTween(ref _windEntryTween);
             KillTween(ref _windExitTween);
             KillTween(ref _waterEntryTween);

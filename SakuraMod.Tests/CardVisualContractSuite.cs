@@ -37,16 +37,16 @@ public sealed class CardVisualContractSuite
         {
             new VfxCase(
                 new Aqua(),
-                [AquaWaterSphereVfx.ScenePath, AquaWaterSphereVfx.TargetScenePath, .. sharedCelPaths]),
+                [AquaPhoenixVfx.ScenePath, .. sharedCelPaths]),
             new VfxCase(
                 new Hail(),
                 [HailIceShardVfx.ScenePath, HailIceShardVfx.TargetScenePath, FreezeShellVisual.ShaderPath, .. sharedCelPaths]),
             new VfxCase(
                 new Blaze(),
-                [BlazeFireColumnVfx.ScenePath, .. sharedCelPaths]),
+                [BlazePhoenixVfx.ScenePath, .. sharedCelPaths]),
             new VfxCase(
                 new SakuraMod.SakuraModCode.Cards.Time(),
-                [SakuraCardPlayVfx.TimeScenePath, .. sharedCelPaths]),
+                [TimeStopVfx.ScenePath, .. sharedCelPaths]),
             new VfxCase(
                 new ClowSword(),
                 [SakuraSwordBladeVfx.ScenePath, SakuraSwordBladeVfx.TargetScenePath, .. sharedCelPaths]),
@@ -108,8 +108,8 @@ public sealed class CardVisualContractSuite
         foreach (var relativePath in new[]
                  {
                      "SakuraModCode/Cards/Visuals/Transparent/HailIceShardVfx.cs",
-                     "SakuraModCode/Cards/Visuals/Transparent/BlazeFireColumnVfx.cs",
-                     "SakuraModCode/Cards/SakuraCardPlayVfx.cs",
+                     "SakuraModCode/Cards/Visuals/Transparent/BlazePhoenixVfx.cs",
+                     "SakuraModCode/Cards/Visuals/Transparent/TimeStopVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/SakuraSwordBladeVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/CloudRainWeatherVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/ArrowBowProjectileVfx.cs",

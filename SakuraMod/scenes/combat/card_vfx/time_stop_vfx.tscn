@@ -1,0 +1,219 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Shader" uid="uid://b74v6y05msdl5" path="res://SakuraMod/shaders/card_vfx/time_stop.gdshader" id="1_time"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_under"]
+resource_local_to_scene = true
+shader = ExtResource("1_time")
+shader_parameter/mode = 0.0
+shader_parameter/region_size = Vector2(1920, 1080)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/opacity = 0.0
+shader_parameter/centre = Vector2(0, 0)
+shader_parameter/wave_radius = 0.0
+shader_parameter/wave_aspect = 0.8
+shader_parameter/front = 0.0
+shader_parameter/flash = 0.0
+shader_parameter/release_radius = 0.0
+shader_parameter/release_front = 0.0
+shader_parameter/hole_mode = 2.0
+shader_parameter/hole_rect = Vector4(0, 0, 0, 0)
+shader_parameter/hole_corner = 18.0
+shader_parameter/focus = 0.0
+shader_parameter/dial_radius = 340.0
+shader_parameter/dial_aspect = 0.86
+shader_parameter/dial_opacity = 0.0
+shader_parameter/dial_reveal = 0.0
+shader_parameter/dial_shudder = 0.0
+shader_parameter/dial_pulse = 0.0
+shader_parameter/hour_angle = -2.618
+shader_parameter/minute_angle = -0.8727
+shader_parameter/hand_angle = -1.5707964
+shader_parameter/hand_grow = 0.0
+shader_parameter/hand_opacity = 0.0
+shader_parameter/hand_smear = 0.0
+shader_parameter/clack = 0.0
+shader_parameter/hand_squash = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_over"]
+resource_local_to_scene = true
+shader = ExtResource("1_time")
+shader_parameter/mode = 0.0
+shader_parameter/region_size = Vector2(1920, 1080)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/opacity = 0.0
+shader_parameter/centre = Vector2(0, 0)
+shader_parameter/wave_radius = 0.0
+shader_parameter/wave_aspect = 0.8
+shader_parameter/front = 0.0
+shader_parameter/flash = 0.0
+shader_parameter/release_radius = 0.0
+shader_parameter/release_front = 0.0
+shader_parameter/hole_mode = 1.0
+shader_parameter/hole_rect = Vector4(0, 0, 0, 0)
+shader_parameter/hole_corner = 18.0
+shader_parameter/focus = 0.0
+shader_parameter/dial_radius = 340.0
+shader_parameter/dial_aspect = 0.86
+shader_parameter/dial_opacity = 0.0
+shader_parameter/dial_reveal = 0.0
+shader_parameter/dial_shudder = 0.0
+shader_parameter/dial_pulse = 0.0
+shader_parameter/hour_angle = -2.618
+shader_parameter/minute_angle = -0.8727
+shader_parameter/hand_angle = -1.5707964
+shader_parameter/hand_grow = 0.0
+shader_parameter/hand_opacity = 0.0
+shader_parameter/hand_smear = 0.0
+shader_parameter/clack = 0.0
+shader_parameter/hand_squash = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_petals"]
+resource_local_to_scene = true
+shader = ExtResource("1_time")
+shader_parameter/mode = 1.0
+shader_parameter/region_size = Vector2(1920, 1080)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/opacity = 0.0
+shader_parameter/centre = Vector2(0, 0)
+shader_parameter/petal_time = 0.0
+shader_parameter/petal_fall = 0.0
+shader_parameter/petal_freeze = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_glaze"]
+resource_local_to_scene = true
+shader = ExtResource("1_time")
+shader_parameter/mode = 2.0
+shader_parameter/region_size = Vector2(96, 96)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/opacity = 0.0
+shader_parameter/rim_size = Vector2(64, 64)
+shader_parameter/rim_round = 0.3
+shader_parameter/glaze = 0.0
+shader_parameter/sheen = -1.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_pin"]
+resource_local_to_scene = true
+shader = ExtResource("1_time")
+shader_parameter/mode = 3.0
+shader_parameter/region_size = Vector2(72, 28)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/opacity = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_seal"]
+resource_local_to_scene = true
+shader = ExtResource("1_time")
+shader_parameter/mode = 4.0
+shader_parameter/region_size = Vector2(128, 128)
+shader_parameter/elapsed = 0.0
+shader_parameter/held = 0.0
+shader_parameter/held_at = 0.0
+shader_parameter/seed = 0.0
+shader_parameter/opacity = 0.0
+shader_parameter/hour_angle = -2.618
+shader_parameter/minute_angle = -0.8727
+shader_parameter/hand_angle = -1.5707964
+shader_parameter/stamp = 0.0
+shader_parameter/ripple = 0.0
+
+[sub_resource type="Gradient" id="Gradient_trail"]
+colors = PackedColorArray(1, 0.84, 0.36, 0, 1, 0.93, 0.62, 0.85)
+
+[node name="TimeStopVfx" type="Node2D"]
+
+[node name="UnderGrade" type="Node2D" parent="."]
+unique_name_in_owner = true
+visible = false
+
+[node name="StableFrame" type="BackBufferCopy" parent="UnderGrade"]
+copy_mode = 2
+
+[node name="Grade" type="ColorRect" parent="UnderGrade"]
+material = SubResource("ShaderMaterial_under")
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="OverGrade" type="Node2D" parent="."]
+unique_name_in_owner = true
+visible = false
+
+[node name="StableFrame" type="BackBufferCopy" parent="OverGrade"]
+copy_mode = 2
+
+[node name="Grade" type="ColorRect" parent="OverGrade"]
+material = SubResource("ShaderMaterial_over")
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Petals" type="ColorRect" parent="."]
+unique_name_in_owner = true
+visible = false
+material = SubResource("ShaderMaterial_petals")
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Pins" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="PinTemplate" type="Node2D" parent="Pins"]
+unique_name_in_owner = true
+visible = false
+
+[node name="Glaze" type="ColorRect" parent="Pins/PinTemplate"]
+material = SubResource("ShaderMaterial_glaze")
+offset_left = -48.0
+offset_top = -48.0
+offset_right = 48.0
+offset_bottom = 48.0
+pivot_offset = Vector2(48, 48)
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Trail" type="Line2D" parent="Pins/PinTemplate"]
+width = 5.0
+gradient = SubResource("Gradient_trail")
+begin_cap_mode = 2
+end_cap_mode = 2
+
+[node name="Hand" type="Node2D" parent="Pins/PinTemplate"]
+
+[node name="Body" type="ColorRect" parent="Pins/PinTemplate/Hand"]
+material = SubResource("ShaderMaterial_pin")
+offset_left = -36.0
+offset_top = -14.0
+offset_right = 36.0
+offset_bottom = 14.0
+pivot_offset = Vector2(36, 14)
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Seal" type="ColorRect" parent="Pins/PinTemplate"]
+material = SubResource("ShaderMaterial_seal")
+offset_left = -64.0
+offset_top = -64.0
+offset_right = 64.0
+offset_bottom = 64.0
+pivot_offset = Vector2(64, 64)
+mouse_filter = 2
+color = Color(1, 1, 1, 1)

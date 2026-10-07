@@ -28,12 +28,17 @@ public class Time() : TransparentExtraEffectCard(3, CardType.Skill, CardRarity.R
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        SakuraCardPlayVfx.PlayTime();
-        var power = await PowerCmd.Apply<TimeStopPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, true);
-        if (activation.IsActive)
-            power?.PreserveCurrentTurnState();
+        await TimeStopVfx.PlayOrResolveAsync(this, Owner.Creature, activation.IsActive, async cues =>
+        {
+            var power = await PowerCmd.Apply<TimeStopPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, true);
+            if (activation.IsActive)
+                power?.PreserveCurrentTurnState();
 
-        PlayerCmd.EndTurn(Owner, canBackOut: false);
+            // The turn ends on the second hand's clack; with card VFX off this
+            // returns at once.
+            await cues.StopAsync();
+            PlayerCmd.EndTurn(Owner, canBackOut: false);
+        });
     }
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)

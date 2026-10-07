@@ -36,16 +36,24 @@ public class Blaze() : TransparentExtraEffectCard(3, CardType.Attack, CardRarity
         await ExhaustSelectedHandCards(choiceContext);
 
         var target = RequiredTarget(play);
-        await BlazeFireColumnVfx.PlayOrResolveAsync(this, Owner.Creature, target, async cues =>
+        // Presentation input only: the exhaust pile is the bird's fuel, and the
+        // extra effect makes it visibly stronger. Damage still reads the pile
+        // through BlazeRules.ExhaustedCardMultiplier.
+        var fuel = new BlazePhoenixVfx.Fuel(
+            CardPile.Get(PileType.Exhaust, Owner)?.Cards.Count ?? 0,
+            SakuraCardModel.UsesMagicChargeExtraEffect(this));
+        await BlazePhoenixVfx.PlayOrResolveAsync(this, Owner.Creature, target, fuel, async cues =>
         {
-            // Before the attack: the damage number belongs on the beat the fire
-            // lands, not after it.
-            cues.Impact();
+            // Before the attack: the damage number belongs on the frame the bird
+            // strikes, not after it.
+            cues.Strike();
             await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage);
+            // The removal list is read at removal time, exactly as before; the cue
+            // only wraps it so the pile can burn to ash where its button was.
+            await cues.AshAsync(() => CardPileCmd.RemoveFromCombat(
+                CardPile.Get(PileType.Exhaust, Owner)?.Cards.ToList() ?? [],
+                skipVisuals: false));
         });
-
-        var exhaustedCards = CardPile.Get(PileType.Exhaust, Owner)?.Cards.ToList() ?? [];
-        await CardPileCmd.RemoveFromCombat(exhaustedCards, skipVisuals: false);
     }
 
     private async Task ExhaustSelectedHandCards(PlayerChoiceContext choiceContext)

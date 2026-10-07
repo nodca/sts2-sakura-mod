@@ -330,211 +330,147 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
-    public void AquaWaterSphereVfxResourcesRemainComplete()
+    public void AquaPhoenixKeepsLocalPresentationAndGameplayContracts()
     {
-        var rootScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/combat/card_vfx/aqua_water_sphere_vfx.tscn"));
-        var targetScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/combat/card_vfx/aqua_water_sphere_target.tscn"));
+        var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/card_vfx/aqua_phoenix_vfx.tscn"));
         var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/shaders/card_vfx/aqua_water_sphere.gdshader"));
-        var controller = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Visuals/Transparent/AquaWaterSphereVfx.cs"));
+            "SakuraMod/shaders/card_vfx/aqua_phoenix.gdshader"));
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/AquaPhoenixVfx.cs"));
         var aqua = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Aqua.cs"));
         var mainFile = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/MainFile.cs"));
-        var legacyVfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraCardPlayVfx.cs"));
 
-        var backBufferIndex = rootScene.IndexOf("[node name=\"StableCombatFrame\" type=\"BackBufferCopy\"", StringComparison.Ordinal);
-        var crestIndex = rootScene.IndexOf("[node name=\"Crest\" type=\"Node2D\"", StringComparison.Ordinal);
-        var sphereIndex = rootScene.IndexOf("[node name=\"Spheres\" type=\"Node2D\"", StringComparison.Ordinal);
+        // The water-sphere owner is retired with its grandfathered lifecycle copy.
+        var repoRoot = Path.GetDirectoryName(RegressionTestHarness.FindRepoFile("SakuraMod.csproj"))!;
+        foreach (var retired in new[]
+                 {
+                     "SakuraModCode/Cards/Visuals/Transparent/AquaWaterSphereVfx.cs",
+                     "SakuraMod/shaders/card_vfx/aqua_water_sphere.gdshader",
+                     "SakuraMod/scenes/combat/card_vfx/aqua_water_sphere_vfx.tscn",
+                     "SakuraMod/scenes/combat/card_vfx/aqua_water_sphere_target.tscn"
+                 })
+        {
+            RegressionTestHarness.Require(
+                !File.Exists(Path.Combine(repoRoot, retired)),
+                $"Expected the retired Aqua water-sphere resource {retired} to be deleted.");
+        }
+        RegressionTestHarness.Require(
+            !mainFile.Contains("Aqua", StringComparison.Ordinal),
+            "Expected no process-lifetime Aqua preload: the phoenix scene is a card run asset.");
+
+        var backBufferIndex = scene.IndexOf(
+            "[node name=\"StableCombatFrame\" type=\"BackBufferCopy\"", StringComparison.Ordinal);
+        var vortexIndex = scene.IndexOf("[node name=\"VortexBody\" type=\"ColorRect\" parent=\"Vortex\"", StringComparison.Ordinal);
+        var tailIndex = scene.IndexOf("[node name=\"Tail\" type=\"Line2D\"", StringComparison.Ordinal);
+        var birdIndex = scene.IndexOf("[node name=\"BirdBody\" type=\"ColorRect\" parent=\"Bird\"", StringComparison.Ordinal);
+        var splashIndex = scene.IndexOf("[node name=\"SplashBody\" type=\"ColorRect\" parent=\"Splashes/SplashTemplate\"", StringComparison.Ordinal);
+        var iceIndex = scene.IndexOf("[node name=\"Ice\" type=\"Node2D\"", StringComparison.Ordinal);
         RegressionTestHarness.Require(
             backBufferIndex >= 0
-            && crestIndex > backBufferIndex
-            && sphereIndex > crestIndex
-            && rootScene.Contains("[node name=\"CrestBody\" type=\"ColorRect\"", StringComparison.Ordinal)
-            && rootScene.Contains("[node name=\"Debris\" type=\"Node2D\"", StringComparison.Ordinal)
-            && rootScene.Contains("mouse_filter = 2", StringComparison.Ordinal),
-            "Expected one stable combat-frame copy before the crest, enclosure, and debris layers with ignored input.");
+            && vortexIndex > backBufferIndex
+            && tailIndex > vortexIndex
+            && birdIndex > tailIndex
+            && splashIndex > birdIndex
+            && iceIndex > splashIndex
+            && scene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
+            && scene.Contains("mouse_filter = 2", StringComparison.Ordinal),
+            "Expected one stable frame copy before the vortex, tail, bird, splash, and ice layers, with local materials and ignored input.");
         RegressionTestHarness.Require(
-            !rootScene.Contains("WaterBird", StringComparison.Ordinal)
-            && !rootScene.Contains("BindingStreams", StringComparison.Ordinal),
-            "Expected the water-bird and authored binding-stream layers to be retired with the SDF rebuild.");
-
-        RegressionTestHarness.Require(
-            targetScene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
-            && targetScene.Contains("[node name=\"WaterBody\" type=\"ColorRect\"", StringComparison.Ordinal)
-            && targetScene.Contains("[node name=\"Droplets\" type=\"Node2D\"", StringComparison.Ordinal)
-            && targetScene.Contains("[node name=\"FloorRipple\" type=\"Line2D\"", StringComparison.Ordinal)
-            && targetScene.Contains("mouse_filter = 2", StringComparison.Ordinal),
-            "Expected each target scene to own a local water material plus ground-contact and debris anchors.");
-        RegressionTestHarness.Require(
-            !targetScene.Contains("CelRim", StringComparison.Ordinal)
-            && !targetScene.Contains("HighlightArc", StringComparison.Ordinal)
-            && !targetScene.Contains("[node name=\"Bubbles\"", StringComparison.Ordinal),
-            "Expected no authored polyline to describe the water edge: the SDF is the single silhouette source.");
+            scene.Split("visible = false").Length - 1 == 4
+            && scene.Split("shader_parameter/form = 0.0").Length - 1 == 4
+            && scene.Split("shader_parameter/opacity = 0.0").Length - 1 == 4
+            && scene.Contains("shader_parameter/mode = 2.0", StringComparison.Ordinal)
+            && scene.Contains("shader_parameter/mode = 3.0", StringComparison.Ordinal)
+            && scene.Contains("shader_parameter/mode = 1.0", StringComparison.Ordinal),
+            "Expected the shipped vortex, tail, bird, and splash template to start hidden, each in its own mode.");
 
         foreach (var uniform in new[]
-                 { "shape_mode", "formation", "impact", "freeze", "breakup", "elapsed", "seed", "opacity" })
+                 {
+                     "mode", "elapsed", "seed", "form", "spread", "dissolve", "freeze", "shatter", "empowered", "opacity"
+                 })
             Assert.Contains($"uniform float {uniform}", shader, StringComparison.Ordinal);
-        Assert.Contains("uniform vec2 region_size", shader, StringComparison.Ordinal);
+        var shaderCode = shader
+            .Split('\n')
+            .Select(static line => line.Trim())
+            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
+            .ToList();
+        // Cel water: shared union and ink, refraction bounded in screen pixels,
+        // session-owned continuous time, and neither fire's turbulence nor Snow's fold.
         RegressionTestHarness.Require(
-            shader.Contains("hint_screen_texture", StringComparison.Ordinal)
-            && shader.Contains("filter_linear", StringComparison.Ordinal)
-            && shader.Contains("step(", StringComparison.Ordinal)
-            && !shader.Contains("TIME", StringComparison.Ordinal),
-            "Expected restrained screen refraction, stepped cel bands, and controller-owned timing.");
-        // The smooth-minimum union, derivative-width ink, and stepped clock now live
-        // in the shared include. Aqua must consume them rather than restate them:
-        // a second copy of the union operator cannot stay in step with the first.
-        RegressionTestHarness.Require(
-            shader.Contains("#include \"res://SakuraMod/shaders/card_vfx/cel_vfx.gdshaderinc\"", StringComparison.Ordinal)
-            && shader.Contains("cel_smin(", StringComparison.Ordinal)
-            && shader.Contains("cel_ink(d, aa, CEL_INK_WIDTH)", StringComparison.Ordinal)
-            && shader.Contains("cel_step_clock(elapsed)", StringComparison.Ordinal),
-            "Expected Aqua to consume the shared union, ink, and stepped clock from cel_vfx.gdshaderinc.");
-        RegressionTestHarness.Require(
-            !shader.Contains("float smin(", StringComparison.Ordinal)
-            && !shader.Contains("float hash11(", StringComparison.Ordinal)
-            && !shader.Contains("float ellipse_field(", StringComparison.Ordinal)
-            && !shader.Contains("uniform float ink_width", StringComparison.Ordinal),
-            "Expected no card-local copy of shared mathematics or of a locked art-language value.");
-        // fwidth/dFdx/dFdy stay in uniform control flow: GLSL leaves them undefined
-        // across a branch boundary, and the silhouette is exactly where the ink line
-        // needs a stable value. cel_ink therefore takes aa rather than deriving it.
-        RegressionTestHarness.Require(
-            shader.Contains("float aa = max(fwidth(d), 0.0001);", StringComparison.Ordinal)
-            && shader.IndexOf("float aa = max(fwidth(d)", StringComparison.Ordinal)
-                < shader.IndexOf("cel_ink(d, aa, CEL_INK_WIDTH)", StringComparison.Ordinal),
-            "Expected derivatives to be taken once in uniform control flow before any ink call.");
-        RegressionTestHarness.Require(
-            shader.Contains("float squash_y = 1.0 / squash_x;", StringComparison.Ordinal),
-            "Expected impact compression to conserve volume through a reciprocal vertical factor.");
-        // The crest is a ground-anchored height field whose front radiates outward
-        // from the caster's column, so player-left, player-right, and
-        // player-centre arenas are all covered without branching per layout.
-        RegressionTestHarness.Require(
-            shader.Contains("uniform float crest_origin_x", StringComparison.Ordinal)
-            && shader.Contains("float floor_y = half_size.y;", StringComparison.Ordinal)
-            && shader.Contains("float offset = p.x - crest_origin_x;", StringComparison.Ordinal)
-            && shader.Contains("CREST_SPREAD", StringComparison.Ordinal),
-            "Expected the crest to rise from the floor line and lag with distance from the caster.");
-        // A hard sign() flip at the caster's column would tear a vertical crack
-        // through the water when the player stands between two enemy groups.
-        RegressionTestHarness.Require(
-            !shader.Contains("offset >= 0.0 ? 1.0 : -1.0", StringComparison.Ordinal)
-            && shader.Contains("float dir = clamp(offset", StringComparison.Ordinal),
-            "Expected the outward lean direction to ramp continuously through the caster's column.");
-
-        // Budgets stay pinned to exact values; beat durations are art-tuning knobs
-        // and are asserted by presence so retiming does not require a test edit.
-        RegressionTestHarness.Require(
-            controller.Contains("float CrestDuration =", StringComparison.Ordinal)
-            && controller.Contains("float FormationDuration =", StringComparison.Ordinal)
-            && controller.Contains("float TargetStagger =", StringComparison.Ordinal)
-            && controller.Contains("float FreezeHold =", StringComparison.Ordinal)
-            && controller.Contains("DropletCount = 8", StringComparison.Ordinal)
-            && controller.Contains("ShardCount = 7", StringComparison.Ordinal)
-            && controller.Contains("TestMode.IsOn", StringComparison.Ordinal)
-            && controller.Contains("Hitbox", StringComparison.Ordinal)
-            && controller.Contains("Math.Clamp", StringComparison.Ordinal)
-            && controller.Contains("ResourceLoader.Load<PackedScene>", StringComparison.Ordinal)
-            && controller.Contains("MainFile.Logger.Error", StringComparison.Ordinal)
-            && controller.Contains("Duplicate", StringComparison.Ordinal),
-            "Expected bounded timing/geometry, safe presentation loading, and independent target material state.");
-        RegressionTestHarness.Require(
-            !controller.Contains("BirdDuration", StringComparison.Ordinal)
-            && !controller.Contains("BubbleCount", StringComparison.Ordinal)
-            && !controller.Contains("BuildBindingStreams", StringComparison.Ordinal),
-            "Expected the bird beat, CPU bubble budget, and authored binding streams to be retired.");
-        // Guards the reason the first crest pass read as a flat mass in flight: the
-        // region was anchored above the enemies and the node itself was translated
-        // across the line. The wave front now moves through a stationary region
-        // whose bottom edge sits on the floor.
-        RegressionTestHarness.Require(
-            controller.Contains("floorY - size.Y * 0.5f", StringComparison.Ordinal)
-            && controller.Contains("SetShaderParameter(\"crest_origin_x\", localOrigin)", StringComparison.Ordinal)
-            && controller.Contains("ResolveCasterX", StringComparison.Ordinal)
-            && !controller.Contains("CrestTravel", StringComparison.Ordinal)
-            && !controller.Contains("CrestRise", StringComparison.Ordinal),
-            "Expected the crest region to be floor-anchored and stationary, with the wave front driven by the caster's column.");
-        // Guards the root cause of ink weight drifting with enemy size: the old
-        // implementation scaled the target root non-uniformly instead of telling
-        // the shader how large its region is.
-        RegressionTestHarness.Require(
-            controller.Contains("Root.Scale = Vector2.One;", StringComparison.Ordinal)
-            && controller.Contains("SetShaderParameter(\"region_size\", geometry.Size)", StringComparison.Ordinal),
-            "Expected target roots to keep uniform scale and pass region_size so ink stays constant in screen pixels.");
-        RegressionTestHarness.Require(
-            mainFile.Contains("AquaWaterSphereVfx.PreloadResources();", StringComparison.Ordinal)
-            && controller.Contains("private static PackedScene? _rootScene;", StringComparison.Ordinal)
-            && controller.Split("catch (OperationCanceledException)", StringSplitOptions.None).Length == 3,
-            "Expected Aqua resources to warm before combat use and normal tree-exit frame cancellation to stay silent.");
+            shader.Contains("cel_vfx.gdshaderinc", StringComparison.Ordinal)
+            && shaderCode.Any(static line => line.Contains("cel_smin(", StringComparison.Ordinal))
+            && shaderCode.Any(static line => line.Contains("cel_ink(", StringComparison.Ordinal))
+            && shader.Contains("CEL_REFRACT_MAX_PX", StringComparison.Ordinal)
+            && shader.Contains("SCREEN_PIXEL_SIZE", StringComparison.Ordinal)
+            && !shaderCode.Any(static line =>
+                line.Contains("TIME", StringComparison.Ordinal)
+                || line.Contains("cel_step_clock(", StringComparison.Ordinal)
+                || line.Contains("cel_fbm(", StringComparison.Ordinal)
+                || line.Contains("cel_radial_fold(", StringComparison.Ordinal)
+                || line.Contains("const float CEL_", StringComparison.Ordinal)),
+            "Expected Aqua's cel water language from the shared include, without restated constants, shader time, or neighbouring operators.");
 
         RegressionTestHarness.Require(
-            aqua.Contains("AquaWaterSphereVfx.TryCreate(targets, Owner.Creature)", StringComparison.Ordinal)
-            && aqua.Contains("await waterVfx.PlayPrelude()", StringComparison.Ordinal)
-            && aqua.Contains("waterVfx?.Impact(enemy)", StringComparison.Ordinal)
-            && aqua.Contains("finally", StringComparison.Ordinal)
-            && aqua.Contains("waterVfx?.Release()", StringComparison.Ordinal)
-            && aqua.Contains("await SakuraActions.Attack", StringComparison.Ordinal),
-            "Expected Aqua to wrap its unchanged attack loop in the focused presentation session.");
-        // The freeze beat must start inside the try, because the finally disposes
-        // the session before the reward awaits run. It must also stay after the
-        // attack loop, since attacks can kill the enemy holding the maximum.
+            session.Contains(": CelVfxSession", StringComparison.Ordinal)
+            && session.Contains("session.StartClock();", StringComparison.Ordinal)
+            && session.Contains("PlayCelPrelude(card, caster)", StringComparison.Ordinal)
+            && session.Contains("scope.InvokeAsync(\"reach\"", StringComparison.Ordinal)
+            && session.Contains("scope.Invoke(\"return\"", StringComparison.Ordinal)
+            && session.Contains("ReleaseSeconds(t, _lastArrival)", StringComparison.Ordinal)
+            && session.Contains("PreloadManager.Cache.GetScene(ScenePath)", StringComparison.Ordinal)
+            && session.Contains("protected override float MaximumLifetime => 8.0f;", StringComparison.Ordinal)
+            && session.Contains("scripts/render_aqua_vfx.gd", StringComparison.Ordinal)
+            && !session.Contains("ResourceLoader.Load", StringComparison.Ordinal),
+            "Expected the shared lifecycle and prelude, awaited reach and sync return cues, a tail-bounded outro, and the cached scene.");
+        RegressionTestHarness.Require(
+            !session.Contains("SakuraFrostbitePower", StringComparison.Ordinal)
+            && !session.Contains("AquaRules", StringComparison.Ordinal)
+            && !session.Contains("SakuraActions", StringComparison.Ordinal)
+            && !session.Contains("CardPileCmd", StringComparison.Ordinal)
+            && !session.Contains("PlayerCmd", StringComparison.Ordinal),
+            "Expected the visual to take targets and Frostbite enemies as input and never read powers or resolve rewards.");
+
+        Assert.Contains(
+            "AquaPhoenixVfx.PlayOrResolveAsync(this, Owner.Creature, targets, activation.IsActive",
+            aqua,
+            StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            aqua.Contains("var targets = CombatState!.HittableEnemies.ToList();", StringComparison.Ordinal)
+            && aqua.Contains(
+                "SakuraActions.Attack(choiceContext, this, enemy, DynamicVars.Damage.IntValue)",
+                StringComparison.Ordinal)
+            && aqua.Split("SakuraActions.Attack(").Length - 1 == 1,
+            "Expected Aqua's single snapshot attack loop to stay behind the presentation wrapper.");
+        // Each enemy's damage waits for the bird to reach it. Frostbite is read after
+        // every attack (attacks can kill the holder), Return runs inside the cue scope,
+        // and the rewards stay after the presentation has resolved.
+        var loopIndex = aqua.IndexOf("foreach (var enemy in targets)", StringComparison.Ordinal);
+        var reachIndex = aqua.IndexOf("await cues.ReachAsync(enemy);", StringComparison.Ordinal);
         var attackIndex = aqua.IndexOf("await SakuraActions.Attack", StringComparison.Ordinal);
-        var frostbiteIndex = aqua.IndexOf("AquaRules.FrostbiteEnemyCount(targets)", StringComparison.Ordinal);
-        var freezeIndex = aqua.IndexOf("waterVfx?.PlayFreeze(frozen)", StringComparison.Ordinal);
-        var releaseIndex = aqua.IndexOf("waterVfx?.Release()", StringComparison.Ordinal);
+        var frostbiteIndex = aqua.IndexOf("AquaRules.FrostbiteEnemies(targets)", StringComparison.Ordinal);
+        var returnIndex = aqua.IndexOf("cues.Return(frostbitten);", StringComparison.Ordinal);
+        var scopeEndIndex = aqua.IndexOf("});", returnIndex, StringComparison.Ordinal);
+        var drawIndex = aqua.IndexOf("CardPileCmd.Draw", StringComparison.Ordinal);
         var energyIndex = aqua.IndexOf("PlayerCmd.GainEnergy", StringComparison.Ordinal);
         RegressionTestHarness.Require(
-            attackIndex >= 0
+            loopIndex >= 0
+            && reachIndex > loopIndex
+            && attackIndex > reachIndex
             && frostbiteIndex > attackIndex
-            && freezeIndex > frostbiteIndex
-            && releaseIndex > freezeIndex
-            && energyIndex > releaseIndex,
-            "Expected Frostbite to be read after every attack, the freeze beat to start before release, and the rewards to stay after release.");
+            && returnIndex > frostbiteIndex
+            && scopeEndIndex > returnIndex
+            && drawIndex > scopeEndIndex
+            && energyIndex > drawIndex
+            && aqua.Contains("var frostbiteEnemies = frostbitten.Count;", StringComparison.Ordinal),
+            "Expected reach before each attack, Frostbite read after the loop, Return inside the scope, and rewards after it.");
+        // The last legacy primitive owner (Time's line clock) is retired, so every
+        // old Aqua/Hail/Blaze/Gale/Time builder left with its file.
         RegressionTestHarness.Require(
-            !legacyVfx.Contains("PlayAqua", StringComparison.Ordinal)
-            && !legacyVfx.Contains("BuildAqua", StringComparison.Ordinal)
-            && !legacyVfx.Contains("AnimateAqua", StringComparison.Ordinal)
-            && !legacyVfx.Contains("AquaDuration", StringComparison.Ordinal)
-            && !legacyVfx.Contains("AquaColor", StringComparison.Ordinal),
-            "Expected the legacy wave/ripple Aqua owner to be fully retired.");
-        RegressionTestHarness.Require(
-            !legacyVfx.Contains("PlayHail", StringComparison.Ordinal)
-            && !legacyVfx.Contains("BuildHail", StringComparison.Ordinal)
-            && !legacyVfx.Contains("AnimateHail", StringComparison.Ordinal)
-            && !legacyVfx.Contains("HailDuration", StringComparison.Ordinal)
-            && !legacyVfx.Contains("IceColor", StringComparison.Ordinal),
-            "Expected the legacy diamond/streak Hail owner to be fully retired.");
-        RegressionTestHarness.Require(
-            !legacyVfx.Contains("PlayBlaze", StringComparison.Ordinal)
-            && !legacyVfx.Contains("BuildBlaze", StringComparison.Ordinal)
-            && !legacyVfx.Contains("AnimateBlaze", StringComparison.Ordinal)
-            && !legacyVfx.Contains("BlazeDuration", StringComparison.Ordinal)
-            && !legacyVfx.Contains("FlameColor", StringComparison.Ordinal)
-            && !legacyVfx.Contains("FlameGoldColor", StringComparison.Ordinal),
-            "Expected the legacy polygon-flame Blaze owner to be fully retired.");
-        // The final procedural clock builder moved into a native animation scene;
-        // its old ellipse helper is now unused too.
-        RegressionTestHarness.Require(
-            !legacyVfx.Contains("CreateDiamond", StringComparison.Ordinal)
-            && !legacyVfx.Contains("QuadraticPoints(", StringComparison.Ordinal)
-            && !legacyVfx.Contains("AddEllipse(", StringComparison.Ordinal)
-            && legacyVfx.Contains("TimeScenePath", StringComparison.Ordinal),
-            "Expected retired geometry builders to be replaced by the cached Time scene.");
-        RegressionTestHarness.Require(
-            !legacyVfx.Contains("CreateGaleWindBlade", StringComparison.Ordinal)
-            && !legacyVfx.Contains("BuildGaleWindBlade", StringComparison.Ordinal)
-            && !legacyVfx.Contains("AnimateGaleWindBlade", StringComparison.Ordinal)
-            && !legacyVfx.Contains("GaleDuration", StringComparison.Ordinal)
-            && !legacyVfx.Contains("GaleEdgeColor", StringComparison.Ordinal)
-            && !legacyVfx.Contains("GaleBodyColor", StringComparison.Ordinal)
-            && !legacyVfx.Contains("GaleTrailColor", StringComparison.Ordinal),
-            "Expected the legacy crescent-and-streak Gale owner to be fully retired.");
+            !File.Exists(Path.Combine(repoRoot, "SakuraModCode/Cards/SakuraCardPlayVfx.cs")),
+            "Expected the legacy SakuraCardPlayVfx owner to be fully retired.");
     }
 
     [Fact]
@@ -587,76 +523,296 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
-    public void AquaKeepsItsFrequentPlayLeadBoundedAcrossEnemyCounts()
+    public void AquaSweepKeepsTheFirstHitShortAndTheSweepBounded()
     {
-        Assert.InRange(AquaWaterSphereVfx.PreludeDuration(1), 0.25f, 0.35f);
-        for (var targets = 2; targets <= 30; targets++)
-            Assert.InRange(AquaWaterSphereVfx.PreludeDuration(targets), 0.25f, 0.45f);
-        Assert.InRange(AquaWaterSphereVfx.FrozenReleaseDuration, 0.40f, 0.60f);
+        // Measured from the card play: the shared prelude's blocking lead, then body time.
+        Assert.InRange(
+            AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.ArrivalTime(0, 1), 0.50f, 0.60f);
+        for (var count = 1; count <= 8; count++)
+        {
+            Assert.Equal(AquaPhoenixVfx.FirstReach, AquaPhoenixVfx.ArrivalTime(0, count), 5);
+            Assert.InRange(AquaPhoenixVfx.SweepSpan(count), 0f, AquaPhoenixVfx.SweepSpanCap + 1e-5f);
+            for (var index = 1; index < count; index++)
+                Assert.True(
+                    AquaPhoenixVfx.ArrivalTime(index, count) > AquaPhoenixVfx.ArrivalTime(index - 1, count),
+                    "Expected the bird to reach the enemies strictly in gameplay order.");
+        }
+        Assert.Equal(AquaPhoenixVfx.SweepSpanCap, AquaPhoenixVfx.SweepSpan(8), 5);
+        Assert.Equal(0f, AquaPhoenixVfx.SweepSpan(1));
+
+        // Approved plate totals after play (D6): 1 enemy, 5 enemies, 3 enemies with 2 Frostbite.
+        Assert.InRange(AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.PlannedBodySeconds(1, 0), 0.95f, 1.00f);
+        Assert.InRange(AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.PlannedBodySeconds(5, 0), 1.25f, 1.30f);
+        Assert.InRange(AquaPhoenixVfx.SharedPreludeLead + AquaPhoenixVfx.PlannedBodySeconds(3, 2), 1.52f, 1.56f);
+        Assert.True(
+            AquaPhoenixVfx.PlannedBodySeconds(1, 0) < BlazePhoenixVfx.BodySeconds(1),
+            "Expected the frequently played Aqua to stay shorter than Blaze.");
+        Assert.True(
+            AquaPhoenixVfx.LandedAt(1f, 3) > AquaPhoenixVfx.LandedAt(1f, 1),
+            "Expected each further Frostbite enemy to stagger its returning ice.");
+        Assert.InRange(AquaPhoenixVfx.CrystalScale, 1.29f, 1.31f);
     }
 
     [Fact]
-    public void BlazeFireColumnKeepsLocalPresentationAndGameplayContracts()
+    public void AquaOutroConsumesTheTailInsteadOfRestartingIt()
+    {
+        const float lastArrival = 0.70f;
+        var fullTail = AquaPhoenixVfx.ReleaseSeconds(lastArrival, lastArrival);
+        Assert.Equal(AquaPhoenixVfx.TailDuration, fullTail);
+        foreach (var gameplaySeconds in new[] { 0f, 0.10f, 0.20f, 0.29f, 0.30f })
+        {
+            var finishedAt = lastArrival + gameplaySeconds;
+            var remaining = AquaPhoenixVfx.ReleaseSeconds(finishedAt, lastArrival);
+            Assert.InRange(remaining, 0f, fullTail);
+            Assert.True(Math.Abs(finishedAt + remaining - (lastArrival + fullTail)) < 1e-5f,
+                "Resolving gameplay must consume, rather than restart, the visual tail.");
+        }
+        Assert.Equal(0f, AquaPhoenixVfx.ReleaseSeconds(lastArrival + 1f, lastArrival));
+        Assert.Equal(fullTail, AquaPhoenixVfx.ReleaseSeconds(lastArrival - 0.1f, lastArrival));
+    }
+
+    [Fact]
+    public async Task AquaCuesNeverWaitOrSkipGameplayWithoutPresentation()
+    {
+        foreach (var enabled in new[] { false, true })
+        {
+            var created = 0;
+            var attacks = 0;
+            var returns = 0;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            await CelVfxSession.PlayOrResolveAsync<AquaPhoenixVfx>(
+                enabled,
+                "aqua inert",
+                () =>
+                {
+                    created++;
+                    return null;
+                },
+                static _ => Task.FromResult(true),
+                async scope =>
+                {
+                    var cues = new AquaPhoenixVfx.Cues(scope);
+                    for (var i = 0; i < 5; i++)
+                    {
+                        await cues.ReachAsync(new MegaCrit.Sts2.Core.Entities.Creatures.Creature(
+                            (MegaCrit.Sts2.Core.Entities.Players.Player)null!, 30, 30));
+                        attacks++;
+                    }
+                    cues.Return([]);
+                    returns++;
+                },
+                static _ => { },
+                static _ => { });
+            watch.Stop();
+            Assert.Equal(enabled ? 1 : 0, created);
+            Assert.Equal(5, attacks);
+            Assert.Equal(1, returns);
+            Assert.True(watch.Elapsed < TimeSpan.FromSeconds(0.2), "Expected inert cues to add no wait.");
+        }
+    }
+
+    [Fact]
+    public void TimeStopMountsTwoGradeLayersAndEndsTheTurnOnTheClack()
     {
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/combat/card_vfx/blaze_fire_column_vfx.tscn"));
+            "SakuraMod/scenes/combat/card_vfx/time_stop_vfx.tscn"));
         var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/shaders/card_vfx/blaze_fire_column.gdshader"));
+            "SakuraMod/shaders/card_vfx/time_stop.gdshader"));
         var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Visuals/Transparent/BlazeFireColumnVfx.cs"));
+            "SakuraModCode/Cards/Visuals/Transparent/TimeStopVfx.cs"));
+        var time = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Time.cs"));
+        var repoRoot = Path.GetDirectoryName(RegressionTestHarness.FindRepoFile("SakuraMod.csproj"))!;
+
+        // The line clock, its owner and the shared Hail/Time plate are retired.
+        foreach (var retired in new[]
+                 {
+                     "SakuraMod/scenes/combat/card_vfx/time_shift_vfx.tscn",
+                     "SakuraModCode/Cards/SakuraCardPlayVfx.cs",
+                     "scripts/render_hail_time_vfx.gd"
+                 })
+        {
+            RegressionTestHarness.Require(
+                !File.Exists(Path.Combine(repoRoot, retired)),
+                $"Expected the retired Time resource {retired} to be deleted.");
+        }
+        var hailPlate = File.ReadAllText(RegressionTestHarness.FindRepoFile("scripts/render_hail_vfx.gd"));
+        Assert.DoesNotContain("time_shift", hailPlate, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(repoRoot, "scripts/render_time_stop_vfx.gd")));
+
+        // Each grade layer reads its own fresh copy of the frame, and the two
+        // partition the screen by Sakura's rect; everything ships hidden.
+        foreach (var layer in new[] { "UnderGrade", "OverGrade" })
+        {
+            var node = scene.IndexOf($"[node name=\"{layer}\"", StringComparison.Ordinal);
+            var copy = scene.IndexOf($"[node name=\"StableFrame\" type=\"BackBufferCopy\" parent=\"{layer}\"]", StringComparison.Ordinal);
+            var grade = scene.IndexOf($"[node name=\"Grade\" type=\"ColorRect\" parent=\"{layer}\"]", StringComparison.Ordinal);
+            Assert.True(node >= 0 && copy > node && grade > copy, $"Expected {layer} to copy the frame before grading it.");
+        }
+        Assert.Contains("shader_parameter/hole_mode = 2.0", scene, StringComparison.Ordinal);
+        Assert.Contains("shader_parameter/hole_mode = 1.0", scene, StringComparison.Ordinal);
+        Assert.DoesNotContain("shader_parameter/opacity = 1", scene, StringComparison.Ordinal);
+        Assert.Contains("hint_screen_texture", shader, StringComparison.Ordinal);
+        Assert.Contains("cel_vfx.gdshaderinc", shader, StringComparison.Ordinal);
+        // Session-owned time: no shader TIME outside comments.
+        Assert.DoesNotContain(
+            shader.Split('\n').Where(static line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)),
+            static line => line.Contains("TIME", StringComparison.Ordinal));
+
+        // Mounts: under-layer first in the Time owner's creature, over-layer first
+        // in the combat VFX container, seals under the combat UI. Run assets only.
+        Assert.Contains(": CelVfxSession", session, StringComparison.Ordinal);
+        Assert.Contains("PlayCelPrelude", session, StringComparison.Ordinal);
+        Assert.Contains("casterNode.MoveChildSafely(underRoot, 0)", session, StringComparison.Ordinal);
+        Assert.Contains("container.MoveChildSafely(overRoot, 0)", session, StringComparison.Ordinal);
+        Assert.Contains("ui.AddChildSafely(sealRoot)", session, StringComparison.Ordinal);
+        Assert.Contains("PreloadManager.Cache.GetScene(ScenePath)", session, StringComparison.Ordinal);
+        Assert.DoesNotContain("ResourceLoader.Load", session, StringComparison.Ordinal);
+        // Release on the next turn start, never leaving the world grey.
+        Assert.Contains("CombatManager.Instance.TurnStarted += OnTurnStarted", session, StringComparison.Ordinal);
+        Assert.Contains("CombatManager.Instance.TurnStarted -= OnTurnStarted", session, StringComparison.Ordinal);
+        Assert.Contains("CombatManager.Instance.IsEnding", session, StringComparison.Ordinal);
+        Assert.Contains("Root.TreeExiting -= ReleaseExtras", session, StringComparison.Ordinal);
+        Assert.Contains("scope.InvokeAsync(\"stop\"", session, StringComparison.Ordinal);
+        Assert.True(TimeStopVfx.HoldCap > 0f && TimeStopVfx.Clack > TimeStopVfx.WaveStart);
+
+        // Power and preservation resolve first; only the end turn waits for the clack.
+        var wrapIndex = time.IndexOf("TimeStopVfx.PlayOrResolveAsync(this, Owner.Creature, activation.IsActive", StringComparison.Ordinal);
+        var applyIndex = time.IndexOf("PowerCmd.Apply<TimeStopPower>", StringComparison.Ordinal);
+        var preserveIndex = time.IndexOf("power?.PreserveCurrentTurnState()", StringComparison.Ordinal);
+        var stopIndex = time.IndexOf("await cues.StopAsync()", StringComparison.Ordinal);
+        var endIndex = time.IndexOf("PlayerCmd.EndTurn(Owner, canBackOut: false)", StringComparison.Ordinal);
+        var afterPlayedIndex = time.IndexOf("AfterCardPlayed", StringComparison.Ordinal);
+        Assert.True(
+            wrapIndex >= 0
+            && applyIndex > wrapIndex
+            && preserveIndex > applyIndex
+            && stopIndex > preserveIndex
+            && endIndex > stopIndex
+            && afterPlayedIndex > endIndex,
+            "Expected Time to apply and preserve, then await the clack, then end the turn.");
+        Assert.Contains("power.PreserveElementStates()", time[afterPlayedIndex..], StringComparison.Ordinal);
+        Assert.DoesNotContain("PlayTime", time, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TimeStopCueNeverWaitsOrSkipsGameplayWithoutPresentation()
+    {
+        foreach (var enabled in new[] { false, true })
+        {
+            var created = 0;
+            var endTurns = 0;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            await CelVfxSession.PlayOrResolveAsync<TimeStopVfx>(
+                enabled,
+                "time inert",
+                () =>
+                {
+                    created++;
+                    return null;
+                },
+                static _ => Task.FromResult(true),
+                async scope =>
+                {
+                    await new TimeStopVfx.Cues(scope).StopAsync();
+                    endTurns++;
+                },
+                static _ => { },
+                static _ => { });
+            watch.Stop();
+            Assert.Equal(enabled ? 1 : 0, created);
+            Assert.Equal(1, endTurns);
+            Assert.True(watch.Elapsed < TimeSpan.FromSeconds(0.2), "Expected the inert stop cue to add no wait.");
+        }
+    }
+
+    [Fact]
+    public void BlazePhoenixKeepsLocalPresentationAndGameplayContracts()
+    {
+        var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/card_vfx/blaze_phoenix_vfx.tscn"));
+        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/blaze_phoenix.gdshader"));
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/BlazePhoenixVfx.cs"));
         var blaze = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Blaze.cs"));
 
         var backBufferIndex = scene.IndexOf(
             "[node name=\"StableCombatFrame\" type=\"BackBufferCopy\"", StringComparison.Ordinal);
-        var columnIndex = scene.IndexOf("[node name=\"ColumnBody\" type=\"ColorRect\"", StringComparison.Ordinal);
+        var birdIndex = scene.IndexOf("[node name=\"BirdBody\" type=\"ColorRect\" parent=\"Bird\"", StringComparison.Ordinal);
+        var strikeIndex = scene.IndexOf("[node name=\"StrikeFlare\" type=\"ColorRect\" parent=\"Strike\"", StringComparison.Ordinal);
         RegressionTestHarness.Require(
-            backBufferIndex >= 0 && columnIndex > backBufferIndex
-            && scene.Contains("[node name=\"Embers\" type=\"Node2D\"", StringComparison.Ordinal)
+            backBufferIndex >= 0 && birdIndex > backBufferIndex && strikeIndex > backBufferIndex
+            && scene.Contains("[node name=\"Fuel\" type=\"Node2D\"", StringComparison.Ordinal)
+            && scene.Contains("[node name=\"Ash\" type=\"Node2D\"", StringComparison.Ordinal)
+            && scene.Contains("[node name=\"StrikeEmbers\" type=\"Node2D\" parent=\"Strike\"", StringComparison.Ordinal)
             && scene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
             && scene.Contains("mouse_filter = 2", StringComparison.Ordinal),
-            "Expected a stable combat-frame copy before local, input-transparent fire and embers.");
+            "Expected a stable combat-frame copy before local, input-transparent bird, strike, fuel, and ash layers.");
         RegressionTestHarness.Require(
-            scene.Contains("shader_parameter/ignite = 0.0", StringComparison.Ordinal)
-            && scene.Contains("shader_parameter/rise = 0.0", StringComparison.Ordinal)
-            && scene.Contains("shader_parameter/impact_at = -10.0", StringComparison.Ordinal),
-            "Expected the mounted scene to wait for ignition and its first real impact.");
+            scene.Split("visible = false").Length - 1 == 2
+            && scene.Split("shader_parameter/form = 0.0").Length - 1 == 2
+            && scene.Split("shader_parameter/opacity = 0.0").Length - 1 == 2
+            && scene.Contains("shader_parameter/mode = 1.0", StringComparison.Ordinal),
+            "Expected the shipped bird and strike flare to start hidden, with the flare in its own mode.");
 
-        foreach (var uniform in new[] { "elapsed", "seed", "ignite", "rise", "burnout", "impact_at", "opacity" })
+        foreach (var uniform in new[]
+                 {
+                     "elapsed", "seed", "form", "spread", "strength", "empowered", "dissolve", "mode", "opacity"
+                 })
             Assert.Contains($"uniform float {uniform}", shader, StringComparison.Ordinal);
         Assert.Contains("uniform vec2 region_size", shader, StringComparison.Ordinal);
+        var shaderCode = shader
+            .Split('\n')
+            .Select(static line => line.Trim())
+            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
+            .ToList();
         RegressionTestHarness.Require(
             shader.Contains("cel_vfx.gdshaderinc", StringComparison.Ordinal)
-            && shader.Contains("cel_bands3(", StringComparison.Ordinal)
+            && shaderCode.Any(static line => line.Contains("cel_fbm(", StringComparison.Ordinal))
             && shader.Contains("CEL_REFRACT_MAX_PX", StringComparison.Ordinal)
             && shader.Contains("SCREEN_PIXEL_SIZE", StringComparison.Ordinal)
-            && !shader.Contains("TIME", StringComparison.Ordinal),
-            "Expected shared colour bands, session-owned time, and heat bounded in screen pixels.");
+            && !shaderCode.Any(static line =>
+                line.Contains("TIME", StringComparison.Ordinal)
+                || line.Contains("cel_step_clock(", StringComparison.Ordinal)
+                || line.Contains("cel_ink(", StringComparison.Ordinal)),
+            "Expected shared turbulence, session-owned continuous time, no dark ink outline, and heat bounded in screen pixels.");
+
         RegressionTestHarness.Require(
             session.Contains("session.StartClock();", StringComparison.Ordinal)
             && session.Contains(": CelVfxSession", StringComparison.Ordinal)
-            && session.Contains("ReleaseSeconds(Elapsed, _impactAt)", StringComparison.Ordinal),
-            "Expected the shared lifecycle and an outro bounded by time since the actual hit.");
+            && session.Contains("ReleaseSeconds(elapsed, _strikeAt)", StringComparison.Ordinal)
+            && session.Contains("PreloadManager.Cache.GetScene(ScenePath)", StringComparison.Ordinal)
+            && session.Contains("LocalContext.IsMe(owner)", StringComparison.Ordinal)
+            && session.Contains("PileExchangeVfx.TryGetPileCenter(room, PileType.Exhaust", StringComparison.Ordinal)
+            && !session.Contains("ResourceLoader.Load", StringComparison.Ordinal),
+            "Expected the shared lifecycle, cached scene, a strike-bounded outro, and local-pile anchoring.");
         RegressionTestHarness.Require(
-            !session.Contains("PileType", StringComparison.Ordinal)
+            !session.Contains("CardPile.Get", StringComparison.Ordinal)
             && !session.Contains("ExhaustedCardMultiplier", StringComparison.Ordinal)
-            && !session.Contains("CalculatedDamage", StringComparison.Ordinal),
-            "Expected fixed visual strength without reading the damage or exhaust pile.");
+            && !session.Contains("CalculatedDamage", StringComparison.Ordinal)
+            && !session.Contains("CardPileCmd", StringComparison.Ordinal),
+            "Expected the visual to take its fuel as input and never read piles, damage, or remove cards itself.");
 
         Assert.Contains(
-            "BlazeFireColumnVfx.PlayOrResolveAsync(this, Owner.Creature, target",
+            "BlazePhoenixVfx.PlayOrResolveAsync(this, Owner.Creature, target, fuel",
             blaze,
             StringComparison.Ordinal);
-        var impactIndex = blaze.IndexOf("cues.Impact()", StringComparison.Ordinal);
-        var attackIndex = blaze.IndexOf("SakuraActions.Attack(", StringComparison.Ordinal);
+        var strikeCue = blaze.IndexOf("cues.Strike()", StringComparison.Ordinal);
+        var attack = blaze.IndexOf("SakuraActions.Attack(", StringComparison.Ordinal);
+        var ash = blaze.IndexOf("cues.AshAsync(", StringComparison.Ordinal);
+        var removal = blaze.IndexOf("CardPileCmd.RemoveFromCombat(", StringComparison.Ordinal);
         RegressionTestHarness.Require(
-            impactIndex >= 0 && attackIndex > impactIndex,
-            "Expected the visual impact on the same beat as the authoritative attack.");
+            strikeCue >= 0 && attack > strikeCue && ash > attack && removal > ash
+            && blaze.Split("CardPileCmd.RemoveFromCombat(").Length - 1 == 1,
+            "Expected Strike on the attack's beat and the single removal running inside the ash cue.");
         RegressionTestHarness.Require(
             blaze.Contains("var target = RequiredTarget(play);", StringComparison.Ordinal)
             && blaze.Contains(
                 "SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage)",
                 StringComparison.Ordinal)
+            && blaze.Contains("skipVisuals: false", StringComparison.Ordinal)
             && blaze.Contains("BlazeRules.ExhaustedCardMultiplier", StringComparison.Ordinal),
             "Expected Blaze's gameplay path to remain behind the presentation wrapper.");
     }
@@ -664,19 +820,104 @@ public sealed class ResourceContractSuite
     [Fact]
     public void BlazeOutroEndsAtTheSameTimeForFastAndSlowGameplay()
     {
-        const float hitAt = 2f;
-        var fullTail = BlazeFireColumnVfx.ReleaseSeconds(hitAt, hitAt);
-        Assert.InRange(fullTail, 0.45f, 0.60f);
-        foreach (var gameplaySeconds in new[] { 0f, 0.10f, 0.25f, 0.44f, 0.50f })
+        const float strikeAt = 2f;
+        var fullTail = BlazePhoenixVfx.ReleaseSeconds(strikeAt, strikeAt);
+        Assert.Equal(BlazePhoenixVfx.TailDuration, fullTail);
+        foreach (var gameplaySeconds in new[] { 0f, 0.10f, 0.25f, 0.44f, 0.45f })
         {
-            var finishedAt = hitAt + gameplaySeconds;
-            var remaining = BlazeFireColumnVfx.ReleaseSeconds(finishedAt, hitAt);
+            var finishedAt = strikeAt + gameplaySeconds;
+            var remaining = BlazePhoenixVfx.ReleaseSeconds(finishedAt, strikeAt);
             Assert.InRange(remaining, 0f, fullTail);
-            Assert.True(Math.Abs(finishedAt + remaining - (hitAt + fullTail)) < 1e-5f,
+            Assert.True(Math.Abs(finishedAt + remaining - (strikeAt + fullTail)) < 1e-5f,
                 "Resolving gameplay must consume, rather than restart, the visual tail.");
         }
-        Assert.Equal(0f, BlazeFireColumnVfx.ReleaseSeconds(hitAt + 1f, hitAt));
-        Assert.Equal(fullTail, BlazeFireColumnVfx.ReleaseSeconds(hitAt - 0.1f, hitAt));
+        Assert.Equal(0f, BlazePhoenixVfx.ReleaseSeconds(strikeAt + 1f, strikeAt));
+        Assert.Equal(fullTail, BlazePhoenixVfx.ReleaseSeconds(strikeAt - 0.1f, strikeAt));
+    }
+
+    [Fact]
+    public void BlazeFuelIsClampedAndStrengthSaturatesWithoutLengtheningTheBeat()
+    {
+        Assert.Equal(0, BlazePhoenixVfx.FuelStreamCount(0));
+        Assert.Equal(3, BlazePhoenixVfx.FuelStreamCount(3));
+        Assert.Equal(BlazePhoenixVfx.MaxFuelStreams, BlazePhoenixVfx.FuelStreamCount(6));
+        Assert.Equal(BlazePhoenixVfx.MaxFuelStreams, BlazePhoenixVfx.FuelStreamCount(40));
+        Assert.Equal(0, BlazePhoenixVfx.FuelStreamCount(-1));
+
+        Assert.Equal(BlazePhoenixVfx.MinBirdScale, BlazePhoenixVfx.BirdScale(0), 4);
+        Assert.Equal(BlazePhoenixVfx.MaxBirdScale, BlazePhoenixVfx.BirdScale(BlazePhoenixVfx.StrengthSaturation), 4);
+        Assert.Equal(BlazePhoenixVfx.BirdScale(BlazePhoenixVfx.StrengthSaturation), BlazePhoenixVfx.BirdScale(60), 4);
+        for (var count = 1; count <= BlazePhoenixVfx.StrengthSaturation; count++)
+            Assert.True(BlazePhoenixVfx.Strength(count) > BlazePhoenixVfx.Strength(count - 1),
+                "Expected the bird to grow with every card up to saturation.");
+
+        // The fuel window is fixed: streams stagger inside it, whatever the count.
+        foreach (var count in new[] { 1, 2, 3, 6, 10, 40 })
+        {
+            var streams = BlazePhoenixVfx.FuelStreamCount(count);
+            Assert.InRange(BlazePhoenixVfx.StreamStart(streams - 1, streams), 0f, BlazePhoenixVfx.FuelDuration);
+            Assert.Equal(BlazePhoenixVfx.BodySeconds(1), BlazePhoenixVfx.BodySeconds(count), 4);
+        }
+        Assert.Equal(0f, BlazePhoenixVfx.FuelSeconds(0));
+        Assert.InRange(BlazePhoenixVfx.BodySeconds(0), 0.90f, 1.00f);
+        Assert.InRange(BlazePhoenixVfx.BodySeconds(5), 1.25f, 1.35f);
+    }
+
+    [Fact]
+    public void BlazeStrikePlaysTheVanillaFireHit()
+    {
+        // Vanilla's shared fire hit (FmodSfx.fire), not mod audio.
+        Assert.Equal("event:/sfx/characters/attack_fire", BlazePhoenixVfx.StrikeSfx);
+
+        var blaze = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/BlazePhoenixVfx.cs"));
+        var start = blaze.IndexOf("private void Strike()", StringComparison.Ordinal);
+        Assert.True(start >= 0, "Missing BlazePhoenixVfx.Strike().");
+        var next = blaze.IndexOf("\n    private ", start + 1, StringComparison.Ordinal);
+        // The sound rides the strike beat, so VFX off or a dead session stays silent.
+        Assert.Contains("SfxCmd.Play(StrikeSfx);", blaze[start..(next < 0 ? blaze.Length : next)]);
+    }
+
+    [Fact]
+    public async Task BlazeAshAwaitsTheRemovalExactlyOnceEvenWithoutPresentation()
+    {
+        var created = 0;
+        var removals = 0;
+        await CelVfxSession.PlayOrResolveAsync<BlazePhoenixVfx>(
+            false,
+            "blaze disabled",
+            () =>
+            {
+                created++;
+                return null;
+            },
+            static _ => Task.FromResult(true),
+            async scope =>
+            {
+                var cues = new BlazePhoenixVfx.Cues(scope);
+                cues.Strike();
+                await cues.AshAsync(() =>
+                {
+                    removals++;
+                    return Task.CompletedTask;
+                });
+            },
+            static _ => { },
+            static _ => { });
+        Assert.Equal(0, created);
+        Assert.Equal(1, removals);
+
+        var failed = new InvalidOperationException("removal");
+        var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CelVfxSession.PlayOrResolveAsync<BlazePhoenixVfx>(
+                true,
+                "blaze failed create",
+                static () => null,
+                static _ => Task.FromResult(true),
+                scope => new BlazePhoenixVfx.Cues(scope).AshAsync(() => throw failed),
+                static _ => { },
+                static _ => { }));
+        Assert.Same(failed, thrown);
     }
 
     [Fact]
@@ -2049,8 +2290,8 @@ public sealed class ResourceContractSuite
             "SakuraModCode/Cards/Visuals/CelVfxSession.cs"));
         var presenter = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Visuals/SakuraMagicCirclePresenter.cs"));
-        var simpleVfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraCardPlayVfx.cs"));
+        var timeVfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/TimeStopVfx.cs"));
         var bigLittle = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Visuals/Classic/BigLittleStandeeVfx.cs"));
         var standee = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -2089,16 +2330,14 @@ public sealed class ResourceContractSuite
             && session.Contains("SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal)
             && session.Contains("if (presentationEnabled)", StringComparison.Ordinal)
             && presenter.Contains("IsCardVfxEnabled", StringComparison.Ordinal)
-            && simpleVfx.Contains("if (!SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal)
-            && simpleVfx.Contains("PlayTime", StringComparison.Ordinal)
-            && !simpleVfx.Contains("PlayGravitation", StringComparison.Ordinal)
+            && timeVfx.Contains("CelVfxSession.PlayOrResolveAsync", StringComparison.Ordinal)
             && gravitationHold.Contains("SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal)
             && gravitationVfx.Contains("CelVfxSession.PlayOrResolveAsync", StringComparison.Ordinal)
             && gravitationCard.Contains("GravitationVfx.PlayOrResolveAsync", StringComparison.Ordinal)
             && !gravitationCard.Contains("PlayGravitation", StringComparison.Ordinal)
             && arrowVfx.Contains("CelVfxSession.PlayOrResolveAsync", StringComparison.Ordinal)
             && arrowCard.Contains("ArrowBowProjectileVfx.PlayOrResolveAsync", StringComparison.Ordinal)
-            && timeCard.Contains("SakuraCardPlayVfx.PlayTime", StringComparison.Ordinal),
+            && timeCard.Contains("TimeStopVfx.PlayOrResolveAsync", StringComparison.Ordinal),
             "Expected one local card-VFX preference to gate the shared session and approved presentation owners.");
         RegressionTestHarness.Require(
             disabledIndex >= 0
@@ -2165,22 +2404,19 @@ public sealed class ResourceContractSuite
         // shader-driven rect, say — reuses the trajectory instead of retyping it.
         // Once retyped, the copies drift silently.
         //
-        // Aqua is excluded by name, not by accident: its session predates the shared
-        // skeleton and its duplication is the deliberate boundary recorded in the cel
-        // VFX guide. Every other card must route through the shared helper, which is
-        // what this count enforces.
+        // Every card routes through the shared helper, which is what this count
+        // enforces. Aqua's grandfathered copy left with its water-sphere session.
         var integrations = Directory
             .EnumerateFiles(
                 Path.GetDirectoryName(RegressionTestHarness.FindRepoFile(
                     "SakuraModCode/Cards/Visuals/CelVfxGeometry.cs"))!,
                 "*.cs",
                 SearchOption.AllDirectories)
-            .Where(static path => !path.EndsWith("AquaWaterSphereVfx.cs", StringComparison.Ordinal))
             .Select(File.ReadAllText)
             .Count(static source => source.Contains("0.5f * gravity * time * time", StringComparison.Ordinal));
         RegressionTestHarness.Require(
             integrations == 1,
-            $"Expected exactly one ballistic integration outside Aqua's grandfathered session, found {integrations}.");
+            $"Expected exactly one ballistic integration, found {integrations}.");
 
         var constructorIndex = session.IndexOf("protected CelVfxSession(", StringComparison.Ordinal);
         var startClockIndex = session.IndexOf("internal void StartClock()", StringComparison.Ordinal);
@@ -2949,23 +3185,28 @@ public sealed class ResourceContractSuite
         var card = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Transfer.cs"));
 
-        var cueIndex = card.IndexOf("cues.Exchange(target)", StringComparison.Ordinal);
+        var cueIndex = card.IndexOf("await cues.PullOutAsync(target)", StringComparison.Ordinal);
         var powerIndex = card.IndexOf("PowerCmd.Apply<StrengthPower>", cueIndex, StringComparison.Ordinal);
+        var deliverIndex = card.IndexOf("await cues.DeliverAsync(target)", powerIndex, StringComparison.Ordinal);
+        var gainIndex = card.IndexOf("PowerCmd.Apply<StrengthPower>", deliverIndex, StringComparison.Ordinal);
         RegressionTestHarness.Require(
             session.Contains(": CelVfxSession", StringComparison.Ordinal)
             && session.Contains("PlayCelPrelude", StringComparison.Ordinal)
             && session.Contains("CelVfxGeometry.ResolveCaster", StringComparison.Ordinal)
             && session.Contains("CelVfxGeometry.Resolve(room, target, index, Budget)", StringComparison.Ordinal)
             && session.Contains("PairVisual", StringComparison.Ordinal)
-            && session.Contains("Connection", StringComparison.Ordinal)
-            && session.Contains("AfterCaster", StringComparison.Ordinal)
+            && session.Contains("PreloadManager.Cache.GetAsset<Shader>(ShaderPath)", StringComparison.Ordinal)
+            && session.Contains("scope.InvokeAsync(\"pull out\"", StringComparison.Ordinal)
+            && session.Contains("scope.InvokeAsync(\"deliver\"", StringComparison.Ordinal)
             && !session.Contains("ResourceLoader.Load", StringComparison.Ordinal)
             && !session.Contains("TIME", StringComparison.Ordinal)
             && card.Contains("var targets = SakuraThroughResolution.TargetsFor(play)", StringComparison.Ordinal)
             && card.Contains("TransferVfx.PlayOrResolveAsync", StringComparison.Ordinal)
             && cueIndex >= 0
-            && powerIndex > cueIndex,
-            "Expected Transfer to render one paired exchange cue for every Through target before the existing PowerCmd loop, without moving gameplay ownership into VFX.");
+            && powerIndex > cueIndex
+            && deliverIndex > powerIndex
+            && gainIndex > deliverIndex,
+            "Expected Transfer to pull the core out of every Through target before its Strength loss and deliver it before Sakura's gains, keeping every PowerCmd on the card.");
     }
 
     [Fact]
@@ -2981,8 +3222,6 @@ public sealed class ResourceContractSuite
             "SakuraModCode/Powers/Transparent/GravitationHoldPower.cs"));
         var pileExchange = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/PileExchangeVfx.cs"));
-        var simpleVfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraCardPlayVfx.cs"));
 
         var applyIndex = card.IndexOf("PowerCmd.Apply<GravitationHoldPower>", StringComparison.Ordinal);
         var excludeIndex = card.IndexOf("power?.ExcludeSource(this)", StringComparison.Ordinal);
@@ -3001,13 +3240,15 @@ public sealed class ResourceContractSuite
             && session.Contains("PlayCelPrelude", StringComparison.Ordinal)
             && session.Contains("session => session.Dispose()", StringComparison.Ordinal)
             && !session.Contains("NotifyRemoved", StringComparison.Ordinal)
+            && hold.Contains("MoveChildSafely(root, creatureNode.Visuals.GetIndex())", StringComparison.Ordinal)
+            && !hold.Contains("BackCombatVfxContainer", StringComparison.Ordinal)
             && hold.Contains("CombatVfxContainer", StringComparison.Ordinal)
             && hold.Contains("CelVfxGeometry.ResolveCaster", StringComparison.Ordinal)
-            && hold.Contains("FloorBias", StringComparison.Ordinal)
+            && hold.Contains("SakuraElementSlotLayout.GroundVisualLift", StringComparison.Ordinal)
             && hold.Contains("FacingSign", StringComparison.Ordinal)
             && hold.Contains("TestMode.IsOn", StringComparison.Ordinal)
             && hold.Contains("SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal)
-            && hold.Contains("MaxConcurrentOverlays = 4", StringComparison.Ordinal)
+            && hold.Contains("MaxConcurrentTethers = 4", StringComparison.Ordinal)
             && hold.Contains("PileExchangeVfx.TryGetPileCenter", StringComparison.Ordinal)
             && hold.Contains("CombatEnded", StringComparison.Ordinal)
             && hold.Contains("TreeExiting", StringComparison.Ordinal)
@@ -3022,10 +3263,6 @@ public sealed class ResourceContractSuite
             && card.Contains("MoveExistingCardToHand", StringComparison.Ordinal)
             && card.Contains("GravitationVfx.PlayOrResolveAsync", StringComparison.Ordinal)
             && !card.Contains("PlayGravitation", StringComparison.Ordinal)
-            && !simpleVfx.Contains("PlayGravitation", StringComparison.Ordinal)
-            && !simpleVfx.Contains("EnemyArea", StringComparison.Ordinal)
-            && simpleVfx.Contains("PlayTime", StringComparison.Ordinal)
-            && simpleVfx.Contains("TimeScenePath", StringComparison.Ordinal)
             && power.Contains("GravitationHoldVisual.Mount(Owner)", StringComparison.Ordinal)
             && power.Contains("NotifyRemoved(oldOwner)", StringComparison.Ordinal)
             && applyIndex >= 0
@@ -3037,7 +3274,7 @@ public sealed class ResourceContractSuite
             && pullIndex > moveIndex
             && energyIndex >= 0
             && returnedIndex > energyIndex,
-            "Expected Gravitation to open a caster-foot well through a short cel session and a Power-tied persist owner, overlay native hand motion, and leave Time on SakuraCardPlayVfx.");
+            "Expected Gravitation to open a caster-foot well through a short cel session and a Power-tied persist owner, and overlay native hand motion.");
     }
 
     private static void RequireClearCardDescriptionsAvoidRedundantText()

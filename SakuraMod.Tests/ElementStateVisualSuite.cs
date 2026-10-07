@@ -83,8 +83,6 @@ public sealed class ElementStateVisualSuite
     {
         var common = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/shaders/card_vfx/sakura_element_state_common.gdshaderinc"));
-        var fire = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/shaders/card_vfx/sakura_element_state_firey.gdshader"));
         var earth = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/shaders/card_vfx/sakura_element_state_earthy.gdshader"));
         var wind = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -111,12 +109,10 @@ public sealed class ElementStateVisualSuite
                 common, @"^\s*uniform\s", System.Text.RegularExpressions.RegexOptions.Multiline),
             "Expected one guarded, uniform-free edge include with a bounded halo and an inner rim.");
 
-        // Fire is the reference the others are matched to: its shape stays, and it joins
-        // the family through the shared halo alone.
+        // Fire is the game's own stepped fire and has its own native glow; the three
+        // hand-drawn spirits share this edge language so they sit beside it.
         RegressionTestHarness.Require(
-            fire.Contains(include, StringComparison.Ordinal)
-            && fire.Contains("element_halo(", StringComparison.Ordinal)
-            && earth.Contains(include, StringComparison.Ordinal)
+            earth.Contains(include, StringComparison.Ordinal)
             && earth.Contains("element_halo(", StringComparison.Ordinal)
             && earth.Contains("element_rim(", StringComparison.Ordinal)
             && wind.Contains(include, StringComparison.Ordinal)
@@ -125,7 +121,7 @@ public sealed class ElementStateVisualSuite
             && water.Contains(include, StringComparison.Ordinal)
             && water.Contains("element_halo(", StringComparison.Ordinal)
             && water.Contains("element_rim(", StringComparison.Ordinal),
-            "Expected every spirit to take its edges from the shared include.");
+            "Expected every hand-drawn spirit to take its edges from the shared include.");
 
         RegressionTestHarness.Require(
             visuals.Contains("CommonShaderIncludePath", StringComparison.Ordinal)
@@ -203,25 +199,68 @@ public sealed class ElementStateVisualSuite
     }
 
     [Fact]
-    public void HybridFireResourcesExposeBoundedThreeLayerContract()
+    public void FireSpiritIsTheNativeSteppedFire()
     {
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/combat/sakura_element_state_visuals.tscn"));
-        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/shaders/card_vfx/sakura_element_state_firey.gdshader"));
+        var fire = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraNativeSteppedFire.cs"));
+        var visuals = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraElementStateVisuals.cs"));
 
         foreach (var slot in new[] { "FireSlot", "WindSlot", "EarthSlot", "WaterSlot" })
             RegressionTestHarness.Require(
                 scene.Contains($"[node name=\"{slot}\" type=\"Node2D\" parent=\".\"]", StringComparison.Ordinal),
                 $"Expected the fixed element scene to reserve {slot}.");
 
+        // Fire is the game's own stepped fire: the rest-site three-layer stack, built
+        // from the game PCK's shaders and textures. A hand-drawn SDF flame read as an
+        // icon against the stage art.
         RegressionTestHarness.Require(
-            scene.Contains("[node name=\"FireyEmber\" type=\"ColorRect\" parent=\"FireSlot\"]", StringComparison.Ordinal)
-            && scene.Contains("mouse_filter", StringComparison.Ordinal)
-            && shader.Contains("uniform float state_alpha", StringComparison.Ordinal)
-            && shader.Contains("uniform float summon_progress", StringComparison.Ordinal)
-            && shader.Contains("uniform float trigger_progress", StringComparison.Ordinal),
-            "Expected the hybrid fire ember to live in FireSlot, ignore the mouse, and carry its own state controls.");
+            fire.Contains("\"res://shaders/vfx/vfx_stepped_shader_fire_flat.tres\"", StringComparison.Ordinal)
+            && fire.Contains("\"res://shaders/vfx/vfx_stepped_shader_fire_add.tres\"", StringComparison.Ordinal)
+            && fire.Contains("\"res://images/vfx/fire/fire_base_campfire.png\"", StringComparison.Ordinal)
+            && fire.Contains("\"SteppedFireMix\"", StringComparison.Ordinal)
+            && fire.Contains("\"SteppedFireAdd\"", StringComparison.Ordinal)
+            && fire.Contains("\"SteppedFireAdd1\"", StringComparison.Ordinal),
+            "Expected the fire spirit to rebuild the native rest-site stepped fire stack.");
+
+        // The mod export project does not mount the game PCK, so native paths may only
+        // be loaded from C# at runtime, never referenced by a mod-owned scene.
+        RegressionTestHarness.Require(
+            !scene.Contains("res://shaders/vfx/", StringComparison.Ordinal)
+            && !scene.Contains("res://images/vfx/", StringComparison.Ordinal)
+            && !scene.Contains("FireyEmber", StringComparison.Ordinal)
+            && !visuals.Contains("sakura_element_state_firey.gdshader", StringComparison.Ordinal),
+            "Expected no native resource path or retired fire shader in mod-owned resources.");
+
+        // Missing native resources hide the spirit rather than failing the mount; every
+        // fire beat tolerates the absence.
+        RegressionTestHarness.Require(
+            fire.Contains("internal static SakuraNativeSteppedFire? TryCreate()", StringComparison.Ordinal)
+            && fire.Contains("return null;", StringComparison.Ordinal)
+            && visuals.Contains("private readonly SakuraNativeSteppedFire? _flame;", StringComparison.Ordinal)
+            && visuals.Contains("_flame = SakuraNativeSteppedFire.TryCreate();", StringComparison.Ordinal),
+            "Expected the native fire to fail open when its resources are missing.");
+
+        // Idle motion mirrors NRestSiteFireVfx: vertical flicker and skew sway on
+        // randomised legs, on an inner body so the controller's beats drive the root.
+        RegressionTestHarness.Require(
+            fire.Contains("MinFlickerScale = 0.85f", StringComparison.Ordinal)
+            && fire.Contains("MaxFlickerScale = 1.05f", StringComparison.Ordinal)
+            && fire.Contains("MaxSkew = 0.1f", StringComparison.Ordinal)
+            && fire.Contains("\"skew\"", StringComparison.Ordinal)
+            && visuals.Contains("_flame?.StartIdle();", StringComparison.Ordinal)
+            && visuals.Contains("_flame?.StopIdle();", StringComparison.Ordinal)
+            && visuals.Contains("KillTween(ref _fireTriggerTween);", StringComparison.Ordinal),
+            "Expected native flicker and sway on the body, stopped on dispose, with a killable trigger pulse.");
+
+        // Visual work stays a fixed constant: a few CPU cinders, never a GPU emitter.
+        RegressionTestHarness.Require(
+            fire.Contains("CinderCount = 4", StringComparison.Ordinal)
+            && fire.Contains("new CpuParticles2D", StringComparison.Ordinal)
+            && !fire.Contains("GpuParticles", StringComparison.Ordinal),
+            "Expected the fire's cinders to stay a small fixed CPU budget.");
     }
 
     [Fact]

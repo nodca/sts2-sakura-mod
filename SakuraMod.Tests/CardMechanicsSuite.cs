@@ -1288,7 +1288,7 @@ public sealed class CardMechanicsSuite
             && AquaRules.DrawCount(1) == 1
             && AquaRules.DrawCount(2) == 2
             && AquaRules.FrostbiteEnemyCount([]) == 0
-            && AquaRules.FrostbiteEnemyForPresentation([]) is null
+            && AquaRules.FrostbiteEnemies([]).Count == 0
             && upgradedAqua.DynamicVars.Damage.IntValue == 7,
             "Expected Aqua to cost 0, deal 4/7 AOE damage, draw 1 per Frostbite enemy, and grant 1 Energy per Frostbite enemy with Extra.");
 

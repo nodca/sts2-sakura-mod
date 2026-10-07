@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using Godot;
 using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.TestSupport;
@@ -85,7 +87,7 @@ internal static class SpellTurnTransformationScenario
             "spell_turn_transformation_verified",
             "SpellTurn converted a live ClowSword deck/hand identity through PlayCardAction.");
 
-        return new Dictionary<string, object?>(StringComparer.Ordinal)
+        var result = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["fixture"] = new
             {
@@ -109,6 +111,10 @@ internal static class SpellTurnTransformationScenario
                     .Any(SakuraSourceCardRules.IsEligibleClowForTurn)
             }
         };
+
+        // Ends the turn: after every other check and after the result snapshot.
+        await VerifyTimeStopAsync(player, assertions);
+        return result;
     }
 
     private static async Task VerifyTransientCardVfxAsync(
@@ -143,30 +149,73 @@ internal static class SpellTurnTransformationScenario
 
         foreach (var frozen in new[] { false, true })
         {
-            var water = AquaWaterSphereVfx.TryCreate([target])
-                ?? throw new InvalidOperationException("Aqua presentation failed to mount.");
-            await water.PlayPrelude();
-            var waterRoot = Find("SakuraAquaWaterSphereVfx")
-                ?? throw new InvalidOperationException("Aqua ended before impact.");
-            var body = waterRoot.GetNode<ColorRect>("Spheres/AquaWater1/WaterBody");
-            var material = (ShaderMaterial)body.Material;
-            assertions.Equal($"aqua_{frozen}_enclosure_completes_before_gameplay", 1f,
-                material.GetShaderParameter("formation").AsSingle());
-            water.Impact(target);
-            if (frozen)
-                water.PlayFreeze(target);
-            water.Release();
-            await CombatScenarioContext.WaitUntilAsync(() => Find("SakuraAquaWaterSphereVfx") is null,
+            var aquaCalls = 0;
+            await AquaPhoenixVfx.PlayOrResolveAsync(ModelDb.Card<Aqua>(), null, [target], frozen, async cues =>
+            {
+                aquaCalls++;
+                var phoenix = Find("SakuraAquaPhoenixVfx")
+                    ?? throw new InvalidOperationException("Aqua presentation failed to mount.");
+                await cues.ReachAsync(target);
+                assertions.True($"aqua_{frozen}_bird_reaches_before_gameplay",
+                    phoenix.GetNode<Node2D>("%Bird").Visible);
+                assertions.True($"aqua_{frozen}_splash_lands_on_the_hit",
+                    phoenix.GetNode<Node2D>("%Splashes").GetChildren().OfType<Node2D>()
+                        .Any(static splash => splash.Name != "SplashTemplate"));
+                cues.Return(frozen ? [target] : []);
+                assertions.Equal($"aqua_{frozen}_ice_returns_only_for_frostbite",
+                    frozen ? AquaPhoenixVfx.CrystalsPerEnemy * 2 : 0,
+                    phoenix.GetNode<Node2D>("%Ice").GetChildCount());
+            });
+            assertions.Equal($"aqua_{frozen}_gameplay_resolves_once", 1, aquaCalls);
+            await CombatScenarioContext.WaitUntilAsync(() => Find("SakuraAquaPhoenixVfx") is null,
                 $"Aqua {(frozen ? "frozen" : "normal")} cleanup");
-            assertions.True($"aqua_{frozen}_outro_cleans_up", Find("SakuraAquaWaterSphereVfx") is null);
+            assertions.True($"aqua_{frozen}_outro_cleans_up", Find("SakuraAquaPhoenixVfx") is null);
         }
 
-        SakuraCardPlayVfx.PlayTime();
-        var clock = Find("SakuraTimeVfx") ?? throw new InvalidOperationException("Time presentation failed to mount.");
-        assertions.Equal("time_is_centered_on_the_battlefield", room.SceneContainer.GetGlobalRect().GetCenter(), clock.GlobalPosition);
-        assertions.True("time_native_animation_started", clock.GetNode<AnimationPlayer>("AnimationPlayer").IsPlaying());
-        await CombatScenarioContext.WaitUntilAsync(() => Find("SakuraTimeVfx") is null, "Time animation cleanup");
-        assertions.True("time_animation_releases_root", Find("SakuraTimeVfx") is null);
+    }
+
+    /// <summary>
+    /// Time's world stop on the live room: both grade layers mount where the
+    /// partition needs them, the stop cue holds gameplay until the clack, the
+    /// freeze outlives gameplay, and the next turn start releases every layer.
+    /// </summary>
+    /// <remarks>Ends the turn, so it runs after every other check.</remarks>
+    private static async Task VerifyTimeStopAsync(Player player, RuntimeAssertionCollector assertions)
+    {
+        var room = NCombatRoom.Instance ?? throw new InvalidOperationException("Time needs a live room.");
+        var casterNode = room.GetCreatureNode(player.Creature)
+            ?? throw new InvalidOperationException("Time needs the player's creature node.");
+        Node? Over() => room.CombatVfxContainer.GetChildren()
+            .FirstOrDefault(static node => node.Name == TimeStopVfx.OverRootName);
+        Node? Under() => casterNode.GetChildren()
+            .FirstOrDefault(static node => node.Name == TimeStopVfx.UnderRootName);
+        Node? Seals() => room.Ui.GetNodeOrNull(TimeStopVfx.SealRootName);
+
+        var calls = 0;
+        await TimeStopVfx.PlayOrResolveAsync(ModelDb.Card<SakuraMod.SakuraModCode.Cards.Time>(), player.Creature, true, async cues =>
+        {
+            calls++;
+            assertions.True("time_over_grade_is_first_combat_vfx_child",
+                room.CombatVfxContainer.GetChild(0).Name == TimeStopVfx.OverRootName);
+            assertions.True("time_under_grade_is_first_creature_child",
+                casterNode.GetChild(0).Name == TimeStopVfx.UnderRootName);
+            assertions.True("time_seal_overlay_mounts_under_combat_ui", Seals() is not null);
+            var watch = Stopwatch.StartNew();
+            await cues.StopAsync();
+            assertions.True("time_stop_cue_waits_for_the_clack",
+                watch.Elapsed.TotalSeconds >= (TimeStopVfx.Clack - TimeStopVfx.WaveStart) * 0.8,
+                watch.Elapsed.TotalSeconds.ToString("F3", System.Globalization.CultureInfo.InvariantCulture));
+            assertions.True("time_extra_effect_stamps_seals",
+                Seals()?.GetNodeOrNull("Pins") is { } pins && pins.GetChildCount() > 1);
+        });
+        assertions.Equal("time_gameplay_resolves_once", 1, calls);
+        assertions.True("time_freeze_holds_after_gameplay", Over() is not null && Under() is not null);
+
+        await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
+        await CombatScenarioContext.WaitUntilAsync(
+            () => Over() is null && Under() is null && Seals() is null,
+            "Time release cleanup");
+        assertions.True("time_turn_start_releases_every_layer", Over() is null && Under() is null && Seals() is null);
     }
 
     private static int InspectRunAssetCache(RuntimeAssertionCollector assertions)
@@ -211,12 +260,11 @@ internal static class SpellTurnTransformationScenario
         var missedCacheAssetsBefore = PreloadManager.Cache.MissedCacheAssetCount;
         var scenePaths = new[]
         {
-            AquaWaterSphereVfx.ScenePath,
-            AquaWaterSphereVfx.TargetScenePath,
+            AquaPhoenixVfx.ScenePath,
             HailIceShardVfx.ScenePath,
             HailIceShardVfx.TargetScenePath,
-            BlazeFireColumnVfx.ScenePath,
-            SakuraCardPlayVfx.TimeScenePath,
+            BlazePhoenixVfx.ScenePath,
+            TimeStopVfx.ScenePath,
             SakuraSwordBladeVfx.ScenePath,
             SakuraSwordBladeVfx.TargetScenePath,
             SpellTurnTransformationVfx.ScenePath

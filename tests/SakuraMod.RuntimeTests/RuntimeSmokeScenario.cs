@@ -899,9 +899,8 @@ internal static class RuntimeSmokeScenario
             ["combat_scene"] = "res://SakuraMod/scenes/combat/sakura_element_state_hud.tscn",
             ["magic_charge_scene"] = SakuraMagicChargeHud.ScenePath,
             ["spell_turn_scene"] = SpellTurnTransformationVfx.ScenePath,
-            ["aqua_water_sphere_scene"] = AquaWaterSphereVfx.ScenePath,
-            ["aqua_water_sphere_target_scene"] = AquaWaterSphereVfx.TargetScenePath,
-            ["aqua_water_sphere_shader"] = AquaWaterSphereVfx.ShaderPath,
+            ["aqua_phoenix_scene"] = AquaPhoenixVfx.ScenePath,
+            ["aqua_phoenix_shader"] = AquaPhoenixVfx.ShaderPath,
             ["character_scene"] = "res://SakuraMod/scenes/screens/char_select/sakura_character_select_background.tscn",
             ["rest_site_scene"] = "res://SakuraMod/scenes/rest_site/sakura_rest_site_character.tscn",
             ["texture"] = "res://SakuraMod/images/relics/sealed_wand.png",
@@ -980,69 +979,57 @@ internal static class RuntimeSmokeScenario
             spellTurnScene?.Dispose();
         }
 
-        var aquaScene = ResourceLoader.Load<PackedScene>(AquaWaterSphereVfx.ScenePath);
-        var aquaTargetScene = ResourceLoader.Load<PackedScene>(AquaWaterSphereVfx.TargetScenePath);
-        var aquaShader = ResourceLoader.Load<Shader>(AquaWaterSphereVfx.ShaderPath);
+        var aquaScene = ResourceLoader.Load<PackedScene>(AquaPhoenixVfx.ScenePath);
         Node2D? aquaRoot = null;
-        Node2D? firstAquaTarget = null;
-        Node2D? secondAquaTarget = null;
+        Node2D? firstSplash = null;
+        Node2D? secondSplash = null;
         try
         {
-            assertions.True(
-                "aqua_water_sphere_resources_are_preloaded",
-                AquaWaterSphereVfx.ResourcesArePreloaded);
             aquaRoot = aquaScene?.Instantiate<Node2D>();
-            assertions.True("aqua_water_sphere_scene_instantiates", aquaRoot is not null, AquaWaterSphereVfx.ScenePath);
+            assertions.True("aqua_phoenix_scene_instantiates", aquaRoot is not null, AquaPhoenixVfx.ScenePath);
             assertions.True(
-                "aqua_water_sphere_stable_back_buffer",
+                "aqua_phoenix_stable_back_buffer",
                 aquaRoot?.GetNodeOrNull<BackBufferCopy>("StableCombatFrame")?.CopyMode
                     == BackBufferCopy.CopyModeEnum.Viewport);
             assertions.True(
-                "aqua_crest_region_is_scene_authored",
-                aquaRoot?.GetNodeOrNull<ColorRect>("Crest/CrestBody")?.Material is ShaderMaterial
-                && aquaRoot.GetNodeOrNull<Node2D>("Debris") is not null);
+                "aqua_phoenix_layers_are_scene_authored",
+                aquaRoot?.GetNodeOrNull<ColorRect>("Vortex/VortexBody")?.Material is ShaderMaterial
+                && aquaRoot.GetNodeOrNull<Line2D>("Tail")?.Material is ShaderMaterial
+                && aquaRoot.GetNodeOrNull<ColorRect>("Bird/BirdBody")?.Material is ShaderMaterial
+                && aquaRoot.GetNodeOrNull<Node2D>("Ice") is not null);
             assertions.True(
-                "aqua_water_bird_is_retired",
-                aquaRoot?.GetNodeOrNull<Node2D>("WaterBird") is null
-                && aquaRoot?.GetNodeOrNull<Node2D>("BindingStreams") is null);
-            assertions.True("aqua_water_sphere_shader_loads", aquaShader is not null, AquaWaterSphereVfx.ShaderPath);
+                "aqua_water_sphere_is_retired",
+                !ResourceLoader.Exists("res://SakuraMod/scenes/combat/card_vfx/aqua_water_sphere_vfx.tscn")
+                && aquaRoot?.GetNodeOrNull<Node2D>("Spheres") is null);
 
-            firstAquaTarget = aquaTargetScene?.Instantiate<Node2D>();
-            secondAquaTarget = aquaTargetScene?.Instantiate<Node2D>();
-            var firstMaterial = firstAquaTarget?.GetNodeOrNull<ColorRect>("WaterBody")?.Material as ShaderMaterial;
-            var secondMaterial = secondAquaTarget?.GetNodeOrNull<ColorRect>("WaterBody")?.Material as ShaderMaterial;
+            var template = aquaRoot?.GetNodeOrNull<Node2D>("Splashes/SplashTemplate");
+            firstSplash = template?.Duplicate() as Node2D;
+            secondSplash = template?.Duplicate() as Node2D;
+            var firstBody = firstSplash?.GetNodeOrNull<ColorRect>("SplashBody");
+            var secondBody = secondSplash?.GetNodeOrNull<ColorRect>("SplashBody");
+            if (firstBody?.Material is ShaderMaterial firstSource)
+                firstBody.Material = (ShaderMaterial)firstSource.Duplicate();
+            if (secondBody?.Material is ShaderMaterial secondSource)
+                secondBody.Material = (ShaderMaterial)secondSource.Duplicate();
+            var firstMaterial = firstBody?.Material as ShaderMaterial;
+            var secondMaterial = secondBody?.Material as ShaderMaterial;
             assertions.True(
-                "aqua_water_sphere_targets_instantiate",
-                firstAquaTarget is not null && secondAquaTarget is not null,
-                AquaWaterSphereVfx.TargetScenePath);
-            assertions.True(
-                "aqua_water_sphere_materials_are_independent",
+                "aqua_splash_materials_are_independent",
                 firstMaterial is not null
                 && secondMaterial is not null
                 && !ReferenceEquals(firstMaterial, secondMaterial));
-            firstMaterial?.SetShaderParameter("formation", 0.73f);
-            assertions.Equal(
-                "aqua_water_sphere_material_parameters_are_independent",
-                0f,
-                secondMaterial?.GetShaderParameter("formation").AsSingle() ?? -1f);
             firstMaterial?.SetShaderParameter("freeze", 1f);
             assertions.Equal(
-                "aqua_water_freeze_parameter_is_independent",
+                "aqua_splash_freeze_parameter_is_independent",
                 0f,
                 secondMaterial?.GetShaderParameter("freeze").AsSingle() ?? -1f);
-            assertions.True(
-                "aqua_water_region_size_is_writable",
-                firstAquaTarget?.GetNodeOrNull<ColorRect>("WaterBody") is not null
-                && firstMaterial?.GetShaderParameter("region_size").AsVector2() != Vector2.Zero);
         }
         finally
         {
-            aquaRoot?.Dispose();
-            firstAquaTarget?.Dispose();
-            secondAquaTarget?.Dispose();
+            firstSplash?.Free();
+            secondSplash?.Free();
+            aquaRoot?.Free();
             aquaScene?.Dispose();
-            aquaTargetScene?.Dispose();
-            aquaShader?.Dispose();
         }
 
         var magicChargeScene = ResourceLoader.Load<PackedScene>(SakuraMagicChargeHud.ScenePath);

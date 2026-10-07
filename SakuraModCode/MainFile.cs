@@ -43,6 +43,5 @@ public partial class MainFile : Node
         SakuraCombatResourceHudPatchRegistration.Register();
         SakuraRunHooks.Register();
         ClearCardLayout.PreloadVisualResources();
-        AquaWaterSphereVfx.PreloadResources();
     }
 }
