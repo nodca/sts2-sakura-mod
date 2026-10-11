@@ -364,12 +364,6 @@ internal static class SakuraGeneratedCardLifecycle
         GeneratedTransparentHandVisualCards.GetOrCreateValue(card);
     }
 
-    private static string FormatCard(CardModel card) =>
-        $"{card.GetType().Name}/{card.Id.Entry}";
-
-    private static string FormatPile(PileType? pile) =>
-        pile?.ToString() ?? "null";
-
     private sealed class GeneratedTransparentHandVisualMarker;
 
     public static CardModel CreateManifestChoice(Player owner, CardModel source)

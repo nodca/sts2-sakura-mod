@@ -160,7 +160,7 @@ internal static class AfflictionVisualLayoutScenario
             CardCmd.ClearAffliction(model);
             await ApplyAffliction<TAffliction>(player, model);
             results[affliction] = InspectGeometry(layout, affliction, card, assertions);
-            if (affliction is "bound" or "tainted")
+            if (affliction is "bound" or "entangled" or "tainted")
             {
                 card.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
                 results[$"{affliction}_refresh"] = InspectGeometry(
@@ -170,17 +170,17 @@ internal static class AfflictionVisualLayoutScenario
                     assertions);
             }
 
-            if (affliction == "tainted" && layout != "vanilla")
+            if (affliction is "entangled" or "tainted" && layout != "vanilla")
             {
                 var ledger = SakuraCardMutationLedgers.For(card);
                 ledger.Restore(layout == "classic" ? SakuraCardRendererId.Classic : SakuraCardRendererId.Clear);
                 var main = RequireOverlay(card).GetChild<Control>(0).GetNode<Control>("vfx_container/main");
                 assertions.True(
-                    $"affliction_{layout}_tainted_native_scale_restored",
+                    $"affliction_{layout}_{affliction}_native_scale_restored",
                     Near(Vector2.One * 1.2f, main.Scale),
-                    $"Tainted native scale was not restored: {main.Scale}.");
+                    $"{affliction} native scale was not restored: {main.Scale}.");
                 card.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
-                results["tainted_reapplied"] = InspectGeometry(layout, "tainted", card, assertions);
+                results[$"{affliction}_reapplied"] = InspectGeometry(layout, affliction, card, assertions);
             }
         }
     }
@@ -222,7 +222,7 @@ internal static class AfflictionVisualLayoutScenario
                 && Near(effectRoot.Size, mask.Size),
                 $"Effect root {effectRoot.Position}/{effectRoot.Size} does not match mask {mask.Size}.");
 
-            if (affliction == "entangled")
+            if (affliction is "entangled" or "entangled_refresh")
                 AssertEntangled(layout, effectRoot, mask.Size, assertions);
             else if (affliction is "bound" or "bound_refresh")
                 AssertBound(layout, effectRoot, mask.Size, assertions);
@@ -284,9 +284,16 @@ internal static class AfflictionVisualLayoutScenario
         assertions.True(
             $"affliction_{layout}_entangled_leaf_profile",
             Near(Vector2.Zero, leaves.Position)
-            && Near(Vector2.Zero, main.PivotOffset)
-            && Near(new Vector2(size.Y * -0.6f, size.Y * -0.6f), main.Position),
+            && Near(Vector2.Zero, main.PivotOffset),
             $"Entangled leaves/main geometry was {leaves.Position}/{main.Position}/{main.PivotOffset}.");
+        var visibleSize = main.Size * main.Scale;
+        var nativeSize = SakuraCardGeometry.VanillaLayoutSize;
+        assertions.True(
+            $"affliction_{layout}_entangled_edge_clearance",
+            Mathf.Abs(visibleSize.X / size.X - nativeSize.Y * 1.2f / nativeSize.X) < 0.001f
+            && Mathf.Abs(visibleSize.Y / size.Y - 1.2f) < 0.001f
+            && Near(main.Position + visibleSize * 0.5f, Vector2.Zero),
+            $"Entangled visible field {visibleSize} at {main.Position} does not preserve native edge clearance for {size}.");
     }
 
     private static void AssertGalvanized(

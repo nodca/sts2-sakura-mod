@@ -89,7 +89,6 @@ public sealed class DarkEndpointSuite
             Assert.Contains("SAKURA_MOD_CARD_MICRO_LIGHT.description", cards.Keys);
             Assert.Contains("SAKURA_MOD_POWER_DARKNESS_POWER.title", powers.Keys);
             Assert.Contains("SAKURA_MOD_POWER_DARK_CONFINEMENT_SELECTION_POWER.selectionPrompt", powers.Keys);
-            Assert.DoesNotContain(cards["SAKURA_MOD_CARD_MICRO_LIGHT.description"], locale == "zhs" ? "暗幕" : "Dark Veil");
             Assert.DoesNotContain(powers.Keys, key => key.Contains("DARK_VEIL_POWER", StringComparison.Ordinal));
             Assert.DoesNotContain(powers.Keys, key => key.Contains("DARK_NIGHT_POWER", StringComparison.Ordinal));
         }

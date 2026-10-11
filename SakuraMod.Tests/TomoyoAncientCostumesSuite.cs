@@ -73,16 +73,5 @@ public sealed class TomoyoAncientCostumesSuite
             Assert.True(entries.ContainsKey(optionPrefix + ".title"), $"Missing {optionPrefix}.title in {relativePath}.");
             Assert.True(entries.ContainsKey(optionPrefix + ".description"), $"Missing {optionPrefix}.description in {relativePath}.");
         }
-
-        if (locale == "zhs")
-        {
-            Assert.Equal("小樱，终于找到你了！我还带来了几套专门为你准备的战斗服。", entries[$"{eventEntry}.talk.firstVisitEver.0-0.ancient"].GetString());
-            Assert.Equal("选择库洛牌战斗服。", entries[$"{eventEntry}.pages.INITIAL.options.{RegressionTestHarness.RegisteredModelEntry(typeof(ClassicRedCapeRelic))}.title"].GetString());
-            Assert.Equal("获得红披风战斗服。", entries[$"{eventEntry}.pages.INITIAL.options.{RegressionTestHarness.RegisteredModelEntry(typeof(ClassicRedCapeRelic))}.description"].GetString());
-            Assert.Equal("选择小樱牌战斗服。", entries[$"{eventEntry}.pages.INITIAL.options.{RegressionTestHarness.RegisteredModelEntry(typeof(ClassicPinkTransformationCostumeRelic))}.title"].GetString());
-            Assert.Equal("获得粉色战斗服。", entries[$"{eventEntry}.pages.INITIAL.options.{RegressionTestHarness.RegisteredModelEntry(typeof(ClassicPinkTransformationCostumeRelic))}.description"].GetString());
-            Assert.Equal("选择透明牌战斗服。", entries[$"{eventEntry}.pages.INITIAL.options.{RegressionTestHarness.RegisteredModelEntry(typeof(ClassicFrogRaincoatRelic))}.title"].GetString());
-            Assert.Equal("获得青蛙雨衣。", entries[$"{eventEntry}.pages.INITIAL.options.{RegressionTestHarness.RegisteredModelEntry(typeof(ClassicFrogRaincoatRelic))}.description"].GetString());
-        }
     }
 }

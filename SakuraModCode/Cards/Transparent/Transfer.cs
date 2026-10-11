@@ -34,7 +34,6 @@ public class Transfer() : TransparentExtraEffectCard(2, CardType.Skill, CardRari
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        ApplyExtraEffectExhaustChange(activation);
         var targets = SakuraThroughResolution.TargetsFor(play);
         await SakuraThroughResolution.WithPropagationSuppressed(async () =>
         {
@@ -57,21 +56,12 @@ public class Transfer() : TransparentExtraEffectCard(2, CardType.Skill, CardRari
             ? PileType.Discard
             : base.GetResultPileTypeForCardPlay();
 
-    private void ApplyExtraEffectExhaustChange(SakuraExtraEffectActivation activation)
-    {
-        if (activation.IsActive)
-            RemoveKeywordIfPresent(CardKeyword.Exhaust);
-        else
-            AddKeywordIfMissing(CardKeyword.Exhaust);
-    }
-
     protected override void OnUpgrade()
     {
         DynamicVars["EnemyStrengthLoss"].UpgradeValueBy(1);
         DynamicVars["StrengthGain"].UpgradeValueBy(1);
     }
 }
-
 
 
 

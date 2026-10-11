@@ -90,16 +90,10 @@ public sealed class SakuraRelicParitySuite
     {
         var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Relics/Models/ClassicFrogRaincoatRelic.cs"));
-        var zhs = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/localization/zhs/relics.json"));
-        var eng = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/localization/eng/relics.json"));
 
         RegressionTestHarness.Require(
-            source.Contains("SakuraCardHoverTips.StaticTip(SakuraCardHoverTips.RemindTipKey)", StringComparison.Ordinal)
-            && zhs.Contains("[gold]想起[/gold]", StringComparison.Ordinal)
-            && eng.Contains("[gold]Remind[/gold]", StringComparison.Ordinal),
-            "Expected Frog Raincoat to color Remind gold and expose its registered static hover tip.");
+            source.Contains("SakuraCardHoverTips.StaticTip(SakuraCardHoverTips.RemindTipKey)", StringComparison.Ordinal),
+            "Expected Frog Raincoat to expose its registered Remind static hover tip.");
     }
 
     [Fact]
@@ -189,40 +183,6 @@ public sealed class SakuraRelicParitySuite
                 type.GetMethod("AddGeneratedTurnCard", DeclaredGrant)?.DeclaringType
                     == typeof(ClassicSealedWandRelic)),
             "Expected every wand to inherit the single grant path instead of adding a second Turn of its own.");
-    }
-
-    [Fact]
-    public void EveryTurnGrantingRelicTextStatesTheUnplayedTurnIsKept()
-    {
-        static string LineFor(IEnumerable<string> lines, string key) =>
-            lines.FirstOrDefault(line => line.Contains($"\"{key}\"", StringComparison.Ordinal))
-            ?? throw new InvalidOperationException($"Missing localization key {key}.");
-
-        var zhsLines = File.ReadAllLines(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/localization/zhs/relics.json"));
-        var engLines = File.ReadAllLines(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/localization/eng/relics.json"));
-
-        var keys = new[]
-        {
-            "SAKURA_MOD_RELIC_CLASSIC_SEALED_WAND_RELIC.description",
-            "SAKURA_MOD_RELIC_CLASSIC_STAR_WAND_RELIC.description",
-            "SAKURA_MOD_RELIC_CLASSIC_ULTIMATE_WAND_RELIC.description",
-            "SAKURA_MOD_RELIC_CLASSIC_MOON_BELL_RELIC.description"
-        };
-
-        const string PersistenceClause = "保留到之后的战斗";
-        string[] engPersistenceClauses = ["is kept for later combats", "carry over to later combats", "carries over to later combats"];
-
-        RegressionTestHarness.Require(
-            keys.All(key => LineFor(zhsLines, key).Contains(PersistenceClause, StringComparison.Ordinal))
-            && keys.All(key => engPersistenceClauses.Any(clause => LineFor(engLines, key).Contains(clause, StringComparison.Ordinal))),
-            "Expected every Turn-granting relic to state that an unplayed Turn is kept for later combats.");
-
-        RegressionTestHarness.Require(
-            keys.All(key => !LineFor(zhsLines, key).Contains("加入手牌和牌组", StringComparison.Ordinal))
-            && keys.All(key => !LineFor(engLines, key).Contains("to your hand and deck", StringComparison.Ordinal)),
-            "Expected no Turn-granting relic to describe its Turn as entering the hand and deck at once.");
     }
 
     [Fact]

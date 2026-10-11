@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Enchantments;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Relics;
@@ -142,6 +143,44 @@ internal static class ExtraEffectPlayScenario
             drawVoidsBeforePinkReturn,
             CountVoids(player, PileType.Draw));
 
+        var transferFixture = new RuntimeFixtureAction(player, async choiceContext =>
+        {
+            await PlayerCmd.GainEnergy(20, player);
+            await SakuraMagicCharge.SpendAllMagic(choiceContext, player);
+            await CardCmd.Discard(choiceContext, playerCombat.Hand.Cards.ToList());
+        });
+        await CombatScenarioContext.EnqueueAndWaitAsync(transferFixture);
+
+        var normalTransfer = await CombatScenarioContext.AddGeneratedCardToHandAsync<Transfer>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(normalTransfer, target);
+        assertions.Equal("transfer_without_extra_exhausts", PileType.Exhaust, normalTransfer.Pile?.Type);
+
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player,
+            choiceContext => SakuraMagicCharge.GainMagic(choiceContext, player, FixtureMagicCharge)));
+        var extraTransfer = await CombatScenarioContext.AddGeneratedCardToHandAsync<Transfer>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(extraTransfer, target);
+        assertions.Equal("transfer_extra_discards", PileType.Discard, extraTransfer.Pile?.Type);
+        assertions.True("transfer_extra_preserves_exhaust_keyword", extraTransfer.Keywords.Contains(CardKeyword.Exhaust));
+        await SakuraActions.MoveExistingCardToHand(extraTransfer, extraTransfer);
+        assertions.Equal("transfer_returned_to_hand", PileType.Hand, extraTransfer.Pile?.Type);
+        var repeatedTransferPlay = await CombatScenarioContext.PlayCardAsync(extraTransfer, target);
+        assertions.True("transfer_repeated_play_executed", repeatedTransferPlay.PlayerChoiceContext is not null);
+        assertions.Equal("transfer_after_extra_exhausts_again", PileType.Exhaust, extraTransfer.Pile?.Type);
+
+        var enchantedTransfer = await CombatScenarioContext.AddGeneratedCardToHandAsync<Transfer>(combat, player);
+        assertions.True("transfer_accepts_souls_power", CardCmd.Enchant<SoulsPower>(enchantedTransfer, 1m) is not null);
+        for (var playIndex = 0; playIndex < 2; playIndex++)
+        {
+            assertions.Equal($"souls_power_transfer_in_hand_{playIndex}", PileType.Hand, enchantedTransfer.Pile?.Type);
+            var enchantedPlay = await CombatScenarioContext.PlayCardAsync(enchantedTransfer, target);
+            assertions.True($"souls_power_transfer_play_executed_{playIndex}", enchantedPlay.PlayerChoiceContext is not null);
+            assertions.Equal($"souls_power_transfer_discards_{playIndex}", PileType.Discard, enchantedTransfer.Pile?.Type);
+            assertions.Equal($"souls_power_transfer_has_no_exhaust_{playIndex}", false,
+                enchantedTransfer.Keywords.Contains(CardKeyword.Exhaust));
+            if (playIndex == 0)
+                await SakuraActions.MoveExistingCardToHand(enchantedTransfer, enchantedTransfer);
+        }
+
         RuntimeTestHost.WriteCheckpoint(
             request,
             "extra_effect_play_verified",
@@ -165,7 +204,9 @@ internal static class ExtraEffectPlayScenario
                     $"Generated {nameof(ClowReturn)} -> hand",
                     $"RelicCmd.Obtain<{nameof(ClassicPinkTransformationCostumeRelic)}>",
                     $"Generated {nameof(SakuraShield)} -> hand after pink costume",
-                    $"Generated {nameof(ClowReturn)} -> hand after pink costume"
+                    $"Generated {nameof(ClowReturn)} -> hand after pink costume",
+                    "Transfer fixture -> GainEnergy(20), SpendAllMagic, discard hand, then GainMagic(10) for Extra",
+                    "Transfer fixture -> return discarded instances to hand; CardCmd.Enchant<SoulsPower>"
                 }
             },
             ["extra"] = new

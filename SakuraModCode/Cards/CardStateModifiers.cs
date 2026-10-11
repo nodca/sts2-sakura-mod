@@ -22,7 +22,13 @@ public sealed class SynchronizedCardPairModifier : SakuraCardStateCapability
     private static readonly HashSet<SynchronizedPairKey> ResolvingPairs = [];
     internal static IReadOnlyList<PileType> AutoPlayPileTypes { get; } =
         [PileType.Hand, PileType.Draw, PileType.Discard];
-    private readonly List<CardModel> _pairedCards = [];
+    private List<CardModel> _pairedCards = [];
+
+    protected override void DeepCloneFields()
+    {
+        base.DeepCloneFields();
+        _pairedCards = [.. _pairedCards];
+    }
 
     public void AddPairedCard(CardModel pairedCard)
     {

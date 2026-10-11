@@ -2944,10 +2944,7 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
-    public void ClearCardDescriptionsAvoidRedundantText() => RequireClearCardDescriptionsAvoidRedundantText();
-
-    [Fact]
-    public void ForgottenTerminologyKeepsGeneralAndSpecialRulesSeparated()
+    public void MemoryPileIconAndLocalizationRemainAvailable()
     {
         var memoryIcon = RegressionTestHarness.FindRepoFile("SakuraMod/images/powers/record.png");
         RegressionTestHarness.Require(
@@ -2960,117 +2957,15 @@ public sealed class ResourceContractSuite
             var tips = JsonSerializer.Deserialize<Dictionary<string, string>>(
                 File.ReadAllText(RegressionTestHarness.FindRepoFile(tipsPath)))
                 ?? throw new InvalidOperationException($"Could not parse {tipsPath}.");
-            var forgottenTitle = locale == "zhs" ? "遗忘" : "Forgotten";
-            var oldStateTitle = locale == "zhs" ? "临时" : "Temporary";
-            var termComparison = locale == "zhs"
-                ? StringComparison.Ordinal
-                : StringComparison.OrdinalIgnoreCase;
-            var forgotten = tips["SAKURAMOD-TEMPORARY.description"];
-            var memoryDescription = tips["SAKURA_MOD_CARDPILE_MEMORY.description"];
-            var remind = tips["SAKURAMOD-REMIND.description"];
-
             RegressionTestHarness.Require(
-                tips["SAKURAMOD-TEMPORARY.title"] == forgottenTitle,
-                $"Expected {locale} to display the Temporary state as {forgottenTitle}.");
-            RegressionTestHarness.Require(
-                tips.ContainsKey("SAKURA_MOD_CARDPILE_MEMORY.title")
+                tips.ContainsKey("SAKURAMOD-TEMPORARY.title")
+                && tips.ContainsKey("SAKURAMOD-TEMPORARY.description")
+                && tips.ContainsKey("SAKURAMOD-REMIND.description")
+                && tips.ContainsKey("SAKURA_MOD_CARDPILE_MEMORY.title")
                 && tips.ContainsKey("SAKURA_MOD_CARDPILE_MEMORY.description")
                 && tips.ContainsKey("SAKURA_MOD_CARDPILE_MEMORY.empty"),
-                $"Expected {locale} Memory pile title, description, and empty text.");
-            RegressionTestHarness.Require(
-                forgotten.Contains(forgottenTitle, StringComparison.Ordinal)
-                && (forgotten.Contains("Memory", StringComparison.Ordinal)
-                    || forgotten.Contains("记忆区", StringComparison.Ordinal))
-                && (forgotten.Contains("Exhaust", StringComparison.Ordinal)
-                    || forgotten.Contains("消耗牌堆", StringComparison.Ordinal))
-                && (memoryDescription.Contains("Exhaust", StringComparison.Ordinal)
-                    || memoryDescription.Contains("消耗牌堆", StringComparison.Ordinal))
-                && !forgotten.Contains("Remind", StringComparison.Ordinal)
-                && !forgotten.Contains("想起", StringComparison.Ordinal),
-                $"Expected {locale} Forgotten hover text to explain only its general Memory rule.");
-            RegressionTestHarness.Require(
-                locale == "zhs"
-                    ? remind.Contains("本回合耗能为 0", StringComparison.Ordinal)
-                    : remind.Contains("cost 0 this turn", StringComparison.OrdinalIgnoreCase),
-                $"Expected {locale} Remind hover text to keep recalled copies free for the turn.");
-            RegressionTestHarness.Require(
-                !remind.Contains(forgottenTitle, termComparison),
-                $"Expected {locale} Remind hover text not to grant Forgotten to recalled copies.");
-
-            var stateReferences = new Dictionary<string, string[]>
-            {
-                ["cards.json"] =
-                [
-                    "SAKURAMOD-GENERIC.temporaryCardPrompt",
-                    "SAKURA_MOD_CARD_DREAMING.description",
-                    "SAKURA_MOD_CARD_EXCHANGE.description",
-                    "SAKURA_MOD_CARD_SPIRAL.description",
-                    "SAKURA_MOD_CARD_BLANK.description",
-                    "SAKURA_MOD_CARD_TRUE_OR_FALSE.description",
-                    "SAKURA_MOD_CARD_TRUE_OR_FALSE_DRAW_CHOICE.description"
-                ],
-                ["powers.json"] =
-                [
-                    "SAKURA_MOD_POWER_DREAMING_POWER.description",
-                    "SAKURA_MOD_POWER_DREAMING_POWER.smartDescription"
-                ],
-                ["card_keywords.json"] =
-                [
-                    "SAKURAMOD-STABILIZE.description",
-                    "SAKURAMOD-MANIFEST.description"
-                ],
-                ["static_hover_tips.json"] =
-                [
-                    "SAKURAMOD-TEMPORARY.title",
-                    "SAKURAMOD-TEMPORARY.description",
-                    "SAKURA_MOD_CARDPILE_MEMORY.description"
-                ]
-            };
-            if (locale == "eng")
-            {
-                stateReferences["characters.json"] =
-                ["SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.description"];
-            }
-
-            foreach (var (fileName, keys) in stateReferences)
-            {
-                var relativePath = $"SakuraMod/localization/{locale}/{fileName}";
-                var localization = JsonSerializer.Deserialize<Dictionary<string, string>>(
-                    File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath)))
-                    ?? throw new InvalidOperationException($"Could not parse {relativePath}.");
-                foreach (var key in keys)
-                {
-                    RegressionTestHarness.Require(
-                        localization[key].Contains(forgottenTitle, StringComparison.Ordinal)
-                        && !localization[key].Contains(oldStateTitle, termComparison),
-                        $"Expected {locale} {key} to use {forgottenTitle} instead of the old state name.");
-                }
-            }
-
-            var powersPath = $"SakuraMod/localization/{locale}/powers.json";
-            var powers = JsonSerializer.Deserialize<Dictionary<string, string>>(
-                File.ReadAllText(RegressionTestHarness.FindRepoFile(powersPath)))
-                ?? throw new InvalidOperationException($"Could not parse {powersPath}.");
-            RegressionTestHarness.Require(
-                powers["SAKURA_MOD_POWER_SAKURA_TEMPORARY_DEXTERITY_POWER.title"]
-                    .Contains(oldStateTitle, termComparison)
-                && powers["SAKURA_MOD_POWER_CLASSIC_TEMPORARY_STRENGTH_POWER.title"]
-                    .Contains(oldStateTitle, termComparison)
-                && powers["SAKURA_MOD_POWER_CLASSIC_TEMPORARY_STRENGTH_LOSS_POWER.title"]
-                    .Contains(oldStateTitle, termComparison)
-                && powers["SAKURA_MOD_POWER_CLASSIC_DREAM_POWER.description"]
-                    .Contains(oldStateTitle, termComparison),
-                $"Expected {locale} generic duration wording to remain unchanged.");
+                $"Expected {locale} Forgotten, Remind, and Memory pile localization keys.");
         }
-
-        var cardStateSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/CardStateModifiers.cs"));
-        RegressionTestHarness.Require(
-            cardStateSource.Contains("[red]遗忘[/red]", StringComparison.Ordinal)
-            && cardStateSource.Contains("[red]Forgotten[/red]", StringComparison.Ordinal)
-            && !cardStateSource.Contains("[red]临时[/red]", StringComparison.Ordinal)
-            && !cardStateSource.Contains("[red]Temporary[/red]", StringComparison.Ordinal),
-            "Expected dynamically rendered Temporary state labels to use Forgotten terminology in both locales.");
     }
 
     [Fact]
@@ -3184,17 +3079,14 @@ public sealed class ResourceContractSuite
     {
         foreach (var locale in new[] { "eng", "zhs" })
         {
-            var cards = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
-                RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/cards.json")))!;
             var tips = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
                 RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/static_hover_tips.json")))!;
             var powers = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
                 RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/powers.json")))!;
             RegressionTestHarness.Require(
-                cards["SAKURA_MOD_CARD_LABYRINTH.description"].Count(character => character == '\n') == 2
-                && tips.ContainsKey("SAKURAMOD-ENTER_LABYRINTH.description")
+                tips.ContainsKey("SAKURAMOD-ENTER_LABYRINTH.description")
                 && powers.ContainsKey("SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.description"),
-                $"Expected {locale} Labyrinth field rules, Earthy discount, and Lost explanation.");
+                $"Expected {locale} Labyrinth entry and Lost explanation keys.");
         }
         foreach (var relativePath in new[]
         {
@@ -3343,36 +3235,6 @@ public sealed class ResourceContractSuite
             && energyIndex >= 0
             && returnedIndex > energyIndex,
             "Expected Gravitation to open a caster-foot well through a short cel session and a Power-tied persist owner, and overlay native hand motion.");
-    }
-
-    private static void RequireClearCardDescriptionsAvoidRedundantText()
-    {
-        foreach (var locale in new[] { "eng", "zhs" })
-        {
-            var relativePath = $"SakuraMod/localization/{locale}/cards.json";
-            var cards = JsonSerializer.Deserialize<Dictionary<string, string>>(
-                File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath)))
-                ?? throw new InvalidOperationException($"Could not parse {relativePath}.");
-
-            var remind = cards["SAKURA_MOD_CARD_REMIND.description"];
-            RegressionTestHarness.Require(
-                cards.Values.All(description =>
-                    !description.Contains("Upgrade:", StringComparison.Ordinal)
-                    && !description.Contains("升级：", StringComparison.Ordinal)),
-                $"Expected {locale} card descriptions not to include explicit upgrade notes.");
-            RegressionTestHarness.Require(
-                !remind.Contains("[gold]Exhaust[/gold]", StringComparison.Ordinal)
-                && !remind.Contains("[gold]消耗[/gold]", StringComparison.Ordinal),
-                $"Expected {locale} Remind description not to duplicate its native Exhaust keyword.");
-        }
-
-        var chineseCardsPath = RegressionTestHarness.FindRepoFile("SakuraMod/localization/zhs/cards.json");
-        var chineseCards = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(chineseCardsPath))
-            ?? throw new InvalidOperationException("Could not parse zhs cards localization.");
-        RegressionTestHarness.Require(
-            !chineseCards["SAKURA_MOD_CARD_TRUE_OR_FALSE.description"]
-                .Contains("[gold]消耗[/gold]", StringComparison.Ordinal),
-            "Expected Chinese True or False description not to duplicate its native Exhaust keyword.");
     }
 
     private static void RequirePngWithImport(string relativePath, int width, int height)

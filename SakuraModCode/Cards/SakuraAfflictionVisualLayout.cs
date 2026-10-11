@@ -159,7 +159,10 @@ internal static class SakuraAfflictionVisualLayout
         BorrowNodePositions(ledger, particles);
 
         SetCenteredContainer(container, targetSize);
-        SetScaledCenteredSquare(main, targetSize, 0.6f);
+        // Map the edge vines by each card axis, preserving their native border clearance.
+        var fieldSize = Vector2.One * NativeSize.Y;
+        main.Scale = targetSize / NativeSize * 1.2f;
+        SetBox(main, new Rect2(fieldSize * main.Scale * -0.5f, fieldSize));
         leaves.Position = Vector2.Zero;
         RemapCenteredPositions(particles, EntangledLeafPositions, targetSize);
     }
@@ -378,18 +381,6 @@ internal static class SakuraAfflictionVisualLayout
             new Rect2(
                 new Vector2((targetSize.X - targetSize.Y) * 0.5f, 0f),
                 new Vector2(targetSize.Y, targetSize.Y)));
-
-    private static void SetScaledCenteredSquare(
-        Control control,
-        Vector2 targetSize,
-        float positionScale,
-        Vector2? pivotOverride = null) =>
-        SetBox(
-            control,
-            new Rect2(
-                new Vector2(targetSize.Y * -positionScale, targetSize.Y * -positionScale),
-                new Vector2(targetSize.Y, targetSize.Y)),
-            pivotOverride);
 
     private static void SetBox(Control control, Rect2 box, Vector2? pivotOverride = null)
     {

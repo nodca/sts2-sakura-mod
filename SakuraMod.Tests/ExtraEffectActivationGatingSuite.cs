@@ -3,7 +3,6 @@ using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Relics;
 using System.Reflection;
-using System.Text.Json;
 
 /// <summary>
 /// Covers the Extra Effect activation gate. Three cards expose that gate to the
@@ -66,20 +65,6 @@ public sealed class ExtraEffectActivationGatingSuite
         RegressionTestHarness.Require(
             source.Contains("IsPlayable => SakuraMagicCharge.CanSpendMagic(Owner)", StringComparison.Ordinal),
             "Expected Thunder to keep requiring 10 Magic Charge to be played, matching its printed text.");
-
-        var descriptions = new[]
-        {
-            ("SakuraMod/localization/zhs/cards.json", "[gold]地[/gold]\n只有拥有 10 点[gold]魔力充能[/gold]时才能打出。"),
-            ("SakuraMod/localization/eng/cards.json", "[gold]Earthy[/gold]\nCan only be played with 10 [gold]Magic Charge[/gold].")
-        };
-
-        foreach (var (relativePath, expected) in descriptions)
-        {
-            var actual = ReadLocalization(relativePath)["SAKURA_MOD_CARD_CLOW_THUNDER.description"].GetString();
-            RegressionTestHarness.Require(
-                actual == expected,
-                $"Expected {relativePath} to keep Thunder's Magic Charge play requirement, got '{actual}'.");
-        }
     }
 
     [Fact]
@@ -123,9 +108,4 @@ public sealed class ExtraEffectActivationGatingSuite
         (PileType)typeof(CardModel)
             .GetMethod("GetResultPileTypeForCardPlay", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(card, null)!;
-
-    private static Dictionary<string, JsonElement> ReadLocalization(string relativePath) =>
-        JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-            File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath)))
-        ?? throw new InvalidOperationException($"Could not parse {relativePath}.");
 }

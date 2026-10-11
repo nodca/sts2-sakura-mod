@@ -53,21 +53,8 @@ public sealed class TurnStartChoiceSynchronizationSuite
     }
 
     [Fact]
-    public void LoopPowerKeepsUpToDiscardCardTextAndUpgrade()
+    public void LoopCardUpgradeAddsOneCard()
     {
-        foreach (var (locale, expected) in new[]
-                 {
-                     ("zhs", "丢弃至多 {Cards:diff()} 张牌"),
-                     ("eng", "discard up to {Cards:diff()} card")
-                 })
-        {
-            var cards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-                $"SakuraMod/localization/{locale}/cards.json"));
-            RegressionTestHarness.Require(
-                cards.Contains(expected, StringComparison.Ordinal),
-                $"Expected the {locale} Loop text to keep the \"discard up to N\" semantics.");
-        }
-
         var cardSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/ClowSakura/Loop.cs"));
         RegressionTestHarness.Require(

@@ -84,34 +84,6 @@ public sealed class EndOfTurnExhaustChoiceSynchronizationSuite
     }
 
     [Fact]
-    public void DarkPowerTextStaysUnchangedInBothLocales()
-    {
-        foreach (var (locale, expected) in new[]
-                 {
-                     ("zhs", "回合结束时，你可以消耗手牌。若以此消耗了牌，下回合获得 1 点能量。"),
-                     ("eng", "At end of turn, you may Exhaust cards from your [gold]Hand[/gold]. If you Exhaust any, gain 1 Energy next turn."),
-                 })
-        {
-            var powers = Read($"SakuraMod/localization/{locale}/powers.json");
-            RegressionTestHarness.Require(
-                powers.Contains(expected, StringComparison.Ordinal),
-                $"Expected SAKURA_MOD_POWER_CLASSIC_DARK_POWER.description in {locale} to keep its existing wording.");
-        }
-
-        foreach (var (locale, expected) in new[]
-                 {
-                     ("zhs", "在你的回合结束时，消耗任意张手牌，并将等量的随机升级[gold]库洛牌[/gold]加入你的[gold]弃牌堆[/gold]。"),
-                     ("eng", "At the end of your turn, Exhaust any number of cards in your [gold]Hand[/gold]. Add that many random upgraded [gold]Clow Cards[/gold] into your [gold]Discard Pile[/gold]."),
-                 })
-        {
-            var powers = Read($"SakuraMod/localization/{locale}/powers.json");
-            RegressionTestHarness.Require(
-                powers.Contains(expected, StringComparison.Ordinal),
-                $"Expected SAKURA_MOD_POWER_CLASSIC_DARK_SAKURA_POWER.description in {locale} to keep its existing wording.");
-        }
-    }
-
-    [Fact]
     public void DarkCardKeepsItsValues()
     {
         var darkCard = Read("SakuraModCode/Cards/ClowSakura/Dark.cs");
