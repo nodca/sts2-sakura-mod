@@ -342,7 +342,11 @@ internal static class IllusionIntentDisplayPatch
         }
 
         while (container.GetChildCount() > intents.Count)
-            container.GetChild(container.GetChildCount() - 1).QueueFree();
+        {
+            var child = container.GetChild(container.GetChildCount() - 1);
+            container.RemoveChildSafely(child);
+            child.QueueFreeSafely();
+        }
 
         return Task.CompletedTask;
     }

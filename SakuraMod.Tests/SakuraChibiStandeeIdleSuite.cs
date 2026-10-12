@@ -23,7 +23,7 @@ public sealed class SakuraChibiStandeeIdleSuite
             scene,
             StringComparison.Ordinal);
         Assert.Contains(
-            "parent=\"CharacterRoot/ChestAttachmentRoot/HeldWandRoot/ScreenLeftArmRoot\"",
+            "parent=\"CharacterRoot/ChestAttachmentRoot/ScreenLeftArmDrawRoot\"",
             scene,
             StringComparison.Ordinal);
         Assert.DoesNotContain("CharacterRoot:position", scene, StringComparison.Ordinal);

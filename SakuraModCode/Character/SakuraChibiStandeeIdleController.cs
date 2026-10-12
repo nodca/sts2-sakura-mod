@@ -15,7 +15,7 @@ internal sealed partial class SakuraChibiStandeeIdleController : Node2D
         "CharacterRoot/ChestAttachmentRoot/HeadRoot/Head",
         "CharacterRoot/ChestAttachmentRoot/HeldWandRoot/WandRoot/Wand",
         "CharacterRoot/ChestAttachmentRoot/HeldWandRoot/ScreenRightArmRoot/ScreenRightArm",
-        "CharacterRoot/ChestAttachmentRoot/HeldWandRoot/ScreenLeftArmRoot/ScreenLeftArm"
+        "CharacterRoot/ChestAttachmentRoot/ScreenLeftArmDrawRoot/ScreenLeftArm"
     ];
     private static readonly (string Path, string Animation)[] RequiredAnimationPlayers =
     [
