@@ -1,0 +1,201 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/affliction_overlay.gdshader" id="1_affliction_overlay"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/card_vfx/afflictions/buried/cracks.png" id="2_cracks"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/card_vfx/afflictions/buried/soil.png" id="3_soil"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/card_vfx/afflictions/speck.png" id="4_speck"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1"]
+resource_local_to_scene = true
+shader = ExtResource("1_affliction_overlay")
+shader_parameter/corner_radius = 14.0
+shader_parameter/wash_color = Color(0.240, 0.150, 0.080, 0.300)
+shader_parameter/wash_bias = -0.85
+shader_parameter/edge_color = Color(0.160, 0.100, 0.050, 0.550)
+shader_parameter/edge_width = 28.0
+shader_parameter/breakup = 0.6
+shader_parameter/glow_color = Color(0.900, 0.700, 0.420, 0.600)
+shader_parameter/glow_width = 3.0
+shader_parameter/pulse_speed = 1.2
+shader_parameter/pulse_depth = 0.25
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.25, 1.0)
+colors = PackedColorArray(1.000, 1.000, 1.000, 0.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 0.000)
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "intro"
+length = 0.4
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Frame/Veil:material:shader_parameter/reveal")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.0, 0.4), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [0.0, 1.0]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Frame/Motif/SoilLayer:position")
+tracks/1/interp = 2
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.0, 0.32), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(0, 90), Vector2(0, 0)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Frame/Motif/Cracks:modulate")
+tracks/2/interp = 2
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.0, 0.2, 0.4), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Color(1.000, 1.000, 1.000, 0.000), Color(1.000, 1.000, 1.000, 0.000), Color(1.000, 1.000, 1.000, 1.000)]}
+
+[sub_resource type="Animation" id="Animation_4"]
+resource_name = "idle"
+length = 4.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Frame/Motif/Cracks:modulate")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.0, 2.0, 4.0), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Color(1.000, 1.000, 1.000, 0.820), Color(1.000, 1.000, 1.000, 1.000), Color(1.000, 1.000, 1.000, 0.820)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_5"]
+_data = {&"intro": SubResource("Animation_3")}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_6"]
+_data = {&"idle": SubResource("Animation_4")}
+
+[node name="BuriedAffliction" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
+
+[node name="Frame" type="Control" parent="."]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -211.0
+offset_right = 150.0
+offset_bottom = 211.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Veil" type="ColorRect" parent="Frame"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0
+anchor_top = 0
+anchor_right = 1
+anchor_bottom = 1
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+material = SubResource("ShaderMaterial_1")
+
+[node name="Motif" type="Control" parent="Frame"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0
+anchor_top = 0
+anchor_right = 1
+anchor_bottom = 1
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+
+[node name="Cracks" type="TextureRect" parent="Frame/Motif"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.93
+anchor_right = 0.5
+anchor_bottom = 0.93
+offset_left = -96
+offset_top = -250
+offset_right = 96
+offset_bottom = 10
+mouse_filter = 2
+texture = ExtResource("2_cracks")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SoilLayer" type="Control" parent="Frame/Motif"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0
+anchor_top = 0
+anchor_right = 1
+anchor_bottom = 1
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+
+[node name="Soil" type="TextureRect" parent="Frame/Motif/SoilLayer"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0
+anchor_top = 0.9
+anchor_right = 1
+anchor_bottom = 1.03
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+texture = ExtResource("3_soil")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="DustAnchor" type="Control" parent="Frame"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.91
+anchor_right = 0.5
+anchor_bottom = 0.91
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+
+[node name="Dust" type="CPUParticles2D" parent="Frame/DustAnchor"]
+amount = 9
+lifetime = 2.8
+preprocess = 2.8
+texture = ExtResource("4_speck")
+emission_shape = 3
+color_ramp = SubResource("Gradient_2")
+emission_rect_extents = Vector2(120, 6)
+direction = Vector2(0, -1)
+spread = 60.0
+gravity = Vector2(0, 12)
+initial_velocity_min = 8.0
+initial_velocity_max = 18.0
+scale_amount_min = 0.14
+scale_amount_max = 0.3
+color = Color(0.780, 0.600, 0.380, 0.900)
+
+[node name="IntroPlayer" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_5")}
+autoplay = "intro"
+
+[node name="IdlePlayer" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_6")}
+autoplay = "idle"

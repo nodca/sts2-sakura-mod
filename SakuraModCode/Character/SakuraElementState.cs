@@ -105,7 +105,7 @@ internal static class SakuraElementState
             combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<DarkSovereigntyPower>()),
             combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<WaterSovereigntyPower>()),
             combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<FireSovereigntyPower>()),
-            combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<LightBattlePower>()),
+            combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<LightSovereigntyPower>()),
             combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<EarthSovereigntyPower>()));
 
     public static SakuraElementSet LocksForPower(PowerModel power) => power switch

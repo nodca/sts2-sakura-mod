@@ -48,6 +48,9 @@ using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
 using SakuraMod.SakuraModCode.FourthAct.Fire;
 using SakuraMod.SakuraModCode.FourthAct.Fire.Encounters;
 using SakuraMod.SakuraModCode.FourthAct.Fire.Models;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Powers;
+using SakuraMod.SakuraModCode.FourthAct.Earth.CardState;
+using SakuraMod.SakuraModCode.FourthAct.Water.CardState;
 using SakuraMod.SakuraModCode.FourthAct.Water;
 using SakuraMod.SakuraModCode.FourthAct.Water.Encounters;
 using SakuraMod.SakuraModCode.FourthAct.Routing;
@@ -190,12 +193,15 @@ internal static class RuntimeSmokeScenario
             ["wind_sleep_wake"] = RequireModel(ModelDb.Power<WindSleepWakePower>()),
             ["dark_micro_light"] = RequireModel(ModelDb.Card<MicroLight>()),
             ["wind_sleeping_affliction"] = RequireModel(ModelDb.Affliction<SleepingAffliction>()),
+            ["earth_buried_affliction"] = RequireModel(ModelDb.Affliction<BuriedAffliction>()),
+            ["water_frozen_affliction"] = RequireModel(ModelDb.Affliction<FrozenAffliction>()),
             ["dark_encounter"] = RequireModel(ModelDb.Encounter<DarkEncounter>()),
             ["dark_monster"] = RequireModel(ModelDb.Monster<DarkMonster>()),
             ["darkness"] = RequireModel(ModelDb.Power<DarknessPower>()),
             ["dark_sovereignty"] = RequireModel(ModelDb.Power<DarkSovereigntyPower>()),
             ["dark_battle"] = RequireModel(ModelDb.Power<DarkBattlePower>()),
             ["dark_confinement_selection"] = RequireModel(ModelDb.Power<DarkConfinementSelectionPower>()),
+            ["light_sovereignty"] = RequireModel(ModelDb.Power<LightSovereigntyPower>()),
             ["fire_libra_encounter"] = RequireModel(ModelDb.Encounter<LibraEncounter>()),
             ["fire_libra_pan"] = RequireModel(ModelDb.Monster<LibraPanMonster>())
         };
@@ -859,7 +865,8 @@ internal static class RuntimeSmokeScenario
                              ("cards", "SAKURA_MOD_CARD_MICRO_LIGHT.title"),
                              ("monsters", "SAKURA_MOD_MONSTER_DARK_MONSTER.name"),
                              ("powers", "SAKURA_MOD_POWER_DARKNESS_POWER.title"),
-                             ("afflictions", "SAKURA_MOD_AFFLICTION_DARK_CONFINEMENT_AFFLICTION.title"),
+                             ("afflictions", "SAKURA_MOD_AFFLICTION_BURIED_AFFLICTION.title"),
+                             ("afflictions", "SAKURA_MOD_AFFLICTION_FROZEN_AFFLICTION.title"),
                              ("afflictions", "SAKURA_MOD_AFFLICTION_SLEEPING_AFFLICTION.title")
                 };
                 foreach (var (table, key) in localizationKeys.Concat(
@@ -918,7 +925,8 @@ internal static class RuntimeSmokeScenario
             ["spell_turn_audio"] = SpellTurnTransformationVfx.TurnAudioPath,
             ["dark_standee"] = DarkEnemyAssets.Standee,
             ["dark_action"] = DarkEnemyAssets.Action,
-            ["dark_confinement_overlay"] = DarkEnemyAssets.ConfinementOverlay,
+            ["buried_affliction_overlay"] = BuriedAffliction.OverlayScenePath,
+            ["frozen_affliction_overlay"] = FrozenAffliction.OverlayScenePath,
             ["sleeping_affliction_overlay"] = SleepingAffliction.OverlayScenePath,
             ["micro_light_portrait"] = "res://SakuraMod/images/cards/clear_cards/MICRO_LIGHT.png",
             ["dark_shrine_layer"] = FourthActCombatBackgrounds.DarkShrineLayerPath,

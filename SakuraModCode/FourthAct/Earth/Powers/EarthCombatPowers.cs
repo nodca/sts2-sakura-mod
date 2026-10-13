@@ -1,3 +1,5 @@
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
+using MegaCrit.Sts2.Core.HoverTips;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
@@ -10,6 +12,8 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.FourthAct.Earth.CardState;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using SakuraMod.SakuraModCode.FourthAct.Earth.Models;
 using SakuraMod.SakuraModCode.Powers;
 
@@ -17,16 +21,31 @@ namespace SakuraMod.SakuraModCode.FourthAct.Earth.Powers;
 
 public static class EarthCombatRules
 {
-    private static readonly HashSet<CardModel> BuriedCards = [];
+    public static bool IsBuried(CardModel card) => card.Affliction is BuriedAffliction;
 
-    public static bool IsBuried(CardModel card) => BuriedCards.Contains(card);
-    public static void MarkBuried(CardModel card) => BuriedCards.Add(card);
-    public static void UnmarkBuried(CardModel card) => BuriedCards.Remove(card);
-    public static void ClearBuried() => BuriedCards.Clear();
-    public static bool HasAnyBuried(Player player)
+    // Landslide always buries the top card, so a foreign Affliction is replaced rather than skipped.
+    public static async Task MarkBuried(CardModel card)
     {
-        var discard = CardPile.Get(PileType.Discard, player);
-        return discard?.Cards.Any(IsBuried) == true;
+        if (IsBuried(card))
+            return;
+        if (card.Affliction is not null)
+            CardCmd.ClearAffliction(card);
+        await CardCmd.Afflict<BuriedAffliction>(card, 1);
+    }
+
+    public static void UnmarkBuried(CardModel card)
+    {
+        if (!IsBuried(card))
+            return;
+        CardAfflictionVisuals.PlayRelease(card, CardAfflictionRelease.Unbury);
+        CardCmd.ClearAffliction(card);
+    }
+
+    public static void ClearBuried(ICombatState combatState)
+    {
+        foreach (var player in combatState.Players)
+        foreach (var card in CardPile.Get(PileType.Discard, player)?.Cards.Where(IsBuried).ToList() ?? [])
+            UnmarkBuried(card);
     }
 }
 
@@ -65,6 +84,7 @@ public static class EarthBuriedCardShufflePatch
 public sealed class EarthSovereigntyPower : SakuraPowerModel
 {
     protected override string IconFileName => "fourth_act/earth_sovereignty.png";
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [SakuraCardHoverTips.StaticTip("SAKURAMOD-EARTHY_STATE")];
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
@@ -90,6 +110,7 @@ public sealed class ShadowEchoPower : SakuraPowerModel
     private bool _recordingPlayerTurn;
 
     protected override string IconFileName => "fourth_act/shadow_echo.png";
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Hits", EarthEnemyRules.ShadowClawsHits)];
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
@@ -164,15 +185,10 @@ public sealed class WoodRootedPower : SakuraPowerModel
     protected override string IconFileName => "fourth_act/wood_rooted.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
-    public override int DisplayAmount
-    {
-        get
-        {
-            if (Owner.CombatState is null) return 0;
-            var players = Owner.CombatState.Players.Where(p => p.Creature.IsAlive).ToList();
-            return players.Count == 0 ? 0 : players.Max(p => CardPile.GetCards(p, PileType.Exhaust).Count());
-        }
-    }
+    public override int DisplayAmount =>
+        Owner.CombatState is { } combatState && FourthActCombatRules.PreviewPlayer(combatState) is { } player
+            ? GetRootedCount(player)
+            : 0;
 
     public static int GetRootedCount(Player player) =>
         CardPile.GetCards(player, PileType.Exhaust).Count();
@@ -198,7 +214,10 @@ public sealed class EarthySedimentPower : SakuraPowerModel
     protected override string IconFileName => "fourth_act/earthy_sediment.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
-    public override int DisplayAmount => _lastTurnSediment.Values.DefaultIfEmpty(0).Max();
+    public override int DisplayAmount =>
+        Owner.CombatState is { } combatState && FourthActCombatRules.PreviewPlayer(combatState) is { } player
+            ? GetSediment(player.Creature)
+            : 0;
 
     public int GetSediment(Creature player) => _lastTurnSediment.GetValueOrDefault(player, 0);
 
@@ -236,7 +255,7 @@ public sealed class EarthySedimentPower : SakuraPowerModel
     {
         if (creature == Owner)
         {
-            EarthCombatRules.ClearBuried();
+            EarthCombatRules.ClearBuried(CombatState);
         }
         return Task.CompletedTask;
     }

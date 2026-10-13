@@ -51,8 +51,9 @@ public sealed class CardMechanicsSuite
         foreach (var power in powers)
             amountField.SetValue(power, power is DexterityPower ? -2 : 2);
 
-        Assert.Equal(new PowerModel[] { strength, buffer }, SakuraSourceCardText.BubblesPreviewBuffs(powers));
-        Assert.Empty(SakuraSourceCardText.BubblesPreviewBuffs([powers[2], powers[4]]));
+        Assert.Equal(new PowerModel[] { strength, buffer }, SakuraSourceCardText.BubblesPreviewBuffs(new SakuraBubbles(), powers));
+        Assert.Equal(new PowerModel[] { strength }, SakuraSourceCardText.BubblesPreviewBuffs(new ClowBubbles(), powers));
+        Assert.Empty(SakuraSourceCardText.BubblesPreviewBuffs(new SakuraBubbles(), [powers[2], powers[4]]));
         Assert.Equal("SAKURAMOD-BUBBLES.previewNone",
             SakuraSourceCardText.BubblesBuffDescription(new ClowBubbles(), null)?.LocEntryKey);
         Assert.Equal("SAKURAMOD-BUBBLES.previewNone",
@@ -87,7 +88,16 @@ public sealed class CardMechanicsSuite
             }
         }
 
-        Assert.Contains(SakuraCardHoverTips.BubblesBuffTipKey, SakuraSourceCardText.StaticTipKeys(new ClowBubbles()));
+        Assert.Equal(candidates.Take(1), candidates.Where(SakuraPowerRules.IsBubblesBasicBuff));
+        var ritual = new RitualPower();
+        var intangible = new IntangiblePower();
+        amountField.SetValue(ritual, 2);
+        amountField.SetValue(intangible, 2);
+        Assert.True(SakuraPowerRules.IsBubblesBasicBuff(ritual));
+        Assert.False(SakuraPowerRules.IsBubblesBasicBuff(intangible));
+        Assert.True(SakuraPowerRules.IsBubblesRemovableBuff(intangible));
+        Assert.Contains(SakuraCardHoverTips.BubblesBasicBuffTipKey, SakuraSourceCardText.StaticTipKeys(new ClowBubbles()));
+        Assert.DoesNotContain(SakuraCardHoverTips.BubblesBuffTipKey, SakuraSourceCardText.StaticTipKeys(new ClowBubbles()));
         Assert.Contains(SakuraCardHoverTips.BubblesBuffTipKey, SakuraSourceCardText.StaticTipKeys(new SakuraBubbles()));
     }
 

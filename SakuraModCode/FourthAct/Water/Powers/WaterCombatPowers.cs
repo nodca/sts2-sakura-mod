@@ -1,3 +1,7 @@
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
+using SakuraMod.SakuraModCode.FourthAct.Water.CardState;
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
@@ -20,10 +24,41 @@ public sealed class WaterFrozenPower : SakuraPowerModel
     protected override string IconFileName => "fourth_act/water_frozen.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
-    public override Task AfterApplied(Creature? applier, CardModel? cardSource)
+    public override async Task AfterApplied(Creature? applier, CardModel? cardSource)
     {
         FreezeShellVisual.Mount(Owner);
+        foreach (var card in Owner.Player is { } player ? CardPile.GetCards(player, PileType.Hand).ToList() : [])
+            await Project(card);
+    }
+    public override async Task AfterCardChangedPiles(CardModel card, PileType oldPileType, AbstractModel? clonedBy)
+    {
+        if (card.Owner?.Creature != Owner)
+            return;
+        if (card.Pile?.Type == PileType.Hand)
+            await Project(card);
+        else if (oldPileType == PileType.Hand)
+            ClearProjection(card);
+    }
+    public override Task AfterRemoved(Creature oldOwner)
+    {
+        foreach (var card in oldOwner.Player?.PlayerCombatState?.AllCards.ToList() ?? [])
+        {
+            if (card.Affliction is FrozenAffliction)
+                CardAfflictionVisuals.PlayRelease(card, CardAfflictionRelease.Thaw);
+            ClearProjection(card);
+        }
         return Task.CompletedTask;
+    }
+    // A card that already carries an Affliction keeps it; the Power still gates its play.
+    private static async Task Project(CardModel card)
+    {
+        if (card.Affliction is null)
+            await CardCmd.Afflict<FrozenAffliction>(card, 1);
+    }
+    private static void ClearProjection(CardModel card)
+    {
+        if (card.Affliction is FrozenAffliction)
+            CardCmd.ClearAffliction(card);
     }
     public override Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature target,
         DamageResult result, ValueProp props, Creature? dealer, CardModel? cardSource)
@@ -46,10 +81,11 @@ public sealed class DrenchedPower : SakuraPowerModel
     protected override string IconFileName => "fourth_act/drenched.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Single;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Cost", WaterEnemyRules.DrenchedCostIncrease)];
     public override bool TryModifyEnergyCostInCombat(CardModel card, decimal currentCost, out decimal newCost)
     {
         if (card.Owner?.Creature == Owner && currentCost > 0 && !card.EnergyCost.CostsX)
-        { newCost = currentCost + 1; return true; }
+        { newCost = currentCost + WaterEnemyRules.DrenchedCostIncrease; return true; }
         newCost = currentCost; return false;
     }
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
@@ -62,6 +98,7 @@ public sealed class WaterSovereigntyPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [SakuraCardHoverTips.StaticTip("SAKURAMOD-WATERY_STATE")];
     public override bool TryModifyPowerAmountReceived(PowerModel canonicalPower, Creature target, decimal amount, Creature? applier, out decimal modifiedAmount)
     {
         if (target.IsPlayer && canonicalPower is ClassicWateryPower or ClassicWateryPermanentPower && amount > 0)
@@ -82,7 +119,10 @@ public sealed class WaterReservoirPower : SakuraPowerModel
     protected override string IconFileName => "fourth_act/water_reservoir.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
-    public override int DisplayAmount => _values.Values.Sum();
+    public override int DisplayAmount =>
+        Owner.CombatState is { } combatState && FourthActCombatRules.PreviewPlayer(combatState) is { } player
+            ? For(player.Creature)
+            : 0;
 
     public int For(Creature player) => _values.GetValueOrDefault(player);
 

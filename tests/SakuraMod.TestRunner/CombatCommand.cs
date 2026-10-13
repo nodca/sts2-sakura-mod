@@ -38,6 +38,7 @@ public static class CombatCommand
         "sakura-erase",
         "affliction-visual-layout",
         "queen-bound-cleanup",
+        "fourth-act-card-afflictions",
         "cleansing-stats",
         "dark-endpoint",
         "light-eternal-day",

@@ -34,10 +34,7 @@ public sealed class WindEnemyContractSuite
 
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/scenes/cards/overlays/sleeping_affliction.tscn"));
-        Assert.Contains("SleepingAffliction", scene);
-        Assert.Contains("LeftEyelid", scene);
-        Assert.Contains("RightEyelid", scene);
-        Assert.Contains("settle_breathe", scene);
+        Assert.Contains("[node name=\"SleepingAffliction\" type=\"Control\"]", scene);
         Assert.Contains("mouse_filter = 2", scene);
     }
 

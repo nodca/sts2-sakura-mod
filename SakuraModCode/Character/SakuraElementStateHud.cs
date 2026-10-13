@@ -225,7 +225,7 @@ internal static class SakuraElementStateHud
 
         private void RefreshForSovereignty(PowerModel power)
         {
-            if (power is WindSovereigntyPower or DarkSovereigntyPower or WaterSovereigntyPower or FireSovereigntyPower or LightBattlePower or EarthSovereigntyPower)
+            if (power is WindSovereigntyPower or DarkSovereigntyPower or WaterSovereigntyPower or FireSovereigntyPower or LightSovereigntyPower or EarthSovereigntyPower)
                 Refresh(animateNewlyActive: false);
         }
 
@@ -315,8 +315,8 @@ internal static class SakuraElementStateHud
                     && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<FireSovereigntyPower>()))
                     tips.Add(HoverTipFactory.FromPower<FireSovereigntyPower>());
                 if (slot.Element is SakuraElement.Fire or SakuraElement.Earth
-                    && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<LightBattlePower>()))
-                    tips.Add(HoverTipFactory.FromPower<LightBattlePower>());
+                    && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<LightSovereigntyPower>()))
+                    tips.Add(HoverTipFactory.FromPower<LightSovereigntyPower>());
                 if (slot.Element == SakuraElement.Earth
                     && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<EarthSovereigntyPower>()))
                     tips.Add(HoverTipFactory.FromPower<EarthSovereigntyPower>());

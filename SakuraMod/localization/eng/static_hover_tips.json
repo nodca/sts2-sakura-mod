@@ -41,7 +41,9 @@
   "SAKURAMOD-DEBUFF.title": "Debuff",
   "SAKURAMOD-DEBUFF.description": "Includes: [gold]Weak[/gold], [gold]Vulnerable[/gold], [gold]Frail[/gold], [gold]Poison[/gold], [gold]negative Strength[/gold], and [gold]negative Dexterity[/gold].",
   "SAKURAMOD-BUBBLES_BUFF.title": "Dispellable Buffs",
-  "SAKURAMOD-BUBBLES_BUFF.description": "Most positive enemy powers, such as [gold]Strength[/gold], [gold]Artifact[/gold], [gold]Thorns[/gold] and [gold]Intangible[/gold].\nPowers tied to an enemy's own mechanics are not removed.",
+  "SAKURAMOD-BUBBLES_BUFF.description": "All [gold]common buffs[/gold], plus most enemy trait powers such as [gold]Intangible[/gold], [gold]Slippery[/gold] and [gold]High Voltage[/gold].\nPowers tied to an enemy's own mechanics are not removed.",
+  "SAKURAMOD-BUBBLES_BASIC_BUFF.title": "Common Buffs",
+  "SAKURAMOD-BUBBLES_BASIC_BUFF.description": "Includes: [gold]Strength[/gold], [gold]Dexterity[/gold], [gold]Vigor[/gold], [gold]Artifact[/gold], [gold]Ritual[/gold], [gold]Thorns[/gold], and [gold]Plating[/gold].",
   "SAKURAMOD-MIST_DEFENSE.title": "Defensive effects",
   "SAKURAMOD-MIST_DEFENSE.description": "Includes enemy [gold]Block[/gold], [gold]Artifact[/gold], [gold]Thorns[/gold], [gold]Buffer[/gold], [gold]Intangible[/gold], [gold]Barricade[/gold], and [gold]Slippery[/gold]."
 }

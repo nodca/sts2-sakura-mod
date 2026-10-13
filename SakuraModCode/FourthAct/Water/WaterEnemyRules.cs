@@ -4,6 +4,8 @@ namespace SakuraMod.SakuraModCode.FourthAct.Water;
 
 public static class WaterEnemyRules
 {
+    public const int DrenchedCostIncrease = 1;
+
     public static int RollTidalDamage(uint runSeed, uint combatId, int roundNumber, int minimum, int maximum) =>
         new Rng(runSeed, $"tidal/{combatId}/{roundNumber}").NextInt(minimum, maximum + 1);
 

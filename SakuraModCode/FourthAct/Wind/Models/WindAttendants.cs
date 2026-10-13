@@ -106,13 +106,13 @@ public sealed class SleepMonster : WindAttendantMonster
 
     protected override string StandeePath => WindEnemyAssets.Sleep;
     protected override string StandeeLabel => "Sleep";
-    protected override IEnumerable<AbstractIntent> DeclaredIntents => [new DebuffIntent(strong: true)];
+    protected override IEnumerable<AbstractIntent> DeclaredIntents => [new CardDebuffIntent()];
     public override int MinInitialHp => AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, ToughHp, BaseHp);
     public override int MaxInitialHp => MinInitialHp;
 
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
-        var sleep = new MoveState("SLEEP", ArmSleep, new DebuffIntent(strong: true));
+        var sleep = new MoveState("SLEEP", ArmSleep, new CardDebuffIntent());
         sleep.FollowUpState = sleep;
         return new MonsterMoveStateMachine([sleep], sleep);
     }

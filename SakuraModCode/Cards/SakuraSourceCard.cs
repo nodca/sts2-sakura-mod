@@ -951,7 +951,17 @@ internal static class SakuraSnowRules
 
 internal static class SakuraPowerRules
 {
-    // Shared by both Bubbles forms. Only audited, independently removable buffs belong here.
+    // Clow Bubbles tier: numeric buffs that leave the encounter's own mechanics intact.
+    public static bool IsBubblesBasicBuff(PowerModel power) =>
+        power.Amount > 0
+        && power.TypeForCurrentAmount == PowerType.Buff
+        && power is (StrengthPower or DexterityPower or VigorPower
+            or ArtifactPower or RitualPower or ThornsPower or PlatingPower);
+
+    public static Func<PowerModel, bool> BubblesFilterFor(CardModel card) =>
+        card is SakuraBubbles ? IsBubblesRemovableBuff : IsBubblesBasicBuff;
+
+    // Sakura Bubbles tier. Only audited, independently removable buffs belong here.
     // Buff also labels encounter state: Sandpit kills on removal, Swipe owns stolen cards,
     // and Skittish is dereferenced by its monster's animator. Unknown powers stay protected.
     public static bool IsBubblesRemovableBuff(PowerModel power) =>

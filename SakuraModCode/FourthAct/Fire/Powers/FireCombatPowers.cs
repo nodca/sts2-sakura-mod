@@ -1,3 +1,5 @@
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -42,10 +44,14 @@ public sealed class SwordBlockFeedingPower : SakuraPowerModel
     protected override string IconFileName => "fourth_act/sword_edge.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
-    public override int DisplayAmount => _bonuses.Values.DefaultIfEmpty().Max();
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Bonus", FireEnemyRules.SwordBlockBonus)];
+    public override int DisplayAmount =>
+        Owner.CombatState is { } combatState && FourthActCombatRules.PreviewPlayer(combatState) is { } player
+            ? _bonuses.GetValueOrDefault(player.Creature)
+            : 0;
     public override Task AfterBlockGained(Creature creature, decimal amount, ValueProp props, CardModel? cardSource)
     {
-        if (creature.IsPlayer && amount > 0) { _bonuses[creature] = _bonuses.GetValueOrDefault(creature) + 5; InvokeDisplayAmountChanged(); }
+        if (creature.IsPlayer && amount > 0) { _bonuses[creature] = _bonuses.GetValueOrDefault(creature) + FireEnemyRules.SwordBlockBonus; InvokeDisplayAmountChanged(); }
         return Task.CompletedTask;
     }
     public override decimal ModifyDamageAdditive(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource) =>
@@ -59,6 +65,7 @@ public sealed class FireSovereigntyPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [SakuraCardHoverTips.StaticTip("SAKURAMOD-FIREY_STATE")];
     public override bool TryModifyPowerAmountReceived(PowerModel power, Creature target, decimal amount, Creature? applier, out decimal modified)
     {
         if (target.IsPlayer && amount > 0 && power is ClassicFireyPower or ClassicFireyPermanentPower) { modified = 0; Flash(); SakuraElementStateHud.NotifyPrevented(target.Player, SakuraElementSet.Fire); return true; }
@@ -72,8 +79,20 @@ public sealed class LightBattlePower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips =>
+        [HoverTipFactory.FromKeyword(CardKeyword.Retain), SakuraCardHoverTips.StaticTip(SakuraCardHoverTips.TemporaryTipKey)];
     public override bool TryModifyKeywordsInCombat(CardModel card, ISet<CardKeyword> keywords) =>
         Owner.IsAlive && card.Owner?.Creature.IsPlayer == true && !card.IsTemporary() && keywords.Add(CardKeyword.Retain);
+}
+
+public sealed class LightSovereigntyPower : SakuraPowerModel
+{
+    protected override string IconFileName => "fourth_act/light_sovereignty.png";
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+    public override int DisplayAmount => -1;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips =>
+        [SakuraCardHoverTips.StaticTip("SAKURAMOD-FIREY_STATE"), SakuraCardHoverTips.StaticTip("SAKURAMOD-EARTHY_STATE")];
     public override bool TryModifyPowerAmountReceived(PowerModel power, Creature target, decimal amount, Creature? applier, out decimal modified)
     {
         if (target.IsPlayer && amount > 0 && power is ClassicFireyPower or ClassicFireyPermanentPower or ClassicEarthyPower or ClassicEarthyPermanentPower) { modified = 0; Flash(); SakuraElementStateHud.NotifyPrevented(target.Player, SakuraElementSet.Fire | SakuraElementSet.Earth); return true; }
@@ -238,6 +257,7 @@ public sealed class LibraImbalancePower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [HoverTipFactory.FromCard<Balance>()];
 
     public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {

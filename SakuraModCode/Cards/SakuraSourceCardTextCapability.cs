@@ -62,8 +62,8 @@ internal static class SakuraSourceCardText
         return target is not null && combat.HittableEnemies.Contains(target) ? [target] : null;
     }
 
-    internal static IEnumerable<PowerModel> BubblesPreviewBuffs(IEnumerable<PowerModel> powers) =>
-        powers.Where(SakuraPowerRules.IsBubblesRemovableBuff).DistinctBy(power => power.GetType());
+    internal static IEnumerable<PowerModel> BubblesPreviewBuffs(CardModel card, IEnumerable<PowerModel> powers) =>
+        powers.Where(SakuraPowerRules.BubblesFilterFor(card)).DistinctBy(power => power.GetType());
 
     // Always shown on both Bubbles forms; without a combat target or dispellable buff it reads "none".
     internal static LocString? BubblesBuffDescription(CardModel card, Creature? target)
@@ -72,7 +72,7 @@ internal static class SakuraSourceCardText
             return null;
 
         var names = BubblesPreviewTargets(card, target) is { } targets
-            ? BubblesPreviewBuffs(targets.SelectMany(creature => creature.Powers))
+            ? BubblesPreviewBuffs(card, targets.SelectMany(creature => creature.Powers))
                 .Select(power => power.Title.GetFormattedText()).ToList()
             : [];
         if (names.Count == 0)
@@ -195,6 +195,8 @@ internal static class SakuraSourceCardText
                 yield return SakuraCardHoverTips.DebuffTipKey;
                 break;
             case ClowBubbles:
+                yield return SakuraCardHoverTips.BubblesBasicBuffTipKey;
+                break;
             case SakuraBubbles:
                 yield return SakuraCardHoverTips.BubblesBuffTipKey;
                 break;

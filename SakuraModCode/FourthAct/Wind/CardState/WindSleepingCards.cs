@@ -2,7 +2,7 @@ using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
-using SakuraMod.SakuraModCode.FourthAct.Wind.Visuals;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Wind.CardState;
@@ -36,7 +36,7 @@ public static class WindSleepingCards
         if (!IsSleeping(card))
             return;
 
-        SleepingCardVisuals.PlayWake(card);
+        CardAfflictionVisuals.PlayRelease(card, CardAfflictionRelease.Wake);
         CardCmd.ClearAffliction(card);
     }
 

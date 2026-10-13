@@ -5,6 +5,9 @@ using MegaCrit.Sts2.Core.Models.Afflictions;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using STS2RitsuLib.Patching;
 using System.Reflection;
+using SakuraMod.SakuraModCode.FourthAct.Water.CardState;
+using SakuraMod.SakuraModCode.FourthAct.Earth.CardState;
+using SakuraMod.SakuraModCode.FourthAct.Wind.CardState;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -27,11 +30,19 @@ internal static class SakuraAfflictionVisualLayout
     {
         var layout = SakuraCardVisualFamilies.Layout(card);
         if (!SakuraCardGeometry.TryProfile(layout, out var geometry)
-            || !TryVisual(card.Model?.Affliction, out var visual)
             || CardOverlayField.GetValue(card) is not Control overlay)
         {
             return;
         }
+
+        if (IsModOverlay(card.Model?.Affliction))
+        {
+            ApplyModOverlay(ledger, overlay, geometry.RootSize);
+            return;
+        }
+
+        if (!TryVisual(card.Model?.Affliction, out var visual))
+            return;
 
         if (!TryResolve(overlay, visual, out var nodes))
         {
@@ -67,6 +78,30 @@ internal static class SakuraAfflictionVisualLayout
                 ApplyTainted(ledger, nodes, targetSize);
                 break;
         }
+    }
+
+    // Mod overlays mirror the native wrapper: a zero-size root on the card centre and one
+    // centred "Frame" authored at the native 300x422 size. Everything inside Frame is anchored.
+    internal const string ModOverlayFrameName = "Frame";
+
+    private static bool IsModOverlay(AfflictionModel? affliction) =>
+        affliction is SleepingAffliction or BuriedAffliction or FrozenAffliction;
+
+    private static void ApplyModOverlay(
+        SakuraCardMutationLedger ledger,
+        Control overlay,
+        Vector2 targetSize)
+    {
+        if (overlay.GetNodeOrNull<Control>(ModOverlayFrameName) is not { } frame)
+            return;
+
+        ledger.BorrowPositionBaseline(overlay);
+        ledger.Borrow(frame, BoxProperties);
+        var nativeOverlayPosition = ledger.TryGetPositionBaseline(overlay, out var baseline)
+            ? baseline
+            : overlay.Position;
+        overlay.Position = nativeOverlayPosition + targetSize * 0.5f;
+        SetBox(frame, new Rect2(targetSize * -0.5f, targetSize));
     }
 
     private static void BorrowCommon(

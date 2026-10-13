@@ -133,20 +133,17 @@ public sealed class FourthActEarthEnemiesSuite
     }
 
     [Fact]
-    public void BuriedCardsTrackingLifecycle()
+    public void BuriedStateIsOnlyTheAffliction()
     {
-        var dummyCard = new ClowWood();
-
-        Assert.False(EarthCombatRules.IsBuried(dummyCard));
-        EarthCombatRules.MarkBuried(dummyCard);
-        Assert.True(EarthCombatRules.IsBuried(dummyCard));
-        EarthCombatRules.UnmarkBuried(dummyCard);
-        Assert.False(EarthCombatRules.IsBuried(dummyCard));
-
-        EarthCombatRules.MarkBuried(dummyCard);
-        Assert.True(EarthCombatRules.IsBuried(dummyCard));
-        EarthCombatRules.ClearBuried();
-        Assert.False(EarthCombatRules.IsBuried(dummyCard));
+        Assert.False(EarthCombatRules.IsBuried(new ClowWood()));
+        var rules = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Earth/Powers/EarthCombatPowers.cs"));
+        Assert.DoesNotContain("HashSet<CardModel>", rules);
+        Assert.Contains("card.Affliction is BuriedAffliction", rules);
+        Assert.Contains("CardCmd.Afflict<BuriedAffliction>", rules);
+        var earthy = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Earth/Models/EarthMonsters.cs"));
+        Assert.Contains("await EarthCombatRules.MarkBuried(topCard);", earthy);
     }
 
     [Fact]

@@ -1,3 +1,5 @@
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
@@ -25,6 +27,12 @@ public sealed class DarknessPower : SakuraPowerModel
     protected override string IconFileName => "fourth_act/dark_veil.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DynamicVar("Reduction", DarkEnemyRules.DarknessDamageReductionPerLayer * 100m),
+        new DynamicVar("Bonus", DarkEnemyRules.DarknessAttackBonusPerLayer),
+        new DynamicVar("Maximum", DarkEnemyRules.DarknessMaximum)
+    ];
 
     public override decimal ModifyDamageMultiplicative(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource)
     {
@@ -40,6 +48,8 @@ public sealed class DarkSovereigntyPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips =>
+        [SakuraCardHoverTips.StaticTip("SAKURAMOD-WINDY_STATE"), SakuraCardHoverTips.StaticTip("SAKURAMOD-WATERY_STATE")];
 
     public override bool TryModifyPowerAmountReceived(PowerModel canonicalPower, Creature target, decimal amount, Creature? applier, out decimal modifiedAmount)
     {
@@ -61,6 +71,15 @@ public sealed class DarkBattlePower : SakuraPowerModel, IMaxHandSizeModifier
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DynamicVar("HandSize", DarkEnemyRules.MaxHandSizeReduction),
+        new DynamicVar("MicroLights", DarkEnemyRules.MicroLightsPerDraw),
+        new DynamicVar("Threshold", DarkEnemyRules.TransitionHpRatio * 100m),
+        new DynamicVar("Reset", DarkEnemyRules.DarknessReset)
+    ];
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips =>
+        [HoverTipFactory.FromCard<MicroLight>(), HoverTipFactory.FromPower<DarknessPower>()];
 
     public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
     {
@@ -109,6 +128,8 @@ public sealed class DarkConfinementSelectionPower : SakuraPowerModel
     protected override string IconFileName => "fourth_act/confinement.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips =>
+        [SakuraCardHoverTips.StaticTip(SakuraCardHoverTips.TemporaryTipKey), HoverTipFactory.FromCard<MicroLight>()];
 
     public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {

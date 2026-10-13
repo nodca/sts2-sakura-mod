@@ -1,3 +1,5 @@
+using SakuraMod.SakuraModCode.FourthAct.Water.CardState;
+using SakuraMod.SakuraModCode.FourthAct.Earth.CardState;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
@@ -32,6 +34,8 @@ internal static class SakuraContentRegistration
         registry.RegisterCharacter<ClassicSakura>();
         RegisterCards(registry, typeof(ClassicSakuraCardPool), AllCardTypesForRegistration());
         registry.RegisterAffliction<SleepingAffliction>();
+        registry.RegisterAffliction<BuriedAffliction>();
+        registry.RegisterAffliction<FrozenAffliction>();
         RegisterFourthAct(registry);
         foreach (var monsterType in WindEnemyCatalog.MonsterTypes
                      .Concat(WaterEnemyCatalog.MonsterTypes)

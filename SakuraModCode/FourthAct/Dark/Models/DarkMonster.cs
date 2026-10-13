@@ -66,13 +66,13 @@ public sealed class DarkMonster : ModMonsterTemplate
         var branch = new ConditionalBranchState("DARK_BRANCH");
         _confinement = new MoveState("CONFINEMENT", DoConfinement,
             new SingleAttackIntent(() => DarkEnemyRules.AttackDamage(DarkRegularAction.Confinement, Darkness, IsDeadly)),
-            new DebuffIntent(strong: true));
+            new CardDebuffIntent());
         _nonConfinement = new MoveState("NON_CONFINEMENT", DoNonConfinement,
             new SingleAttackIntent(() => DarkEnemyRules.AttackDamage(DarkRegularAction.NonConfinement, Darkness, IsDeadly)),
             new DefendIntent());
         _ultimate = new MoveState("ULTIMATE", DoUltimate,
             new SingleAttackIntent(() => DarkEnemyRules.UltimateDamage(IsDeadly)),
-            new DebuffIntent(strong: true));
+            new StatusIntent(1));
         _confinement.FollowUpState = branch;
         _nonConfinement.FollowUpState = branch;
         _ultimate.FollowUpState = branch;
@@ -145,7 +145,8 @@ public sealed class DarkMonster : ModMonsterTemplate
         new SingleAttackIntent(DarkEnemyRules.BaseConfinementDamage),
         new SingleAttackIntent(DarkEnemyRules.BaseNonConfinementDamage),
         new SingleAttackIntent(DarkEnemyRules.BaseUltimateDamage),
-        new DebuffIntent(strong: true),
+        new CardDebuffIntent(),
+        new StatusIntent(1),
         new DefendIntent()
     ];
 }

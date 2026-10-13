@@ -18,7 +18,7 @@ using STS2RitsuLib.Cards.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Break() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+public class Break() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(7, ValueProp.Move), new PowerVar<VulnerablePower>(1)];

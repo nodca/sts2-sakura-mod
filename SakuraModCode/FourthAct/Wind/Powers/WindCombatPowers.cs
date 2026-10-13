@@ -1,3 +1,5 @@
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -157,6 +159,7 @@ public sealed class WindSovereigntyPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [SakuraCardHoverTips.StaticTip("SAKURAMOD-WINDY_STATE")];
 
     public override bool TryModifyPowerAmountReceived(PowerModel canonicalPower, Creature target, decimal amount, Creature? applier, out decimal modifiedAmount)
     {
@@ -178,6 +181,9 @@ public sealed class WindBindPower : SakuraPowerModel
     protected override string IconFileName => "fourth_act/wind_bind.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Single;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("WallCap", WindEnemyRules.WallCap(1))];
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips =>
+        [HoverTipFactory.FromCard<Dazed>(), HoverTipFactory.FromPower<WindWallPower>()];
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -283,6 +289,8 @@ public sealed class FloatDrawCounterPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => _drawCount;
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+        [new DynamicVar("Cards", 0), new DynamicVar("Block", Models.FloatMonster.BlockPerDraw)];
     public int DrawCount => _drawCount;
 
     public override Task AfterCardDrawn(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
@@ -290,6 +298,7 @@ public sealed class FloatDrawCounterPower : SakuraPowerModel
         if (card.Owner.Creature.IsAlive)
         {
             _drawCount++;
+            DynamicVars["Cards"].BaseValue = _drawCount;
             InvokeDisplayAmountChanged();
         }
         return Task.CompletedTask;
@@ -298,6 +307,7 @@ public sealed class FloatDrawCounterPower : SakuraPowerModel
     public void Reset()
     {
         _drawCount = 0;
+        DynamicVars["Cards"].BaseValue = 0;
         InvokeDisplayAmountChanged();
     }
 }
@@ -307,6 +317,7 @@ public sealed class WindSleepSelectionPower : SakuraPowerModel
     protected override string IconFileName => "fourth_act/drowsy.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => HoverTipFactory.FromAffliction<SleepingAffliction>();
 
     public override async Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
@@ -350,6 +361,7 @@ public sealed class WindSleepWakePower : SakuraPowerModel
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => -1;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => HoverTipFactory.FromAffliction<SleepingAffliction>();
 
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature target, DamageResult result, ValueProp props, Creature? dealer, CardModel? cardSource)
     {

@@ -22,7 +22,7 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Repair() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Repair() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<RegenPower>(3)];

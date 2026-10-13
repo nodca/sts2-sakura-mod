@@ -262,7 +262,7 @@ public sealed class EarthyMonster : EarthMonsterBase
         var tremor = new MoveState("TREMOR", Tremor, new SingleAttackIntent(() => EarthEnemyRules.EarthyTremorDamage(SedimentCount, IsDeadly)));
         var rockfall = new MoveState("ROCKFALL", Rockfall, new MultiAttackIntent(IsDeadly ? EarthEnemyRules.EarthyRockfallA9Damage : EarthEnemyRules.EarthyRockfallDamage, EarthEnemyRules.EarthyRockfallHits));
         var charge = new MoveState("QUAKE_CHARGE", Charge, new BuffIntent(), new DefendIntent());
-        var landslide = new MoveState("LANDSLIDE", Landslide, new SingleAttackIntent(IsDeadly ? EarthEnemyRules.EarthyLandslideA9Damage : EarthEnemyRules.EarthyLandslideDamage));
+        var landslide = new MoveState("LANDSLIDE", Landslide, new SingleAttackIntent(IsDeadly ? EarthEnemyRules.EarthyLandslideA9Damage : EarthEnemyRules.EarthyLandslideDamage), new CardDebuffIntent());
 
         tremor.FollowUpState = rockfall;
         rockfall.FollowUpState = charge;
@@ -317,7 +317,7 @@ public sealed class EarthyMonster : EarthMonsterBase
             var discard = CardPile.Get(PileType.Discard, player);
             if (discard?.Cards.LastOrDefault() is { } topCard)
             {
-                EarthCombatRules.MarkBuried(topCard);
+                await EarthCombatRules.MarkBuried(topCard);
             }
         }
     }

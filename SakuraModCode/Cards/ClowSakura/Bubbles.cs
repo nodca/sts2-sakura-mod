@@ -25,7 +25,7 @@ using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class ClowBubbles() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Rare, TargetType.AnyEnemy)
+public class ClowBubbles() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Water;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(5, ValueProp.Move), new DynamicVar("Magic", 2)];
@@ -66,7 +66,7 @@ public class ClowBubbles() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.
 
     private async Task<bool> RemoveRandomBuff(PlayerChoiceContext choiceContext, Creature target)
     {
-        var buffs = target.Powers.Where(SakuraPowerRules.IsBubblesRemovableBuff).ToList();
+        var buffs = target.Powers.Where(SakuraPowerRules.IsBubblesBasicBuff).ToList();
         var buff = Owner.RunState.Rng.CombatCardSelection.NextItem(buffs);
         if (buff is null)
             return false;
@@ -78,7 +78,7 @@ public class ClowBubbles() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.
     private static async Task<bool> RemoveAllBuffs(Creature target)
     {
         var removed = false;
-        foreach (var buff in target.Powers.Where(SakuraPowerRules.IsBubblesRemovableBuff).ToList())
+        foreach (var buff in target.Powers.Where(SakuraPowerRules.IsBubblesBasicBuff).ToList())
         {
             await PowerCmd.Remove(buff);
             removed = true;
