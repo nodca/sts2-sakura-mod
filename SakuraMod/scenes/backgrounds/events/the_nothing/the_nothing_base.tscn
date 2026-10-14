@@ -1,0 +1,28 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/events/the_nothing/the_nothing_base.png" id="1_base"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/events/the_nothing/sky_clouds.png" id="2_clouds"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/events/the_nothing/sky_mask.png" id="3_mask"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/backgrounds/events/the_nothing/town_lights.png" id="4_lights"]
+[ext_resource type="Shader" path="res://SakuraMod/shaders/events/the_nothing_seal.gdshader" id="5_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_seal"]
+resource_local_to_scene = true
+shader = ExtResource("5_shader")
+shader_parameter/clouds = ExtResource("2_clouds")
+shader_parameter/sky_mask = ExtResource("3_mask")
+shader_parameter/town_lights = ExtResource("4_lights")
+
+[node name="TheNothingBase" type="Control"]
+mouse_filter = 2
+
+[node name="TheNothingPainting" type="TextureRect" parent="."]
+material = SubResource("ShaderMaterial_seal")
+offset_left = -1360.0
+offset_top = -680.0
+offset_right = 1360.0
+offset_bottom = 680.0
+mouse_filter = 2
+texture = ExtResource("1_base")
+expand_mode = 1
+stretch_mode = 0

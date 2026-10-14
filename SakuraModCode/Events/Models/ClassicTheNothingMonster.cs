@@ -25,12 +25,22 @@ using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Extensions;
 using SakuraMod.SakuraModCode.Events;
-using STS2RitsuLib.Scaffolding.Content;
+using SakuraMod.SakuraModCode.Events.Visuals;
+using SakuraMod.SakuraModCode.FourthAct;
+using SakuraMod.SakuraModCode.FourthAct.Visuals.Presentation;
+using Godot;
 
 namespace SakuraMod.SakuraModCode.Events;
 
-public class ClassicTheNothingMonster : ModMonsterTemplate
+// Presented through the fourth-act template: she floats inside a sphere (the catalog's front
+// ambient), every move leaves the sphere, hits ripple it instead of flashing her, and her
+// death lets the sphere go before she fades.
+public class ClassicTheNothingMonster : FourthActMonsterTemplate
 {
+    // Radius of her sphere in creature-visual pixels; the sphere scene draws the same.
+    internal const float SphereRadius = 196f;
+    private const float CardImpactStrength = 0.6f;
+
     private const int BaseHp = 187;
     private const int ToughHp = 214;
 
@@ -57,9 +67,13 @@ public class ClassicTheNothingMonster : ModMonsterTemplate
     public override int MinInitialHp => AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, ToughHp, BaseHp);
     public override int MaxInitialHp => MinInitialHp;
     public override string? CustomVisualsPath => "monsters/the_nothing.png".ImagePath();
-    public override bool HasDeathSfx => false;
     public override string? HurtSfx => null;
-    public override IEnumerable<string> AssetPaths => GetIntentAssets().Prepend(CustomVisualsPath!);
+    internal override float StandeeStateGlow => Creature.GetPower<IntangiblePower>() is null ? 0f : 1f;
+    internal override float DissolveDuration => 1.8f;
+    internal override FourthActFxId? DeathFx => FourthActFxId.NothingRelease;
+
+    protected override IEnumerable<string> MonsterAssetPaths =>
+        GetIntentAssets().Prepend(CustomVisualsPath!).Concat(TheNothingCardTheftVfx.AssetPaths);
 
     private int StartVoid => DeadlyValue(DeadlyStartVoid, BaseStartVoid);
     private int ThumpDamage => DeadlyValue(DeadlyThumpDamage, BaseThumpDamage);
@@ -71,8 +85,22 @@ public class ClassicTheNothingMonster : ModMonsterTemplate
     private int Strengthen => DeadlyValue(DeadlyStrengthen, BaseStrengthen);
     private int Weaken => DeadlyValue(DeadlyWeaken, BaseWeaken);
 
-    protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
+    // She keeps the standee's gentle idle float; the sphere stays still around her.
+    protected override NCreatureVisuals? CreateStandee() =>
         SakuraStandeeVisuals.Create(CustomVisualsPath!, "The Nothing", CombatVisualScale);
+
+    // A hit is stopped by the sphere: its surface ripples like water from the point struck, on
+    // the side facing the players (harder while Intangible), and she does not flash.
+    internal override bool TryPlayStandeeHit(NCreature node)
+    {
+        var at = new Vector2((float)GD.RandRange(-0.7, -0.3), (float)GD.RandRange(-0.45, 0.4));
+        var strength = Creature.GetPower<IntangiblePower>() is null ? 1f : 1.6f;
+        return FourthActStandeeMaterial.TryGet(node)?.Impact(at, strength) == true;
+    }
+
+    // A taken card going into the sphere: a smaller ripple where it went in (unit-disc point).
+    internal void RippleWhereCardEntered(Vector2 at) =>
+        FourthActStandeeMaterial.TryGet(Creature)?.Impact(at, CardImpactStrength);
 
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
@@ -116,34 +144,25 @@ public class ClassicTheNothingMonster : ModMonsterTemplate
             start);
     }
 
-    private async Task StartVoidMove(IReadOnlyList<Creature> targets)
-    {
-        foreach (var target in targets)
+    private Task StartVoidMove(IReadOnlyList<Creature> targets) =>
+        PerformAsync(async () =>
         {
-            await PowerCmd.Apply<ClassicNothingMonsterPower>(new ThrowingPlayerChoiceContext(), target, 1, Creature, null, false);
-            await AddVoids(target, StartVoid);
-        }
-    }
+            foreach (var target in targets)
+            {
+                await PowerCmd.Apply<ClassicNothingMonsterPower>(new ThrowingPlayerChoiceContext(), target, 1, Creature, null, false);
+                await AddVoids(target, StartVoid);
+            }
+        }, targets);
 
-    private async Task ThumpAttack(IReadOnlyList<Creature> targets) =>
-        await DamageCmd.Attack(ThumpDamage)
-            .FromMonster(this)
-            .WithNoAttackerAnim()
-            .Execute(null);
+    private Task ThumpAttack(IReadOnlyList<Creature> targets) =>
+        AttackAsync(DamageCmd.Attack(ThumpDamage).FromMonster(this));
 
-    private async Task BatterAttack(IReadOnlyList<Creature> targets) =>
-        await DamageCmd.Attack(BatterDamage)
-            .FromMonster(this)
-            .WithHitCount(BatterHits)
-            .WithNoAttackerAnim()
-            .Execute(null);
+    private Task BatterAttack(IReadOnlyList<Creature> targets) =>
+        AttackAsync(DamageCmd.Attack(BatterDamage).FromMonster(this).WithHitCount(BatterHits));
 
     private async Task Destruction(IReadOnlyList<Creature> targets)
     {
-        await DamageCmd.Attack(DestructionDamage)
-            .FromMonster(this)
-            .WithNoAttackerAnim()
-            .Execute(null);
+        await AttackAsync(DamageCmd.Attack(DestructionDamage).FromMonster(this));
 
         foreach (var target in targets)
         {
@@ -152,24 +171,26 @@ public class ClassicTheNothingMonster : ModMonsterTemplate
         }
     }
 
-    private async Task StrengthenSelf(IReadOnlyList<Creature> targets)
-    {
-        foreach (var power in Creature.Powers.ToList())
-            await PowerCmd.Remove(power);
-
-        await PowerCmd.Apply<IntangiblePower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, false);
-        await PowerCmd.Apply<StrengthPower>(new ThrowingPlayerChoiceContext(), Creature, Strengthen, Creature, null, false);
-    }
-
-    private async Task WeakenPlayers(IReadOnlyList<Creature> targets)
-    {
-        foreach (var target in targets)
+    private Task StrengthenSelf(IReadOnlyList<Creature> targets) =>
+        PerformAsync(async () =>
         {
-            await PowerCmd.Apply<VulnerablePower>(new ThrowingPlayerChoiceContext(), target, Weaken, Creature, null, false);
-            await PowerCmd.Apply<FrailPower>(new ThrowingPlayerChoiceContext(), target, Weaken, Creature, null, false);
-            await PowerCmd.Apply<WeakPower>(new ThrowingPlayerChoiceContext(), target, Weaken, Creature, null, false);
-        }
-    }
+            foreach (var power in Creature.Powers.ToList())
+                await PowerCmd.Remove(power);
+
+            await PowerCmd.Apply<IntangiblePower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, false);
+            await PowerCmd.Apply<StrengthPower>(new ThrowingPlayerChoiceContext(), Creature, Strengthen, Creature, null, false);
+        });
+
+    private Task WeakenPlayers(IReadOnlyList<Creature> targets) =>
+        PerformAsync(async () =>
+        {
+            foreach (var target in targets)
+            {
+                await PowerCmd.Apply<VulnerablePower>(new ThrowingPlayerChoiceContext(), target, Weaken, Creature, null, false);
+                await PowerCmd.Apply<FrailPower>(new ThrowingPlayerChoiceContext(), target, Weaken, Creature, null, false);
+                await PowerCmd.Apply<WeakPower>(new ThrowingPlayerChoiceContext(), target, Weaken, Creature, null, false);
+            }
+        }, targets);
 
     private static async Task AddVoids(Creature target, int count)
     {
@@ -186,7 +207,9 @@ public class ClassicTheNothingMonster : ModMonsterTemplate
             CardPilePosition.Bottom));
     }
 
-    private static async Task PurgeRandomCombatCards(Creature target, int count)
+    // The cards she takes drift into her sphere (TheNothingCardTheftVfx) instead of the native
+    // removal smoke; the Voids follow once they are gone.
+    private async Task PurgeRandomCombatCards(Creature target, int count)
     {
         if (target.Player is not { } player || count <= 0)
             return;
@@ -203,8 +226,13 @@ public class ClassicTheNothingMonster : ModMonsterTemplate
             removed.Add(card);
         }
 
-        if (removed.Count > 0)
-            await CardPileCmd.RemoveFromCombat(removed, skipVisuals: false);
+        if (removed.Count == 0)
+            return;
+
+        var theft = TheNothingCardTheftVfx.Begin(removed, Creature);
+        await CardPileCmd.RemoveFromCombat(removed, skipVisuals: true);
+        if (theft is not null)
+            await theft.WaitAsync();
     }
 
     private static int DeadlyValue(int deadly, int normal) =>

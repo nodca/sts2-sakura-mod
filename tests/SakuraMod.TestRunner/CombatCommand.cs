@@ -35,6 +35,7 @@ public static class CombatCommand
         "combat-transition-cleanup",
         "dark-selection-combat-reentry",
         "through-piercing",
+        "lucid-aoe",
         "sakura-erase",
         "affliction-visual-layout",
         "queen-bound-cleanup",

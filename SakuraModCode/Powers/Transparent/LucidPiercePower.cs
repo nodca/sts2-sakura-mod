@@ -1,46 +1,73 @@
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
-using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
-using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
-using SakuraMod.SakuraModCode;
-using SakuraMod.SakuraModCode.Cards;
-using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Extensions;
-using STS2RitsuLib.Combat.HandSize;
-using STS2RitsuLib.Scaffolding.Content;
-using STS2RitsuLib.Scaffolding.Content.Patches;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
 public class LucidPiercePower : SakuraPowerModel
 {
-    private readonly List<CardModel> _cards = [];
+    private sealed class Data
+    {
+        public readonly List<uint> Cards = [];
+    }
 
     protected override string IconFileName => "lucid_pierce.png";
-
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
-    public static bool ShouldPierce(Creature? dealer, CardModel? cardSource) =>
+    protected override object InitInternalData() => new Data();
+
+    internal static bool ShouldSpread(Creature? dealer, CardModel? cardSource) =>
         dealer is not null
-        && cardSource is { Type: CardType.Attack }
+        && cardSource is { IsMutable: true, Type: CardType.Attack }
+        && cardSource.TargetType != TargetType.AllEnemies
         && cardSource.Owner?.Creature == dealer
         && (dealer.GetPower<LucidPierceAllPower>() is not null
-            || dealer.GetPower<LucidPiercePower>()?._cards.Contains(cardSource) == true);
+            || dealer.GetPower<LucidPiercePower>()?.GetInternalData<Data>().Cards
+                .Contains(NetCombatCard.FromModel(cardSource).CombatCardIndex) == true);
+
+    internal static void SpreadAttack(AttackCommand command)
+    {
+        if (command.DamageProps.IsCardOrMonsterMove()
+            && ShouldSpread(command.Attacker, command.ModelSource as CardModel))
+            command.RetargetAllOpponents();
+    }
+
+    internal static IReadOnlyList<Creature>? ExpandDamageTargets(
+        IEnumerable<Creature> targets, ValueProp props, Creature? dealer, CardModel? cardSource)
+    {
+        if (!props.IsCardOrMonsterMove()
+            || !ShouldSpread(dealer, cardSource)
+            || dealer?.CombatState is not { } combat)
+            return null;
+
+        var original = targets.ToList();
+        if (original.Count == 0 || original.Any(target => target.Side == dealer.Side))
+            return null;
+
+        // Also covers manual hits grouped by AttackContext, which do not use builder targeting.
+        return combat.GetOpponentsOf(dealer).Where(target => target.IsHittable).Distinct().ToList();
+    }
 
     public static async Task Mark(PlayerChoiceContext choiceContext, Creature owner, CardModel card, CardModel source)
     {
-        if (owner.GetPower<LucidPiercePower>() is null)
-            await PowerCmd.Apply<LucidPiercePower>(choiceContext, owner, 1, owner, source, false);
-        owner.GetPower<LucidPiercePower>()?._cards.Add(card);
+        var power = owner.GetPower<LucidPiercePower>()
+            ?? await PowerCmd.Apply<LucidPiercePower>(choiceContext, owner, 1, owner, source, false);
+        power?.GetInternalData<Data>().Cards.Add(NetCombatCard.FromModel(card).CombatCardIndex);
+    }
+
+    public override Task BeforeAttack(AttackCommand command)
+    {
+        SpreadAttack(command);
+        return Task.CompletedTask;
     }
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
@@ -53,9 +80,14 @@ public class LucidPiercePower : SakuraPowerModel
 public class LucidPierceAllPower : SakuraPowerModel
 {
     protected override string IconFileName => "lucid_pierce.png";
-
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
+
+    public override Task BeforeAttack(AttackCommand command)
+    {
+        LucidPiercePower.SpreadAttack(command);
+        return Task.CompletedTask;
+    }
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {

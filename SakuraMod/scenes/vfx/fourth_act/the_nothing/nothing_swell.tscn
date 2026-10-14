@@ -1,0 +1,83 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/crescent.png" id="1_crescent"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="2_glow"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Animation" id="Animation_2"]
+resource_name = "play"
+length = 0.660
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Bulge:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.420, 0.660), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.300, 0.600, 1.000, 0.000), Color(0.300, 0.600, 1.000, 0.000), Color(0.300, 0.600, 1.000, 1.000), Color(0.300, 0.600, 1.000, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Bulge:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.660), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(2.1434294871794872, 2.2506009615384617), Vector2(2.1434294871794872, 2.2506009615384617), Vector2(2.4435096153846154, 2.6149839743589745)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Edge:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.080, 0.420, 0.600), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.860, 0.970, 1.000, 0.000), Color(0.860, 0.970, 1.000, 0.000), Color(0.860, 0.970, 1.000, 0.550), Color(0.860, 0.970, 1.000, 0.000)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Edge:scale")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.080, 0.600), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(2.0791266025641026, 2.1434294871794872), Vector2(2.0791266025641026, 2.1434294871794872), Vector2(2.3149038461538463, 2.4435096153846154)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Glow:modulate")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.100, 0.420, 0.620), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.300, 0.600, 1.000, 0.000), Color(0.300, 0.600, 1.000, 0.000), Color(0.300, 0.600, 1.000, 0.600), Color(0.300, 0.600, 1.000, 0.000)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Glow:scale")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.100, 0.620), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(1.4, 2.8), Vector2(1.4, 2.8), Vector2(2.2, 4.0)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_3"]
+_data = {&"play": SubResource("Animation_2")}
+
+[node name="NothingSwell" type="Node2D"]
+metadata/contact_time = 0.45
+metadata/lifetime = 0.9
+
+[node name="Bulge" type="Sprite2D" parent="."]
+texture = ExtResource("1_crescent")
+modulate = Color(0.300, 0.600, 1.000, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+rotation = 3.141592653589793
+
+[node name="Edge" type="Sprite2D" parent="."]
+texture = ExtResource("1_crescent")
+modulate = Color(0.860, 0.970, 1.000, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+rotation = 3.141592653589793
+
+[node name="Glow" type="Sprite2D" parent="."]
+texture = ExtResource("2_glow")
+modulate = Color(0.300, 0.600, 1.000, 0.000)
+position = Vector2(-196.0, 0.0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_3")}
+autoplay = &"play"

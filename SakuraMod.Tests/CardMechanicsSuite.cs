@@ -18,6 +18,23 @@ using STS2RitsuLib.RunData;
 public sealed class CardMechanicsSuite
 {
     [Fact]
+    public void LucidKeepsItsSearchBudgetAndRejectsNonCombatDamageSources()
+    {
+        var lucid = new Lucid();
+        var upgraded = RegressionTestHarness.MutableForCostTest(new Lucid());
+        upgraded.UpgradeInternal();
+
+        Assert.Equal(0, lucid.EnergyCost.Canonical);
+        Assert.Equal(0, upgraded.EnergyCost.Canonical);
+        Assert.Contains(CardKeyword.Exhaust, lucid.CanonicalKeywords);
+        Assert.Equal(3, lucid.DynamicVars["Look"].IntValue);
+        Assert.Equal(4, upgraded.DynamicVars["Look"].IntValue);
+        Assert.False(LucidPiercePower.ShouldSpread(null, new ClowSword()));
+        Assert.Null(LucidPiercePower.ExpandDamageTargets([], ValueProp.Move, null, new ClowSword()));
+        Assert.Null(LucidPiercePower.ExpandDamageTargets([], ValueProp.Unblockable, null, null));
+    }
+
+    [Fact]
     public void SynchronizedPairsAreIndependentAcrossTemplateAndCardClones()
     {
         var template = new SynchronizedCardPairModifier();
@@ -1203,7 +1220,7 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             SakuraActions.HasExchangeableEnergyCost(new Gale())
             && SakuraActions.HasExchangeableEnergyCost(new SpellSeal())
-            && SakuraActions.HasExchangeableEnergyCost(new Remind())
+            && !SakuraActions.HasExchangeableEnergyCost(new Remind())
             && !SakuraActions.HasExchangeableEnergyCost(new SpellHuoShen())
             && !SakuraActions.HasExchangeableEnergyCost(new MegaCrit.Sts2.Core.Models.Cards.Clumsy()),
             "Expected Exchange to accept only cards with displayed, fixed Energy costs.");

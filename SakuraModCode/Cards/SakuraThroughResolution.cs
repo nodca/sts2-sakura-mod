@@ -238,9 +238,10 @@ internal static class SakuraThroughResolution
     [typeof(MegaCrit.Sts2.Core.GameActions.Multiplayer.PlayerChoiceContext), typeof(IEnumerable<Creature>), typeof(decimal), typeof(ValueProp), typeof(Creature), typeof(CardModel)])]
 internal static class SakuraThroughDamageTargetsPatch
 {
-    private static void Prefix(ref IEnumerable<Creature> targets, CardModel? cardSource)
+    private static void Prefix(ref IEnumerable<Creature> targets, ValueProp props, Creature? dealer, CardModel? cardSource)
     {
-        if (SakuraThroughResolution.ExpandDamageTargets(targets, cardSource) is { } expanded)
+        if ((LucidPiercePower.ExpandDamageTargets(targets, props, dealer, cardSource)
+             ?? SakuraThroughResolution.ExpandDamageTargets(targets, cardSource)) is { } expanded)
             targets = expanded;
     }
 }

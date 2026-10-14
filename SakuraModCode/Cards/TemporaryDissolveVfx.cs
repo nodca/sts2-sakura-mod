@@ -112,7 +112,9 @@ public static class TemporaryDissolveVfx
             : NCombatRoom.Instance?.CombatVfxContainer.GetViewportRect().GetCenter() ?? Vector2.Zero;
     }
 
-    private static NCard AttachVisibleCard(Node2D root, CardModel card, NCard cardNode)
+    // Takes a card node off the table the way native RemoveFromCombat does (play queue, hand,
+    // parent) and keeps it where it was under `root`, for a removal that skips native visuals.
+    internal static NCard AttachVisibleCard(Node2D root, CardModel card, NCard cardNode)
     {
         var globalPosition = cardNode.GlobalPosition;
         var rotation = cardNode.Rotation;

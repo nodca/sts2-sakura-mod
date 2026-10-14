@@ -18,8 +18,11 @@ namespace SakuraMod.SakuraModCode.FourthAct.Visuals.Presentation;
 // session-owned values (the shader never reads TIME), so no uniform is ever tweened.
 //
 // It also owns the monster's ambient layer from the catalog: either drawn behind the
-// standee (`ambient_layer = "behind"`, at its centre or `ambient_anchor = "feet"`) or across the bottom of the room (`"room"`), faded
-// by the monster's AmbientLevel and gone with the body.
+// standee (`ambient_layer = "behind"`, at its centre or `ambient_anchor = "feet"`), over it
+// (`"front"`, at its centre: The Nothing's sphere) or across the bottom of the room
+// (`"room"`), faded by the monster's AmbientLevel and gone with the body. Its shaders get the
+// standee's u_time, state_glow and dissolve every frame, and `impacts`: up to MaxImpacts wave
+// sources (x, y on the layer's unit disc, age, strength) a surface layer ripples from.
 internal sealed partial class FourthActStandeeMaterial : Node
 {
     internal const string NodeName = "FourthActStandeeMaterial";
@@ -43,6 +46,9 @@ internal sealed partial class FourthActStandeeMaterial : Node
     private const float StateRate = 3f;
     private const float AmbientRate = 1.5f;
     private const int AmbientAttempts = 120;
+    private const int MaxImpacts = 4;
+    private const float ImpactLifetime = 3f;
+    private static readonly StringName ImpactsParam = "impacts";
 
     private readonly List<ShaderMaterial> _materials = [];
     private float _time;
@@ -57,6 +63,8 @@ internal sealed partial class FourthActStandeeMaterial : Node
     private Node2D? _ambient;
     private readonly List<ShaderMaterial> _ambientMaterials = [];
     private int _ambientAttempts;
+    private readonly Vector4[] _impacts = new Vector4[MaxImpacts];
+    private int _nextImpact;
 
     private FourthActStandeeMaterial() => Name = NodeName;
 
@@ -119,6 +127,19 @@ internal sealed partial class FourthActStandeeMaterial : Node
             _flash = 1f;
     }
 
+    internal bool IsDissolving => _dissolve >= 0f;
+
+    // A wave source on the ambient surface (The Nothing's sphere): `at` on its unit disc.
+    // Returns false when there is no surface to ripple.
+    internal bool Impact(Vector2 at, float strength)
+    {
+        if (_ambientMaterials.Count == 0 || _dissolve >= 0f)
+            return false;
+        _impacts[_nextImpact] = new Vector4(at.X, at.Y, 0f, strength);
+        _nextImpact = (_nextImpact + 1) % MaxImpacts;
+        return true;
+    }
+
     internal void Dissolve()
     {
         _chargeTarget = 0f;
@@ -132,7 +153,7 @@ internal sealed partial class FourthActStandeeMaterial : Node
         _charge = Mathf.MoveToward(_charge, _chargeTarget, ChargeRate * step);
         _flash = Mathf.Max(0f, _flash - FlashDecay * step);
         if (_dissolve >= 0f)
-            _dissolve = Mathf.Min(1f, _dissolve + step / DissolveDuration);
+            _dissolve = Mathf.Min(1f, _dissolve + step / Mathf.Max(0.05f, _monster?.DissolveDuration ?? DissolveDuration));
         _state = Mathf.MoveToward(_state, _dissolve >= 0f ? 0f : StateTarget(), StateRate * step);
         foreach (var material in _materials)
             Write(material);
@@ -204,8 +225,22 @@ internal sealed partial class FourthActStandeeMaterial : Node
         var alpha = Mathf.MoveToward(_ambient.Modulate.A, target, AmbientRate * step);
         _ambient.Modulate = new Color(1f, 1f, 1f, alpha);
         _ambient.Visible = alpha > 0.001f;
+        for (var i = 0; i < MaxImpacts; i++)
+        {
+            if (_impacts[i].W <= 0f)
+                continue;
+            _impacts[i].Z += step;
+            if (_impacts[i].Z > ImpactLifetime)
+                _impacts[i] = Vector4.Zero;
+        }
+
         foreach (var material in _ambientMaterials)
+        {
+            material.SetShaderParameter(ImpactsParam, _impacts);
             material.SetShaderParameter(TimeParam, _time);
+            material.SetShaderParameter(StateParam, _state);
+            material.SetShaderParameter(DissolveParam, Mathf.Max(_dissolve, 0f));
+        }
         if (_dissolve >= 1f && alpha <= 0f)
         {
             _ambient.QueueFreeSafely();
@@ -235,6 +270,11 @@ internal sealed partial class FourthActStandeeMaterial : Node
                 room.CombatVfxContainer.AddChildSafely(root);
                 var size = room.GetViewportRect().Size;
                 root.GlobalPosition = new Vector2(size.X * 0.5f, size.Y);
+            }
+            else if (layer == "front")
+            {
+                _visuals.AddChild(root);
+                root.GlobalPosition = _visuals.VfxSpawnPosition.GlobalPosition;
             }
             else
             {
@@ -288,8 +328,20 @@ internal static class FourthActStandeeHitPatch
 {
     private static void Postfix(NCreature __instance, string trigger)
     {
-        if (trigger == "Hit" && FourthActStandeeMaterial.Owns(__instance))
-            FourthActStandeeMaterial.TryGet(__instance)?.Flash();
+        if (trigger != "Hit" || !FourthActStandeeMaterial.Owns(__instance))
+            return;
+
+        try
+        {
+            if (__instance.Entity.Monster is FourthActMonsterTemplate monster && monster.TryPlayStandeeHit(__instance))
+                return;
+        }
+        catch (Exception exception)
+        {
+            MainFile.Logger.Warn($"Fourth-act standee hit failed open: {exception.Message}");
+        }
+
+        FourthActStandeeMaterial.TryGet(__instance)?.Flash();
     }
 }
 
@@ -303,7 +355,13 @@ internal static class FourthActStandeeDeathPatch
         if (!FourthActStandeeMaterial.Owns(__instance) || __instance.DeathAnimationTask is { IsCompleted: false })
             return;
 
-        FourthActStandeeMaterial.TryGet(__instance)?.Dissolve();
+        if (FourthActStandeeMaterial.TryGet(__instance) is { IsDissolving: false } standee)
+        {
+            standee.Dissolve();
+            if (__instance.Entity.Monster is FourthActMonsterTemplate { DeathFx: { } deathFx })
+                FourthActFxPlayer.Spawn(deathFx, __instance.VfxSpawnPosition);
+        }
+
         if (__instance.Entity.Monster is { HasDeathSfx: true } monster)
             SfxCmd.PlayDeath(monster);
     }

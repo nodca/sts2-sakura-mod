@@ -21,7 +21,7 @@ public abstract class FourthActMonsterTemplate : ModMonsterTemplate
     public override bool HasDeathSfx => true;
     public override string DeathSfx => FourthActEnemyAudio.PathFor(Profile.Death);
     public override DamageSfxType TakeDamageSfxType => Profile.DamageSfx;
-    public override float DeathAnimLengthOverride => FourthActStandeeMaterial.DissolveDuration;
+    public override float DeathAnimLengthOverride => DissolveDuration;
 
     // The standee dissolves itself; the native fade would only replay over an empty body.
     public override bool ShouldFadeAfterDeath => false;
@@ -49,6 +49,15 @@ public abstract class FourthActMonsterTemplate : ModMonsterTemplate
     internal virtual Color StandeeStateColor => Profile.Accent;
     internal virtual Color StandeeAccent => Profile.Accent;
     internal virtual float AmbientLevel => 1f;
+
+    // Death: how long the standee takes to dissolve, and an effect played at its centre as it
+    // starts (The Nothing's sphere coming apart).
+    internal virtual float DissolveDuration => FourthActStandeeMaterial.DissolveDuration;
+    internal virtual FourthActFxId? DeathFx => null;
+
+    // A hit normally flashes the body; a monster that shows hits another way (The Nothing's
+    // sphere ripples where it was struck) plays that here and returns true.
+    internal virtual bool TryPlayStandeeHit(NCreature node) => false;
 
     // NextMove is the move being performed for the whole of MonsterModel.PerformMove, so a
     // method shared by several moves resolves under whichever one is running.

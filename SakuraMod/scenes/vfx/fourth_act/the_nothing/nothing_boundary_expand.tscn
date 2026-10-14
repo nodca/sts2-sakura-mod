@@ -1,0 +1,73 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/arc_ring.png" id="1_arc_ring"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Animation" id="Animation_2"]
+resource_name = "play"
+length = 0.620
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Edge:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.060, 0.500), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.550, 0.940, 1.000, 0.000), Color(0.550, 0.940, 1.000, 0.000), Color(0.550, 0.940, 1.000, 0.950), Color(0.550, 0.940, 1.000, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Edge:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.500), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.8506944444444444, 0.8506944444444444), Vector2(0.8506944444444444, 0.8506944444444444), Vector2(1.3185763888888888, 1.3185763888888888)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Edge:rotation")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.500), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [0.0, 0.35]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("EdgeB:modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.120, 0.180, 0.620), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.860, 0.970, 1.000, 0.000), Color(0.860, 0.970, 1.000, 0.000), Color(0.860, 0.970, 1.000, 0.700), Color(0.860, 0.970, 1.000, 0.000)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("EdgeB:scale")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.120, 0.620), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.8506944444444444, 0.8506944444444444), Vector2(0.8506944444444444, 0.8506944444444444), Vector2(1.1484375, 1.1484375)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("EdgeB:rotation")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.620), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [0.8, 0.5]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_3"]
+_data = {&"play": SubResource("Animation_2")}
+
+[node name="NothingBoundaryExpand" type="Node2D"]
+metadata/contact_time = 0.35
+metadata/lifetime = 0.9
+
+[node name="Edge" type="Sprite2D" parent="."]
+texture = ExtResource("1_arc_ring")
+modulate = Color(0.550, 0.940, 1.000, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="EdgeB" type="Sprite2D" parent="."]
+texture = ExtResource("1_arc_ring")
+modulate = Color(0.860, 0.970, 1.000, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_3")}
+autoplay = &"play"

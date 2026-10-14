@@ -9,11 +9,11 @@
   "SAKURA_MOD_POWER_LUCID_GUARD_POWER.description": "本回合下一次受到的攻击伤害有上限。",
   "SAKURA_MOD_POWER_LUCID_GUARD_POWER.smartDescription": "限制下一次攻击伤害。",
   "SAKURA_MOD_POWER_LUCID_PIERCE_POWER.title": "透过",
-  "SAKURA_MOD_POWER_LUCID_PIERCE_POWER.description": "本回合内，透过选中的攻击牌无视敌人的[gold]格挡[/gold]。",
-  "SAKURA_MOD_POWER_LUCID_PIERCE_POWER.smartDescription": "选中的攻击牌无视格挡。",
+  "SAKURA_MOD_POWER_LUCID_PIERCE_POWER.description": "本回合，透过选中的攻击牌的攻击伤害作用于所有敌人。",
+  "SAKURA_MOD_POWER_LUCID_PIERCE_POWER.smartDescription": "本回合，选中牌的攻击伤害作用于所有敌人。",
   "SAKURA_MOD_POWER_LUCID_PIERCE_ALL_POWER.title": "透过",
-  "SAKURA_MOD_POWER_LUCID_PIERCE_ALL_POWER.description": "本回合内，你的攻击牌无视敌人的[gold]格挡[/gold]。",
-  "SAKURA_MOD_POWER_LUCID_PIERCE_ALL_POWER.smartDescription": "攻击牌无视格挡。",
+  "SAKURA_MOD_POWER_LUCID_PIERCE_ALL_POWER.description": "本回合内，你的攻击牌的攻击伤害作用于所有敌人。",
+  "SAKURA_MOD_POWER_LUCID_PIERCE_ALL_POWER.smartDescription": "攻击牌的攻击伤害作用于所有敌人。",
   "SAKURA_MOD_POWER_SWING_DAMAGE_WINDOW_POWER.title": "摇动",
   "SAKURA_MOD_POWER_SWING_DAMAGE_WINDOW_POWER.description": "你的攻击对拥有[gold]虚弱[/gold]的敌人造成 {Amount} 倍伤害，持续至本回合结束。",
   "SAKURA_MOD_POWER_SWING_DAMAGE_WINDOW_POWER.smartDescription": "对拥有[gold]虚弱[/gold]的敌人造成 {Amount} 倍伤害。",
@@ -289,5 +289,5 @@
   "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.title": "冻结抗性",
   "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.description": "本场战斗，每次转化为冻结所需的冻伤增加 {Amount} 层。",
   "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.title": "预支",
-  "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.description": "下回合开始时少抽 {Amount} 张牌。"
+  "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.description": "下回合抽牌后，丢弃 {Amount} 张牌。"
 }

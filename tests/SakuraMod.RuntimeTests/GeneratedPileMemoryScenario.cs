@@ -210,6 +210,7 @@ internal static class GeneratedPileMemoryScenario
         assertions.True(
             "recalled_copy_inherits_enchantment",
             recalled.OfType<Spiral>().Single().Enchantment is SharpEnchantment { Amount: 2 });
+        assertions.True("upgraded_remind_upgrades_recalled_copies", recalled.All(card => card.IsUpgraded));
         assertions.True("recalled_copies_are_ordinary", recalled.All(card => !card.IsTemporary()));
         assertions.Equal("recalled_copies_return_to_memory", false, recalled.Any(card => card.ReturnsToMemoryAfterTemporary()));
         assertions.True(
@@ -247,6 +248,7 @@ internal static class GeneratedPileMemoryScenario
             player,
             async choiceContext =>
             {
+                await PlayerCmd.GainEnergy(1, player);
                 await TemporaryModifier.RemoveTemporaryFromCombat(choiceContext, firstMemorySeed);
                 await TemporaryModifier.RemoveTemporaryFromCombat(choiceContext, secondMemorySeed);
                 await PowerCmd.Apply<ClassicMagicChargePower>(

@@ -84,7 +84,7 @@ public sealed class GeneratedCardLifecycleSuite
     }
 
     [Fact]
-    public void RemindUsesFixedRecallCountAndUpgradesFromTwoToThree()
+    public void RemindUsesXCostAndPreservesRecallEligibility()
     {
         var remind = new Remind();
         var upgradedRemind = RegressionTestHarness.MutableForCostTest(new Remind());
@@ -92,13 +92,12 @@ public sealed class GeneratedCardLifecycleSuite
         var spiral = new Spiral();
         var recallChoices = Remind.RecallChoices([new SpellTurn(), spiral]);
         RegressionTestHarness.Require(
-            remind.EnergyCost.Canonical == 1
-            && !remind.EnergyCost.CostsX
-            && remind.DynamicVars.Cards.IntValue == 2
-            && upgradedRemind.DynamicVars.Cards.IntValue == 3
+            remind.EnergyCost.CostsX
+            && upgradedRemind.EnergyCost.CostsX
+            && upgradedRemind.IsUpgraded
             && recallChoices.Count == 1
             && ReferenceEquals(recallChoices[0], spiral),
-            "Expected Remind to cost 1, recall 2/3 eligible cards, and exclude Turn from Memory choices.");
+            "Expected Remind to cost X before and after upgrade and exclude Turn from Memory choices.");
     }
 
     [Fact]

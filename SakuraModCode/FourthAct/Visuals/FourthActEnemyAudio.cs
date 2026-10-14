@@ -57,6 +57,16 @@ internal enum FourthActAudioCue
     DarkBind,
     DarkEclipse,
 
+    // The Nothing
+    NothingCast,
+    NothingHeavyCast,
+    NothingErase,
+    NothingSeal,
+    NothingIntangible,
+    NothingDebuff,
+    NothingSteal,
+    NothingCardErase,
+
     // Generic
     Buff,
     BluntHit,
@@ -72,7 +82,8 @@ internal enum FourthActAudioCue
     BladeDeath,
     EarthDeath,
     WoodDeath,
-    DarkDeath
+    DarkDeath,
+    NothingDeath
 }
 
 // The only path table for fourth-act enemy audio. A cue resolves to one of three sources,
@@ -130,6 +141,15 @@ internal static class FourthActEnemyAudio
         FourthActAudioCue.DarkBind => "event:/sfx/characters/defect/defect_dark_channel",
         FourthActAudioCue.DarkEclipse => $"{Enemy}/magi_knight/magi_knight_attack_bomb",
 
+        FourthActAudioCue.NothingCast => $"{Enemy}/soul_fysh/soul_fysh_beckon",
+        FourthActAudioCue.NothingHeavyCast => $"{Enemy}/magi_knight/magi_knight_cast_shield",
+        FourthActAudioCue.NothingErase => "event:/sfx/characters/necrobinder/necrobinder_doom_kill",
+        FourthActAudioCue.NothingSeal => "event:/sfx/debuff",
+        FourthActAudioCue.NothingIntangible => $"{Enemy}/soul_fysh/soul_fysh_intangible",
+        FourthActAudioCue.NothingDebuff => $"{Enemy}/terror_eel/terror_eel_debuff",
+        FourthActAudioCue.NothingSteal => $"{Enemy}/thieving_hopper/thieving_hopper_steal",
+        FourthActAudioCue.NothingCardErase => "event:/sfx/ui/map/map_erase",
+
         FourthActAudioCue.Buff => "event:/sfx/buff",
         FourthActAudioCue.BluntHit => "blunt_attack.mp3",
         FourthActAudioCue.HeavyHit => "heavy_attack.mp3",
@@ -144,6 +164,7 @@ internal static class FourthActEnemyAudio
         FourthActAudioCue.EarthDeath => $"{Enemy}/workbug_rock/workbug_rock_die",
         FourthActAudioCue.WoodDeath => $"{Enemy}/phantasmal_gardeners/phantasmal_gardeners_die",
         FourthActAudioCue.DarkDeath => $"{Enemy}/obscura/obscura_die",
+        FourthActAudioCue.NothingDeath => "event:/sfx/enemy/enemy_fade",
         _ => throw new ArgumentOutOfRangeException(nameof(cue), cue, null)
     };
 

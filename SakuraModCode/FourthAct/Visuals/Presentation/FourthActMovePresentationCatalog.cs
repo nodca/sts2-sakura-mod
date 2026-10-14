@@ -1,4 +1,5 @@
 using MegaCrit.Sts2.Core.Nodes.Vfx.Utilities;
+using SakuraMod.SakuraModCode.Events;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Models;
 using SakuraMod.SakuraModCode.FourthAct.Earth.Models;
 using SakuraMod.SakuraModCode.FourthAct.Fire.Models;
@@ -62,18 +63,20 @@ internal static class FourthActMovePresentationCatalog
         [typeof(WateryMonster)] = FourthActFxId.WaterSurface,
         [typeof(FlyMonster)] = FourthActFxId.SoarCurrents,
         [typeof(WindyMonster)] = FourthActFxId.GaleStreaks,
-        [typeof(DarkMonster)] = FourthActFxId.DarkVeil
+        [typeof(DarkMonster)] = FourthActFxId.DarkVeil,
+        [typeof(ClassicTheNothingMonster)] = FourthActFxId.NothingSphere
     };
 
-    // Effects a monster's powers play outside its moves (Windy's bind and wall, Sleep's powder,
-    // Micro Light and the full-Darkness corona),
+    // Effects a monster shows outside its moves (Windy's bind and wall, Sleep's powder, Micro
+    // Light and the full-Darkness corona, The Nothing's release),
     // preloaded with the monster like everything else it shows.
     private static readonly Dictionary<Type, FourthActFxId[]> PowerFx = new()
     {
         [typeof(WindyMonster)] = [FourthActFxId.BindCoil, FourthActFxId.BindReturn, FourthActFxId.WindWallShield,
             FourthActFxId.WindWallDeflect],
         [typeof(SleepMonster)] = [FourthActFxId.SleepPowder],
-        [typeof(DarkMonster)] = [FourthActFxId.MicroLightMote, FourthActFxId.VeilPierce, FourthActFxId.DarkCorona]
+        [typeof(DarkMonster)] = [FourthActFxId.MicroLightMote, FourthActFxId.VeilPierce, FourthActFxId.DarkCorona],
+        [typeof(ClassicTheNothingMonster)] = [FourthActFxId.NothingRelease]
     };
 
     private static readonly Dictionary<Type, FourthActElement> Elements = new()
@@ -95,7 +98,8 @@ internal static class FourthActMovePresentationCatalog
         [typeof(ShadowMonster)] = FourthActElement.Dark,
         [typeof(WoodMonster)] = FourthActElement.Wood,
         [typeof(EarthyMonster)] = FourthActElement.Earth,
-        [typeof(DarkMonster)] = FourthActElement.Dark
+        [typeof(DarkMonster)] = FourthActElement.Dark,
+        [typeof(ClassicTheNothingMonster)] = FourthActElement.Nothing
     };
 
     private static readonly Dictionary<Type, Dictionary<string, FourthActMovePresentation>> Moves = Build();
@@ -168,6 +172,7 @@ internal static class FourthActMovePresentationCatalog
         var earth = FourthActElement.Earth;
         var wood = FourthActElement.Wood;
         var dark = FourthActElement.Dark;
+        var nothing = FourthActElement.Nothing;
         // Windy's first and second light attacks look the same.
         var gusts = new FourthActMovePresentation(wind, Cue.WindAttack, Cue.SlashHit, Fx.GaleGather,
             Pose: true, ImpactCycle: [Fx.WindBladeA, Fx.WindBladeB]);
@@ -288,7 +293,21 @@ internal static class FourthActMovePresentationCatalog
                 ("NON_CONFINEMENT", new(dark, Cue.DarkAttack, Cue.SlashHit, Fx.NightBladeGather, Fx.NightCrescent, Pose: true)),
                 ("ULTIMATE", new(dark, Cue.DarkEclipse, Cue.HeavyHit, Fx.EclipseOrb, Fx.EclipseCollapse, Pose: true,
                     CastAnchor: FourthActFxAnchor.Head, Shake: ShakeStrength.Strong)),
-                (DarkTransition, new(dark, Cue.DarkTransition, ImpactFx: Fx.VeilReform, Pose: true)))
+                (DarkTransition, new(dark, Cue.DarkTransition, ImpactFx: Fx.VeilReform, Pose: true))),
+
+            // Everything leaves her sphere: its boundary sweeps out, bulges, pulses, closes in or
+            // peels off, and what it touches on Sakura is erased flat.
+            [typeof(ClassicTheNothingMonster)] = Entries(
+                ("START_VOID", new(nothing, Cue.NothingCast, Cue.NothingSeal, Fx.NothingBoundaryExpand, Fx.NothingArcSeal,
+                    TravelFx: Fx.NothingSweep)),
+                ("THUMP", new(nothing, Cue.NothingHeavyCast, Cue.NothingErase, Fx.NothingSwell, Fx.NothingErase,
+                    Shake: ShakeStrength.Medium)),
+                ("BATTER", new(nothing, Cue.NothingCast, Cue.BluntHit, Fx.NothingPulse, Shake: ShakeStrength.VeryWeak,
+                    ImpactCycle: [Fx.NothingEraseSmallA, Fx.NothingEraseSmallB])),
+                ("DESTRUCTION", new(nothing, Cue.NothingHeavyCast, Cue.NothingErase, Fx.NothingSwell, Fx.NothingErase,
+                    Shake: ShakeStrength.Medium)),
+                ("STRENGTHEN", new(nothing, Cue.NothingIntangible, CastFx: Fx.NothingGather)),
+                ("WEAKEN", new(nothing, Cue.NothingDebuff, CastFx: Fx.NothingPeel, ImpactFx: Fx.NothingBind)))
         };
     }
 

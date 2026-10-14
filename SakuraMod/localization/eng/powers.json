@@ -9,11 +9,11 @@
   "SAKURA_MOD_POWER_LUCID_GUARD_POWER.description": "The next attack damage you take this turn is capped.",
   "SAKURA_MOD_POWER_LUCID_GUARD_POWER.smartDescription": "Cap the next attack.",
   "SAKURA_MOD_POWER_LUCID_PIERCE_POWER.title": "Lucid",
-  "SAKURA_MOD_POWER_LUCID_PIERCE_POWER.description": "The Attack chosen by Lucid ignores enemy [gold]Block[/gold] this turn.",
-  "SAKURA_MOD_POWER_LUCID_PIERCE_POWER.smartDescription": "Chosen Attack ignores Block.",
+  "SAKURA_MOD_POWER_LUCID_PIERCE_POWER.description": "The Attacks chosen by Lucid deal their attack damage to ALL enemies this turn.",
+  "SAKURA_MOD_POWER_LUCID_PIERCE_POWER.smartDescription": "Chosen Attacks deal attack damage to ALL enemies this turn.",
   "SAKURA_MOD_POWER_LUCID_PIERCE_ALL_POWER.title": "Lucid",
-  "SAKURA_MOD_POWER_LUCID_PIERCE_ALL_POWER.description": "Your Attacks ignore enemy [gold]Block[/gold] this turn.",
-  "SAKURA_MOD_POWER_LUCID_PIERCE_ALL_POWER.smartDescription": "Attacks ignore Block.",
+  "SAKURA_MOD_POWER_LUCID_PIERCE_ALL_POWER.description": "Your Attacks' attack damage hits ALL enemies this turn.",
+  "SAKURA_MOD_POWER_LUCID_PIERCE_ALL_POWER.smartDescription": "Attacks deal attack damage to ALL enemies.",
   "SAKURA_MOD_POWER_SWING_DAMAGE_WINDOW_POWER.title": "Swing",
   "SAKURA_MOD_POWER_SWING_DAMAGE_WINDOW_POWER.description": "Your Attacks deal {Amount}x damage to enemies with [gold]Weak[/gold] until the end of this turn.",
   "SAKURA_MOD_POWER_SWING_DAMAGE_WINDOW_POWER.smartDescription": "Deal {Amount}x damage to enemies with [gold]Weak[/gold].",
@@ -289,5 +289,5 @@
   "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.title": "Freeze Resistance",
   "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.description": "Requires {Amount} additional Frostbite stacks per Freeze conversion this combat.",
   "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.title": "Advance",
-  "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.description": "Draw {Amount} fewer cards at the start of your next turn."
+  "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.description": "After drawing next turn, discard {Amount} cards."
 }

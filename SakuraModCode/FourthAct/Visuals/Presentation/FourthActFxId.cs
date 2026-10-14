@@ -136,7 +136,22 @@ internal enum FourthActFxId
     MicroLightMote,
     VeilPierce,
     DarkVeil,
-    DarkCorona
+    DarkCorona,
+
+    // The Nothing (Events/ClassicTheNothingMonster).
+    NothingSphere,
+    NothingRelease,
+    NothingBoundaryExpand,
+    NothingSwell,
+    NothingPulse,
+    NothingGather,
+    NothingPeel,
+    NothingSweep,
+    NothingArcSeal,
+    NothingErase,
+    NothingEraseSmallA,
+    NothingEraseSmallB,
+    NothingBind
 }
 
 // Where on a creature an effect is placed.
@@ -161,6 +176,7 @@ internal static class FourthActFxScenes
         <= FourthActFxId.WaterSurface => "water",
         <= FourthActFxId.SleepPowder => "wind",
         <= FourthActFxId.DarkCorona => "dark",
+        <= FourthActFxId.NothingBind => "the_nothing",
         _ => throw new ArgumentOutOfRangeException(nameof(id), id, null)
     };
 

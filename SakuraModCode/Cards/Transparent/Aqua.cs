@@ -1,5 +1,6 @@
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -29,13 +30,20 @@ public class Aqua() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
         IReadOnlyList<Creature> frostbitten = [];
         await AquaPhoenixVfx.PlayOrResolveAsync(this, Owner.Creature, targets, activation.IsActive, async cues =>
         {
-            foreach (var enemy in targets)
+            await using (var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, this))
             {
-                await cues.ReachAsync(enemy);
-                await SakuraActions.Attack(choiceContext, this, enemy, DynamicVars.Damage.IntValue);
+                foreach (var enemy in targets)
+                {
+                    await cues.ReachAsync(enemy);
+                    if (!enemy.IsAlive)
+                        continue;
+
+                    attack.AddHit(await CreatureCmd.Damage(
+                        choiceContext, enemy, DynamicVars.Damage.IntValue, ValueProp.Move, Owner.Creature, this));
+                }
             }
 
-            // Read Frostbite after every attack resolves: attacks can kill the
+            // Read Frostbite after the whole attack resolves: damage can kill the
             // enemy holding Frostbite, and the rules filter on IsAlive.
             frostbitten = AquaRules.FrostbiteEnemies(targets);
             cues.Return(frostbitten);

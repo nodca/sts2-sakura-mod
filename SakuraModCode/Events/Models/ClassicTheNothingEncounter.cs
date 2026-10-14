@@ -18,6 +18,7 @@ using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
+using MegaCrit.Sts2.Core.Random;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
@@ -25,12 +26,17 @@ using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Extensions;
 using SakuraMod.SakuraModCode.Events;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using STS2RitsuLib.Scaffolding.Content;
 
 namespace SakuraMod.SakuraModCode.Events;
 
 public class ClassicTheNothingEncounter() : ModEncounterTemplate
 {
+    // Sealing-scene plate with shader-driven cloud flow and town-light twinkle.
+    public const string SealLayerPath =
+        "res://SakuraMod/scenes/backgrounds/events/the_nothing/the_nothing_base.tscn";
+
     public override RoomType RoomType => RoomType.Elite;
     public override bool ShouldGiveRewards => false;
 
@@ -40,6 +46,10 @@ public class ClassicTheNothingEncounter() : ModEncounterTemplate
     ];
 
     public override bool IsValidForAct(ActModel act) => false;
+
+    protected override bool UseProgrammaticCombatBackground => true;
+    protected override BackgroundAssets? BuildProgrammaticCombatBackground(ActModel parentAct, Rng rng) =>
+        CombatBackgroundAssetsFactory.Create(FourthActCombatBackgrounds.MainScenePath, [SealLayerPath], null);
 
     protected override IReadOnlyList<(MonsterModel, string?)> GenerateMonsters() =>
     [

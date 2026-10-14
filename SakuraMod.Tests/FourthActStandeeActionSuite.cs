@@ -87,11 +87,13 @@ public sealed class FourthActStandeeActionSuite
             "SakuraModCode/FourthAct/FourthActMonsterTemplate.cs"));
 
         Assert.Contains("nameof(NCreature.SetAnimationTrigger)", material, StringComparison.Ordinal);
-        Assert.Contains("trigger == \"Hit\"", material, StringComparison.Ordinal);
+        Assert.Contains("trigger != \"Hit\"", material, StringComparison.Ordinal);
+        Assert.Contains("monster.TryPlayStandeeHit(__instance)", material, StringComparison.Ordinal);
         Assert.Contains("nameof(NCreature.StartDeathAnim)", material, StringComparison.Ordinal);
         Assert.Contains("SfxCmd.PlayDeath", material, StringComparison.Ordinal);
         Assert.DoesNotContain("CreateTween", material, StringComparison.Ordinal);
-        Assert.Contains("DeathAnimLengthOverride => FourthActStandeeMaterial.DissolveDuration", template, StringComparison.Ordinal);
+        Assert.Contains("DeathAnimLengthOverride => DissolveDuration", template, StringComparison.Ordinal);
+        Assert.Contains("internal virtual float DissolveDuration => FourthActStandeeMaterial.DissolveDuration", template, StringComparison.Ordinal);
         Assert.Contains("ShouldFadeAfterDeath => false", template, StringComparison.Ordinal);
     }
 

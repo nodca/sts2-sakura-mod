@@ -21,6 +21,28 @@ public static class AttackCommandExtensions
         typeof(AttackCommand).GetField("_combatState", BindingFlags.Instance | BindingFlags.NonPublic)
         ?? throw new MissingMemberException(nameof(AttackCommand), "_combatState");
 
+    private static readonly FieldInfo SingleTargetField =
+        typeof(AttackCommand).GetField("_singleTarget", BindingFlags.Instance | BindingFlags.NonPublic)
+        ?? throw new MissingMemberException(nameof(AttackCommand), "_singleTarget");
+
+    private static readonly MethodInfo RandomTargetingSetter =
+        typeof(AttackCommand).GetProperty(nameof(AttackCommand.IsRandomlyTargeted))
+            ?.GetSetMethod(nonPublic: true)
+        ?? throw new MissingMemberException(nameof(AttackCommand), nameof(AttackCommand.IsRandomlyTargeted));
+
+    internal static void RetargetAllOpponents(this AttackCommand command)
+    {
+        if ((!command.IsSingleTargeted && !command.IsRandomlyTargeted)
+            || command.Attacker?.CombatState is not { } combat)
+            return;
+
+        // 0.107.1 has no retarget API; clear the old mode before using the native AOE builder.
+        SingleTargetField.SetValue(command, null);
+        CombatStateField.SetValue(command, null);
+        RandomTargetingSetter.Invoke(command, [false]);
+        command.TargetingAllOpponents(combat).SpawningHitVfxOnEachCreature();
+    }
+
     public static AttackCommand WithValueProp(this AttackCommand command, ValueProp props)
     {
         DamagePropsSetter.Invoke(command, [props]);

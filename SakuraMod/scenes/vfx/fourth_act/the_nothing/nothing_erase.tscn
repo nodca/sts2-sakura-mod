@@ -1,0 +1,65 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Shader" path="res://SakuraMod/shaders/fourth_act/nothing_erase.gdshader" id="1_nothing_erase"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="2_glow"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2"]
+resource_local_to_scene = true
+shader = ExtResource("1_nothing_erase")
+shader_parameter/radius_px = 150.0
+shader_parameter/half_px = 187.5
+shader_parameter/progress = 0.0
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "play"
+length = 0.600
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Disc:material:shader_parameter/progress")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.600), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [0.001, 1.0]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Flash:modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.020, 0.180), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 1.000, 1.000, 0.000), Color(1.000, 1.000, 1.000, 0.000), Color(1.000, 1.000, 1.000, 0.550), Color(1.000, 1.000, 1.000, 0.000)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Flash:scale")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.180), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(3.3333333333333335, 3.3333333333333335), Vector2(3.3333333333333335, 3.3333333333333335), Vector2(4.333333333333334, 4.333333333333334)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4"]
+_data = {&"play": SubResource("Animation_3")}
+
+[node name="NothingErase" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 0.8999999999999999
+
+[node name="Disc" type="ColorRect" parent="."]
+offset_left = -187.5
+offset_top = -187.5
+offset_right = 187.5
+offset_bottom = 187.5
+mouse_filter = 2
+material = SubResource("ShaderMaterial_2")
+
+[node name="Flash" type="Sprite2D" parent="."]
+texture = ExtResource("2_glow")
+modulate = Color(1.000, 1.000, 1.000, 0.000)
+position = Vector2(0.0, 0.0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_4")}
+autoplay = &"play"

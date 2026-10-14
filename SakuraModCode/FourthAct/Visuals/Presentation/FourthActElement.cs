@@ -13,7 +13,10 @@ internal enum FourthActElement
     Blade,
     Earth,
     Wood,
-    Dark
+    Dark,
+
+    // The Nothing's sphere: a boundary that erases, not an element of the Clow.
+    Nothing
 }
 
 // What an element contributes when a move or monster names nothing more specific: its
@@ -51,6 +54,8 @@ internal static class FourthActElements
             new Color(0.5f, 0.86f, 0.36f), new Color(0.9f, 1f, 0.82f), new Color(0.56f, 0.9f, 0.4f)),
         FourthActElement.Dark => new(FourthActFxId.DarkImpact, DamageSfxType.Magic, FourthActAudioCue.DarkDeath,
             new Color(0.62f, 0.42f, 1f), new Color(0.86f, 0.8f, 1f), new Color(0.56f, 0.32f, 0.94f)),
+        FourthActElement.Nothing => new(FourthActFxId.NothingErase, DamageSfxType.Magic, FourthActAudioCue.NothingDeath,
+            new Color(0.5f, 0.9f, 0.95f), new Color(1f, 1f, 1f), new Color(0.86f, 0.97f, 1f)),
         _ => throw new ArgumentOutOfRangeException(nameof(element), element, null)
     };
 

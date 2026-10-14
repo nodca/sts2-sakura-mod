@@ -125,7 +125,7 @@ public static class SakuraActions
         var attack = DamageCmd.Attack(damage)
             .WithHitCount(hitCount)
             .FromCard(source)
-            .WithValueProp(AttackProps(source, damage.Props))
+            .WithValueProp(damage.Props)
             .WithNoAttackerAnim()
             .Targeting(target);
         if (hitSfx != null)
@@ -148,7 +148,7 @@ public static class SakuraActions
         await DamageCmd.Attack(damage)
             .WithHitCount(hitCount)
             .FromCard(source)
-            .WithValueProp(AttackProps(source, props))
+            .WithValueProp(props)
             .WithNoAttackerAnim()
             .TargetingFiltered(targetList)
             .Execute(context);
@@ -168,7 +168,7 @@ public static class SakuraActions
         await DamageCmd.Attack(damage)
             .WithHitCount(hitCount)
             .FromCard(source)
-            .WithValueProp(AttackProps(source, damage.Props))
+            .WithValueProp(damage.Props)
             .WithNoAttackerAnim()
             .TargetingFiltered(targetList)
             .Execute(context);
@@ -186,14 +186,9 @@ public static class SakuraActions
         DamageCmd.Attack(damage)
             .WithHitCount(hitCount)
             .FromCard(source)
-            .WithValueProp(AttackProps(source, props))
+            .WithValueProp(props)
             .Targeting(target)
             .WithHitFx(vfx, sfx, tmpSfx);
-
-    internal static ValueProp AttackProps(SakuraCardModel source, ValueProp props) =>
-        LucidPiercePower.ShouldPierce(source.Owner.Creature, source)
-            ? props | ValueProp.Unblockable
-            : props;
 
     public static SakuraElementSet ElementSetOf(CardModel? card) =>
         card switch

@@ -442,16 +442,17 @@ public sealed class ResourceContractSuite
         RegressionTestHarness.Require(
             aqua.Contains("var targets = CombatState!.HittableEnemies.ToList();", StringComparison.Ordinal)
             && aqua.Contains(
-                "SakuraActions.Attack(choiceContext, this, enemy, DynamicVars.Damage.IntValue)",
+                "AttackCommand.CreateContextAsync(CombatState!, choiceContext, this)",
                 StringComparison.Ordinal)
-            && aqua.Split("SakuraActions.Attack(").Length - 1 == 1,
-            "Expected Aqua's single snapshot attack loop to stay behind the presentation wrapper.");
+            && aqua.Split("attack.AddHit(await CreatureCmd.Damage(").Length - 1 == 1
+            && !aqua.Contains("SakuraActions.Attack(", StringComparison.Ordinal),
+            "Expected Aqua's snapshot damage loop to share one native attack context behind the presentation wrapper.");
         // Each enemy's damage waits for the bird to reach it. Frostbite is read after
-        // every attack (attacks can kill the holder), Return runs inside the cue scope,
+        // the complete attack (damage can kill the holder), Return runs inside the cue scope,
         // and the rewards stay after the presentation has resolved.
         var loopIndex = aqua.IndexOf("foreach (var enemy in targets)", StringComparison.Ordinal);
         var reachIndex = aqua.IndexOf("await cues.ReachAsync(enemy);", StringComparison.Ordinal);
-        var attackIndex = aqua.IndexOf("await SakuraActions.Attack", StringComparison.Ordinal);
+        var attackIndex = aqua.IndexOf("attack.AddHit(await CreatureCmd.Damage", StringComparison.Ordinal);
         var frostbiteIndex = aqua.IndexOf("AquaRules.FrostbiteEnemies(targets)", StringComparison.Ordinal);
         var returnIndex = aqua.IndexOf("cues.Return(frostbitten);", StringComparison.Ordinal);
         var scopeEndIndex = aqua.IndexOf("});", returnIndex, StringComparison.Ordinal);

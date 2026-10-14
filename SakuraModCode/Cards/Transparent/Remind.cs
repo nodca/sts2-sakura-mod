@@ -22,20 +22,22 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Remind() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Remind() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     private static LocString SelectionPrompt => CardLoc<Remind>("selectionPrompt");
 
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
         [SakuraMemoryPile.PileId, SakuraCardHoverTips.RemindTipKey];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2)];
+    protected override bool HasEnergyCostX => true;
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var choices = RecallChoices(SakuraMemoryPile.Get(Owner)?.Cards ?? []);
-        var recallCount = DynamicVars.Cards.IntValue;
-        var cards = (choices.Count <= recallCount
+        var recallCount = ResolveEnergyXValue();
+        var cards = (recallCount <= 0
+            ? []
+            : choices.Count <= recallCount
             ? choices.ToList()
             : await SakuraActions.SelectUpToFromCards(
                 this,
@@ -52,6 +54,8 @@ public class Remind() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
         {
             foreach (var copy in copies)
             {
+                if (IsUpgraded)
+                    CardCmd.Upgrade(copy);
                 await SakuraGeneratedCardLifecycle.AddRememberedCardToHand(
                     copy,
                     freeThisTurn: true,
@@ -92,7 +96,7 @@ public class Remind() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
                 selected,
                 choiceContext,
                 refreshGeneratedTransparentHandVisual: false);
-            await SakuraActions.ReduceCostThisTurn(choiceContext, this, selected);
+            selected.EnergyCost.AddThisCombat(-1);
         }
         finally
         {
@@ -109,5 +113,5 @@ public class Remind() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
             .Where(SakuraSourceCardRules.CanBeTargetedByClearCardEffects)
             .ToList();
 
-    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
+    protected override void OnUpgrade() { }
 }

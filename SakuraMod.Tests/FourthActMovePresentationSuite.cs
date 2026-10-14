@@ -2,17 +2,20 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
+using SakuraMod.SakuraModCode.Events;
 using SakuraMod.SakuraModCode.FourthAct;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using SakuraMod.SakuraModCode.FourthAct.Visuals.Presentation;
 
 public sealed class FourthActMovePresentationSuite
 {
+    // Every fourth-act monster, plus anything else presented through the template (The Nothing).
     private static IReadOnlyList<Type> FourthActMonsters { get; } =
         typeof(FourthActCombatRules).Assembly.GetTypes()
             .Where(static type => !type.IsAbstract
                 && typeof(MonsterModel).IsAssignableFrom(type)
-                && type.Namespace?.Contains(".FourthAct.", StringComparison.Ordinal) == true)
+                && (type.Namespace?.Contains(".FourthAct.", StringComparison.Ordinal) == true
+                    || typeof(FourthActMonsterTemplate).IsAssignableFrom(type)))
             .OrderBy(static type => type.Name, StringComparer.Ordinal)
             .ToList();
 
@@ -99,7 +102,7 @@ public sealed class FourthActMovePresentationSuite
             {
                 // Ambient layers live as long as their monster and loop instead of expiring.
                 Assert.Contains("loop_mode = 1", scene, StringComparison.Ordinal);
-                Assert.Matches(new Regex(@"metadata/ambient_layer = ""(behind|room)"""), scene);
+                Assert.Matches(new Regex(@"metadata/ambient_layer = ""(behind|front|room)"""), scene);
             }
             else if (scene.Contains("metadata/persistent = true", StringComparison.Ordinal))
             {
@@ -228,6 +231,50 @@ public sealed class FourthActMovePresentationSuite
         Assert.Contains("FourthActFxId.MicroLightMote", powers, StringComparison.Ordinal);
         var model = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/FourthAct/Dark/Models/DarkMonster.cs"));
         Assert.Contains("DarkEnemyRules.DarknessReset), [Creature]);", model, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheNothingRipplesItsSphereAndTakesCardsIntoIt()
+    {
+        var monster = typeof(ClassicTheNothingMonster);
+        Assert.Equal(FourthActElement.Nothing, FourthActMovePresentationCatalog.ElementOf(monster));
+        Assert.Equal(FourthActFxId.NothingSphere, FourthActMovePresentationCatalog.AmbientOf(monster));
+        var fx = FourthActMovePresentationCatalog.FxOf(monster).ToHashSet();
+        Assert.Contains(FourthActFxId.NothingRelease, fx);
+        Assert.Contains("metadata/ambient_layer = \"front\"",
+            File.ReadAllText(RepoFile(FourthActFxScenes.PathFor(FourthActFxId.NothingSphere))), StringComparison.Ordinal);
+        // Hits ripple the sphere's own surface (wave sources in its shader), not a ring scene.
+        var sphere = ShaderCode(RegressionTestHarness.FindRepoFile("SakuraMod/shaders/fourth_act/nothing_sphere.gdshader"));
+        Assert.Matches(new Regex(@"uniform\s+vec4\s+impacts\[4\]"), sphere);
+        Assert.Contains("hint_screen_texture", sphere, StringComparison.Ordinal);
+        Assert.DoesNotMatch(new Regex(@"\bTIME\b"), sphere);
+        // TheNothingCardTheftVfx is a Godot node: its statics can't be touched in plain .NET, so
+        // check the shipped files and that the theft names them.
+        var theft = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Events/Visuals/TheNothingCardTheftVfx.cs"));
+        foreach (var path in new[] { "SakuraMod/images/cards/classic/backs/sakura_back.png",
+                     "SakuraMod/images/cards/classic/backs/clow_back.png",
+                     "SakuraMod/shaders/fourth_act/card_sphere_clip.gdshader" })
+        {
+            Assert.True(File.Exists(RegressionTestHarness.FindRepoFile(path)), path);
+            Assert.Contains(Path.GetFileName(path), theft, StringComparison.Ordinal);
+        }
+        Assert.Contains("AssetPaths => [SakuraBackPath, ClowBackPath, ClipShaderPath]", theft, StringComparison.Ordinal);
+
+        var model = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Events/Models/ClassicTheNothingMonster.cs"));
+        Assert.Equal(Count(model, "DamageCmd.Attack("), Count(model, "AttackAsync("));
+        Assert.DoesNotContain("WithNoAttackerAnim(", model, StringComparison.Ordinal);
+        Assert.Contains("TheNothingCardTheftVfx.AssetPaths", model, StringComparison.Ordinal);
+        Assert.Contains("internal override bool TryPlayStandeeHit(NCreature node)", model, StringComparison.Ordinal);
+        Assert.Contains("FourthActStandeeMaterial.TryGet(node)?.Impact(at, strength)", model, StringComparison.Ordinal);
+        Assert.Contains("DeathFx => FourthActFxId.NothingRelease", model, StringComparison.Ordinal);
+        // The theft reads each card's pile and takes hand cards off the table before the cards
+        // leave combat without native visuals; the Voids are added after it has finished.
+        var begin = model.IndexOf("TheNothingCardTheftVfx.Begin(removed, Creature)", StringComparison.Ordinal);
+        var remove = model.IndexOf("CardPileCmd.RemoveFromCombat(removed, skipVisuals: true)", StringComparison.Ordinal);
+        var wait = model.IndexOf("await theft.WaitAsync()", StringComparison.Ordinal);
+        Assert.True(begin >= 0 && begin < remove && remove < wait, "theft order");
     }
 
     [Fact]
