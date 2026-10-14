@@ -260,6 +260,10 @@ public sealed class FourthActMovePresentationSuite
             Assert.Contains(Path.GetFileName(path), theft, StringComparison.Ordinal);
         }
         Assert.Contains("AssetPaths => [SakuraBackPath, ClowBackPath, ClipShaderPath]", theft, StringComparison.Ordinal);
+        // The animation frees itself during _Process; a signal awaiter targeting it hangs the enemy turn.
+        Assert.Contains("await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame)", theft, StringComparison.Ordinal);
+        Assert.DoesNotContain("await ToSignal(", theft, StringComparison.Ordinal);
+        Assert.DoesNotContain("waited += (float)GetProcessDeltaTime()", theft, StringComparison.Ordinal);
 
         var model = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Events/Models/ClassicTheNothingMonster.cs"));

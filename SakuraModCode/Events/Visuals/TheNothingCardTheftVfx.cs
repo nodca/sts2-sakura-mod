@@ -113,11 +113,13 @@ internal sealed partial class TheNothingCardTheftVfx : Node2D
     {
         try
         {
+            // Finish frees this node before the next frame; the awaiter must outlive it.
+            var tree = GetTree();
             var waited = 0f;
             while (!_done && IsInstanceValid(this) && IsInsideTree() && waited < MaxWait)
             {
-                await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-                waited += (float)GetProcessDeltaTime();
+                await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+                waited += (float)tree.Root.GetProcessDeltaTime();
             }
         }
         catch (Exception exception)
