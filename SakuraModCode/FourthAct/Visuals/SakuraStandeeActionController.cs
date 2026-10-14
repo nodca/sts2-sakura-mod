@@ -1,25 +1,12 @@
 using Godot;
-using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.TestSupport;
 using SakuraMod.SakuraModCode.FourthAct.Dark;
-using SakuraMod.SakuraModCode.FourthAct.Dark.Models;
 using SakuraMod.SakuraModCode.FourthAct.Wind;
-using SakuraMod.SakuraModCode.FourthAct.Wind.Models;
-using SakuraMod.SakuraModCode.FourthAct.Water;
-using SakuraMod.SakuraModCode.FourthAct.Water.Models;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Visuals;
-
-internal enum SakuraStandeeClip
-{
-    Attack,
-    Cast,
-    Buff,
-    Summon
-}
 
 internal enum SakuraStandeeSizeEffect
 {
@@ -50,9 +37,7 @@ internal static class SakuraStandeeSizeRules
 internal enum SakuraStandeePlaybackPriority
 {
     Idle,
-    Action,
-    Hurt,
-    Death
+    Action
 }
 
 internal sealed class SakuraStandeePlaybackState
@@ -60,18 +45,14 @@ internal sealed class SakuraStandeePlaybackState
     internal SakuraStandeePlaybackPriority Priority { get; private set; }
         = SakuraStandeePlaybackPriority.Idle;
 
-    internal bool IsDead { get; private set; }
     internal bool IsDisposed { get; private set; }
-    internal bool CanPlayNonDeath => !IsDead && !IsDisposed;
 
     private int Generation { get; set; }
 
     internal bool TryBegin(SakuraStandeePlaybackPriority priority, out int generation)
     {
         generation = Generation;
-        if (IsDisposed
-            || IsDead && priority != SakuraStandeePlaybackPriority.Death
-            || priority < Priority)
+        if (IsDisposed || priority < Priority)
             return false;
 
         Priority = priority;
@@ -79,19 +60,9 @@ internal sealed class SakuraStandeePlaybackState
         return true;
     }
 
-    internal bool TryBeginDeath(out int generation)
-    {
-        generation = Generation;
-        if (IsDead || IsDisposed)
-            return false;
-
-        IsDead = true;
-        return TryBegin(SakuraStandeePlaybackPriority.Death, out generation);
-    }
-
     internal bool TryFinish(int generation)
     {
-        if (!IsCurrent(generation) || IsDead)
+        if (!IsCurrent(generation))
             return false;
 
         Priority = SakuraStandeePlaybackPriority.Idle;
@@ -104,10 +75,13 @@ internal sealed class SakuraStandeePlaybackState
     internal void Dispose() => IsDisposed = true;
 }
 
+// Owns a static standee's transform: entry and idle motion for the Sakura-side standees,
+// the persistent Big/Little size state, and texture swaps (fourth-act action poses, Fly
+// frames). Fourth-act enemies attach with motion off; their acting lives in
+// FourthActStandeeMaterial and the move effect layers.
 internal sealed partial class SakuraStandeeActionController : Node
 {
     internal const string NodeName = "SakuraStandeeActionController";
-    internal const float DeathDuration = 0.55f;
 
     private const float EntryOffsetY = 16f;
     private const float EntryDuration = 0.42f;
@@ -120,11 +94,12 @@ internal sealed partial class SakuraStandeeActionController : Node
     private readonly Vector2 _restScale;
     private readonly float _floorY;
     private readonly Sprite2D? _sprite;
+    private readonly bool _motion;
     private readonly bool _playIdleMotion;
     private readonly Dictionary<string, Texture2D> _textures = new(StringComparer.Ordinal);
-    private readonly HashSet<Sprite2D> _afterimages = [];
     private readonly SakuraStandeePlaybackState _playback = new();
     private string _restTexturePath;
+    private bool _posing;
     private Tween? _idleTween;
     private Tween? _clipTween;
     private TaskCompletionSource<bool>? _phaseCompletion;
@@ -137,6 +112,7 @@ internal sealed partial class SakuraStandeeActionController : Node
         Vector2 restScale,
         float floorY,
         string restTexturePath,
+        bool motion,
         bool playIdleMotion)
     {
         _body = body;
@@ -144,7 +120,8 @@ internal sealed partial class SakuraStandeeActionController : Node
         _restScale = restScale;
         _floorY = floorY;
         _restTexturePath = restTexturePath;
-        _playIdleMotion = playIdleMotion;
+        _motion = motion;
+        _playIdleMotion = motion && playIdleMotion;
         _sprite = FindSprite(body);
         PreloadTextures(restTexturePath);
         Name = NodeName;
@@ -156,7 +133,8 @@ internal sealed partial class SakuraStandeeActionController : Node
         Vector2 restScale,
         float floorY,
         string restTexturePath,
-        bool playIdleMotion = true)
+        bool playIdleMotion = true,
+        bool motion = true)
     {
         if (body.GetNodeOrNull<SakuraStandeeActionController>(NodeName) is not null)
             return;
@@ -167,6 +145,7 @@ internal sealed partial class SakuraStandeeActionController : Node
             restScale,
             floorY,
             restTexturePath,
+            motion,
             playIdleMotion));
     }
 
@@ -177,39 +156,30 @@ internal sealed partial class SakuraStandeeActionController : Node
         node.Visuals.GetNodeOrNull<Node2D>("%Visuals")
             ?.GetNodeOrNull<SakuraStandeeActionController>(NodeName);
 
-    internal static bool IsFourthActStandee(NCreature node) =>
-        node.Entity.Monster is WindMonsterTemplate or DarkMonster
-            or RainMonster or FreezeMonster or WateryMonster;
+    internal bool HasActionPose => ActionTexturePath(_restTexturePath) is not null;
 
     public override void _Ready()
     {
         TreeExiting += OnTreeExiting;
-        if (!TestMode.IsOn)
+        if (_motion && !TestMode.IsOn)
             TaskHelper.RunSafely(PlayEntryAsync());
     }
 
-    internal async Task PlayActionAsync(SakuraStandeeClip clip, Func<Task> resolveAtContact)
+    // An instant swap to the standee's action pose, held until released. No transform moves.
+    internal void SetActionPose(bool posing)
     {
-        if (!TryBegin(SakuraStandeePlaybackPriority.Action, out var generation))
+        _posing = posing;
+        if (!posing)
         {
-            await resolveAtContact();
+            ApplyRestTexture();
             return;
         }
 
-        var stillCurrent = await PlayAnticipationAsync(clip, generation);
-        if (stillCurrent)
-        {
-            if (!ApplyActionTexture(clip))
-                SpawnAfterimage(clip);
-            stillCurrent = await PlayContactAsync(clip, generation);
-        }
-
-        // Presentation interruption must never skip authoritative gameplay.
-        await resolveAtContact();
-
-        if (stillCurrent && IsCurrent(generation))
-            await PlayRecoveryAsync(generation);
-        FinishClip(generation);
+        if (_sprite is not null
+            && IsUsable(_sprite)
+            && ActionTexturePath(_restTexturePath) is { } path
+            && _textures.TryGetValue(path, out var texture))
+            _sprite.Texture = texture;
     }
 
     internal async Task PlaySizeEffectAsync(
@@ -285,23 +255,6 @@ internal sealed partial class SakuraStandeeActionController : Node
             FinishClip(generation);
     }
 
-    internal void PlayHurt()
-    {
-        if (_playback.CanPlayNonDeath)
-            TaskHelper.RunSafely(PlayHurtAsync());
-    }
-
-    internal bool PlayDeath()
-    {
-        if (!_playback.TryBeginDeath(out var generation))
-            return false;
-
-        CancelCurrent();
-        StopIdle();
-        TaskHelper.RunSafely(PlayDeathAsync(generation));
-        return true;
-    }
-
     internal async Task PlayTextureSequenceAsync(
         IEnumerable<string> frames,
         string finalTexturePath,
@@ -352,93 +305,6 @@ internal sealed partial class SakuraStandeeActionController : Node
             Tween.TransitionType.Cubic);
         FinishClip(generation);
     }
-
-    private async Task PlayHurtAsync()
-    {
-        if (!TryBegin(SakuraStandeePlaybackPriority.Hurt, out var generation))
-            return;
-
-        ApplyRestTexture();
-        var hurtColor = new Color(1f, 0.63f, 0.67f, 1f);
-        if (!await PlayPhaseAsync(
-                generation,
-                0.07,
-                RestPosition + Vector2.Right * 12f,
-                RestScale * new Vector2(0.97f, 1.02f),
-                0.018f,
-                hurtColor,
-                Tween.TransitionType.Quad))
-            return;
-        if (!await PlayPhaseAsync(
-                generation,
-                0.08,
-                RestPosition + Vector2.Left * 5f,
-                RestScale,
-                -0.01f,
-                Colors.White,
-                Tween.TransitionType.Quad))
-            return;
-        await PlayRecoveryAsync(generation, 0.11);
-        FinishClip(generation);
-    }
-
-    private async Task PlayDeathAsync(int generation)
-    {
-        ClearAfterimages();
-        ApplyRestTexture();
-        await PlayPhaseAsync(
-            generation,
-            DeathDuration,
-            RestPosition + new Vector2(16f, 34f),
-            RestScale * new Vector2(0.92f, 0.96f),
-            0.11f,
-            new Color(0.62f, 0.58f, 0.72f, 0.08f),
-            Tween.TransitionType.Cubic,
-            Tween.EaseType.In);
-    }
-
-    private Task<bool> PlayAnticipationAsync(SakuraStandeeClip clip, int generation) =>
-        clip switch
-        {
-            SakuraStandeeClip.Attack => PlayPhaseAsync(
-                generation, 0.11, RestPosition + Vector2.Right * 6f,
-                RestScale * new Vector2(0.94f, 1.03f), 0.012f, Colors.White),
-            SakuraStandeeClip.Cast => PlayPhaseAsync(
-                generation, 0.16, RestPosition + Vector2.Down * 4f,
-                RestScale * new Vector2(0.95f, 0.96f), 0f,
-                new Color(0.74f, 0.9f, 1f, 0.88f)),
-            SakuraStandeeClip.Buff => PlayPhaseAsync(
-                generation, 0.14, RestPosition + Vector2.Down * 3f,
-                RestScale * new Vector2(0.96f, 0.96f), 0f,
-                new Color(1f, 0.91f, 0.68f, 0.9f)),
-            SakuraStandeeClip.Summon => PlayPhaseAsync(
-                generation, 0.18, RestPosition + Vector2.Down * 5f,
-                RestScale * new Vector2(0.91f, 0.97f), 0f,
-                new Color(0.83f, 0.78f, 1f, 0.86f)),
-            _ => Task.FromResult(false)
-        };
-
-    private Task<bool> PlayContactAsync(SakuraStandeeClip clip, int generation) =>
-        clip switch
-        {
-            SakuraStandeeClip.Attack => PlayPhaseAsync(
-                generation, 0.08, RestPosition + Vector2.Left * 19f,
-                RestScale * new Vector2(1.04f, 0.98f), -0.02f, Colors.White,
-                Tween.TransitionType.Cubic, Tween.EaseType.Out),
-            SakuraStandeeClip.Cast => PlayPhaseAsync(
-                generation, 0.1, RestPosition + Vector2.Up * 7f,
-                RestScale * new Vector2(1.045f, 1.045f), 0f, Colors.White,
-                Tween.TransitionType.Back, Tween.EaseType.Out),
-            SakuraStandeeClip.Buff => PlayPhaseAsync(
-                generation, 0.11, RestPosition + Vector2.Up * 9f,
-                RestScale * new Vector2(1.06f, 1.06f), 0f, Colors.White,
-                Tween.TransitionType.Back, Tween.EaseType.Out),
-            SakuraStandeeClip.Summon => PlayPhaseAsync(
-                generation, 0.12, RestPosition + Vector2.Up * 5f,
-                RestScale * new Vector2(1.075f, 1.04f), 0f, Colors.White,
-                Tween.TransitionType.Back, Tween.EaseType.Out),
-            _ => Task.FromResult(false)
-        };
 
     private Task<bool> PlayRecoveryAsync(int generation, double duration = 0.18) =>
         PlayPhaseAsync(
@@ -516,12 +382,12 @@ internal sealed partial class SakuraStandeeActionController : Node
         _body.Scale = RestScale;
         _body.Rotation = 0f;
         _body.Modulate = Colors.White;
-        ApplyRestTexture();
+        SetActionPose(_posing);
     }
 
     private void StartIdle()
     {
-        if (!_playIdleMotion || !_playback.CanPlayNonDeath || !IsUsable(_body))
+        if (!_playIdleMotion || _playback.IsDisposed || !IsUsable(_body))
             return;
 
         StopIdle();
@@ -570,34 +436,11 @@ internal sealed partial class SakuraStandeeActionController : Node
             _sprite.Texture = texture;
     }
 
-    private bool ApplyActionTexture(SakuraStandeeClip clip)
+    private static string? ActionTexturePath(string restTexturePath)
     {
-        if (_sprite is null
-            || !IsUsable(_sprite)
-            || ActionTexturePath(clip) is not { } path
-            || !_textures.TryGetValue(path, out var texture))
-            return false;
-
-        _sprite.Texture = texture;
-        return true;
-    }
-
-    private string? ActionTexturePath(SakuraStandeeClip clip)
-    {
-        if (_restTexturePath == WindEnemyAssets.Illusion
-            && clip is SakuraStandeeClip.Attack or SakuraStandeeClip.Summon)
-            return WindEnemyAssets.IllusionCast;
-        if (_restTexturePath == WindEnemyAssets.Windy
-            && clip is SakuraStandeeClip.Attack or SakuraStandeeClip.Summon)
-            return WindEnemyAssets.WindyAction;
-        if (_restTexturePath == WindEnemyAssets.Dash && clip == SakuraStandeeClip.Attack)
-            return WindEnemyAssets.DashAttack;
-        if (_restTexturePath == WindEnemyAssets.Sleep && clip == SakuraStandeeClip.Cast)
-            return WindEnemyAssets.SleepCast;
-        if (_restTexturePath == DarkEnemyAssets.Standee
-            && clip is SakuraStandeeClip.Attack or SakuraStandeeClip.Cast)
+        if (restTexturePath == DarkEnemyAssets.Standee)
             return DarkEnemyAssets.Action;
-        return null;
+        return WindEnemyAssets.ActionFramesFor(restTexturePath).FirstOrDefault();
     }
 
     private void PreloadTextures(string restTexturePath)
@@ -627,68 +470,12 @@ internal sealed partial class SakuraStandeeActionController : Node
         }
     }
 
-    private void SpawnAfterimage(SakuraStandeeClip clip)
-    {
-        if (_sprite is null || !IsUsable(_sprite) || _sprite.GetParent() is not { } parent)
-            return;
-
-        var tint = clip switch
-        {
-            SakuraStandeeClip.Cast => new Color(0.57f, 0.82f, 1f, 0.34f),
-            SakuraStandeeClip.Buff => new Color(1f, 0.82f, 0.38f, 0.32f),
-            SakuraStandeeClip.Summon => new Color(0.76f, 0.57f, 1f, 0.32f),
-            _ => new Color(0.72f, 0.9f, 1f, 0.3f)
-        };
-        var drift = clip == SakuraStandeeClip.Attack
-            ? Vector2.Right * 13f
-            : Vector2.Down * 8f;
-        var afterimage = new Sprite2D
-        {
-            Texture = _sprite.Texture,
-            Centered = _sprite.Centered,
-            Offset = _sprite.Offset,
-            FlipH = _sprite.FlipH,
-            FlipV = _sprite.FlipV,
-            Position = _sprite.Position,
-            Rotation = _sprite.Rotation,
-            Scale = _sprite.Scale,
-            Modulate = tint,
-            ZIndex = _sprite.ZIndex - 1,
-            ZAsRelative = _sprite.ZAsRelative
-        };
-        parent.AddChild(afterimage);
-        _afterimages.Add(afterimage);
-
-        var fade = afterimage.CreateTween().SetParallel();
-        fade.TweenProperty(afterimage, "position", afterimage.Position + drift, 0.18)
-            .SetTrans(Tween.TransitionType.Cubic)
-            .SetEase(Tween.EaseType.Out);
-        fade.TweenProperty(afterimage, "modulate:a", 0f, 0.18)
-            .SetTrans(Tween.TransitionType.Quad)
-            .SetEase(Tween.EaseType.Out);
-        fade.Chain().TweenCallback(Callable.From(() => RemoveAfterimage(afterimage)));
-    }
-
-    private void RemoveAfterimage(Sprite2D afterimage)
-    {
-        _afterimages.Remove(afterimage);
-        if (GodotObject.IsInstanceValid(afterimage))
-            afterimage.QueueFree();
-    }
-
-    private void ClearAfterimages()
-    {
-        foreach (var afterimage in _afterimages.ToArray())
-            RemoveAfterimage(afterimage);
-    }
-
     private void OnTreeExiting()
     {
         _playback.Dispose();
         TreeExiting -= OnTreeExiting;
         CancelCurrent();
         StopIdle();
-        ClearAfterimages();
     }
 
     private static bool IsUsable(GodotObject value) =>
@@ -704,36 +491,5 @@ internal sealed partial class SakuraStandeeActionController : Node
                 return nested;
         }
         return null;
-    }
-}
-
-[HarmonyLib.HarmonyPatch(typeof(NCreature), nameof(NCreature.SetAnimationTrigger))]
-internal static class SakuraStandeeHitPatch
-{
-    private static void Postfix(NCreature __instance, string trigger)
-    {
-        if (trigger == "Hit"
-            && __instance.Entity.Monster is not SakuraMod.SakuraModCode.FourthAct.Wind.Models.IllusionProjectionMonster
-            && SakuraStandeeActionController.IsFourthActStandee(__instance))
-        {
-            SakuraStandeeActionController.TryGet(__instance)?.PlayHurt();
-        }
-    }
-}
-
-[HarmonyLib.HarmonyPatch(typeof(NCreature), nameof(NCreature.StartDeathAnim))]
-internal static class SakuraStandeeDeathPatch
-{
-    private static void Prefix(NCreature __instance)
-    {
-        if (__instance.Entity.Monster is SakuraMod.SakuraModCode.FourthAct.Wind.Models.IllusionProjectionMonster)
-            return;
-        if (!SakuraStandeeActionController.IsFourthActStandee(__instance)
-            || SakuraStandeeActionController.TryGet(__instance) is not { } controller
-            || !controller.PlayDeath())
-            return;
-
-        if (__instance.Entity.Monster is { } monster && monster.HasDeathSfx)
-            SfxCmd.PlayDeath(monster);
     }
 }

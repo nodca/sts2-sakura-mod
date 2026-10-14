@@ -1,0 +1,97 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/smoke.png" id="1_smoke"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/ring.png" id="2_ring"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/droplet.png" id="3_droplet"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.25, 1.0)
+colors = PackedColorArray(0.420, 0.500, 0.620, 0.000, 0.380, 0.460, 0.580, 0.500, 0.340, 0.420, 0.540, 0.000)
+
+[sub_resource type="Gradient" id="Gradient_3"]
+offsets = PackedFloat32Array(0.0, 0.7, 1.0)
+colors = PackedColorArray(0.600, 0.850, 1.000, 0.950, 0.380, 0.680, 1.000, 0.850, 0.380, 0.680, 1.000, 0.000)
+
+[sub_resource type="Animation" id="Animation_4"]
+resource_name = "play"
+length = 1.200
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Ring:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.200, 1.200), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.400, 0.740, 1.000, 0.000), Color(0.400, 0.740, 1.000, 0.000), Color(0.400, 0.740, 1.000, 0.450), Color(0.400, 0.740, 1.000, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Ring:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 1.200), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(1.3, 1.6), Vector2(1.3, 1.6), Vector2(1.7, 2.1)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Drops:emitting")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.200, 1.000), "transitions": PackedFloat32Array(1, 1, 1), "update": 1, "values": [false, true, false]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_5"]
+_data = {&"play": SubResource("Animation_4")}
+
+[node name="CloudVeil" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 1.8
+
+[node name="Wrap" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 0.5
+texture = ExtResource("1_smoke")
+color_ramp = SubResource("Gradient_2")
+amount = 24
+lifetime = 1.3
+spread = 180
+emission_shape = 1
+emission_sphere_radius = 200
+orbit_velocity_min = 0.25
+orbit_velocity_max = 0.4
+gravity = Vector2(0, 0)
+scale_amount_min = 1.4
+scale_amount_max = 2.4
+angle_min = -180
+angle_max = 180
+
+[node name="Ring" type="Sprite2D" parent="."]
+texture = ExtResource("2_ring")
+modulate = Color(0.400, 0.740, 1.000, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Drops" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 0.0
+texture = ExtResource("3_droplet")
+color_ramp = SubResource("Gradient_3")
+amount = 16
+lifetime = 0.7
+direction = Vector2(0, 1)
+spread = 10
+initial_velocity_min = 200
+initial_velocity_max = 400
+gravity = Vector2(0, 900)
+scale_amount_min = 0.14
+scale_amount_max = 0.24
+emission_shape = 3
+emission_rect_extents = Vector2(180, 20)
+position = Vector2(0, -180)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_5")}
+autoplay = &"play"

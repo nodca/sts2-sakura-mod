@@ -42,7 +42,10 @@ public sealed class CommandDispatcherSuite
         CombatCommand.PrintHelp(writer);
 
         var help = writer.ToString();
-        Assert.Contains("scripts/test-mod combat [--scenario <id>]", help, StringComparison.Ordinal);
+        Assert.Contains(
+            "scripts/test-mod combat [--scenario <id> | --only <id,id,...>] [--jobs <n>] [--isolated]",
+            help,
+            StringComparison.Ordinal);
         foreach (var scenario in new[]
                  {
                      "affliction-visual-layout",

@@ -1,0 +1,122 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="1_glow"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/crescent.png" id="2_crescent"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/beam.png" id="3_beam"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(0.720, 1.000, 0.900, 0.000, 0.720, 1.000, 0.900, 0.800, 0.600, 0.950, 0.850, 0.000)
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "play"
+length = 3.000
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Screen:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 1.500, 3.000), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Color(0.550, 0.950, 0.840, 0.180), Color(0.550, 0.950, 0.840, 0.260), Color(0.550, 0.950, 0.840, 0.180)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Screen:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 3.000), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(1.6, 4.0), Vector2(1.6, 4.0)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Rim0:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 1.500, 3.000), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Color(0.550, 0.950, 0.840, 0.550), Color(0.550, 0.950, 0.840, 0.800), Color(0.550, 0.950, 0.840, 0.550)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Rim0:scale")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 3.000), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(0.75, 1.9), Vector2(0.75, 1.9)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Rim1:modulate")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 1.500, 3.000), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Color(0.900, 1.000, 0.970, 0.550), Color(0.900, 1.000, 0.970, 0.800), Color(0.900, 1.000, 0.970, 0.550)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Rim1:scale")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 3.000), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(0.6, 1.6), Vector2(0.6, 1.6)]}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Flow:position")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {"times": PackedFloat32Array(0.000, 3.000), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(-90, 60), Vector2(-90, 60)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4"]
+_data = {&"play": SubResource("Animation_3")}
+
+[node name="WindWallShield" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 0.0
+metadata/persistent = true
+
+[node name="Screen" type="Sprite2D" parent="."]
+texture = ExtResource("1_glow")
+modulate = Color(0.550, 0.950, 0.840, 0.000)
+position = Vector2(-90, 0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Rim0" type="Sprite2D" parent="."]
+texture = ExtResource("2_crescent")
+modulate = Color(0.550, 0.950, 0.840, 0.000)
+position = Vector2(-60, 0)
+material = SubResource("CanvasItemMaterial_1")
+rotation = 3.141592653589793
+
+[node name="Rim1" type="Sprite2D" parent="."]
+texture = ExtResource("2_crescent")
+modulate = Color(0.900, 1.000, 0.970, 0.000)
+position = Vector2(-85, 0)
+material = SubResource("CanvasItemMaterial_1")
+rotation = 3.141592653589793
+
+[node name="Flow" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = false
+explosiveness = 0.0
+texture = ExtResource("3_beam")
+color_ramp = SubResource("Gradient_2")
+material = SubResource("CanvasItemMaterial_1")
+amount = 24
+lifetime = 1.0
+preprocess = 1.0
+direction = Vector2(0, -1)
+spread = 8
+initial_velocity_min = 280
+initial_velocity_max = 420
+gravity = Vector2(0, 0)
+particle_flag_align_y = true
+scale_amount_min = 0.05
+scale_amount_max = 0.1
+emission_shape = 3
+emission_rect_extents = Vector2(40, 200)
+position = Vector2(-90, 60)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_4")}
+autoplay = &"play"

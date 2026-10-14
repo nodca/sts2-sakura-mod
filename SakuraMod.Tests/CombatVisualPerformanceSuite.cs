@@ -78,10 +78,9 @@ public sealed class CombatVisualPerformanceSuite
             "SakuraModCode/FourthAct/Visuals/FourthActCombatFeedbackVisuals.cs"));
         RegressionTestHarness.Require(
             source.Contains("WindWallBarrier", StringComparison.Ordinal)
-            && source.Contains("DarkVeilMembrane", StringComparison.Ordinal)
-            && source.Contains("DarkVeilRemnants", StringComparison.Ordinal)
+            && source.Contains("EternalNightDarkCorona", StringComparison.Ordinal)
             && source.Contains("Name = \"WindWallImpact\"", StringComparison.Ordinal),
-            "Expected Wind Wall and Dark Veil to own their named persistent visual nodes.");
+            "Expected Wind Wall and the full-Darkness corona to own their named persistent visual nodes.");
         RegressionTestHarness.Require(
             source.Contains("CombatEnded +=", StringComparison.Ordinal)
             && source.Contains("CombatEnded -=", StringComparison.Ordinal)
@@ -112,17 +111,17 @@ public sealed class CombatVisualPerformanceSuite
     }
 
     [Fact]
-    public void IllusionFeedbackCleansOcclusionAndSuppressesLivingBodyHurt()
+    public void IllusionFeedbackCleansOcclusionAndSkipsProjectionStandeeActing()
     {
         var illusion = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/FourthAct/Wind/Visuals/IllusionVisualPatches.cs"));
         var standee = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Visuals/SakuraStandeeActionController.cs"));
+            "SakuraModCode/FourthAct/Visuals/Presentation/FourthActStandeeMaterial.cs"));
 
         RegressionTestHarness.Require(
             illusion.Contains("QueueFreeSafely", StringComparison.Ordinal)
             && standee.Contains("IllusionProjectionMonster", StringComparison.Ordinal),
-            "Expected Illusion occlusion to clean up on failures and projections to skip the shared living-body hurt clip.");
+            "Expected Illusion occlusion to clean up on failures and projections to skip the shared standee hit flash and dissolve.");
     }
 
     [Fact]

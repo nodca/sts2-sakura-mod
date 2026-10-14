@@ -55,6 +55,10 @@ internal sealed partial class LibraVisualController : Node2D
     private string? _criticalSide;
     private int _presentationGeneration;
     private bool _assemblyFading;
+    private ColorRect? _vignette;
+    private ShaderMaterial? _vignetteMaterial;
+    private float _vignetteLevel;
+    private float _vignetteTarget;
 
     public LibraVisualController()
     {
@@ -134,6 +138,7 @@ internal sealed partial class LibraVisualController : Node2D
             AddChild(_rightOutline);
             AddChild(_rightCore);
             AddChild(_central);
+            CreateVignette();
         }
         catch (Exception ex)
         {
@@ -162,6 +167,48 @@ internal sealed partial class LibraVisualController : Node2D
             ApplyIdle(_right, -Mathf.Sin(time * 1.45f) * Mathf.DegToRad(1.5f));
         }
         RefreshLines(time);
+        UpdateVignette((float)delta, time);
+    }
+
+    internal const string VignetteShaderPath = MainFile.ResPath + "/shaders/fourth_act/libra_vignette.gdshader";
+
+    // Optional: a missing shader only loses the warning, never the encounter visuals.
+    private void CreateVignette()
+    {
+        try
+        {
+            _vignetteMaterial = new ShaderMaterial
+            {
+                Shader = MegaCrit.Sts2.Core.Assets.PreloadManager.Cache.GetAsset<Shader>(VignetteShaderPath)
+            };
+            _vignette = new ColorRect
+            {
+                Name = "PendulumVignette",
+                Size = new Vector2(1920f, 1080f),
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                Material = _vignetteMaterial,
+                Visible = false,
+                ZIndex = 2
+            };
+            AddChild(_vignette);
+        }
+        catch (Exception ex)
+        {
+            MainFile.Logger.Warn($"Libra vignette failed open: {ex.Message}");
+            _vignette = null;
+            _vignetteMaterial = null;
+        }
+    }
+
+    private void UpdateVignette(float delta, float time)
+    {
+        if (_vignette is null || _vignetteMaterial is null)
+            return;
+
+        _vignetteLevel = Mathf.MoveToward(_vignetteLevel, _vignetteTarget, delta * 1.5f);
+        _vignette.Visible = _vignetteLevel > 0.001f;
+        _vignetteMaterial.SetShaderParameter("u_time", time);
+        _vignetteMaterial.SetShaderParameter("intensity", _vignetteLevel);
     }
 
     private void TryBind()
@@ -296,11 +343,11 @@ internal sealed partial class LibraVisualController : Node2D
         }
     }
 
+    // The striking pan's line lights for the attack; the pans themselves never lunge.
     internal async Task PlayAttackAsync(Creature actor, Func<Task> resolveAtContact)
     {
         ArgumentNullException.ThrowIfNull(resolveAtContact);
         var node = actor.SlotName == "LEFT" ? _left : _right;
-        var other = actor.SlotName == "LEFT" ? _right : _left;
         if (_disposed || node is null || node.Entity.IsDead)
         {
             await resolveAtContact();
@@ -308,57 +355,13 @@ internal sealed partial class LibraVisualController : Node2D
         }
 
         _cueActive = true;
-        var body = node.Body;
-        var rest = body.Position;
-        var restScale = body.Scale;
-        if (other is not null)
-            other.Body.Rotation = 0f;
         try
         {
-            try
-            {
-                KillTween(ref _motionTween);
-                _motionTween = CreateTween().SetParallel();
-                var towardCenter = actor.SlotName == "LEFT" ? 12f : -12f;
-                _motionTween.TweenProperty(body, "position", rest + new Vector2(towardCenter, 22f), 0.11f)
-                    .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
-                _motionTween.TweenProperty(body, "scale", restScale * new Vector2(1.04f, 0.93f), 0.11f)
-                    .SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
-                if (_central is not null)
-                    _motionTween.TweenProperty(_central, "rotation", -Mathf.Sign(node.Position.X - CentralX) * Mathf.DegToRad(1.5f), 0.11f);
-                SetLineModulate(actor.SlotName, new Color(1.35f, 1.2f, 0.75f, 1f));
-                await AwaitTweenAsync(_motionTween);
-            }
-            catch (Exception ex)
-            {
-                MainFile.Logger.Warn($"Libra attack anticipation failed open: {ex.Message}");
-            }
-
+            SetLineModulate(actor.SlotName, new Color(1.35f, 1.2f, 0.75f, 1f));
             await resolveAtContact();
-
-            try
-            {
-                _motionTween = CreateTween().SetParallel();
-                _motionTween.TweenProperty(body, "position", rest, 0.16f)
-                    .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
-                _motionTween.TweenProperty(body, "scale", restScale, 0.16f)
-                    .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
-                if (_central is not null)
-                    _motionTween.TweenProperty(_central, "rotation", CurrentCentralRotation(), 0.16f);
-                await AwaitTweenAsync(_motionTween);
-                if (other is not null)
-                    other.Body.Rotation = 0f;
-            }
-            catch (Exception ex)
-            {
-                MainFile.Logger.Warn($"Libra attack recovery failed open: {ex.Message}");
-            }
         }
         finally
         {
-            body.Position = rest;
-            body.Scale = restScale;
-            body.Rotation = 0f;
             SetLineModulate(actor.SlotName, Colors.White);
             _cueActive = false;
             SnapToCurrentState();
@@ -494,6 +497,8 @@ internal sealed partial class LibraVisualController : Node2D
         _extreme = left is 0 or 10 || right is 0 or 10;
         _critical = !_extreme && (left is 1 or 9 || right is 1 or 9);
         _criticalSide = right > left ? "RIGHT" : left > right ? "LEFT" : null;
+        var reach = Math.Max(Math.Abs(left - 5), Math.Abs(right - 5));
+        _vignetteTarget = reach switch { >= 5 => 1f, 4 => 0.6f, 3 => 0.25f, _ => 0f };
     }
 
     private void RefreshDeathVisibility()

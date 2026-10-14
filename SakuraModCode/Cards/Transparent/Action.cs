@@ -34,7 +34,7 @@ public class Action() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
 
         var manifested = await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
         foreach (var copy in manifested)
-            copy.SetToFreeThisTurn();
+            copy.EnergyCost.AddThisTurnOrUntilPlayed(-1, true);
 
         if (activation.IsActive)
             await CardPileCmd.Draw(choiceContext, DynamicVars["ExtraDraw"].IntValue, Owner, false);

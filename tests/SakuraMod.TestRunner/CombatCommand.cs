@@ -39,6 +39,7 @@ public static class CombatCommand
         "affliction-visual-layout",
         "queen-bound-cleanup",
         "fourth-act-card-afflictions",
+        "fourth-act-audio",
         "cleansing-stats",
         "dark-endpoint",
         "light-eternal-day",
@@ -53,11 +54,18 @@ public static class CombatCommand
         "fourth-act-finished-combat-transition"
     ];
 
+    private const int DefaultJobs = 2;
+
+    private sealed record CombatOptions(IReadOnlyList<string> Scenarios, bool Single, int Jobs, bool Isolated);
+
     public static void PrintHelp(TextWriter writer)
     {
-        writer.WriteLine("Usage: scripts/test-mod combat [--scenario <id>]");
+        writer.WriteLine("Usage: scripts/test-mod combat [--scenario <id> | --only <id,id,...>] [--jobs <n>] [--isolated]");
         writer.WriteLine();
-        writer.WriteLine("Without --scenario, runs every combat scenario.");
+        writer.WriteLine("Without --scenario, runs every combat scenario: batched in reused game processes,");
+        writer.WriteLine($"spread over --jobs parallel processes (default {DefaultJobs}). --isolated starts one process");
+        writer.WriteLine("per scenario instead (to bisect state leaking between scenarios).");
+        writer.WriteLine("--only runs that subset the same way; --scenario runs one scenario in its own process.");
         writer.WriteLine("Available scenarios:");
         foreach (var scenarioId in ScenarioIds)
             writer.WriteLine($"  {scenarioId}");
@@ -65,14 +73,15 @@ public static class CombatCommand
 
     public static async Task<int> RunAsync(string repoRoot, string[] args)
     {
-        var requested = ParseRequestedScenarios(args);
-        if (requested is null)
+        var options = ParseOptions(args);
+        if (options is null)
         {
             return 2;
         }
 
+        var requested = options.Scenarios;
         var startedAt = DateTimeOffset.UtcNow;
-        var suiteName = requested.Count == 1 ? requested[0] : "suite";
+        var suiteName = options.Single ? requested[0] : "suite";
         var runId = $"{startedAt:yyyyMMddTHHmmssZ}-combat-{suiteName}-{Guid.NewGuid():N}";
         var runRoot = Path.Combine(repoRoot, "artifacts", "tests", runId);
         Directory.CreateDirectory(runRoot);
@@ -82,13 +91,26 @@ public static class CombatCommand
         try
         {
             var build = await RuntimeBuildPreparation.PrepareAsync(repoRoot, runId, runRoot);
-            foreach (var scenarioId in requested)
+            if (options.Single)
             {
-                await RunScenarioAsync(repoRoot, runId, runRoot, scenarioId, build);
+                await RunScenarioAsync(repoRoot, runId, runRoot, requested[0], build);
+                Console.WriteLine($"[combat] PASS: {requested.Count} scenario(s)");
+                return 0;
             }
 
-            Console.WriteLine($"[combat] PASS: {requested.Count} scenario(s)");
-            return 0;
+            var failed = await RunSuiteAsync(repoRoot, runId, runRoot, build, options);
+            var elapsed = DateTimeOffset.UtcNow - startedAt;
+            if (failed.Count == 0)
+            {
+                Console.WriteLine($"[combat] PASS: {requested.Count} scenario(s) in {elapsed.TotalSeconds:F0}s");
+                return 0;
+            }
+
+            Console.Error.WriteLine(
+                $"[combat] FAIL: {failed.Count} of {requested.Count} scenario(s) in {elapsed.TotalSeconds:F0}s: " +
+                string.Join(", ", failed));
+            Console.Error.WriteLine($"[combat] artifacts retained: {runRoot}");
+            return 1;
         }
         catch (Exception exception)
         {
@@ -98,27 +120,112 @@ public static class CombatCommand
         }
     }
 
-    private static IReadOnlyList<string>? ParseRequestedScenarios(string[] args)
+    private static CombatOptions? ParseOptions(string[] args)
     {
-        if (args.Length == 0)
+        string? scenario = null;
+        string[]? only = null;
+        var jobs = DefaultJobs;
+        var isolated = false;
+        for (var index = 0; index < args.Length; index++)
         {
-            return ScenarioIds;
+            switch (args[index])
+            {
+                case "--scenario" when index + 1 < args.Length:
+                    scenario = args[++index];
+                    break;
+                case "--jobs" when index + 1 < args.Length && int.TryParse(args[index + 1], out var parsed) && parsed > 0:
+                    jobs = parsed;
+                    index++;
+                    break;
+                case "--only" when index + 1 < args.Length:
+                    only = args[++index].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    break;
+                case "--isolated":
+                    isolated = true;
+                    break;
+                default:
+                    PrintHelp(Console.Error);
+                    return null;
+            }
         }
 
-        if (args.Length != 2 || args[0] != "--scenario")
+        if (only is not null)
         {
-            PrintHelp(Console.Error);
-            return null;
+            var unknown = only.Where(id => !ScenarioIds.Contains(id, StringComparer.Ordinal)).ToList();
+            if (scenario is not null || only.Length == 0 || unknown.Count > 0)
+            {
+                Console.Error.WriteLine(
+                    $"--only takes known scenario ids and excludes --scenario. Unknown: {string.Join(", ", unknown)}");
+                return null;
+            }
+
+            return new CombatOptions(only.Distinct(StringComparer.Ordinal).ToList(), false, jobs, isolated);
         }
 
-        if (!ScenarioIds.Contains(args[1], StringComparer.Ordinal))
+        if (scenario is null)
+        {
+            return new CombatOptions(ScenarioIds, false, jobs, isolated);
+        }
+
+        if (!ScenarioIds.Contains(scenario, StringComparer.Ordinal))
         {
             Console.Error.WriteLine(
-                $"Unknown combat scenario '{args[1]}'. Available: {string.Join(", ", ScenarioIds)}");
+                $"Unknown combat scenario '{scenario}'. Available: {string.Join(", ", ScenarioIds)}");
             return null;
         }
 
-        return [args[1]];
+        return new CombatOptions([scenario], true, 1, true);
+    }
+
+    // Deals the scenarios round-robin into --jobs queues that run concurrently. A queue runs its
+    // batchable scenarios in reused processes, then its save/load scenarios (which must cross a
+    // process boundary between their write and read phases) one process pair each.
+    private static async Task<IReadOnlyList<string>> RunSuiteAsync(
+        string repoRoot,
+        string runId,
+        string runRoot,
+        RuntimeBuildArtifacts build,
+        CombatOptions options)
+    {
+        var batchable = options.Scenarios.Where(id => !options.Isolated && !SaveLoadScenarioIds.Contains(id)).ToList();
+        var separate = options.Scenarios.Except(batchable).ToList();
+        var queues = Enumerable.Range(0, Math.Min(options.Jobs, options.Scenarios.Count))
+            .Select(static _ => (Batched: new List<string>(), Separate: new List<string>()))
+            .ToList();
+        for (var index = 0; index < batchable.Count; index++)
+            queues[index % queues.Count].Batched.Add(batchable[index]);
+        for (var index = 0; index < separate.Count; index++)
+            queues[(batchable.Count + index) % queues.Count].Separate.Add(separate[index]);
+
+        var passed = new System.Collections.Concurrent.ConcurrentDictionary<string, bool>(StringComparer.Ordinal);
+        await Task.WhenAll(queues.Select((queue, job) => Task.Run(async () =>
+        {
+            var remaining = queue.Batched;
+            for (var attempt = 0; remaining.Count > 0; attempt++)
+            {
+                var outcome = await CombatBatchSession.RunAsync(
+                    repoRoot, runId, runRoot, build, $"job{job}-{attempt}", remaining);
+                foreach (var (scenarioId, ok) in outcome.Completed)
+                    passed[scenarioId] = ok;
+                remaining = outcome.NotRun.ToList();
+            }
+
+            foreach (var scenarioId in queue.Separate)
+            {
+                try
+                {
+                    await RunScenarioAsync(repoRoot, runId, runRoot, scenarioId, build);
+                    passed[scenarioId] = true;
+                }
+                catch (Exception exception)
+                {
+                    Console.Error.WriteLine($"[combat] {scenarioId} FAIL: {exception.Message}");
+                    passed[scenarioId] = false;
+                }
+            }
+        })));
+
+        return options.Scenarios.Where(id => !passed.GetValueOrDefault(id)).ToList();
     }
 
     private static async Task RunScenarioAsync(
@@ -338,7 +445,7 @@ public static class CombatCommand
         return readOutcome;
     }
 
-    private static SakuraTestRequest CreateRequest(
+    internal static SakuraTestRequest CreateRequest(
         RuntimePrerequisites prerequisites,
         string runId,
         string scenarioId,
@@ -376,7 +483,7 @@ public static class CombatCommand
         }
     }
 
-    private static Task WriteSyntheticFailureAsync(
+    internal static Task WriteSyntheticFailureAsync(
         string path,
         string runId,
         string scenarioId,

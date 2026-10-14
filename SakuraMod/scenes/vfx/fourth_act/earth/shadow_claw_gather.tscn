@@ -1,0 +1,110 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/slash.png" id="1_slash"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/smoke.png" id="2_smoke"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(0.420, 0.220, 0.660, 0.000, 0.340, 0.160, 0.540, 0.600, 0.140, 0.060, 0.220, 0.000)
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "play"
+length = 0.450
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Claw0:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.080, 0.200, 0.450), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.800), Color(0.660, 0.460, 1.000, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Claw0:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.080, 0.450), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.15, 0.8), Vector2(0.15, 0.8), Vector2(0.6, 0.5)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Claw1:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.120, 0.230, 0.450), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.800), Color(0.660, 0.460, 1.000, 0.000)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Claw1:scale")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.120, 0.450), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.15, 0.8), Vector2(0.15, 0.8), Vector2(0.6, 0.5)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Claw2:modulate")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.160, 0.260, 0.450), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.800), Color(0.660, 0.460, 1.000, 0.000)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Claw2:scale")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.160, 0.450), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.15, 0.8), Vector2(0.15, 0.8), Vector2(0.6, 0.5)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4"]
+_data = {&"play": SubResource("Animation_3")}
+
+[node name="ShadowClawGather" type="Node2D"]
+metadata/contact_time = 0.32
+metadata/lifetime = 0.75
+
+[node name="Claw0" type="Sprite2D" parent="."]
+texture = ExtResource("1_slash")
+modulate = Color(0.660, 0.460, 1.000, 0.000)
+position = Vector2(-110, -20)
+material = SubResource("CanvasItemMaterial_1")
+rotation = 0.9
+
+[node name="Claw1" type="Sprite2D" parent="."]
+texture = ExtResource("1_slash")
+modulate = Color(0.660, 0.460, 1.000, 0.000)
+position = Vector2(-76, -2)
+material = SubResource("CanvasItemMaterial_1")
+rotation = 0.9
+
+[node name="Claw2" type="Sprite2D" parent="."]
+texture = ExtResource("1_slash")
+modulate = Color(0.660, 0.460, 1.000, 0.000)
+position = Vector2(-42, 16)
+material = SubResource("CanvasItemMaterial_1")
+rotation = 0.9
+
+[node name="Drawn" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("2_smoke")
+color_ramp = SubResource("Gradient_2")
+amount = 12
+lifetime = 0.32
+spread = 180
+emission_shape = 1
+emission_sphere_radius = 170
+radial_accel_min = -1800
+radial_accel_max = -1300
+gravity = Vector2(0, 0)
+scale_amount_min = 0.6
+scale_amount_max = 1.1
+angle_min = -180
+angle_max = 180
+position = Vector2(-80, 0)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_4")}
+autoplay = &"play"

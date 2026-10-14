@@ -9,7 +9,6 @@ using MegaCrit.Sts2.Core.MonsterMoves;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
-using STS2RitsuLib.Scaffolding.Content;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using SakuraMod.SakuraModCode.Extensions;
@@ -17,10 +16,11 @@ using SakuraMod.SakuraModCode.FourthAct.Fire.Powers;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.FourthAct.Visuals.Presentation;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Fire.Models;
 
-public abstract class FireMonsterBase : ModMonsterTemplate
+public abstract class FireMonsterBase : FourthActMonsterTemplate
 {
     protected abstract int BaseHp { get; }
     protected abstract int ToughHp { get; }
@@ -32,10 +32,17 @@ public sealed class SwordMonster : FireMonsterBase
 {
     protected override int BaseHp => FireEnemyRules.SwordHp; protected override int ToughHp => FireEnemyRules.SwordToughHp;
     public override string? CustomVisualsPath => FireEnemyAssets.Sword;
-    public override IEnumerable<string> AssetPaths => [CustomVisualsPath!];
-    protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
-        SakuraStandeeVisuals.Create(CustomVisualsPath!, "The Sword");
+    protected override IEnumerable<string> MonsterAssetPaths => [CustomVisualsPath!];
+    protected override NCreatureVisuals? CreateStandee() =>
+        SakuraStandeeVisuals.CreateFourthActEnemy(CustomVisualsPath!, "The Sword");
     public override async Task AfterAddedToRoom() { await base.AfterAddedToRoom(); await PowerCmd.Apply<SwordBlockFeedingPower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, true); }
+
+    // 锋芒: the edge burns brighter with every stored bonus until the next attack spends it.
+    internal override float StandeeStateGlow =>
+        Creature.GetPower<SwordBlockFeedingPower>()?.LargestBonus is > 0 and var bonus
+            ? Math.Min(1f, 0.45f + 0.15f * bonus / FireEnemyRules.SwordBlockBonus)
+            : 0f;
+    internal override Color StandeeStateColor => new(1f, 0.42f, 0.18f);
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
         var slash = new MoveState("SLASH", Hit, new SingleAttackIntent(FireEnemyRules.SwordSlash));
@@ -45,12 +52,12 @@ public sealed class SwordMonster : FireMonsterBase
     }
     private async Task Hit(IReadOnlyList<Creature> _)
     {
-        try { await FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(FireEnemyRules.SwordSlash).FromMonster(this)); }
+        try { await AttackAsync(DamageCmd.Attack(FireEnemyRules.SwordSlash).FromMonster(this)); }
         finally { Creature.GetPower<SwordBlockFeedingPower>()?.Reset(); }
     }
     private async Task HitTwice(IReadOnlyList<Creature> _)
     {
-        try { await FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(FireEnemyRules.SwordDoubleCut).FromMonster(this).WithHitCount(2)); }
+        try { await AttackAsync(DamageCmd.Attack(FireEnemyRules.SwordDoubleCut).FromMonster(this).WithHitCount(2)); }
         finally { Creature.GetPower<SwordBlockFeedingPower>()?.Reset(); }
     }
 }
@@ -67,9 +74,11 @@ public sealed class LibraPanMonster : FireMonsterBase
 
     protected override int BaseHp => FireEnemyRules.LibraPanHp; protected override int ToughHp => FireEnemyRules.LibraToughPanHp;
     public override string? CustomVisualsPath => LibraEnemyAssets.Moon;
-    public override IEnumerable<string> AssetPaths => LibraEnemyAssets.All;
+    internal override Color StandeeAccent => IsLeftPan ? new Color(0.82f, 0.88f, 1f) : base.StandeeAccent;
+    protected override IEnumerable<string> MonsterAssetPaths =>
+        [.. LibraEnemyAssets.All, Fire.Visuals.LibraVisualController.VignetteShaderPath];
 
-    protected override NCreatureVisuals? TryCreateCreatureVisuals()
+    protected override NCreatureVisuals? CreateStandee()
     {
         var scaledSize = VisibleSize * StandeeScale;
         var boundsSize = scaledSize + Vector2.One * ClickMargin * 2f;
@@ -100,7 +109,7 @@ public sealed class LibraPanMonster : FireMonsterBase
     }
     private async Task Weigh(IReadOnlyList<Creature> _)
     {
-        await FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(FireEnemyRules.LibraAttack).FromMonster(this));
+        await AttackAsync(DamageCmd.Attack(FireEnemyRules.LibraAttack).FromMonster(this), variant: IsLeftPan ? 0 : 1);
     }
 }
 
@@ -110,9 +119,9 @@ public sealed class FireyMonster : FireMonsterBase
     private bool _isAttacking;
     protected override int BaseHp => FireEnemyRules.FireyHp; protected override int ToughHp => FireEnemyRules.FireyToughHp;
     public override string? CustomVisualsPath => FireEnemyAssets.Firey;
-    public override IEnumerable<string> AssetPaths => [CustomVisualsPath!];
-    protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
-        SakuraStandeeVisuals.Create(CustomVisualsPath!, "Firey");
+    protected override IEnumerable<string> MonsterAssetPaths => [CustomVisualsPath!];
+    protected override NCreatureVisuals? CreateStandee() =>
+        SakuraStandeeVisuals.CreateFourthActEnemy(CustomVisualsPath!, "Firey");
     public override async Task AfterAddedToRoom() { await base.AfterAddedToRoom(); await PowerCmd.Apply<FireSovereigntyPower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, true); }
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
@@ -124,15 +133,21 @@ public sealed class FireyMonster : FireMonsterBase
         breath.FollowUpState = arson; arson.FollowUpState = kindle; kindle.FollowUpState = ball; ball.FollowUpState = breath;
         return new MonsterMoveStateMachine([breath, arson, kindle, ball], breath);
     }
-    private async Task Breath(IReadOnlyList<Creature> _) { _isAttacking = true; try { await FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(FireEnemyRules.FlameBreath).FromMonster(this).WithHitCount(FlameBreathHits)); } finally { _isAttacking = false; } }
-    private async Task Arson(IReadOnlyList<Creature> _) { foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive)) for (var i = 0; i < ArsonBurns; i++) await CardPileCmd.AddGeneratedCardToCombat(CombatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Burn>(player), PileType.Discard, player, CardPilePosition.Random); }
-    private Task Kindle(IReadOnlyList<Creature> _) { foreach (var player in CombatState.Players) foreach (var burn in CardPile.GetCards(player, PileType.Draw, PileType.Hand, PileType.Discard).OfType<MegaCrit.Sts2.Core.Models.Cards.Burn>()) burn.DynamicVars.Damage.BaseValue++; return Task.CompletedTask; }
-    private async Task Ball(IReadOnlyList<Creature> _) { _isAttacking = true; try { foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive)) { await DamageCmd.Attack(FireEnemyRules.FireballDamage(CountBurns(player))).FromMonster(this).TargetingFiltered([player.Creature]).Execute(null); } } finally { _isAttacking = false; } }
+    private async Task Breath(IReadOnlyList<Creature> _) { _isAttacking = true; try { await AttackAsync(DamageCmd.Attack(FireEnemyRules.FlameBreath).FromMonster(this).WithHitCount(FlameBreathHits)); } finally { _isAttacking = false; } }
+    private Task Arson(IReadOnlyList<Creature> _) => PerformAsync(async () => { foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive)) for (var i = 0; i < ArsonBurns; i++) await CardPileCmd.AddGeneratedCardToCombat(CombatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Burn>(player), PileType.Discard, player, CardPilePosition.Random); }, LivingPlayers());
+    private Task Kindle(IReadOnlyList<Creature> _) => PerformAsync(() => { foreach (var player in CombatState.Players) foreach (var burn in CardPile.GetCards(player, PileType.Draw, PileType.Hand, PileType.Discard).OfType<MegaCrit.Sts2.Core.Models.Cards.Burn>()) burn.DynamicVars.Damage.BaseValue++; return Task.CompletedTask; }, LivingPlayers());
+    private async Task Ball(IReadOnlyList<Creature> _) { _isAttacking = true; try { foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive)) { var burns = CountBurns(player); await AttackAsync(DamageCmd.Attack(FireEnemyRules.FireballDamage(burns)).FromMonster(this).TargetingFiltered([player.Creature]), FireballTier(burns), player.Creature); } } finally { _isAttacking = false; } }
     public override async Task AfterDamageReceived(PlayerChoiceContext context, Creature target, DamageResult result, MegaCrit.Sts2.Core.ValueProps.ValueProp props, Creature? dealer, CardModel? cardSource)
     {
         if (_isAttacking && dealer == Creature && target.Player is { } player && result.UnblockedDamage > 0)
             await CardPileCmd.AddGeneratedCardToCombat(CombatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Burn>(player), PileType.Discard, player);
     }
+
+    private IEnumerable<Creature> LivingPlayers() =>
+        CombatState.Players.Select(static player => player.Creature).Where(static creature => creature.IsAlive).ToList();
+
+    // Presentation only: the blast grows at 3 and 6 Burns.
+    private static int FireballTier(int burns) => burns >= 6 ? 2 : burns >= 3 ? 1 : 0;
 
     internal static int CountBurns(Player player) =>
         CardPile.GetCards(player, PileType.Draw, PileType.Hand, PileType.Discard).Count(static card => card is MegaCrit.Sts2.Core.Models.Cards.Burn);
@@ -142,10 +157,12 @@ public sealed class LightMonster : FireMonsterBase
 {
     protected override int BaseHp => FireEnemyRules.LightHp; protected override int ToughHp => FireEnemyRules.LightToughHp;
     public override string? CustomVisualsPath => FireEnemyAssets.Light;
-    public override IEnumerable<string> AssetPaths => [CustomVisualsPath!];
-    protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
-        SakuraStandeeVisuals.Create(CustomVisualsPath!, "Light");
+    protected override IEnumerable<string> MonsterAssetPaths => [CustomVisualsPath!];
+    protected override NCreatureVisuals? CreateStandee() =>
+        SakuraStandeeVisuals.CreateFourthActEnemy(CustomVisualsPath!, "Light");
     private bool IsEmpowered => FireEnemyRules.IsLightEmpowered(Creature.CurrentHp, Creature.MaxHp);
+    internal override float StandeeStateGlow => IsEmpowered ? 0.7f : 0f;
+    internal override float AmbientLevel => IsEmpowered ? 1f : 0f;
     public override async Task AfterAddedToRoom() { await base.AfterAddedToRoom(); var context = new ThrowingPlayerChoiceContext(); await PowerCmd.Apply<LightSovereigntyPower>(context, Creature, 1, Creature, null, true); await PowerCmd.Apply<LightBattlePower>(context, Creature, 1, Creature, null, true); }
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
@@ -157,28 +174,35 @@ public sealed class LightMonster : FireMonsterBase
         radiance.FollowUpState = blessing; blessing.FollowUpState = judgment; judgment.FollowUpState = radiance;
         return new MonsterMoveStateMachine([radiance, blessing, judgment], radiance);
     }
-    private Task Hit(IReadOnlyList<Creature> _) => FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(FireEnemyRules.Radiance).FromMonster(this));
-    private async Task Bless(IReadOnlyList<Creature> _) { await FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(FireEnemyRules.Benediction).FromMonster(this)); foreach (var power in Creature.Powers.Where(p => p.TypeForCurrentAmount == PowerType.Debuff).ToList()) await PowerCmd.Remove(power); await CreatureCmd.Heal(Creature, IsEmpowered ? 25 : 15); }
+    private Task Hit(IReadOnlyList<Creature> _) => AttackAsync(DamageCmd.Attack(FireEnemyRules.Radiance).FromMonster(this));
+
+    // Presentation only: the beam widens at 4 and 8 cards in hand.
+    private static int JudgmentTier(int hand) => hand >= 8 ? 2 : hand >= 4 ? 1 : 0;
+    private async Task Bless(IReadOnlyList<Creature> _)
+    {
+        await AttackAsync(DamageCmd.Attack(FireEnemyRules.Benediction).FromMonster(this));
+        await PerformAsync(FourthActMovePresentationCatalog.BenedictionHeal, async () =>
+        {
+            foreach (var power in Creature.Powers.Where(p => p.TypeForCurrentAmount == PowerType.Debuff).ToList()) await PowerCmd.Remove(power);
+            await CreatureCmd.Heal(Creature, IsEmpowered ? 25 : 15);
+        }, [Creature]);
+    }
     private async Task Judge(IReadOnlyList<Creature> _)
     {
         LightEternalDayVisuals.For(Creature)?.BeginJudgment();
-        var firstTarget = true;
         try
         {
             foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive))
             {
                 var hand = CardPile.GetCards(player, PileType.Hand).Count();
-                await DamageCmd.Attack(FireEnemyRules.JudgmentDamage(hand, IsEmpowered))
+                await AttackAsync(DamageCmd.Attack(FireEnemyRules.JudgmentDamage(hand, IsEmpowered))
                     .FromMonster(this)
-                    .WithAttackerAnim("Attack", firstTarget ? 0.3f : 0f)
                     .TargetingFiltered([player.Creature])
                     .BeforeDamage(() =>
                     {
                         LightEternalDayVisuals.For(Creature)?.ReleaseJudgment();
                         return Task.CompletedTask;
-                    })
-                    .Execute(null);
-                firstTarget = false;
+                    }), JudgmentTier(hand), player.Creature);
             }
         }
         finally

@@ -1,0 +1,97 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="1_glow"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/beam.png" id="2_beam"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/droplet.png" id="3_droplet"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.7, 1.0)
+colors = PackedColorArray(0.600, 0.850, 1.000, 0.950, 0.380, 0.680, 1.000, 0.850, 0.380, 0.680, 1.000, 0.000)
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "play"
+length = 0.900
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Column:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.050, 0.350, 0.900), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(2.2, 0.0), Vector2(2.2, 0.0), Vector2(2.4, 7.0), Vector2(2.7, 7.4)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Column:modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.050, 0.100, 0.600, 0.900), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.400, 0.740, 1.000, 0.000), Color(0.400, 0.740, 1.000, 0.000), Color(0.400, 0.740, 1.000, 0.750), Color(0.400, 0.740, 1.000, 0.750), Color(0.400, 0.740, 1.000, 0.000)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Core:scale")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.350, 0.900), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.6, 0.0), Vector2(0.7, 2.2), Vector2(0.7, 2.4)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Core:modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.100, 0.500, 0.800), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.900, 0.970, 1.000, 0.000), Color(0.900, 0.970, 1.000, 0.450), Color(0.900, 0.970, 1.000, 0.300), Color(0.900, 0.970, 1.000, 0.000)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Spray:emitting")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.050, 0.600), "transitions": PackedFloat32Array(1, 1, 1), "update": 1, "values": [false, true, false]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4"]
+_data = {&"play": SubResource("Animation_3")}
+
+[node name="DragonRise" type="Node2D"]
+metadata/contact_time = 0.45
+metadata/lifetime = 1.1
+
+[node name="Column" type="Sprite2D" parent="."]
+texture = ExtResource("1_glow")
+modulate = Color(0.400, 0.740, 1.000, 0.000)
+position = Vector2(40, 120)
+offset = Vector2(0, -44)
+
+[node name="Core" type="Sprite2D" parent="."]
+texture = ExtResource("2_beam")
+modulate = Color(0.900, 0.970, 1.000, 0.000)
+position = Vector2(40, -150)
+offset = Vector2(0, -256)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Spray" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = false
+explosiveness = 0.0
+texture = ExtResource("3_droplet")
+color_ramp = SubResource("Gradient_2")
+amount = 50
+lifetime = 0.8
+direction = Vector2(0, -1)
+spread = 12
+initial_velocity_min = 900
+initial_velocity_max = 1400
+gravity = Vector2(0, 1200)
+particle_flag_align_y = true
+scale_amount_min = 0.25
+scale_amount_max = 0.5
+emission_shape = 3
+emission_rect_extents = Vector2(90, 6)
+position = Vector2(40, -150)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_4")}
+autoplay = &"play"

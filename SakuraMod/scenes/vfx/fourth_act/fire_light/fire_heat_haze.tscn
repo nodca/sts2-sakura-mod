@@ -1,0 +1,68 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Shader" path="res://SakuraMod/shaders/fourth_act/heat_haze.gdshader" id="1_heat_haze"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/dot.png" id="2_dot"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2"]
+shader = ExtResource("1_heat_haze")
+
+[sub_resource type="Gradient" id="Gradient_3"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(1.000, 0.700, 0.300, 0.000, 1.000, 0.600, 0.200, 0.800, 0.900, 0.200, 0.050, 0.000)
+
+[sub_resource type="Animation" id="Animation_4"]
+resource_name = "play"
+length = 4.000
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Embers:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 4.000), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(0, -10), Vector2(0, -10)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_5"]
+_data = {&"play": SubResource("Animation_4")}
+
+[node name="FireHeatHaze" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 0.0
+metadata/ambient_layer = "room"
+
+[node name="Haze" type="ColorRect" parent="."]
+offset_left = -960.0
+offset_top = -300.0
+offset_right = 960.0
+offset_bottom = 0.0
+mouse_filter = 2
+material = SubResource("ShaderMaterial_2")
+
+[node name="Embers" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = false
+explosiveness = 0.0
+texture = ExtResource("2_dot")
+color_ramp = SubResource("Gradient_3")
+material = SubResource("CanvasItemMaterial_1")
+amount = 36
+lifetime = 4.0
+preprocess = 4.0
+direction = Vector2(0, -1)
+spread = 20
+initial_velocity_min = 40
+initial_velocity_max = 110
+gravity = Vector2(0, -10)
+scale_amount_min = 0.4
+scale_amount_max = 1.0
+emission_shape = 3
+emission_rect_extents = Vector2(960, 20)
+position = Vector2(0, -10)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_5")}
+autoplay = &"play"

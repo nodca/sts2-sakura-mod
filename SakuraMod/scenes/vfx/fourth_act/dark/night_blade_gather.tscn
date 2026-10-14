@@ -1,0 +1,68 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/crescent.png" id="1_crescent"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/smoke.png" id="2_smoke"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(0.300, 0.160, 0.480, 0.000, 0.200, 0.100, 0.340, 0.650, 0.080, 0.040, 0.140, 0.000)
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "play"
+length = 0.500
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Edge:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.080, 0.300, 0.500), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.900), Color(0.660, 0.460, 1.000, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Edge:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.080, 0.500), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.2, 0.4), Vector2(0.2, 0.4), Vector2(0.7, 1.0)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4"]
+_data = {&"play": SubResource("Animation_3")}
+
+[node name="NightBladeGather" type="Node2D"]
+metadata/contact_time = 0.32
+metadata/lifetime = 0.75
+
+[node name="Edge" type="Sprite2D" parent="."]
+texture = ExtResource("1_crescent")
+modulate = Color(0.660, 0.460, 1.000, 0.000)
+position = Vector2(-120, -20)
+material = SubResource("CanvasItemMaterial_1")
+rotation = 3.141592653589793
+
+[node name="Drawn" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("2_smoke")
+color_ramp = SubResource("Gradient_2")
+amount = 12
+lifetime = 0.32
+spread = 180
+emission_shape = 1
+emission_sphere_radius = 200
+radial_accel_min = -1700
+radial_accel_max = -1200
+gravity = Vector2(0, 0)
+scale_amount_min = 0.6
+scale_amount_max = 1.1
+angle_min = -180
+angle_max = 180
+position = Vector2(-120, -20)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_4")}
+autoplay = &"play"

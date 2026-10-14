@@ -1,0 +1,128 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/beam.png" id="1_beam"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/ring.png" id="2_ring"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="3_glow"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/droplet.png" id="4_droplet"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.1, 1.0)
+colors = PackedColorArray(0.750, 0.880, 1.000, 0.000, 0.750, 0.880, 1.000, 0.600, 0.700, 0.850, 1.000, 0.400)
+
+[sub_resource type="Gradient" id="Gradient_3"]
+offsets = PackedFloat32Array(0.0, 0.7, 1.0)
+colors = PackedColorArray(0.600, 0.850, 1.000, 0.950, 0.380, 0.680, 1.000, 0.850, 0.380, 0.680, 1.000, 0.000)
+
+[sub_resource type="Animation" id="Animation_4"]
+resource_name = "play"
+length = 0.900
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Rain:emitting")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.500), "transitions": PackedFloat32Array(1, 1), "update": 1, "values": [true, false]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Pool:modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.200, 0.300, 0.900), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.400, 0.740, 1.000, 0.000), Color(0.400, 0.740, 1.000, 0.000), Color(0.400, 0.740, 1.000, 0.800), Color(0.400, 0.740, 1.000, 0.000)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Pool:scale")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.200, 0.900), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.6, 0.12), Vector2(0.6, 0.12), Vector2(1.8, 0.36)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Glow:modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.150, 0.250, 0.800), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.400, 0.740, 1.000, 0.000), Color(0.400, 0.740, 1.000, 0.000), Color(0.400, 0.740, 1.000, 0.350), Color(0.400, 0.740, 1.000, 0.000)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Glow:scale")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.150, 0.800), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(1.6, 2.6), Vector2(1.6, 2.6), Vector2(2.0, 3.0)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Splash:emitting")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.250, 0.700), "transitions": PackedFloat32Array(1, 1, 1), "update": 1, "values": [false, true, false]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_5"]
+_data = {&"play": SubResource("Animation_4")}
+
+[node name="DownpourSplash" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 1.4
+
+[node name="Rain" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = false
+explosiveness = 0.0
+texture = ExtResource("1_beam")
+color_ramp = SubResource("Gradient_2")
+material = SubResource("CanvasItemMaterial_1")
+amount = 110
+lifetime = 0.32
+direction = Vector2(-0.25, 1)
+spread = 3
+initial_velocity_min = 2600
+initial_velocity_max = 3000
+gravity = Vector2(0, 0)
+particle_flag_align_y = true
+scale_amount_min = 0.1
+scale_amount_max = 0.17
+emission_shape = 3
+emission_rect_extents = Vector2(200, 10)
+position = Vector2(200, -800)
+
+[node name="Pool" type="Sprite2D" parent="."]
+texture = ExtResource("2_ring")
+modulate = Color(0.400, 0.740, 1.000, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Glow" type="Sprite2D" parent="."]
+texture = ExtResource("3_glow")
+modulate = Color(0.400, 0.740, 1.000, 0.000)
+position = Vector2(0, -200)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Splash" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = false
+explosiveness = 0.0
+texture = ExtResource("4_droplet")
+color_ramp = SubResource("Gradient_3")
+amount = 40
+lifetime = 0.5
+direction = Vector2(0, -1)
+spread = 60
+initial_velocity_min = 250
+initial_velocity_max = 520
+gravity = Vector2(0, 1500)
+particle_flag_align_y = true
+scale_amount_min = 0.15
+scale_amount_max = 0.32
+emission_shape = 3
+emission_rect_extents = Vector2(150, 6)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_5")}
+autoplay = &"play"

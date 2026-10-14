@@ -1,0 +1,358 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/rays.png" id="1_rays"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="2_glow"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/ring.png" id="3_ring"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/star.png" id="4_star"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/smoke.png" id="5_smoke"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/shard.png" id="6_shard"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/dot.png" id="7_dot"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(0.300, 0.160, 0.480, 0.000, 0.200, 0.100, 0.340, 0.650, 0.080, 0.040, 0.140, 0.000)
+
+[sub_resource type="Gradient" id="Gradient_3"]
+offsets = PackedFloat32Array(0.0, 0.8, 1.0)
+colors = PackedColorArray(0.750, 0.600, 1.000, 1.000, 0.500, 0.350, 0.800, 0.900, 0.500, 0.350, 0.800, 0.000)
+
+[sub_resource type="Gradient" id="Gradient_4"]
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(0.900, 0.800, 1.000, 1.000, 0.550, 0.300, 0.950, 0.000)
+
+[sub_resource type="Animation" id="Animation_5"]
+resource_name = "play"
+length = 1.200
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("FallRays:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.020, 0.140, 0.170), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.700), Color(0.660, 0.460, 1.000, 0.700), Color(0.660, 0.460, 1.000, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("FallRays:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.170), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(2.04, 2.04), Vector2(2.04, 2.04)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("FallCorona:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.020, 0.140, 0.170), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.800), Color(0.660, 0.460, 1.000, 0.800), Color(0.660, 0.460, 1.000, 0.000)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("FallCorona:scale")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.170), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(2.55, 2.55), Vector2(2.55, 2.55)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("FallDisc:modulate")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.020, 0.140, 0.170), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.000, 0.000, 0.000, 0.000), Color(0.000, 0.000, 0.000, 1.000), Color(0.000, 0.000, 0.000, 1.000), Color(0.000, 0.000, 0.000, 0.000)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("FallDisc:scale")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.170), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(1.7, 1.7), Vector2(1.7, 1.7)]}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("FallCore:modulate")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {"times": PackedFloat32Array(0.000, 0.020, 0.140, 0.170), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.000, 0.000, 0.000, 0.000), Color(0.000, 0.000, 0.000, 1.000), Color(0.000, 0.000, 0.000, 1.000), Color(0.000, 0.000, 0.000, 0.000)]}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("FallCore:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {"times": PackedFloat32Array(0.000, 0.170), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(1.19, 1.19), Vector2(1.19, 1.19)]}
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("FallRim:modulate")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {"times": PackedFloat32Array(0.000, 0.020, 0.140, 0.170), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.550), Color(0.660, 0.460, 1.000, 0.550), Color(0.660, 0.460, 1.000, 0.000)]}
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("FallRim:scale")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {"times": PackedFloat32Array(0.000, 0.170), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(0.663, 0.663), Vector2(0.663, 0.663)]}
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("FallRays:rotation")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {"times": PackedFloat32Array(0.000, 0.170), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [0.0, 1.2]}
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("FallRays:position")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {"times": PackedFloat32Array(0.000, 0.150), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(60, -520), Vector2(0, 0)]}
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("FallCorona:position")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {"times": PackedFloat32Array(0.000, 0.150), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(60, -520), Vector2(0, 0)]}
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("FallDisc:position")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {"times": PackedFloat32Array(0.000, 0.150), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(60, -520), Vector2(0, 0)]}
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("FallCore:position")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {"times": PackedFloat32Array(0.000, 0.150), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(60, -520), Vector2(0, 0)]}
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("FallRim:position")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {"times": PackedFloat32Array(0.000, 0.150), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(60, -520), Vector2(0, 0)]}
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Flash:modulate")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {"times": PackedFloat32Array(0.000, 0.140, 0.160, 0.320), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.900, 0.840, 1.000, 0.000), Color(0.900, 0.840, 1.000, 0.000), Color(0.900, 0.840, 1.000, 0.700), Color(0.900, 0.840, 1.000, 0.000)]}
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Flash:scale")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {"times": PackedFloat32Array(0.000, 0.140, 0.320), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.4, 0.4), Vector2(0.4, 0.4), Vector2(1.4, 1.4)]}
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Wave:modulate")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {"times": PackedFloat32Array(0.000, 0.150, 0.200, 0.800), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.070, 0.030, 0.120, 0.000), Color(0.070, 0.030, 0.120, 0.000), Color(0.070, 0.030, 0.120, 1.000), Color(0.070, 0.030, 0.120, 0.000)]}
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Wave:scale")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {"times": PackedFloat32Array(0.000, 0.150, 0.800), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.4, 0.4), Vector2(0.4, 0.4), Vector2(3.4, 3.4)]}
+tracks/20/type = "value"
+tracks/20/imported = false
+tracks/20/enabled = true
+tracks/20/path = NodePath("Pit:modulate")
+tracks/20/interp = 1
+tracks/20/loop_wrap = true
+tracks/20/keys = {"times": PackedFloat32Array(0.000, 0.150, 0.200, 0.900), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.000, 0.000, 0.000, 0.000), Color(0.000, 0.000, 0.000, 0.000), Color(0.000, 0.000, 0.000, 0.850), Color(0.000, 0.000, 0.000, 0.000)]}
+tracks/21/type = "value"
+tracks/21/imported = false
+tracks/21/enabled = true
+tracks/21/path = NodePath("Pit:scale")
+tracks/21/interp = 1
+tracks/21/loop_wrap = true
+tracks/21/keys = {"times": PackedFloat32Array(0.000, 0.150, 0.900), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(1.6, 1.6), Vector2(1.6, 1.6), Vector2(2.8, 2.8)]}
+tracks/22/type = "value"
+tracks/22/imported = false
+tracks/22/enabled = true
+tracks/22/path = NodePath("Corona:modulate")
+tracks/22/interp = 1
+tracks/22/loop_wrap = true
+tracks/22/keys = {"times": PackedFloat32Array(0.000, 0.160, 0.220, 0.850), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.950), Color(0.660, 0.460, 1.000, 0.000)]}
+tracks/23/type = "value"
+tracks/23/imported = false
+tracks/23/enabled = true
+tracks/23/path = NodePath("Corona:scale")
+tracks/23/interp = 1
+tracks/23/loop_wrap = true
+tracks/23/keys = {"times": PackedFloat32Array(0.000, 0.160, 0.850), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.3, 0.3), Vector2(0.3, 0.3), Vector2(2.8, 2.8)]}
+tracks/24/type = "value"
+tracks/24/imported = false
+tracks/24/enabled = true
+tracks/24/path = NodePath("Glow:modulate")
+tracks/24/interp = 1
+tracks/24/loop_wrap = true
+tracks/24/keys = {"times": PackedFloat32Array(0.000, 0.150, 0.250, 1.200), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.360, 0.180, 0.660, 0.000), Color(0.360, 0.180, 0.660, 0.000), Color(0.360, 0.180, 0.660, 0.600), Color(0.360, 0.180, 0.660, 0.000)]}
+tracks/25/type = "value"
+tracks/25/imported = false
+tracks/25/enabled = true
+tracks/25/path = NodePath("Glow:scale")
+tracks/25/interp = 1
+tracks/25/loop_wrap = true
+tracks/25/keys = {"times": PackedFloat32Array(0.000, 0.150, 1.200), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(2.0, 2.0), Vector2(2.0, 2.0), Vector2(4.2, 4.2)]}
+tracks/26/type = "value"
+tracks/26/imported = false
+tracks/26/enabled = true
+tracks/26/path = NodePath("Smoke:emitting")
+tracks/26/interp = 1
+tracks/26/loop_wrap = true
+tracks/26/keys = {"times": PackedFloat32Array(0.000, 0.150), "transitions": PackedFloat32Array(1, 1), "update": 1, "values": [false, true]}
+tracks/27/type = "value"
+tracks/27/imported = false
+tracks/27/enabled = true
+tracks/27/path = NodePath("Shards:emitting")
+tracks/27/interp = 1
+tracks/27/loop_wrap = true
+tracks/27/keys = {"times": PackedFloat32Array(0.000, 0.150), "transitions": PackedFloat32Array(1, 1), "update": 1, "values": [false, true]}
+tracks/28/type = "value"
+tracks/28/imported = false
+tracks/28/enabled = true
+tracks/28/path = NodePath("Sparks:emitting")
+tracks/28/interp = 1
+tracks/28/loop_wrap = true
+tracks/28/keys = {"times": PackedFloat32Array(0.000, 0.150), "transitions": PackedFloat32Array(1, 1), "update": 1, "values": [false, true]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_6"]
+_data = {&"play": SubResource("Animation_5")}
+
+[node name="EclipseCollapse" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 1.9
+
+[node name="FallRays" type="Sprite2D" parent="."]
+texture = ExtResource("1_rays")
+modulate = Color(0.660, 0.460, 1.000, 0.000)
+position = Vector2(0, 0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="FallCorona" type="Sprite2D" parent="."]
+texture = ExtResource("2_glow")
+modulate = Color(0.660, 0.460, 1.000, 0.000)
+position = Vector2(0, 0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="FallDisc" type="Sprite2D" parent="."]
+texture = ExtResource("2_glow")
+modulate = Color(0.000, 0.000, 0.000, 0.000)
+position = Vector2(0, 0)
+
+[node name="FallCore" type="Sprite2D" parent="."]
+texture = ExtResource("2_glow")
+modulate = Color(0.000, 0.000, 0.000, 0.000)
+position = Vector2(0, 0)
+
+[node name="FallRim" type="Sprite2D" parent="."]
+texture = ExtResource("3_ring")
+modulate = Color(0.660, 0.460, 1.000, 0.000)
+position = Vector2(0, 0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Flash" type="Sprite2D" parent="."]
+texture = ExtResource("4_star")
+modulate = Color(0.900, 0.840, 1.000, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Wave" type="Sprite2D" parent="."]
+texture = ExtResource("3_ring")
+modulate = Color(0.070, 0.030, 0.120, 0.000)
+
+[node name="Pit" type="Sprite2D" parent="."]
+texture = ExtResource("2_glow")
+modulate = Color(0.000, 0.000, 0.000, 0.000)
+
+[node name="Corona" type="Sprite2D" parent="."]
+texture = ExtResource("3_ring")
+modulate = Color(0.660, 0.460, 1.000, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Glow" type="Sprite2D" parent="."]
+texture = ExtResource("2_glow")
+modulate = Color(0.360, 0.180, 0.660, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Smoke" type="CPUParticles2D" parent="."]
+emitting = false
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("5_smoke")
+color_ramp = SubResource("Gradient_2")
+amount = 16
+lifetime = 1.3
+spread = 180
+initial_velocity_min = 200
+initial_velocity_max = 480
+damping_min = 250
+damping_max = 380
+gravity = Vector2(0, -40)
+scale_amount_min = 1.2
+scale_amount_max = 2.2
+angle_min = -180
+angle_max = 180
+
+[node name="Shards" type="CPUParticles2D" parent="."]
+emitting = false
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("6_shard")
+color_ramp = SubResource("Gradient_3")
+material = SubResource("CanvasItemMaterial_1")
+amount = 24
+lifetime = 0.9
+spread = 180
+initial_velocity_min = 450
+initial_velocity_max = 950
+damping_min = 400
+damping_max = 600
+gravity = Vector2(0, 400)
+angle_min = -180
+angle_max = 180
+angular_velocity_min = -500
+angular_velocity_max = 500
+scale_amount_min = 0.3
+scale_amount_max = 0.6
+
+[node name="Sparks" type="CPUParticles2D" parent="."]
+emitting = false
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("7_dot")
+color_ramp = SubResource("Gradient_4")
+material = SubResource("CanvasItemMaterial_1")
+amount = 40
+lifetime = 0.8
+spread = 180
+initial_velocity_min = 300
+initial_velocity_max = 900
+damping_min = 300
+damping_max = 500
+gravity = Vector2(0, 0)
+scale_amount_min = 0.6
+scale_amount_max = 1.4
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_6")}
+autoplay = &"play"

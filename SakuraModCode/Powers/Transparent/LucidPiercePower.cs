@@ -20,8 +20,10 @@ using STS2RitsuLib.Scaffolding.Content.Patches;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
-public class LucidPiercePower : NextAttackThisTurnPowerBase
+public class LucidPiercePower : SakuraPowerModel
 {
+    private readonly List<CardModel> _cards = [];
+
     protected override string IconFileName => "lucid_pierce.png";
 
     public override PowerType Type => PowerType.Buff;
@@ -31,9 +33,33 @@ public class LucidPiercePower : NextAttackThisTurnPowerBase
         dealer is not null
         && cardSource is { Type: CardType.Attack }
         && cardSource.Owner?.Creature == dealer
-        && dealer.GetPower<LucidPiercePower>()?.IsActiveFor(cardSource) == true;
+        && (dealer.GetPower<LucidPierceAllPower>() is not null
+            || dealer.GetPower<LucidPiercePower>()?._cards.Contains(cardSource) == true);
 
-    private bool IsActiveFor(CardModel card) =>
-        IsActiveAttack(card);
+    public static async Task Mark(PlayerChoiceContext choiceContext, Creature owner, CardModel card, CardModel source)
+    {
+        if (owner.GetPower<LucidPiercePower>() is null)
+            await PowerCmd.Apply<LucidPiercePower>(choiceContext, owner, 1, owner, source, false);
+        owner.GetPower<LucidPiercePower>()?._cards.Add(card);
+    }
+
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
+    {
+        if (Owner.Side == side && participants.Contains(Owner))
+            await PowerCmd.Remove(this);
+    }
 }
 
+public class LucidPierceAllPower : SakuraPowerModel
+{
+    protected override string IconFileName => "lucid_pierce.png";
+
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Single;
+
+    public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
+    {
+        if (Owner.Side == side && participants.Contains(Owner))
+            await PowerCmd.Remove(this);
+    }
+}

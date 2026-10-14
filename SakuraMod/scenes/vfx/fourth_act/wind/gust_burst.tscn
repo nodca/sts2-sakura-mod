@@ -1,0 +1,141 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="1_glow"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/ring.png" id="2_ring"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/crescent.png" id="3_crescent"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/beam.png" id="4_beam"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(0.720, 1.000, 0.900, 0.000, 0.720, 1.000, 0.900, 0.800, 0.600, 0.950, 0.850, 0.000)
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "play"
+length = 0.450
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Flash:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.030, 0.250), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.700), Color(0.900, 1.000, 0.970, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Flash:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.250), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.9, 0.9), Vector2(0.9, 0.9), Vector2(2.0, 2.0)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Ring:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.040, 0.400), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.720, 1.000, 0.900, 0.000), Color(0.720, 1.000, 0.900, 0.000), Color(0.720, 1.000, 0.900, 0.850), Color(0.720, 1.000, 0.900, 0.000)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Ring:scale")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.400), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.3, 0.3), Vector2(0.3, 0.3), Vector2(1.6, 1.6)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Arc:modulate")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.040, 0.450), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.550, 0.950, 0.840, 0.000), Color(0.550, 0.950, 0.840, 0.000), Color(0.550, 0.950, 0.840, 0.900), Color(0.550, 0.950, 0.840, 0.000)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Arc:scale")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.450), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.5, 0.5), Vector2(0.5, 0.5), Vector2(1.3, 1.3)]}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("ArcB:modulate")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {"times": PackedFloat32Array(0.000, 0.020, 0.060, 0.450), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.800), Color(0.900, 1.000, 0.970, 0.000)]}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("ArcB:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {"times": PackedFloat32Array(0.000, 0.020, 0.450), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.45, 0.45), Vector2(0.45, 0.45), Vector2(1.2, 1.2)]}
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Arc:rotation")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {"times": PackedFloat32Array(0.000, 0.450), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [0.0, -4.0]}
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("ArcB:rotation")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {"times": PackedFloat32Array(0.000, 0.450), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [3.141592653589793, -0.8584073464102069]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4"]
+_data = {&"play": SubResource("Animation_3")}
+
+[node name="GustBurst" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 1.0
+
+[node name="Flash" type="Sprite2D" parent="."]
+texture = ExtResource("1_glow")
+modulate = Color(0.900, 1.000, 0.970, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Ring" type="Sprite2D" parent="."]
+texture = ExtResource("2_ring")
+modulate = Color(0.720, 1.000, 0.900, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Arc" type="Sprite2D" parent="."]
+texture = ExtResource("3_crescent")
+modulate = Color(0.550, 0.950, 0.840, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="ArcB" type="Sprite2D" parent="."]
+texture = ExtResource("3_crescent")
+modulate = Color(0.900, 1.000, 0.970, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+rotation = 3.141592653589793
+
+[node name="Gusts" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("4_beam")
+color_ramp = SubResource("Gradient_2")
+material = SubResource("CanvasItemMaterial_1")
+amount = 24
+lifetime = 0.4
+spread = 180
+initial_velocity_min = 500
+initial_velocity_max = 1000
+damping_min = 800
+damping_max = 1200
+gravity = Vector2(0, 0)
+particle_flag_align_y = true
+scale_amount_min = 0.06
+scale_amount_max = 0.12
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_4")}
+autoplay = &"play"

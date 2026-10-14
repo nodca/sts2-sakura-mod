@@ -1,0 +1,108 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/vine.png" id="1_vine"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/rock.png" id="2_rock"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.8, 1.0)
+colors = PackedColorArray(0.720, 0.580, 0.440, 1.000, 0.600, 0.480, 0.380, 1.000, 0.600, 0.480, 0.380, 0.000)
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "play"
+length = 0.850
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Vine0:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.300, 0.850), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(0.33203125, 0.0), Vector2(0.33203125, 0.0), Vector2(0.33203125, 0.33203125), Vector2(0.33203125, 0.33203125)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Vine0:modulate")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.020, 0.600, 0.850), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.620, 0.920, 0.420, 0.000), Color(0.620, 0.920, 0.420, 0.000), Color(0.620, 0.920, 0.420, 1.000), Color(0.620, 0.920, 0.420, 1.000), Color(0.620, 0.920, 0.420, 0.000)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Vine1:scale")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.040, 0.340, 0.850), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(0.44921875, 0.0), Vector2(0.44921875, 0.0), Vector2(0.44921875, 0.44921875), Vector2(0.44921875, 0.44921875)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Vine1:modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.040, 0.060, 0.600, 0.850), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.620, 0.920, 0.420, 0.000), Color(0.620, 0.920, 0.420, 0.000), Color(0.620, 0.920, 0.420, 1.000), Color(0.620, 0.920, 0.420, 1.000), Color(0.620, 0.920, 0.420, 0.000)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Vine2:scale")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.080, 0.380, 0.850), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(0.29296875, 0.0), Vector2(0.29296875, 0.0), Vector2(0.29296875, 0.29296875), Vector2(0.29296875, 0.29296875)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Vine2:modulate")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.080, 0.100, 0.600, 0.850), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.620, 0.920, 0.420, 0.000), Color(0.620, 0.920, 0.420, 0.000), Color(0.620, 0.920, 0.420, 1.000), Color(0.620, 0.920, 0.420, 1.000), Color(0.620, 0.920, 0.420, 0.000)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4"]
+_data = {&"play": SubResource("Animation_3")}
+
+[node name="VineSprout" type="Node2D"]
+metadata/contact_time = 0.35
+metadata/lifetime = 0.9
+
+[node name="Vine0" type="Sprite2D" parent="."]
+texture = ExtResource("1_vine")
+modulate = Color(0.620, 0.920, 0.420, 0.000)
+position = Vector2(-120, 0)
+offset = Vector2(0, -256)
+rotation = -0.3
+
+[node name="Vine1" type="Sprite2D" parent="."]
+texture = ExtResource("1_vine")
+modulate = Color(0.620, 0.920, 0.420, 0.000)
+position = Vector2(-40, 0)
+offset = Vector2(0, -256)
+rotation = 0.1
+
+[node name="Vine2" type="Sprite2D" parent="."]
+texture = ExtResource("1_vine")
+modulate = Color(0.620, 0.920, 0.420, 0.000)
+position = Vector2(60, 0)
+offset = Vector2(0, -256)
+rotation = 0.35
+
+[node name="Soil" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("2_rock")
+color_ramp = SubResource("Gradient_2")
+amount = 10
+lifetime = 0.6
+direction = Vector2(0, -1)
+spread = 60
+initial_velocity_min = 200
+initial_velocity_max = 400
+gravity = Vector2(0, 1400)
+scale_amount_min = 0.1
+scale_amount_max = 0.22
+emission_shape = 3
+emission_rect_extents = Vector2(130, 5)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_4")}
+autoplay = &"play"

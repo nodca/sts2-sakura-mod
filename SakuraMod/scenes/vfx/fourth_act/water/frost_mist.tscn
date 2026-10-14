@@ -1,0 +1,84 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/smoke.png" id="1_smoke"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/dot.png" id="2_dot"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.3, 1.0)
+colors = PackedColorArray(0.860, 0.950, 1.000, 0.000, 0.820, 0.930, 1.000, 0.220, 0.750, 0.900, 1.000, 0.000)
+
+[sub_resource type="Gradient" id="Gradient_3"]
+offsets = PackedFloat32Array(0.0, 0.1, 0.85, 1.0)
+colors = PackedColorArray(1.000, 1.000, 1.000, 0.000, 0.950, 0.980, 1.000, 0.850, 0.900, 0.960, 1.000, 0.800, 0.900, 0.960, 1.000, 0.000)
+
+[sub_resource type="Animation" id="Animation_4"]
+resource_name = "play"
+length = 5.000
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Snow:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 5.000), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(0, -720), Vector2(0, -720)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_5"]
+_data = {&"play": SubResource("Animation_4")}
+
+[node name="FrostMist" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 0.0
+metadata/ambient_layer = "behind"
+metadata/ambient_anchor = "feet"
+
+[node name="Mist" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = false
+explosiveness = 0.0
+texture = ExtResource("1_smoke")
+color_ramp = SubResource("Gradient_2")
+amount = 14
+lifetime = 4.0
+preprocess = 4.0
+direction = Vector2(-1, 0)
+spread = 15
+initial_velocity_min = 20
+initial_velocity_max = 50
+gravity = Vector2(0, -4)
+scale_amount_min = 1.4
+scale_amount_max = 2.4
+angle_min = -180
+angle_max = 180
+emission_shape = 3
+emission_rect_extents = Vector2(260, 14)
+position = Vector2(0, -20)
+
+[node name="Snow" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = false
+explosiveness = 0.0
+texture = ExtResource("2_dot")
+color_ramp = SubResource("Gradient_3")
+material = SubResource("CanvasItemMaterial_1")
+amount = 30
+lifetime = 5.0
+preprocess = 5.0
+direction = Vector2(-0.2, 1)
+spread = 15
+initial_velocity_min = 50
+initial_velocity_max = 100
+gravity = Vector2(-4, 10)
+scale_amount_min = 0.35
+scale_amount_max = 0.8
+emission_shape = 3
+emission_rect_extents = Vector2(320, 10)
+position = Vector2(0, -720)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_5")}
+autoplay = &"play"

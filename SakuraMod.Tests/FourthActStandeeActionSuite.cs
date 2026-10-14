@@ -8,147 +8,22 @@ using System.Buffers.Binary;
 public sealed class FourthActStandeeActionSuite
 {
     [Fact]
-    public void SharedBridgeOwnsTheStaticStandeeAttackContract()
-    {
-        var fourthActRoot = Path.GetDirectoryName(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Visuals/FourthActEnemyActionCmd.cs"))!;
-        fourthActRoot = Directory.GetParent(fourthActRoot)!.FullName;
-        var fourthActSources = Directory
-            .EnumerateFiles(fourthActRoot, "*.cs", SearchOption.AllDirectories)
-            .ToDictionary(static path => path, File.ReadAllText);
-        var bridge = fourthActSources.Single(static pair =>
-            pair.Key.EndsWith("FourthActEnemyActionCmd.cs", StringComparison.Ordinal)).Value;
-
-        Assert.Equal(1, fourthActSources.Values.Sum(static source =>
-            CountOccurrences(source, ".WithNoAttackerAnim()")));
-        Assert.Contains("WithNoAttackerAnim", bridge, StringComparison.Ordinal);
-        Assert.Contains("OnlyPlayAnimOnce", bridge, StringComparison.Ordinal);
-        Assert.Contains("WithAttackerFx", bridge, StringComparison.Ordinal);
-        Assert.Contains("WithHitFx", bridge, StringComparison.Ordinal);
-        Assert.Contains("PerformAsync", bridge, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void EveryFourthActAttackKeepsTheNativeAttackCommandPath()
-    {
-        var modelsRoot = Path.GetDirectoryName(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Wind/Models/FlyMonster.cs"))!;
-        var fourthActRoot = Directory.GetParent(Directory.GetParent(modelsRoot)!.FullName)!.FullName;
-        var modelSources = Directory
-            .EnumerateFiles(fourthActRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(static path => path.Contains("/Models/", StringComparison.Ordinal))
-            .Select(File.ReadAllText)
-            .ToList();
-
-        var nativeAttackCount = modelSources.Sum(static source =>
-            CountOccurrences(source, "DamageCmd.Attack("));
-        var bridgedAttackCount = modelSources.Sum(static source =>
-            CountOccurrences(source, "FourthActEnemyActionCmd.AttackAsync("));
-
-        Assert.Equal(32, nativeAttackCount);
-        Assert.Equal(28, bridgedAttackCount);
-        var watery = modelSources.Single(static source =>
-            source.Contains("class WateryMonster", StringComparison.Ordinal));
-        Assert.Equal(2, CountOccurrences(watery, "DamageCmd.Attack(")
-            - CountOccurrences(watery, "FourthActEnemyActionCmd.AttackAsync("));
-        Assert.Contains("FourthActEnemyActionCmd.PerformAsync(", watery, StringComparison.Ordinal);
-        Assert.All(modelSources, static source =>
-            Assert.DoesNotContain("CreatureCmd.Damage(", source, StringComparison.Ordinal));
-
-        var bridge = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Visuals/FourthActEnemyActionCmd.cs"));
-        Assert.Contains("command.Execute", bridge, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void FourthActAudioUsesExplicitVanillaCues()
-    {
-        var expected = new Dictionary<FourthActAudioCue, string>
-        {
-            [FourthActAudioCue.WindAttack] =
-                "event:/sfx/enemy/enemy_attacks/living_fog/living_fog_attack_blow",
-            [FourthActAudioCue.HeavyWindAttack] =
-                "event:/sfx/enemy/enemy_attacks/soul_fysh/soul_fysh_wave",
-            [FourthActAudioCue.IllusionAttack] =
-                "event:/sfx/enemy/enemy_attacks/obscura/obscura_attack",
-            [FourthActAudioCue.DarkAttack] =
-                "event:/sfx/enemy/enemy_attacks/spectral_knight/spectral_knight_soul_slash",
-            [FourthActAudioCue.WindTakeoff] =
-                "event:/sfx/enemy/enemy_attacks/thieving_hopper/thieving_hopper_take_off",
-            [FourthActAudioCue.WindySummon] =
-                "event:/sfx/enemy/enemy_attacks/obscura/obscura_summon",
-            [FourthActAudioCue.IllusionReweave] =
-                "event:/sfx/enemy/enemy_attacks/obscura/obscura_summon",
-            [FourthActAudioCue.DarkTransition] =
-                "event:/sfx/enemy/enemy_attacks/spectral_knight/spectral_knight_hex",
-            [FourthActAudioCue.FlyLanding] =
-                "res://SakuraMod/sfx/fourth_act/fly_landing.ogg",
-            [FourthActAudioCue.SleepCast] =
-                "res://SakuraMod/sfx/fourth_act/sleep_cast.ogg",
-            [FourthActAudioCue.WindWallBlock] =
-                "res://SakuraMod/sfx/fourth_act/wind_wall_block.ogg"
-        };
-
-        Assert.Equal(expected.Count, Enum.GetValues<FourthActAudioCue>().Length);
-        foreach (var (cue, path) in expected)
-            Assert.Equal(path, FourthActEnemyAudio.PathFor(cue));
-
-        var audio = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Visuals/FourthActEnemyAudio.cs"));
-        Assert.Contains("TestMode.IsOn", audio, StringComparison.Ordinal);
-        Assert.Contains("ResourceSoundFileSource", audio, StringComparison.Ordinal);
-        Assert.Contains("PlayOneShot", audio, StringComparison.Ordinal);
-        Assert.Contains("SfxCmd.Play", audio, StringComparison.Ordinal);
-        Assert.Contains("Logger.Warn", audio, StringComparison.Ordinal);
-
-        foreach (var cue in new[]
-                 {
-                     FourthActAudioCue.FlyLanding,
-                     FourthActAudioCue.SleepCast,
-                     FourthActAudioCue.WindWallBlock
-                 })
-        {
-            var file = RegressionTestHarness.FindRepoFile(
-                FourthActEnemyAudio.PathFor(cue).Replace("res://", string.Empty, StringComparison.Ordinal));
-            Assert.True(File.Exists(file), $"Missing local audio resource for {cue}: {file}");
-        }
-
-        var fly = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Wind/Models/FlyMonster.cs"));
-        var sleep = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Wind/Models/WindAttendants.cs"));
-        var feedback = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Visuals/FourthActCombatFeedbackVisuals.cs"));
-        var dark = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Dark/Models/DarkMonster.cs"));
-        Assert.Contains("FourthActAudioCue.FlyLanding", fly, StringComparison.Ordinal);
-        Assert.Contains("FourthActAudioCue.SleepCast", sleep, StringComparison.Ordinal);
-        Assert.Contains("FourthActAudioCue.WindWallBlock", feedback, StringComparison.Ordinal);
-        Assert.Contains("FourthActAudioCue.DarkTransition", dark, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void SharedControllerOwnsStandeeLifecycleAndGameplayCannotBeSkipped()
+    public void FourthActStandeesAttachWithoutMotion()
     {
         var factory = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Character/SakuraStandeeVisuals.cs"));
         var controller = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/FourthAct/Visuals/SakuraStandeeActionController.cs"));
 
-        Assert.Contains("Attach", factory, StringComparison.Ordinal);
-        Assert.DoesNotContain("StartCombatStandeeAnimation", factory, StringComparison.Ordinal);
+        Assert.Contains("CreateFourthActEnemy", factory, StringComparison.Ordinal);
+        Assert.Contains("motion: false", factory, StringComparison.Ordinal);
+        Assert.Contains("if (_motion && !TestMode.IsOn)", controller, StringComparison.Ordinal);
+        Assert.Contains("_playIdleMotion = motion && playIdleMotion", controller, StringComparison.Ordinal);
         Assert.Equal(
-            [SakuraStandeeClip.Attack, SakuraStandeeClip.Cast, SakuraStandeeClip.Buff, SakuraStandeeClip.Summon],
-            Enum.GetValues<SakuraStandeeClip>());
-        Assert.Equal(
-            [
-                SakuraStandeePlaybackPriority.Idle,
-                SakuraStandeePlaybackPriority.Action,
-                SakuraStandeePlaybackPriority.Hurt,
-                SakuraStandeePlaybackPriority.Death
-            ],
+            [SakuraStandeePlaybackPriority.Idle, SakuraStandeePlaybackPriority.Action],
             Enum.GetValues<SakuraStandeePlaybackPriority>());
-        Assert.Contains("resolveAtContact", controller, StringComparison.Ordinal);
+        foreach (var removed in new[] { "PlayActionAsync", "PlayHurt", "PlayDeath", "SpawnAfterimage", "HarmonyPatch" })
+            Assert.DoesNotContain(removed, controller, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -176,31 +51,17 @@ public sealed class FourthActStandeeActionSuite
     }
 
     [Fact]
-    public void PlaybackPriorityIsDeathThenHurtThenActionThenIdle()
+    public void ActionOutranksIdleAndOnlyTheCurrentClipRecovers()
     {
         var playback = new SakuraStandeePlaybackState();
 
         Assert.Equal(SakuraStandeePlaybackPriority.Idle, playback.Priority);
-        Assert.True(playback.TryBegin(SakuraStandeePlaybackPriority.Action, out _));
+        Assert.True(playback.TryBegin(SakuraStandeePlaybackPriority.Action, out var first));
         Assert.False(playback.TryBegin(SakuraStandeePlaybackPriority.Idle, out _));
-        Assert.True(playback.TryBegin(SakuraStandeePlaybackPriority.Hurt, out _));
-        Assert.False(playback.TryBegin(SakuraStandeePlaybackPriority.Action, out _));
-        Assert.True(playback.TryBeginDeath(out _));
-        Assert.False(playback.TryBegin(SakuraStandeePlaybackPriority.Hurt, out _));
-    }
+        Assert.True(playback.TryBegin(SakuraStandeePlaybackPriority.Action, out var second));
 
-    [Fact]
-    public void InterruptedPlaybackOnlyLetsTheCurrentClipRecoverToIdle()
-    {
-        var playback = new SakuraStandeePlaybackState();
-
-        Assert.True(playback.TryBegin(SakuraStandeePlaybackPriority.Action, out var actionGeneration));
-        Assert.True(playback.TryBegin(SakuraStandeePlaybackPriority.Hurt, out var hurtGeneration));
-
-        Assert.False(playback.IsCurrent(actionGeneration));
-        Assert.False(playback.TryFinish(actionGeneration));
-        Assert.Equal(SakuraStandeePlaybackPriority.Hurt, playback.Priority);
-        Assert.True(playback.TryFinish(hurtGeneration));
+        Assert.False(playback.TryFinish(first));
+        Assert.True(playback.TryFinish(second));
         Assert.Equal(SakuraStandeePlaybackPriority.Idle, playback.Priority);
     }
 
@@ -214,41 +75,29 @@ public sealed class FourthActStandeeActionSuite
 
         Assert.False(playback.IsCurrent(generation));
         Assert.False(playback.TryFinish(generation));
-        Assert.False(playback.TryBegin(SakuraStandeePlaybackPriority.Death, out _));
+        Assert.False(playback.TryBegin(SakuraStandeePlaybackPriority.Action, out _));
     }
 
     [Fact]
-    public void DeathIsTerminalAndNeverRecoversToIdle()
+    public void HurtAndDeathRideTheStandeeShaderThroughNativeHooks()
     {
-        var playback = new SakuraStandeePlaybackState();
-        Assert.True(playback.TryBegin(SakuraStandeePlaybackPriority.Action, out _));
+        var material = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Visuals/Presentation/FourthActStandeeMaterial.cs"));
+        var template = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/FourthActMonsterTemplate.cs"));
 
-        Assert.True(playback.TryBeginDeath(out var deathGeneration));
-
-        Assert.True(playback.IsDead);
-        Assert.Equal(SakuraStandeePlaybackPriority.Death, playback.Priority);
-        Assert.False(playback.TryFinish(deathGeneration));
-        Assert.Equal(SakuraStandeePlaybackPriority.Death, playback.Priority);
-        Assert.False(playback.CanPlayNonDeath);
-        Assert.False(playback.TryBeginDeath(out _));
+        Assert.Contains("nameof(NCreature.SetAnimationTrigger)", material, StringComparison.Ordinal);
+        Assert.Contains("trigger == \"Hit\"", material, StringComparison.Ordinal);
+        Assert.Contains("nameof(NCreature.StartDeathAnim)", material, StringComparison.Ordinal);
+        Assert.Contains("SfxCmd.PlayDeath", material, StringComparison.Ordinal);
+        Assert.DoesNotContain("CreateTween", material, StringComparison.Ordinal);
+        Assert.Contains("DeathAnimLengthOverride => FourthActStandeeMaterial.DissolveDuration", template, StringComparison.Ordinal);
+        Assert.Contains("ShouldFadeAfterDeath => false", template, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void FourthActModelsRouteActionsAndFlyFramesThroughTheSharedController()
+    public void FlyFramesStillSwapThroughTheSharedController()
     {
-        foreach (var relativePath in new[]
-                 {
-                     "SakuraModCode/FourthAct/Wind/Models/FlyMonster.cs",
-                     "SakuraModCode/FourthAct/Wind/Models/IllusionMonsters.cs",
-                     "SakuraModCode/FourthAct/Wind/Models/WindAttendants.cs",
-                     "SakuraModCode/FourthAct/Wind/Models/WindyMonster.cs",
-                     "SakuraModCode/FourthAct/Dark/Models/DarkMonster.cs"
-                 })
-        {
-            var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath));
-            Assert.Contains("FourthActEnemyActionCmd.", source, StringComparison.Ordinal);
-        }
-
         var flyVisuals = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/FourthAct/Wind/Visuals/FlyVisualController.cs"));
         var flyMonster = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -256,59 +105,6 @@ public sealed class FourthActStandeeActionSuite
         Assert.Contains("PlayTextureSequenceAsync", flyVisuals, StringComparison.Ordinal);
         Assert.Contains("PlayLandingAsync", flyMonster, StringComparison.Ordinal);
         Assert.Contains("PlayTakeoffAsync", flyMonster, StringComparison.Ordinal);
-
-        var expectedActionClips = new Dictionary<string, string[]>(StringComparer.Ordinal)
-        {
-            ["SakuraModCode/FourthAct/Wind/Models/IllusionMonsters.cs"] =
-                ["SakuraStandeeClip.Summon"],
-            ["SakuraModCode/FourthAct/Wind/Models/WindAttendants.cs"] =
-                ["SakuraStandeeClip.Buff", "SakuraStandeeClip.Cast"],
-            ["SakuraModCode/FourthAct/Wind/Models/WindyMonster.cs"] =
-                ["SakuraStandeeClip.Summon"],
-            ["SakuraModCode/FourthAct/Dark/Models/DarkMonster.cs"] =
-                ["SakuraStandeeClip.Cast"]
-        };
-        foreach (var (relativePath, clips) in expectedActionClips)
-        {
-            var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath));
-            foreach (var clip in clips)
-            {
-                Assert.Contains(
-                    $"FourthActEnemyActionCmd.PerformAsync(Creature, {clip}",
-                    source,
-                    StringComparison.Ordinal);
-            }
-        }
-    }
-
-    [Fact]
-    public void HurtAndDeathFeedbackExtendTheNativeCreatureLifecycle()
-    {
-        var controller = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Visuals/SakuraStandeeActionController.cs"));
-        var windTemplate = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Wind/Models/WindMonsterTemplate.cs"));
-        var darkMonster = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Dark/Models/DarkMonster.cs"));
-        var windAttendants = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Wind/Models/WindAttendants.cs"));
-
-        Assert.Contains("nameof(NCreature.SetAnimationTrigger)", controller, StringComparison.Ordinal);
-        Assert.Contains("trigger == \"Hit\"", controller, StringComparison.Ordinal);
-        Assert.Contains("PlayHurt", controller, StringComparison.Ordinal);
-        Assert.Contains("nameof(NCreature.StartDeathAnim)", controller, StringComparison.Ordinal);
-        Assert.Contains("SfxCmd.PlayDeath", controller, StringComparison.Ordinal);
-        Assert.DoesNotContain("CreatureCmd.Damage(", controller, StringComparison.Ordinal);
-
-        foreach (var source in new[] { windTemplate, darkMonster })
-        {
-            Assert.Contains("HasDeathSfx", source, StringComparison.Ordinal);
-            Assert.Contains("HurtSfx", source, StringComparison.Ordinal);
-            Assert.Contains("DeathAnimLengthOverride", source, StringComparison.Ordinal);
-        }
-
-        Assert.Contains("GainBlock", windAttendants, StringComparison.Ordinal);
-        Assert.Contains("GainBlock", darkMonster, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -341,30 +137,10 @@ public sealed class FourthActStandeeActionSuite
         Assert.Empty(WindEnemyAssets.ActionFramesFor(WindEnemyAssets.Float));
         Assert.Contains(DarkEnemyAssets.Action, new DarkMonster().AssetPaths);
 
-        var windTemplate = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Wind/Models/WindMonsterTemplate.cs"));
-        Assert.Contains("ActionFramesFor", windTemplate, StringComparison.Ordinal);
-
         var controller = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/FourthAct/Visuals/SakuraStandeeActionController.cs"));
-        Assert.Contains("ApplyActionTexture", controller, StringComparison.Ordinal);
+        Assert.Contains("SetActionPose", controller, StringComparison.Ordinal);
         Assert.Contains("ActionTexturePath", controller, StringComparison.Ordinal);
         Assert.Contains("PreloadTextures", controller, StringComparison.Ordinal);
-        Assert.Contains("SpawnAfterimage", controller, StringComparison.Ordinal);
-        Assert.Contains("ClearAfterimages", controller, StringComparison.Ordinal);
-        Assert.Contains("ApplyRestTexture", controller, StringComparison.Ordinal);
-    }
-
-    private static int CountOccurrences(string source, string value)
-    {
-        var count = 0;
-        var offset = 0;
-        while ((offset = source.IndexOf(value, offset, StringComparison.Ordinal)) >= 0)
-        {
-            count++;
-            offset += value.Length;
-        }
-
-        return count;
     }
 }

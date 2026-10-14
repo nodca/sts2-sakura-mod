@@ -1,0 +1,103 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="1_glow"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/star.png" id="2_star"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Animation" id="Animation_2"]
+resource_name = "play"
+length = 0.550
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Glow0:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.240, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.900), Color(0.660, 0.460, 1.000, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Glow0:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.550), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.3, 0.3), Vector2(0.3, 0.3), Vector2(0.6, 0.6)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Eye0:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.050, 0.260, 0.500), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.920, 0.850, 1.000, 0.000), Color(0.920, 0.850, 1.000, 0.000), Color(0.920, 0.850, 1.000, 1.000), Color(0.920, 0.850, 1.000, 0.000)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Eye0:scale")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.050, 0.500), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.05, 0.03), Vector2(0.05, 0.03), Vector2(0.22, 0.1)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Glow1:modulate")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.240, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.000), Color(0.660, 0.460, 1.000, 0.900), Color(0.660, 0.460, 1.000, 0.000)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Glow1:scale")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.550), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.3, 0.3), Vector2(0.3, 0.3), Vector2(0.6, 0.6)]}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Eye1:modulate")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {"times": PackedFloat32Array(0.000, 0.050, 0.260, 0.500), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.920, 0.850, 1.000, 0.000), Color(0.920, 0.850, 1.000, 0.000), Color(0.920, 0.850, 1.000, 1.000), Color(0.920, 0.850, 1.000, 0.000)]}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Eye1:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {"times": PackedFloat32Array(0.000, 0.050, 0.500), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.05, 0.03), Vector2(0.05, 0.03), Vector2(0.22, 0.1)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_3"]
+_data = {&"play": SubResource("Animation_2")}
+
+[node name="ShadowEyes" type="Node2D"]
+metadata/contact_time = 0.3
+metadata/lifetime = 0.75
+
+[node name="Glow0" type="Sprite2D" parent="."]
+texture = ExtResource("1_glow")
+modulate = Color(0.660, 0.460, 1.000, 0.000)
+position = Vector2(-46, 90)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Eye0" type="Sprite2D" parent="."]
+texture = ExtResource("2_star")
+modulate = Color(0.920, 0.850, 1.000, 0.000)
+position = Vector2(-46, 90)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Glow1" type="Sprite2D" parent="."]
+texture = ExtResource("1_glow")
+modulate = Color(0.660, 0.460, 1.000, 0.000)
+position = Vector2(-12, 90)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Eye1" type="Sprite2D" parent="."]
+texture = ExtResource("2_star")
+modulate = Color(0.920, 0.850, 1.000, 0.000)
+position = Vector2(-12, 90)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_3")}
+autoplay = &"play"

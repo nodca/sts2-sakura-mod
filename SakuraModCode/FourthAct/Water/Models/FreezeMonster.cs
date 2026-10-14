@@ -8,7 +8,6 @@ using MegaCrit.Sts2.Core.MonsterMoves;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
 using MegaCrit.Sts2.Core.Nodes.Combat;
-using STS2RitsuLib.Scaffolding.Content;
 using SakuraMod.SakuraModCode.FourthAct.Water;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using MegaCrit.Sts2.Core.ValueProps;
@@ -20,7 +19,7 @@ using SakuraMod.SakuraModCode.Character;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Water.Models;
 
-public sealed class FreezeMonster : ModMonsterTemplate
+public sealed class FreezeMonster : FourthActMonsterTemplate
 {
     private bool _isHeavyStriking;
 
@@ -29,9 +28,9 @@ public sealed class FreezeMonster : ModMonsterTemplate
     public override int MinInitialHp => AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, ToughHp, BaseHp);
     public override int MaxInitialHp => MinInitialHp;
     public override string? CustomVisualsPath => WaterEnemyAssets.Freeze;
-    public override IEnumerable<string> AssetPaths => [CustomVisualsPath!];
-    protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
-        SakuraStandeeVisuals.Create(CustomVisualsPath!, "The Freeze");
+    protected override IEnumerable<string> MonsterAssetPaths => [CustomVisualsPath!];
+    protected override NCreatureVisuals? CreateStandee() =>
+        SakuraStandeeVisuals.CreateFourthActEnemy(CustomVisualsPath!, "The Freeze");
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
         var heavy = new MoveState("HEAVY_STRIKE", Heavy, new MultiAttackIntent(CurrentHeavyDamage, HeavyHits), new DebuffIntent());
@@ -48,9 +47,7 @@ public sealed class FreezeMonster : ModMonsterTemplate
         _isHeavyStriking = true;
         try
         {
-            await FourthActEnemyActionCmd.AttackAsync(
-                Creature,
-                DamageCmd.Attack(CurrentHeavyDamage).FromMonster(this).WithHitCount(HeavyHits));
+            await AttackAsync(DamageCmd.Attack(CurrentHeavyDamage).FromMonster(this).WithHitCount(HeavyHits));
         }
         finally
         {
@@ -69,8 +66,8 @@ public sealed class FreezeMonster : ModMonsterTemplate
         if (_isHeavyStriking && dealer == Creature && target.IsPlayer && result.UnblockedDamage > 0)
             await PowerCmd.Apply<SakuraFrostbitePower>(choiceContext, target, 1, Creature, null, false);
     }
-    private async Task Cold(IReadOnlyList<Creature> targets) { await FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(CurrentColdDamage).FromMonster(this)); await CreatureCmd.GainBlock(Creature, ColdBlock, ValueProp.Move, null, false); }
-    private async Task Ice(IReadOnlyList<Creature> targets)
+    private async Task Cold(IReadOnlyList<Creature> targets) { await AttackAsync(DamageCmd.Attack(CurrentColdDamage).FromMonster(this)); await CreatureCmd.GainBlock(Creature, ColdBlock, ValueProp.Move, null, false); }
+    private Task Ice(IReadOnlyList<Creature> targets) => PerformAsync(async () =>
     {
         await CreatureCmd.GainBlock(Creature, AscensionHelper.GetValueIfAscension(AscensionLevel.DeadlyEnemies, DeadlyIceBlock, IceBlock), ValueProp.Move, null, false);
         await PowerCmd.Apply<SakuraFrostbitePower>(
@@ -80,5 +77,5 @@ public sealed class FreezeMonster : ModMonsterTemplate
             Creature,
             null,
             false);
-    }
+    }, [Creature]);
 }

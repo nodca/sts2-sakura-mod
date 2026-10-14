@@ -100,7 +100,7 @@ public static class CommandDispatcher
         writer.WriteLine("  scripts/test-mod fast");
         writer.WriteLine("  scripts/test-mod package");
         writer.WriteLine("  scripts/test-mod runtime");
-        writer.WriteLine("  scripts/test-mod combat [--scenario <id>]");
+        writer.WriteLine("  scripts/test-mod combat [--scenario <id> | --only <id,id,...>] [--jobs <n>] [--isolated]");
         writer.WriteLine("  scripts/test-mod multiplayer --scenario <id>");
         writer.WriteLine("  scripts/test-mod preflight");
         writer.WriteLine("  scripts/test-mod protocol-self-test");

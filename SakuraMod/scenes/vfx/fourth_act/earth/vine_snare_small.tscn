@@ -1,0 +1,143 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/ring.png" id="1_ring"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/vine.png" id="2_vine"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/rock.png" id="3_rock"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.8, 1.0)
+colors = PackedColorArray(0.720, 0.580, 0.440, 1.000, 0.600, 0.480, 0.380, 1.000, 0.600, 0.480, 0.380, 0.000)
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "play"
+length = 1.200
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Burst:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.040, 0.450), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.820, 0.620, 0.400, 0.000), Color(0.820, 0.620, 0.400, 0.000), Color(0.820, 0.620, 0.400, 0.800), Color(0.820, 0.620, 0.400, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Burst:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.450), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.4, 0.1), Vector2(0.4, 0.1), Vector2(1.6, 0.4)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Vine0:scale")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.160, 1.200), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(0.7421875, 0.0), Vector2(0.7421875, 0.0), Vector2(0.7421875, 0.7421875), Vector2(0.7421875, 0.7421875)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Vine0:modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.020, 0.950, 1.200), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.340, 0.600, 0.200, 0.000), Color(0.340, 0.600, 0.200, 0.000), Color(0.340, 0.600, 0.200, 1.000), Color(0.340, 0.600, 0.200, 1.000), Color(0.340, 0.600, 0.200, 0.000)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Vine0:rotation")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.200, 0.320, 1.200), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [-0.35, -0.35, -0.12249999999999998, -0.12249999999999998]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Vine1:scale")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.020, 0.180, 1.200), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(0.8203125, 0.0), Vector2(0.8203125, 0.0), Vector2(0.8203125, 0.8203125), Vector2(0.8203125, 0.8203125)]}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Vine1:modulate")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {"times": PackedFloat32Array(0.000, 0.020, 0.040, 0.950, 1.200), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.340, 0.600, 0.200, 0.000), Color(0.340, 0.600, 0.200, 0.000), Color(0.340, 0.600, 0.200, 1.000), Color(0.340, 0.600, 0.200, 1.000), Color(0.340, 0.600, 0.200, 0.000)]}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Vine1:rotation")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {"times": PackedFloat32Array(0.000, 0.220, 0.340, 1.200), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [0.3, 0.3, 0.105, 0.105]}
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Squeeze:modulate")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {"times": PackedFloat32Array(0.000, 0.260, 0.300, 0.600), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.620, 0.920, 0.420, 0.000), Color(0.620, 0.920, 0.420, 0.000), Color(0.620, 0.920, 0.420, 0.800), Color(0.620, 0.920, 0.420, 0.000)]}
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Squeeze:scale")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {"times": PackedFloat32Array(0.000, 0.260, 0.600), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(1.4, 0.5), Vector2(1.4, 0.5), Vector2(0.7, 0.25)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4"]
+_data = {&"play": SubResource("Animation_3")}
+
+[node name="VineSnareSmall" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 1.6
+
+[node name="Burst" type="Sprite2D" parent="."]
+texture = ExtResource("1_ring")
+modulate = Color(0.820, 0.620, 0.400, 0.000)
+
+[node name="Vine0" type="Sprite2D" parent="."]
+texture = ExtResource("2_vine")
+modulate = Color(0.340, 0.600, 0.200, 0.000)
+position = Vector2(-110, 0)
+offset = Vector2(0, -256)
+rotation = -0.35
+
+[node name="Vine1" type="Sprite2D" parent="."]
+texture = ExtResource("2_vine")
+modulate = Color(0.340, 0.600, 0.200, 0.000)
+position = Vector2(110, 0)
+offset = Vector2(0, -256)
+rotation = 0.3
+
+[node name="Squeeze" type="Sprite2D" parent="."]
+texture = ExtResource("1_ring")
+modulate = Color(0.620, 0.920, 0.420, 0.000)
+position = Vector2(0, -260)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Soil" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("3_rock")
+color_ramp = SubResource("Gradient_2")
+amount = 10
+lifetime = 0.8
+direction = Vector2(0, -1)
+spread = 55
+initial_velocity_min = 300
+initial_velocity_max = 650
+gravity = Vector2(0, 1600)
+angle_min = -180
+angle_max = 180
+scale_amount_min = 0.12
+scale_amount_max = 0.3
+emission_shape = 3
+emission_rect_extents = Vector2(150, 5)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_4")}
+autoplay = &"play"

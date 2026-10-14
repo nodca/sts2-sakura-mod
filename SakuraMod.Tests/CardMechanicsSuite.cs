@@ -114,6 +114,22 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void TransferExtraOnlyMakesPositiveTemporaryStatsPermanent()
+    {
+        var amountField = typeof(PowerModel).GetField("_amount",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var permanentizable = new PowerModel[] { new ClassicTemporaryStrengthPower(), new SakuraTemporaryDexterityPower(), new FlexPotionPower() };
+        var protectedPowers = new PowerModel[] { new PiercingWailPower(), new DarkShacklesPower(), new StrengthPower() };
+        foreach (var power in permanentizable.Concat(protectedPowers))
+            amountField.SetValue(power, 2);
+
+        Assert.All(permanentizable, power => Assert.True(SakuraActions.IsPermanentizableTemporaryStat(power)));
+        Assert.All(protectedPowers, power => Assert.False(SakuraActions.IsPermanentizableTemporaryStat(power)));
+        Assert.Contains(CardKeyword.Exhaust, new Transfer().CanonicalKeywords);
+        Assert.Contains(CardKeyword.Exhaust, new Lucid().CanonicalKeywords);
+    }
+
+    [Fact]
     public void BurningSticksExcludesSpellTurnOnly()
     {
         RegressionTestHarness.Require(

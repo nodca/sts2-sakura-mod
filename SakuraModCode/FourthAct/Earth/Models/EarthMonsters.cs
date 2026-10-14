@@ -18,11 +18,11 @@ using SakuraMod.SakuraModCode.Extensions;
 using SakuraMod.SakuraModCode.FourthAct.Earth.Intents;
 using SakuraMod.SakuraModCode.FourthAct.Earth.Powers;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
-using STS2RitsuLib.Scaffolding.Content;
+using SakuraMod.SakuraModCode.FourthAct.Visuals.Presentation;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Earth.Models;
 
-public abstract class EarthMonsterBase : ModMonsterTemplate
+public abstract class EarthMonsterBase : FourthActMonsterTemplate
 {
     protected abstract int BaseHp { get; }
     protected abstract int ToughHp { get; }
@@ -38,12 +38,12 @@ public sealed class ShadowMonster : EarthMonsterBase
     protected override int BaseHp => EarthEnemyRules.ShadowHp;
     protected override int ToughHp => EarthEnemyRules.ShadowToughHp;
     public override string? CustomVisualsPath => EarthEnemyAssets.Shadow;
-    public override IEnumerable<string> AssetPaths =>
+    protected override IEnumerable<string> MonsterAssetPaths =>
         new AbstractIntent[] { new SingleAttackIntent(0), new DefendIntent(), new HealIntent(), new BuffIntent() }
             .SelectMany(static intent => intent.AssetPaths).Prepend(CustomVisualsPath!).Distinct();
 
-    protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
-        SakuraStandeeVisuals.Create(CustomVisualsPath!, "Shadow");
+    protected override NCreatureVisuals? CreateStandee() =>
+        SakuraStandeeVisuals.CreateFourthActEnemy(CustomVisualsPath!, "Shadow");
 
     public override async Task AfterAddedToRoom()
     {
@@ -125,8 +125,8 @@ public sealed class ShadowMonster : EarthMonsterBase
             {
                 case CardType.Attack:
                     var clawsDmg = IsDeadly ? EarthEnemyRules.ShadowClawsA9Damage : EarthEnemyRules.ShadowClawsDamage;
-                    await FourthActEnemyActionCmd.AttackAsync(
-                        Creature,
+                    await AttackAsync(
+                        FourthActMovePresentationCatalog.ShadowClaws,
                         DamageCmd.Attack(clawsDmg)
                             .FromMonster(this)
                             .WithHitCount(EarthEnemyRules.ShadowClawsHits)
@@ -144,8 +144,8 @@ public sealed class ShadowMonster : EarthMonsterBase
                 default:
                     // Status, Curse, pass, or other non-3 types -> Shadow Bite
                     var biteDmg = IsDeadly ? EarthEnemyRules.ShadowBiteA9Damage : EarthEnemyRules.ShadowBiteDamage;
-                    await FourthActEnemyActionCmd.AttackAsync(
-                        Creature,
+                    await AttackAsync(
+                        FourthActMovePresentationCatalog.ShadowBite,
                         DamageCmd.Attack(biteDmg)
                             .FromMonster(this)
                             .TargetingFiltered([player.Creature]));
@@ -153,20 +153,32 @@ public sealed class ShadowMonster : EarthMonsterBase
             }
         }
 
-        for (var i = 0; i < skillCount; i++)
+        if (skillCount > 0)
         {
-            var block = IsTough ? EarthEnemyRules.ShadowVeilA8Block : EarthEnemyRules.ShadowVeilBlock;
-            var heal = IsDeadly ? EarthEnemyRules.ShadowVeilA9Heal : EarthEnemyRules.ShadowVeilHeal;
-            await CreatureCmd.GainBlock(Creature, block, ValueProp.Move, null, false);
-            await CreatureCmd.Heal(Creature, heal);
+            await PerformAsync(FourthActMovePresentationCatalog.ShadowVeil, async () =>
+            {
+                for (var i = 0; i < skillCount; i++)
+                {
+                    var block = IsTough ? EarthEnemyRules.ShadowVeilA8Block : EarthEnemyRules.ShadowVeilBlock;
+                    var heal = IsDeadly ? EarthEnemyRules.ShadowVeilA9Heal : EarthEnemyRules.ShadowVeilHeal;
+                    await CreatureCmd.GainBlock(Creature, block, ValueProp.Move, null, false);
+                    await CreatureCmd.Heal(Creature, heal);
+                }
+            }, [Creature]);
         }
 
-        for (var i = 0; i < powerCount; i++)
+        if (powerCount > 0)
         {
-            var str = IsDeadly ? EarthEnemyRules.ShadowSurgeA9Strength : EarthEnemyRules.ShadowSurgeStrength;
-            var block = IsTough ? EarthEnemyRules.ShadowSurgeA8Block : EarthEnemyRules.ShadowSurgeBlock;
-            await PowerCmd.Apply<StrengthPower>(new ThrowingPlayerChoiceContext(), Creature, str, Creature, null, false);
-            await CreatureCmd.GainBlock(Creature, block, ValueProp.Move, null, false);
+            await PerformAsync(FourthActMovePresentationCatalog.ShadowSurge, async () =>
+            {
+                for (var i = 0; i < powerCount; i++)
+                {
+                    var str = IsDeadly ? EarthEnemyRules.ShadowSurgeA9Strength : EarthEnemyRules.ShadowSurgeStrength;
+                    var block = IsTough ? EarthEnemyRules.ShadowSurgeA8Block : EarthEnemyRules.ShadowSurgeBlock;
+                    await PowerCmd.Apply<StrengthPower>(new ThrowingPlayerChoiceContext(), Creature, str, Creature, null, false);
+                    await CreatureCmd.GainBlock(Creature, block, ValueProp.Move, null, false);
+                }
+            }, [Creature]);
         }
     }
 }
@@ -176,7 +188,7 @@ public sealed class WoodMonster : EarthMonsterBase
     protected override int BaseHp => EarthEnemyRules.WoodHp;
     protected override int ToughHp => EarthEnemyRules.WoodToughHp;
     public override string? CustomVisualsPath => EarthEnemyAssets.Wood;
-    public override IEnumerable<string> AssetPaths => [CustomVisualsPath!];
+    protected override IEnumerable<string> MonsterAssetPaths => [CustomVisualsPath!];
 
     private int RootedCount
     {
@@ -187,8 +199,13 @@ public sealed class WoodMonster : EarthMonsterBase
         }
     }
 
-    protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
-        SakuraStandeeVisuals.Create(CustomVisualsPath!, "Wood");
+    protected override NCreatureVisuals? CreateStandee() =>
+        SakuraStandeeVisuals.CreateFourthActEnemy(CustomVisualsPath!, "Wood");
+
+    // Falling leaves thicken as the players' exhaust piles grow.
+    internal override float AmbientLevel => 0.3f + 0.7f * Mathf.Min(1f, RootedCount / 8f);
+
+    internal static int SnareTier(int rooted) => rooted >= 8 ? 2 : rooted >= 4 ? 1 : 0;
 
     public override async Task AfterAddedToRoom()
     {
@@ -212,21 +229,21 @@ public sealed class WoodMonster : EarthMonsterBase
         {
             var count = WoodRootedPower.GetRootedCount(player);
             var damage = EarthEnemyRules.WoodStrikeDamage(count, IsDeadly);
-            await FourthActEnemyActionCmd.AttackAsync(
-                Creature,
+            await AttackAsync(
                 DamageCmd.Attack(damage)
                     .FromMonster(this)
-                    .TargetingFiltered([player.Creature]));
+                    .TargetingFiltered([player.Creature]),
+                SnareTier(count));
         }
     }
 
-    private async Task Sprout(IReadOnlyList<Creature> _)
+    private Task Sprout(IReadOnlyList<Creature> _) => PerformAsync(async () =>
     {
         var block = EarthEnemyRules.WoodSproutBlock(RootedCount, IsTough);
         var str = IsDeadly ? EarthEnemyRules.WoodSproutA9Strength : EarthEnemyRules.WoodSproutStrength;
         await CreatureCmd.GainBlock(Creature, block, ValueProp.Move, null, false);
         await PowerCmd.Apply<StrengthPower>(new ThrowingPlayerChoiceContext(), Creature, str, Creature, null, false);
-    }
+    }, [Creature]);
 }
 
 public sealed class EarthyMonster : EarthMonsterBase
@@ -234,7 +251,7 @@ public sealed class EarthyMonster : EarthMonsterBase
     protected override int BaseHp => EarthEnemyRules.EarthyHp;
     protected override int ToughHp => EarthEnemyRules.EarthyToughHp;
     public override string? CustomVisualsPath => EarthEnemyAssets.Earthy;
-    public override IEnumerable<string> AssetPaths => [CustomVisualsPath!];
+    protected override IEnumerable<string> MonsterAssetPaths => [CustomVisualsPath!];
 
     private int SedimentCount
     {
@@ -246,8 +263,13 @@ public sealed class EarthyMonster : EarthMonsterBase
         }
     }
 
-    protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
-        SakuraStandeeVisuals.Create(CustomVisualsPath!, "Earthy");
+    protected override NCreatureVisuals? CreateStandee() =>
+        SakuraStandeeVisuals.CreateFourthActEnemy(CustomVisualsPath!, "Earthy");
+
+    // The rim reads as the coming Tremor: full at 6 Sediment.
+    internal override float StandeeStateGlow => Mathf.Min(1f, SedimentCount / 6f);
+
+    internal static int FissureTier(int sediment) => sediment >= 6 ? 2 : sediment >= 3 ? 1 : 0;
 
     public override async Task AfterAddedToRoom()
     {
@@ -280,36 +302,32 @@ public sealed class EarthyMonster : EarthMonsterBase
         {
             var sediment = sedimentPower?.GetSediment(player.Creature) ?? 0;
             var damage = EarthEnemyRules.EarthyTremorDamage(sediment, IsDeadly);
-            await FourthActEnemyActionCmd.AttackAsync(
-                Creature,
+            await AttackAsync(
                 DamageCmd.Attack(damage)
                     .FromMonster(this)
-                    .TargetingFiltered([player.Creature]));
+                    .TargetingFiltered([player.Creature]),
+                FissureTier(sediment));
         }
     }
 
     private async Task Rockfall(IReadOnlyList<Creature> _)
     {
         var damage = IsDeadly ? EarthEnemyRules.EarthyRockfallA9Damage : EarthEnemyRules.EarthyRockfallDamage;
-        await FourthActEnemyActionCmd.AttackAsync(
-            Creature,
-            DamageCmd.Attack(damage).FromMonster(this).WithHitCount(EarthEnemyRules.EarthyRockfallHits));
+        await AttackAsync(DamageCmd.Attack(damage).FromMonster(this).WithHitCount(EarthEnemyRules.EarthyRockfallHits));
     }
 
-    private async Task Charge(IReadOnlyList<Creature> _)
+    private Task Charge(IReadOnlyList<Creature> _) => PerformAsync(async () =>
     {
         var str = IsDeadly ? EarthEnemyRules.EarthyChargeA9Strength : EarthEnemyRules.EarthyChargeStrength;
         var block = IsTough ? EarthEnemyRules.EarthyChargeA8Block : EarthEnemyRules.EarthyChargeBlock;
         await PowerCmd.Apply<StrengthPower>(new ThrowingPlayerChoiceContext(), Creature, str, Creature, null, false);
         await CreatureCmd.GainBlock(Creature, block, ValueProp.Move, null, false);
-    }
+    }, [Creature]);
 
     private async Task Landslide(IReadOnlyList<Creature> _)
     {
         var damage = IsDeadly ? EarthEnemyRules.EarthyLandslideA9Damage : EarthEnemyRules.EarthyLandslideDamage;
-        await FourthActEnemyActionCmd.AttackAsync(
-            Creature,
-            DamageCmd.Attack(damage).FromMonster(this));
+        await AttackAsync(DamageCmd.Attack(damage).FromMonster(this));
 
         var players = CombatState.Players.Where(p => p.Creature.IsAlive).ToList();
         foreach (var player in players)

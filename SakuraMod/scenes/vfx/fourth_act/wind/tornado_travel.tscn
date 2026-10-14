@@ -1,0 +1,250 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/ring.png" id="1_ring"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/beam.png" id="2_beam"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/smoke.png" id="3_smoke"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(0.720, 1.000, 0.900, 0.000, 0.720, 1.000, 0.900, 0.800, 0.600, 0.950, 0.850, 0.000)
+
+[sub_resource type="Gradient" id="Gradient_3"]
+offsets = PackedFloat32Array(0.0, 0.15, 1.0)
+colors = PackedColorArray(0.800, 0.760, 0.680, 0.000, 0.780, 0.740, 0.660, 0.300, 0.700, 0.680, 0.600, 0.000)
+
+[sub_resource type="Animation" id="Animation_4"]
+resource_name = "play"
+length = 0.550
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Band0:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.080, 0.450, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.550, 0.950, 0.840, 0.000), Color(0.550, 0.950, 0.840, 0.000), Color(0.550, 0.950, 0.840, 0.750), Color(0.550, 0.950, 0.840, 0.750), Color(0.550, 0.950, 0.840, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Band0:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.150, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(0.0, 0.0), Vector2(0.0, 0.0), Vector2(0.63, 0.1386), Vector2(0.6678000000000001, 0.1512)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Band0:position")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.138, 0.275, 0.413, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1), "update": 0, "values": [Vector2(0.0, -60.0), Vector2(0.0, -60.0), Vector2(16.193092369272385, -60.0), Vector2(-0.9456611235267974, -60.0), Vector2(-16.137866663140617, -60.0), Vector2(1.8880971185779971, -60.0)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Band1:modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.080, 0.450, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.750), Color(0.900, 1.000, 0.970, 0.750), Color(0.900, 1.000, 0.970, 0.000)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Band1:scale")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.150, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(0.0, 0.0), Vector2(0.0, 0.0), Vector2(0.918, 0.20196), Vector2(0.9730800000000001, 0.22032)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Band1:position")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.138, 0.275, 0.413, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1), "update": 0, "values": [Vector2(10.406428402505684, -123.0), Vector2(23.096324338470914, -123.0), Vector2(20.101677136989778, -123.0), Vector2(-2.8496607967377727, -123.0), Vector2(1.4853226124239658, -123.0), Vector2(24.183501656688435, -123.0)]}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Band2:modulate")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.080, 0.450, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.550, 0.950, 0.840, 0.000), Color(0.550, 0.950, 0.840, 0.000), Color(0.550, 0.950, 0.840, 0.750), Color(0.550, 0.950, 0.840, 0.750), Color(0.550, 0.950, 0.840, 0.000)]}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Band2:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.150, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(0.0, 0.0), Vector2(0.0, 0.0), Vector2(1.206, 0.26532), Vector2(1.27836, 0.28944)]}
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Band2:position")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.138, 0.275, 0.413, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1), "update": 0, "values": [Vector2(5.567414815671813, -186.0), Vector2(21.343746435898574, -186.0), Vector2(1.4276489628371403, -186.0), Vector2(-9.967158433871031, -186.0), Vector2(10.614384904588547, -186.0), Vector2(20.80724983388413, -186.0)]}
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Band3:modulate")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.080, 0.450, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.750), Color(0.900, 1.000, 0.970, 0.750), Color(0.900, 1.000, 0.970, 0.000)]}
+tracks/10/type = "value"
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/path = NodePath("Band3:scale")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.150, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(0.0, 0.0), Vector2(0.0, 0.0), Vector2(1.494, 0.32868), Vector2(1.5836400000000002, 0.35856)]}
+tracks/11/type = "value"
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/path = NodePath("Band3:position")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.138, 0.275, 0.413, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1), "update": 0, "values": [Vector2(-7.427874519186919, -249.0), Vector2(-0.5043204593988762, -249.0), Vector2(-22.269762694528094, -249.0), Vector2(-13.484676489436744, -249.0), Vector2(7.767725104563854, -249.0), Vector2(-2.2584810491274423, -249.0)]}
+tracks/12/type = "value"
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/path = NodePath("Band4:modulate")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.080, 0.450, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.550, 0.950, 0.840, 0.000), Color(0.550, 0.950, 0.840, 0.000), Color(0.550, 0.950, 0.840, 0.750), Color(0.550, 0.950, 0.840, 0.750), Color(0.550, 0.950, 0.840, 0.000)]}
+tracks/13/type = "value"
+tracks/13/imported = false
+tracks/13/enabled = true
+tracks/13/path = NodePath("Band4:scale")
+tracks/13/interp = 1
+tracks/13/loop_wrap = true
+tracks/13/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.150, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(0.0, 0.0), Vector2(0.0, 0.0), Vector2(1.782, 0.39204), Vector2(1.8889200000000002, 0.42768)]}
+tracks/14/type = "value"
+tracks/14/imported = false
+tracks/14/enabled = true
+tracks/14/path = NodePath("Band4:position")
+tracks/14/interp = 1
+tracks/14/loop_wrap = true
+tracks/14/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.138, 0.275, 0.413, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1), "update": 0, "values": [Vector2(-9.541310281777653, -312.0), Vector2(-16.71014146315426, -312.0), Vector2(-23.853275704444137, -312.0), Vector2(-1.5366739933321885, -312.0), Vector2(4.3031920292524894, -312.0), Vector2(-18.35445227818544, -312.0)]}
+tracks/15/type = "value"
+tracks/15/imported = false
+tracks/15/enabled = true
+tracks/15/path = NodePath("Band5:modulate")
+tracks/15/interp = 1
+tracks/15/loop_wrap = true
+tracks/15/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.080, 0.450, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.750), Color(0.900, 1.000, 0.970, 0.750), Color(0.900, 1.000, 0.970, 0.000)]}
+tracks/16/type = "value"
+tracks/16/imported = false
+tracks/16/enabled = true
+tracks/16/path = NodePath("Band5:scale")
+tracks/16/interp = 1
+tracks/16/loop_wrap = true
+tracks/16/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.150, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Vector2(0.0, 0.0), Vector2(0.0, 0.0), Vector2(2.07, 0.45539999999999997), Vector2(2.1942, 0.49679999999999996)]}
+tracks/17/type = "value"
+tracks/17/imported = false
+tracks/17/enabled = true
+tracks/17/path = NodePath("Band5:position")
+tracks/17/interp = 1
+tracks/17/loop_wrap = true
+tracks/17/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.138, 0.275, 0.413, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1, 1, 1), "update": 0, "values": [Vector2(2.3232958713484075, -375.0), Vector2(-13.512692034826163, -375.0), Vector2(-0.6277366978595458, -375.0), Vector2(18.331621260155814, -375.0), Vector2(4.3394575321628075, -375.0), Vector2(-13.802771432214907, -375.0)]}
+tracks/18/type = "value"
+tracks/18/imported = false
+tracks/18/enabled = true
+tracks/18/path = NodePath("Swirl:emitting")
+tracks/18/interp = 1
+tracks/18/loop_wrap = true
+tracks/18/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.450), "transitions": PackedFloat32Array(1, 1, 1), "update": 1, "values": [false, true, false]}
+tracks/19/type = "value"
+tracks/19/imported = false
+tracks/19/enabled = true
+tracks/19/path = NodePath("Dust:emitting")
+tracks/19/interp = 1
+tracks/19/loop_wrap = true
+tracks/19/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.450), "transitions": PackedFloat32Array(1, 1, 1), "update": 1, "values": [false, true, false]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_5"]
+_data = {&"play": SubResource("Animation_4")}
+
+[node name="TornadoTravel" type="Node2D"]
+metadata/contact_time = 0.5
+metadata/lifetime = 0.7
+metadata/travel_time = 0.5
+
+[node name="Band0" type="Sprite2D" parent="."]
+texture = ExtResource("1_ring")
+modulate = Color(0.550, 0.950, 0.840, 0.000)
+position = Vector2(0.0, -60.0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Band1" type="Sprite2D" parent="."]
+texture = ExtResource("1_ring")
+modulate = Color(0.900, 1.000, 0.970, 0.000)
+position = Vector2(10.406428402505684, -123.0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Band2" type="Sprite2D" parent="."]
+texture = ExtResource("1_ring")
+modulate = Color(0.550, 0.950, 0.840, 0.000)
+position = Vector2(5.567414815671813, -186.0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Band3" type="Sprite2D" parent="."]
+texture = ExtResource("1_ring")
+modulate = Color(0.900, 1.000, 0.970, 0.000)
+position = Vector2(-7.427874519186919, -249.0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Band4" type="Sprite2D" parent="."]
+texture = ExtResource("1_ring")
+modulate = Color(0.550, 0.950, 0.840, 0.000)
+position = Vector2(-9.541310281777653, -312.0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Band5" type="Sprite2D" parent="."]
+texture = ExtResource("1_ring")
+modulate = Color(0.900, 1.000, 0.970, 0.000)
+position = Vector2(2.3232958713484075, -375.0)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Swirl" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = false
+explosiveness = 0.0
+texture = ExtResource("2_beam")
+color_ramp = SubResource("Gradient_2")
+material = SubResource("CanvasItemMaterial_1")
+amount = 50
+lifetime = 0.5
+spread = 180
+emission_shape = 3
+emission_rect_extents = Vector2(54.0, 180.0)
+orbit_velocity_min = 0.8
+orbit_velocity_max = 1.2
+gravity = Vector2(0, -300)
+particle_flag_align_y = true
+scale_amount_min = 0.06
+scale_amount_max = 0.12
+position = Vector2(0, -198.0)
+
+[node name="Dust" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = false
+explosiveness = 0.0
+texture = ExtResource("3_smoke")
+color_ramp = SubResource("Gradient_3")
+amount = 24
+lifetime = 0.7
+direction = Vector2(0, -1)
+spread = 60
+initial_velocity_min = 100
+initial_velocity_max = 240
+gravity = Vector2(0, -60)
+scale_amount_min = 0.9
+scale_amount_max = 1.6
+angle_min = -180
+angle_max = 180
+emission_shape = 3
+emission_rect_extents = Vector2(81.0, 8)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_5")}
+autoplay = &"play"

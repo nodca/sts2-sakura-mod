@@ -48,9 +48,7 @@ public sealed class DashMonster : WindAttendantMonster
 
     private async Task Attack(IReadOnlyList<Creature> targets)
     {
-        await FourthActEnemyActionCmd.AttackAsync(
-            Creature,
-            DamageCmd.Attack(Damage).FromMonster(this));
+        await AttackAsync(DamageCmd.Attack(Damage).FromMonster(this));
         _growth += Growth;
     }
 }
@@ -87,15 +85,11 @@ public sealed class FloatMonster : WindAttendantMonster
         if (counter is null || windy is null)
             return;
 
-        await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Buff, async () =>
+        await PerformAsync(async () =>
         {
-            await FourthActCombatFeedbackVisuals.PlayTransferAsync(
-                Creature,
-                windy,
-                new Godot.Color(0.55f, 0.96f, 0.86f, 0.94f));
             await CreatureCmd.GainBlock(windy, counter.DrawCount * BlockPerDraw, ValueProp.Move, null, false);
             counter.Reset();
-        });
+        }, [windy]);
     }
 }
 
@@ -119,8 +113,7 @@ public sealed class SleepMonster : WindAttendantMonster
 
     private async Task ArmSleep(IReadOnlyList<Creature> targets)
     {
-        FourthActEnemyAudio.Play(FourthActAudioCue.SleepCast);
-        await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Cast, async () =>
+        await PerformAsync(async () =>
         {
             foreach (var target in targets.Where(static target => target.IsAlive))
                 await PowerCmd.Apply<WindSleepSelectionPower>(

@@ -1,0 +1,166 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="1_glow"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/crack.png" id="2_crack"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/ring.png" id="3_ring"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/boulder.png" id="4_boulder"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/rock.png" id="5_rock"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/smoke.png" id="6_smoke"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.8, 1.0)
+colors = PackedColorArray(0.720, 0.580, 0.440, 1.000, 0.600, 0.480, 0.380, 1.000, 0.600, 0.480, 0.380, 0.000)
+
+[sub_resource type="Gradient" id="Gradient_3"]
+offsets = PackedFloat32Array(0.0, 0.8, 1.0)
+colors = PackedColorArray(0.720, 0.580, 0.440, 1.000, 0.600, 0.480, 0.380, 1.000, 0.600, 0.480, 0.380, 0.000)
+
+[sub_resource type="Gradient" id="Gradient_4"]
+offsets = PackedFloat32Array(0.0, 0.15, 1.0)
+colors = PackedColorArray(0.800, 0.680, 0.540, 0.000, 0.780, 0.660, 0.520, 0.300, 0.700, 0.600, 0.500, 0.000)
+
+[sub_resource type="Animation" id="Animation_5"]
+resource_name = "play"
+length = 1.200
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Glow:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.040, 0.500), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 0.750, 0.450, 0.000), Color(1.000, 0.750, 0.450, 0.000), Color(1.000, 0.750, 0.450, 0.500), Color(1.000, 0.750, 0.450, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Glow:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.500), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(3.0, 2.0), Vector2(3.0, 2.0), Vector2(4.2, 2.6)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Crack:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.030, 1.200), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 0.780, 0.450, 0.000), Color(1.000, 0.780, 0.450, 0.000), Color(1.000, 0.780, 0.450, 1.000), Color(1.000, 0.780, 0.450, 0.000)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Crack:scale")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.000, 1.200), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.8, 1.0), Vector2(0.8, 1.0), Vector2(1.6, 1.4)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Ring:modulate")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.040, 0.600), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.820, 0.620, 0.400, 0.000), Color(0.820, 0.620, 0.400, 0.000), Color(0.820, 0.620, 0.400, 0.850), Color(0.820, 0.620, 0.400, 0.000)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Ring:scale")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.600), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.5, 0.12), Vector2(0.5, 0.12), Vector2(3.4, 0.8)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_6"]
+_data = {&"play": SubResource("Animation_5")}
+
+[node name="LandslideBurst" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 1.8
+
+[node name="Glow" type="Sprite2D" parent="."]
+texture = ExtResource("1_glow")
+modulate = Color(1.000, 0.750, 0.450, 0.000)
+position = Vector2(0, -120)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Crack" type="Sprite2D" parent="."]
+texture = ExtResource("2_crack")
+modulate = Color(1.000, 0.780, 0.450, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Ring" type="Sprite2D" parent="."]
+texture = ExtResource("3_ring")
+modulate = Color(0.820, 0.620, 0.400, 0.000)
+
+[node name="Boulders" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("4_boulder")
+color_ramp = SubResource("Gradient_2")
+amount = 10
+lifetime = 1.1
+direction = Vector2(-0.3, -1)
+spread = 40
+initial_velocity_min = 600
+initial_velocity_max = 1000
+gravity = Vector2(0, 2000)
+angle_min = -180
+angle_max = 180
+angular_velocity_min = -300
+angular_velocity_max = 300
+scale_amount_min = 0.18
+scale_amount_max = 0.4
+emission_shape = 3
+emission_rect_extents = Vector2(140, 5)
+
+[node name="Gravel" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("5_rock")
+color_ramp = SubResource("Gradient_3")
+amount = 30
+lifetime = 0.9
+direction = Vector2(-0.2, -1)
+spread = 50
+initial_velocity_min = 500
+initial_velocity_max = 1100
+gravity = Vector2(0, 1900)
+angle_min = -180
+angle_max = 180
+angular_velocity_min = -500
+angular_velocity_max = 500
+scale_amount_min = 0.15
+scale_amount_max = 0.4
+emission_shape = 3
+emission_rect_extents = Vector2(200, 5)
+
+[node name="Dust" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("6_smoke")
+color_ramp = SubResource("Gradient_4")
+amount = 22
+lifetime = 1.5
+direction = Vector2(0, -1)
+spread = 60
+initial_velocity_min = 200
+initial_velocity_max = 520
+damping_min = 180
+damping_max = 280
+gravity = Vector2(0, -20)
+scale_amount_min = 1.6
+scale_amount_max = 3.0
+angle_min = -180
+angle_max = 180
+emission_shape = 3
+emission_rect_extents = Vector2(240, 10)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_6")}
+autoplay = &"play"

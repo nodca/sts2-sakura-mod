@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.MonsterMoves;
 using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
+using SakuraMod.SakuraModCode.FourthAct.Visuals.Presentation;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Intents;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Powers;
 
@@ -102,33 +103,25 @@ public sealed class WindyMonster : WindMonsterTemplate
 
     private async Task MultiAttack(IReadOnlyList<Creature> targets, WindyAction action)
     {
-        await FourthActEnemyActionCmd.AttackAsync(
-            Creature,
-            DamageCmd.Attack(MultiDamage).FromMonster(this).WithHitCount(MultiHits));
+        await AttackAsync(DamageCmd.Attack(MultiDamage).FromMonster(this).WithHitCount(MultiHits));
         await ApplyWindBind(action);
     }
 
     private async Task SingleAttack(IReadOnlyList<Creature> targets, WindyAction action)
     {
-        await FourthActEnemyActionCmd.AttackAsync(
-            Creature,
-            DamageCmd.Attack(SingleDamage).FromMonster(this));
+        await AttackAsync(DamageCmd.Attack(SingleDamage).FromMonster(this));
         await ApplyWindBind(action);
     }
 
     private async Task HeavyAttack(IReadOnlyList<Creature> targets, WindyAction action)
     {
-        await FourthActEnemyActionCmd.AttackAsync(
-            Creature,
-            DamageCmd.Attack(HeavyDamage).FromMonster(this),
-            FourthActAttackStyle.HeavyWind);
+        await AttackAsync(DamageCmd.Attack(HeavyDamage).FromMonster(this));
         await ApplyWindBind(action);
     }
 
     private async Task SummonAttendant(IReadOnlyList<Creature> targets, WindyAction action)
     {
-        FourthActEnemyAudio.Play(FourthActAudioCue.WindySummon);
-        await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Summon, async () =>
+        await PerformAsync(async () =>
         {
             if (!HasAttendant)
             {
@@ -147,14 +140,19 @@ public sealed class WindyMonster : WindMonsterTemplate
         await ApplyWindBind(action);
     }
 
-    private Task ApplyWindBind(WindyAction action) =>
-        PowerCmd.Apply<WindBindPower>(
+    private async Task ApplyWindBind(WindyAction action)
+    {
+        var players = CombatState.Players.Where(static player => player.Creature.IsAlive).Select(static player => player.Creature).ToList();
+        await PowerCmd.Apply<WindBindPower>(
             new ThrowingPlayerChoiceContext(),
-            CombatState.Players.Where(static player => player.Creature.IsAlive).Select(static player => player.Creature),
+            players,
             WindEnemyRules.WindBindForAction(action),
             Creature,
             null,
             silent: false);
+        foreach (var player in players)
+            FourthActFxPlayer.SpawnAt(FourthActFxId.BindCoil, player);
+    }
 
     private bool PrepareAttendant()
     {

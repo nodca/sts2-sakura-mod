@@ -1,0 +1,141 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/beam.png" id="1_beam"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/star.png" id="2_star"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="3_glow"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/ring.png" id="4_ring"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(1.000, 0.980, 0.850, 1.000, 1.000, 0.850, 0.400, 0.000)
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "play"
+length = 0.600
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Column:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.050, 0.180, 0.500), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 0.880, 0.500, 0.000), Color(1.000, 0.880, 0.500, 0.800), Color(1.000, 0.880, 0.500, 0.700), Color(1.000, 0.880, 0.500, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Column:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.180, 0.500), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(1.8, 1.2), Vector2(1.2, 1.2), Vector2(0.4, 1.2)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Sigil:position")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.160), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(0, -300), Vector2(0, 30)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Sigil:modulate")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.080, 0.500), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 0.880, 0.500, 0.000), Color(1.000, 0.880, 0.500, 0.000), Color(1.000, 0.880, 0.500, 1.000), Color(1.000, 0.880, 0.500, 0.000)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Sigil:scale")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.500), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.9, 0.9), Vector2(0.9, 0.9), Vector2(1.2, 1.2)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Flash:modulate")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.150, 0.190, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 0.880, 0.500, 0.000), Color(1.000, 0.880, 0.500, 0.000), Color(1.000, 0.880, 0.500, 0.750), Color(1.000, 0.880, 0.500, 0.000)]}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Flash:scale")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {"times": PackedFloat32Array(0.000, 0.150, 0.550), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.8, 0.8), Vector2(0.8, 0.8), Vector2(3.0, 3.0)]}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Ring:modulate")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {"times": PackedFloat32Array(0.000, 0.160, 0.200, 0.600), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 0.880, 0.500, 0.000), Color(1.000, 0.880, 0.500, 0.000), Color(1.000, 0.880, 0.500, 0.850), Color(1.000, 0.880, 0.500, 0.000)]}
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Ring:scale")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {"times": PackedFloat32Array(0.000, 0.160, 0.600), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.3, 0.12), Vector2(0.3, 0.12), Vector2(1.8, 0.7)]}
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Motes:emitting")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {"times": PackedFloat32Array(0.000, 0.160), "transitions": PackedFloat32Array(1, 1), "update": 1, "values": [false, true]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4"]
+_data = {&"play": SubResource("Animation_3")}
+
+[node name="LibraSunWeight" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 1.2
+
+[node name="Column" type="Sprite2D" parent="."]
+texture = ExtResource("1_beam")
+modulate = Color(1.000, 0.880, 0.500, 0.000)
+position = Vector2(0, -260)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Sigil" type="Sprite2D" parent="."]
+texture = ExtResource("2_star")
+modulate = Color(1.000, 0.880, 0.500, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Flash" type="Sprite2D" parent="."]
+texture = ExtResource("3_glow")
+modulate = Color(1.000, 0.880, 0.500, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Ring" type="Sprite2D" parent="."]
+texture = ExtResource("4_ring")
+modulate = Color(1.000, 0.880, 0.500, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Motes" type="CPUParticles2D" parent="."]
+emitting = false
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("2_star")
+color_ramp = SubResource("Gradient_2")
+material = SubResource("CanvasItemMaterial_1")
+amount = 16
+lifetime = 0.7
+spread = 180
+initial_velocity_min = 200
+initial_velocity_max = 520
+damping_min = 300
+damping_max = 500
+gravity = Vector2(0, -40)
+scale_amount_min = 0.08
+scale_amount_max = 0.18
+position = Vector2(0, 30)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_4")}
+autoplay = &"play"

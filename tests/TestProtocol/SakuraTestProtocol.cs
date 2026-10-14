@@ -7,6 +7,8 @@ public static class SakuraTestProtocol
 {
     public const int CurrentSchemaVersion = 2;
     public const string RequestEnvironmentVariable = "SAKURAMOD_TEST_REQUEST";
+    // A batch runs several ordinary requests in one game process, in order.
+    public const string BatchEnvironmentVariable = "SAKURAMOD_TEST_BATCH";
 
     public static JsonSerializerOptions JsonOptions { get; } = new()
     {
@@ -143,6 +145,19 @@ public static class SakuraTestProtocol
             throw new InvalidDataException("A multiplayer block is only valid for the multiplayer layer.");
     }
 
+    public static void ValidateBatch(SakuraTestBatch batch)
+    {
+        if (batch.SchemaVersion != CurrentSchemaVersion)
+            throw new InvalidDataException(
+                $"Unsupported batch schema {batch.SchemaVersion}; expected {CurrentSchemaVersion}.");
+        if (string.IsNullOrWhiteSpace(batch.RunId) || batch.RequestPaths is not { Count: > 0 })
+            throw new InvalidDataException("A runtime batch needs a run id and at least one request.");
+        if (batch.RequestPaths.Any(static path => !Path.IsPathFullyQualified(path)))
+            throw new InvalidDataException("Runtime batch request paths must be absolute.");
+        if (batch.RequestPaths.Distinct(StringComparer.Ordinal).Count() != batch.RequestPaths.Count)
+            throw new InvalidDataException("A runtime batch lists the same request twice.");
+    }
+
     private static void ValidateMultiplayer(SakuraTestRequest request)
     {
         var multiplayer = request.Multiplayer
@@ -196,6 +211,11 @@ public sealed record SakuraTestRequest(
     string CheckpointPath,
     string? PriorSnapshotPath = null,
     SakuraMultiplayerRequest? Multiplayer = null);
+
+public sealed record SakuraTestBatch(
+    int SchemaVersion,
+    string RunId,
+    IReadOnlyList<string> RequestPaths);
 
 public static class SakuraMultiplayerRoles
 {

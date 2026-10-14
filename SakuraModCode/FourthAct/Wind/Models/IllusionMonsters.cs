@@ -80,24 +80,17 @@ public sealed class IllusionMonster : WindMonsterTemplate
 
     private async Task BeguilingStrike(IReadOnlyList<Creature> targets)
     {
-        await FourthActEnemyActionCmd.AttackAsync(
-            Creature,
-            DamageCmd.Attack(BeguilingDamage).FromMonster(this),
-            FourthActAttackStyle.Illusion);
+        await AttackAsync(DamageCmd.Attack(BeguilingDamage).FromMonster(this));
         foreach (var target in targets.Where(static target => target.IsAlive))
             await PowerCmd.Apply<VulnerablePower>(new ThrowingPlayerChoiceContext(), target, VulnerableAmount, Creature, null);
     }
 
     private Task LuredFall(IReadOnlyList<Creature> targets) =>
-        FourthActEnemyActionCmd.AttackAsync(
-            Creature,
-            DamageCmd.Attack(LuredFallDamage).FromMonster(this),
-            FourthActAttackStyle.Illusion);
+        AttackAsync(DamageCmd.Attack(LuredFallDamage).FromMonster(this));
 
     private async Task Reweave(IReadOnlyList<Creature> targets)
     {
-        FourthActEnemyAudio.Play(FourthActAudioCue.IllusionReweave);
-        await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Summon, async () =>
+        await PerformAsync(async () =>
         {
             await Visuals.IllusionVisualController.WithGroupOcclusionAsync(Creature, async () =>
             {

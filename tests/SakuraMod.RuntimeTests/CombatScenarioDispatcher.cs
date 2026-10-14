@@ -46,6 +46,7 @@ internal static class CombatScenarioDispatcher
             "affliction-visual-layout" => await AfflictionVisualLayoutScenario.ExecuteAsync(request, assertions),
             "queen-bound-cleanup" => await QueenBoundCleanupScenario.ExecuteAsync(request, assertions),
             "fourth-act-card-afflictions" => await FourthActCardAfflictionScenario.ExecuteAsync(request, assertions),
+            "fourth-act-audio" => await FourthActAudioScenario.ExecuteAsync(request, assertions),
             "cleansing-stats" => await CleansingStatsScenario.ExecuteAsync(request, assertions),
             "dark-endpoint" => await DarkEndpointScenario.ExecuteAsync(request, assertions),
             "light-eternal-day" => await LightEternalDayScenario.ExecuteAsync(request, assertions),

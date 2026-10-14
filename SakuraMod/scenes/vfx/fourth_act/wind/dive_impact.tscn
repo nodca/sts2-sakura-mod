@@ -1,0 +1,209 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/beam.png" id="1_beam"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/ring.png" id="2_ring"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/smoke.png" id="3_smoke"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(0.720, 1.000, 0.900, 0.000, 0.720, 1.000, 0.900, 0.800, 0.600, 0.950, 0.850, 0.000)
+
+[sub_resource type="Gradient" id="Gradient_3"]
+offsets = PackedFloat32Array(0.0, 0.15, 1.0)
+colors = PackedColorArray(0.800, 0.760, 0.680, 0.000, 0.780, 0.740, 0.660, 0.300, 0.700, 0.680, 0.600, 0.000)
+
+[sub_resource type="Gradient" id="Gradient_4"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(0.720, 1.000, 0.900, 0.000, 0.720, 1.000, 0.900, 0.800, 0.600, 0.950, 0.850, 0.000)
+
+[sub_resource type="Gradient" id="Gradient_5"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(0.720, 1.000, 0.900, 0.000, 0.720, 1.000, 0.900, 0.800, 0.600, 0.950, 0.850, 0.000)
+
+[sub_resource type="Animation" id="Animation_6"]
+resource_name = "play"
+length = 0.600
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Column:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.020, 0.150, 0.400), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.900), Color(0.900, 1.000, 0.970, 0.500), Color(0.900, 1.000, 0.970, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Column:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.400), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(2.6, 1.2), Vector2(4.2, 1.2)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Ring:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.080, 0.110, 0.550), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.720, 1.000, 0.900, 0.000), Color(0.720, 1.000, 0.900, 0.000), Color(0.720, 1.000, 0.900, 0.900), Color(0.720, 1.000, 0.900, 0.000)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Ring:scale")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.080, 0.550), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.6, 0.12), Vector2(0.6, 0.12), Vector2(3.2, 0.64)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("RingB:modulate")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.140, 0.170, 0.600), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.000), Color(0.900, 1.000, 0.970, 0.700), Color(0.900, 1.000, 0.970, 0.000)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("RingB:scale")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.140, 0.600), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.4, 0.08), Vector2(0.4, 0.08), Vector2(2.2, 0.44)]}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Dust:emitting")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {"times": PackedFloat32Array(0.000, 0.100), "transitions": PackedFloat32Array(1, 1), "update": 1, "values": [false, true]}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Gust:emitting")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {"times": PackedFloat32Array(0.000, 0.100), "transitions": PackedFloat32Array(1, 1), "update": 1, "values": [false, true]}
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("GustR:emitting")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {"times": PackedFloat32Array(0.000, 0.100), "transitions": PackedFloat32Array(1, 1), "update": 1, "values": [false, true]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_7"]
+_data = {&"play": SubResource("Animation_6")}
+
+[node name="DiveImpact" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 1.4
+
+[node name="Column" type="Sprite2D" parent="."]
+texture = ExtResource("1_beam")
+modulate = Color(0.900, 1.000, 0.970, 0.000)
+position = Vector2(0, -260)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Draft" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 0.8
+texture = ExtResource("1_beam")
+color_ramp = SubResource("Gradient_2")
+material = SubResource("CanvasItemMaterial_1")
+amount = 30
+lifetime = 0.25
+direction = Vector2(0, 1)
+spread = 8
+initial_velocity_min = 1800
+initial_velocity_max = 2400
+gravity = Vector2(0, 0)
+particle_flag_align_y = true
+scale_amount_min = 0.08
+scale_amount_max = 0.16
+emission_shape = 3
+emission_rect_extents = Vector2(120, 10)
+position = Vector2(0, -520)
+
+[node name="Ring" type="Sprite2D" parent="."]
+texture = ExtResource("2_ring")
+modulate = Color(0.720, 1.000, 0.900, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="RingB" type="Sprite2D" parent="."]
+texture = ExtResource("2_ring")
+modulate = Color(0.900, 1.000, 0.970, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Dust" type="CPUParticles2D" parent="."]
+emitting = false
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("3_smoke")
+color_ramp = SubResource("Gradient_3")
+amount = 12
+lifetime = 1.0
+direction = Vector2(0, -1)
+spread = 85
+initial_velocity_min = 150
+initial_velocity_max = 380
+damping_min = 200
+damping_max = 300
+gravity = Vector2(0, -30)
+scale_amount_min = 1.0
+scale_amount_max = 1.8
+angle_min = -180
+angle_max = 180
+emission_shape = 3
+emission_rect_extents = Vector2(140, 6)
+
+[node name="Gust" type="CPUParticles2D" parent="."]
+emitting = false
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("1_beam")
+color_ramp = SubResource("Gradient_4")
+material = SubResource("CanvasItemMaterial_1")
+amount = 20
+lifetime = 0.4
+direction = Vector2(-1, 0)
+spread = 10
+initial_velocity_min = 700
+initial_velocity_max = 1200
+damping_min = 900
+damping_max = 1300
+particle_flag_align_y = true
+gravity = Vector2(0, 0)
+scale_amount_min = 0.06
+scale_amount_max = 0.12
+emission_shape = 3
+emission_rect_extents = Vector2(10, 30)
+position = Vector2(0, -20)
+
+[node name="GustR" type="CPUParticles2D" parent="."]
+emitting = false
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("1_beam")
+color_ramp = SubResource("Gradient_5")
+material = SubResource("CanvasItemMaterial_1")
+amount = 20
+lifetime = 0.4
+direction = Vector2(1, 0)
+spread = 10
+initial_velocity_min = 700
+initial_velocity_max = 1200
+damping_min = 900
+damping_max = 1300
+particle_flag_align_y = true
+gravity = Vector2(0, 0)
+scale_amount_min = 0.06
+scale_amount_max = 0.12
+emission_shape = 3
+emission_rect_extents = Vector2(10, 30)
+position = Vector2(0, -20)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_7")}
+autoplay = &"play"

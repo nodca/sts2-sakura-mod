@@ -1,5 +1,4 @@
 using MegaCrit.Sts2.Core.Commands;
-using MegaCrit.Sts2.Core.Audio;
 using MegaCrit.Sts2.Core.Entities.Ascension;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -14,12 +13,11 @@ using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
-using SakuraMod.SakuraModCode.FourthAct.Visuals;
-using STS2RitsuLib.Scaffolding.Content;
+using SakuraMod.SakuraModCode.FourthAct.Visuals.Presentation;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Dark.Models;
 
-public sealed class DarkMonster : ModMonsterTemplate
+public sealed class DarkMonster : FourthActMonsterTemplate
 {
     private MoveState? _confinement;
     private MoveState? _nonConfinement;
@@ -32,17 +30,16 @@ public sealed class DarkMonster : ModMonsterTemplate
     public override int MinInitialHp => AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, DarkEnemyRules.ToughHp, DarkEnemyRules.BaseHp);
     public override int MaxInitialHp => MinInitialHp;
     public override string? CustomVisualsPath => DarkEnemyAssets.Standee;
-    public override bool HasDeathSfx => true;
-    public override string DeathSfx => "event:/sfx/enemy/enemy_attacks/obscura/obscura_die";
     public override string? HurtSfx => "event:/sfx/enemy/enemy_attacks/magi_knight/magi_knight_hurt";
-    public override DamageSfxType TakeDamageSfxType => DamageSfxType.Magic;
-    public override float DeathAnimLengthOverride => SakuraStandeeActionController.DeathDuration;
+    // The veil thickens and the rim brightens with each layer of Darkness.
+    internal override float AmbientLevel => 0.3f + 0.7f * (DarkEnemyRules.ClampDarkness(Darkness) - 1) / (DarkEnemyRules.DarknessMaximum - 1f);
+    internal override float StandeeStateGlow => DarkEnemyRules.ClampDarkness(Darkness) / (float)DarkEnemyRules.DarknessMaximum;
     public bool IsDeadly => AscensionHelper.GetValueIfAscension(AscensionLevel.DeadlyEnemies, 1, 0) == 1;
 
-    public override IEnumerable<string> AssetPaths => DeclaredIntents().SelectMany(static intent => intent.AssetPaths)
+    protected override IEnumerable<string> MonsterAssetPaths => DeclaredIntents().SelectMany(static intent => intent.AssetPaths)
         .Prepend(DarkEnemyAssets.Action).Prepend(DarkEnemyAssets.Standee).Distinct();
 
-    protected override NCreatureVisuals? TryCreateCreatureVisuals() => SakuraStandeeVisuals.Create(DarkEnemyAssets.Standee, "The Dark");
+    protected override NCreatureVisuals? CreateStandee() => SakuraStandeeVisuals.CreateFourthActEnemy(DarkEnemyAssets.Standee, "The Dark");
 
     public override async Task AfterAddedToRoom()
     {
@@ -91,9 +88,8 @@ public sealed class DarkMonster : ModMonsterTemplate
 
     private async Task DoNonConfinement(IReadOnlyList<Creature> targets)
     {
-        await FourthActEnemyActionCmd.AttackAsync(Creature,
-            DamageCmd.Attack(DarkEnemyRules.AttackDamage(DarkRegularAction.NonConfinement, Darkness, IsDeadly)).FromMonster(this),
-            FourthActAttackStyle.Dark);
+        await AttackAsync(
+            DamageCmd.Attack(DarkEnemyRules.AttackDamage(DarkRegularAction.NonConfinement, Darkness, IsDeadly)).FromMonster(this));
         await CreatureCmd.GainBlock(Creature, DarkEnemyRules.NightBlock, ValueProp.Move, null, false);
         NextRegularAction = DarkRegularAction.Confinement;
         await IncreaseDarkness();
@@ -101,8 +97,7 @@ public sealed class DarkMonster : ModMonsterTemplate
 
     private async Task DoUltimate(IReadOnlyList<Creature> targets)
     {
-        await FourthActEnemyActionCmd.AttackAsync(Creature,
-            DamageCmd.Attack(DarkEnemyRules.UltimateDamage(IsDeadly)).FromMonster(this), FourthActAttackStyle.Dark);
+        await AttackAsync(DamageCmd.Attack(DarkEnemyRules.UltimateDamage(IsDeadly)).FromMonster(this));
         var context = new ThrowingPlayerChoiceContext();
         foreach (var player in CombatState.Players)
             await SakuraMagicCharge.AddVoidToDrawPile(context, player);
@@ -111,7 +106,7 @@ public sealed class DarkMonster : ModMonsterTemplate
 
     private async Task AttackAndArmConfinement(IReadOnlyList<Creature> targets, int damage)
     {
-        await FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(damage).FromMonster(this), FourthActAttackStyle.Dark);
+        await AttackAsync(DamageCmd.Attack(damage).FromMonster(this));
         var context = new ThrowingPlayerChoiceContext();
         foreach (var target in targets.Where(static target => target.IsAlive && target.Player is not null))
             await PowerCmd.Apply<DarkConfinementSelectionPower>(context, target, 1, Creature, null, false);
@@ -135,9 +130,8 @@ public sealed class DarkMonster : ModMonsterTemplate
     {
         if (Creature.IsDead)
             return;
-        FourthActEnemyAudio.Play(FourthActAudioCue.DarkTransition);
-        await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Cast,
-            () => SetDarkness(new ThrowingPlayerChoiceContext(), DarkEnemyRules.DarknessReset));
+        await PerformAsync(FourthActMovePresentationCatalog.DarkTransition,
+            () => SetDarkness(new ThrowingPlayerChoiceContext(), DarkEnemyRules.DarknessReset), [Creature]);
     }
 
     private IEnumerable<AbstractIntent> DeclaredIntents() =>

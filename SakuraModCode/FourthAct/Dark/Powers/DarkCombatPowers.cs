@@ -19,6 +19,8 @@ using SakuraMod.SakuraModCode.FourthAct.Dark.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Models;
 using SakuraMod.SakuraModCode.Powers;
 using STS2RitsuLib.Combat.HandSize;
+using SakuraMod.SakuraModCode.FourthAct.Visuals;
+using SakuraMod.SakuraModCode.FourthAct.Visuals.Presentation;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Dark.Powers;
 
@@ -167,6 +169,8 @@ public static class DarkMicroLightCoordinator
             return;
         var darkness = dark.Creature.GetPower<DarknessPower>()
             ?? throw new InvalidOperationException("The Dark has no Darkness power.");
+        // The light flies from the player and pierces the veil as the Darkness drops.
+        await FourthActCombatFeedbackVisuals.PlayTransferAsync(owner.Creature, dark.Creature, FourthActFxId.MicroLightMote);
         await PowerCmd.ModifyAmount(choiceContext, darkness,
             DarkEnemyRules.ChangeDarkness(darkness.Amount, -amount) - darkness.Amount,
             owner.Creature, null, false);

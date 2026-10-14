@@ -1,0 +1,86 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/ring.png" id="1_ring"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="2_glow"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/dot.png" id="3_dot"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(1.000, 1.000, 1.000, 0.000, 0.900, 1.000, 0.970, 1.000, 0.700, 0.950, 0.900, 0.000)
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "play"
+length = 0.800
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Shell:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.100, 0.800), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.720, 1.000, 0.900, 0.000), Color(0.720, 1.000, 0.900, 0.000), Color(0.720, 1.000, 0.900, 0.750), Color(0.720, 1.000, 0.900, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Shell:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.800), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(1.6, 2.4), Vector2(1.6, 2.4), Vector2(2.0, 2.9)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Glow:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.100, 0.700), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(0.550, 0.950, 0.840, 0.000), Color(0.550, 0.950, 0.840, 0.000), Color(0.550, 0.950, 0.840, 0.300), Color(0.550, 0.950, 0.840, 0.000)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Glow:scale")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.700), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(2.0, 3.0), Vector2(2.0, 3.0), Vector2(2.4, 3.4)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4"]
+_data = {&"play": SubResource("Animation_3")}
+
+[node name="FloatGuard" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 1.1
+
+[node name="Shell" type="Sprite2D" parent="."]
+texture = ExtResource("1_ring")
+modulate = Color(0.720, 1.000, 0.900, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Glow" type="Sprite2D" parent="."]
+texture = ExtResource("2_glow")
+modulate = Color(0.550, 0.950, 0.840, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Motes" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("3_dot")
+color_ramp = SubResource("Gradient_2")
+material = SubResource("CanvasItemMaterial_1")
+amount = 24
+lifetime = 0.8
+direction = Vector2(0, -1)
+spread = 30
+initial_velocity_min = 60
+initial_velocity_max = 160
+gravity = Vector2(0, -60)
+scale_amount_min = 0.4
+scale_amount_max = 0.9
+emission_shape = 1
+emission_sphere_radius = 180
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_4")}
+autoplay = &"play"

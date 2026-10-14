@@ -126,6 +126,9 @@ public sealed class WaterReservoirPower : SakuraPowerModel
 
     public int For(Creature player) => _values.GetValueOrDefault(player);
 
+    // All players' water together; Watery's ambient water level and state rim read it.
+    public int Total => _values.Values.Sum();
+
     public void Add(Creature player, int amount)
     {
         if (amount <= 0)

@@ -159,7 +159,7 @@ internal static class ExtraEffectPlayScenario
             choiceContext => SakuraMagicCharge.GainMagic(choiceContext, player, FixtureMagicCharge)));
         var extraTransfer = await CombatScenarioContext.AddGeneratedCardToHandAsync<Transfer>(combat, player);
         await CombatScenarioContext.PlayCardAsync(extraTransfer, target);
-        assertions.Equal("transfer_extra_discards", PileType.Discard, extraTransfer.Pile?.Type);
+        assertions.Equal("transfer_extra_still_exhausts", PileType.Exhaust, extraTransfer.Pile?.Type);
         assertions.True("transfer_extra_preserves_exhaust_keyword", extraTransfer.Keywords.Contains(CardKeyword.Exhaust));
         await SakuraActions.MoveExistingCardToHand(extraTransfer, extraTransfer);
         assertions.Equal("transfer_returned_to_hand", PileType.Hand, extraTransfer.Pile?.Type);

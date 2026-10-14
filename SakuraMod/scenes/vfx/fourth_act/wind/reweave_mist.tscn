@@ -1,0 +1,70 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/smoke.png" id="1_smoke"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/star.png" id="2_star"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 0.3, 1.0)
+colors = PackedColorArray(0.660, 0.920, 1.000, 0.000, 0.620, 0.900, 1.000, 0.450, 0.550, 0.850, 1.000, 0.000)
+
+[sub_resource type="Gradient" id="Gradient_3"]
+offsets = PackedFloat32Array(0.0, 0.2, 1.0)
+colors = PackedColorArray(1.000, 1.000, 1.000, 0.000, 0.900, 1.000, 0.970, 1.000, 0.700, 0.950, 0.900, 0.000)
+
+[sub_resource type="Animation" id="Animation_4"]
+resource_name = "play"
+length = 0.000
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_5"]
+_data = {&"play": SubResource("Animation_4")}
+
+[node name="ReweaveMist" type="Node2D"]
+metadata/contact_time = 0.45
+metadata/lifetime = 1.0
+
+[node name="Gauze" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 0.5
+texture = ExtResource("1_smoke")
+color_ramp = SubResource("Gradient_2")
+amount = 22
+lifetime = 0.9
+spread = 180
+emission_shape = 1
+emission_sphere_radius = 220
+orbit_velocity_min = 0.35
+orbit_velocity_max = 0.55
+radial_accel_min = -200
+radial_accel_max = -100
+gravity = Vector2(0, 0)
+scale_amount_min = 1.2
+scale_amount_max = 2.0
+angle_min = -180
+angle_max = 180
+
+[node name="Glints" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("2_star")
+color_ramp = SubResource("Gradient_3")
+material = SubResource("CanvasItemMaterial_1")
+amount = 12
+lifetime = 0.7
+spread = 180
+initial_velocity_min = 20
+initial_velocity_max = 80
+gravity = Vector2(0, 0)
+scale_amount_min = 0.07
+scale_amount_max = 0.14
+emission_shape = 1
+emission_sphere_radius = 200
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_5")}
+autoplay = &"play"

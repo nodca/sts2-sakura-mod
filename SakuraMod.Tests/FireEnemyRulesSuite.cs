@@ -90,7 +90,7 @@ public sealed class FireEnemyRulesSuite
 
         Assert.Equal(expected.Select(static item => item.Item1), LibraEnemyAssets.All);
         Assert.Equal(LibraEnemyAssets.Moon, new LibraPanMonster().CustomVisualsPath);
-        Assert.Equal(LibraEnemyAssets.All, new LibraPanMonster().AssetPaths);
+        Assert.Equal(LibraEnemyAssets.All, new LibraPanMonster().AssetPaths.Where(static path => path.EndsWith(".png", StringComparison.Ordinal)));
         foreach (var (assetPath, width, height) in expected)
         {
             var relativePath = assetPath.Replace("res://SakuraMod/", "SakuraMod/", StringComparison.Ordinal);
@@ -114,7 +114,7 @@ public sealed class FireEnemyRulesSuite
         Assert.Equal(2048, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
         Assert.Equal(6, header[25]);
         Assert.Equal(FireEnemyAssets.Firey, new FireyMonster().CustomVisualsPath);
-        Assert.Equal([FireEnemyAssets.Firey], new FireyMonster().AssetPaths);
+        Assert.Equal([FireEnemyAssets.Firey], new FireyMonster().AssetPaths.Where(static path => path.EndsWith(".png", StringComparison.Ordinal)));
         Assert.True(File.Exists($"{file}.import"), $"Missing Godot import for {relativePath}.");
     }
 
@@ -129,7 +129,7 @@ public sealed class FireEnemyRulesSuite
         Assert.Equal(2048, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
         Assert.Equal(6, header[25]);
         Assert.Equal(FireEnemyAssets.Sword, new SwordMonster().CustomVisualsPath);
-        Assert.Equal([FireEnemyAssets.Sword], new SwordMonster().AssetPaths);
+        Assert.Equal([FireEnemyAssets.Sword], new SwordMonster().AssetPaths.Where(static path => path.EndsWith(".png", StringComparison.Ordinal)));
         Assert.True(File.Exists($"{file}.import"), $"Missing Godot import for {relativePath}.");
     }
 

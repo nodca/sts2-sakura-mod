@@ -15,6 +15,7 @@ using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.FourthAct;
 using SakuraMod.SakuraModCode.FourthAct.Wind.CardState;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
+using SakuraMod.SakuraModCode.FourthAct.Visuals.Presentation;
 using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Wind.Powers;
@@ -274,9 +275,7 @@ public sealed class WindyBattlePower : SakuraPowerModel
         var totalWall = WindEnemyRules.AggregateWall(existingWall, unresolved, CombatState.Players.Count);
         FourthActCombatFeedbackVisuals.PlayWindBindConversion(
             Owner,
-            unresolved.Sum(),
-            attackBonus,
-            Math.Max(0, totalWall - existingWall));
+            activePlayers.Where((_, index) => unresolved[index] > 0).Select(static player => player.Creature).ToList());
         if (totalWall > existingWall)
             await PowerCmd.Apply<WindWallPower>(choiceContext, Owner, totalWall - existingWall, Owner, null, true);
     }
@@ -333,10 +332,7 @@ public sealed class WindSleepSelectionPower : SakuraPowerModel
                 ?? throw new InvalidOperationException("Sleep selection unexpectedly returned no eligible card.");
             if (Applier is { } source)
             {
-                await FourthActCombatFeedbackVisuals.PlayTransferAsync(
-                    source,
-                    Owner,
-                    new Godot.Color(0.49f, 0.4f, 0.72f, 0.92f));
+                await FourthActCombatFeedbackVisuals.PlayTransferAsync(source, Owner, FourthActFxId.SleepPowder);
             }
             if (await WindSleepingCards.MarkSleeping(selected))
                 await PowerCmd.Apply<WindSleepWakePower>(choiceContext, Owner, 1, Applier, null, true);

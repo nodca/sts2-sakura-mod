@@ -49,12 +49,10 @@ public class Transfer() : TransparentExtraEffectCard(2, CardType.Skill, CardRari
                 }
             });
         });
-    }
 
-    protected override PileType GetResultPileTypeForCardPlay() =>
-        SakuraCardModel.UsesMagicChargeExtraEffect(this)
-            ? PileType.Discard
-            : base.GetResultPileTypeForCardPlay();
+        if (activation.IsActive)
+            await SakuraActions.MakeTemporaryStatsPermanent(Owner.Creature);
+    }
 
     protected override void OnUpgrade()
     {

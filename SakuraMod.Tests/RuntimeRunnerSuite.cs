@@ -199,6 +199,24 @@ public sealed class RuntimeRunnerSuite
     }
 
     [Fact]
+    public void BatchListsDistinctAbsoluteRequests()
+    {
+        var first = Path.Combine(Path.GetTempPath(), "a", "request.json");
+        var second = Path.Combine(Path.GetTempPath(), "b", "request.json");
+        SakuraTestProtocol.ValidateBatch(new SakuraTestBatch(SakuraTestProtocol.CurrentSchemaVersion, "run", [first, second]));
+
+        foreach (var batch in new[]
+                 {
+                     new SakuraTestBatch(SakuraTestProtocol.CurrentSchemaVersion, "run", []),
+                     new SakuraTestBatch(SakuraTestProtocol.CurrentSchemaVersion, "run", ["relative/request.json"]),
+                     new SakuraTestBatch(SakuraTestProtocol.CurrentSchemaVersion, "run", [first, first]),
+                     new SakuraTestBatch(SakuraTestProtocol.CurrentSchemaVersion - 1, "run", [first]),
+                     new SakuraTestBatch(SakuraTestProtocol.CurrentSchemaVersion, " ", [first])
+                 })
+            Assert.Throws<InvalidDataException>(() => SakuraTestProtocol.ValidateBatch(batch));
+    }
+
+    [Fact]
     public void MultiplayerBlockOnSingleProcessLayerFailsClosed()
     {
         using var fixture = new RuntimeResultFixture();

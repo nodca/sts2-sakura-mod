@@ -20,7 +20,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class Lucid() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("Look", 3)];
 
@@ -29,14 +29,15 @@ public class Lucid() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.
         var top = CardPile.Get(PileType.Draw, Owner)!.Cards.Take(DynamicVars["Look"].IntValue).ToList();
         var card = await SakuraActions.SelectFromCardPreviews(this, choiceContext, top, cancelable: false);
         if (card is not null)
+        {
             await SakuraActions.MoveExistingCardToHand(this, card);
+            if (card.Type == CardType.Attack)
+                await LucidPiercePower.Mark(choiceContext, Owner.Creature, card, this);
+        }
 
         if (activation.IsActive)
-            await ApplyExtraEffect(choiceContext, play);
+            await PowerCmd.Apply<LucidPierceAllPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
     }
-
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await PowerCmd.Apply<LucidPiercePower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
 
     protected override void OnUpgrade() => DynamicVars["Look"].UpgradeValueBy(1);
 }

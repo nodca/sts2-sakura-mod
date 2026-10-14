@@ -1,0 +1,142 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/glow.png" id="1_glow"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/ring.png" id="2_ring"]
+
+[ext_resource type="Texture2D" path="res://SakuraMod/images/vfx/fourth_act/common/star.png" id="3_star"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_1"]
+blend_mode = 1
+
+[sub_resource type="Gradient" id="Gradient_2"]
+offsets = PackedFloat32Array(0.0, 1.0)
+colors = PackedColorArray(1.000, 0.980, 0.850, 1.000, 1.000, 0.850, 0.400, 0.000)
+
+[sub_resource type="Animation" id="Animation_3"]
+resource_name = "play"
+length = 0.500
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Glow:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.050, 0.500), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 0.880, 0.500, 0.000), Color(1.000, 0.880, 0.500, 0.000), Color(1.000, 0.880, 0.500, 0.750), Color(1.000, 0.880, 0.500, 0.000)]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Glow:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.500), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(1.4, 1.4), Vector2(1.4, 1.4), Vector2(3.2, 3.2)]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Halo:modulate")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.060, 0.500), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 0.720, 0.250, 0.000), Color(1.000, 0.720, 0.250, 0.000), Color(1.000, 0.720, 0.250, 0.800), Color(1.000, 0.720, 0.250, 0.000)]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Halo:scale")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.500), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.3, 0.3), Vector2(0.3, 0.3), Vector2(1.6, 1.6)]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Ring:modulate")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0.000, 0.030, 0.080, 0.500), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 0.880, 0.500, 0.000), Color(1.000, 0.880, 0.500, 0.000), Color(1.000, 0.880, 0.500, 0.800), Color(1.000, 0.880, 0.500, 0.000)]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Ring:scale")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0.000, 0.030, 0.500), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.3, 0.3), Vector2(0.3, 0.3), Vector2(1.7, 1.7)]}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Cross:modulate")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.040, 0.450), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 0.980, 0.900, 0.000), Color(1.000, 0.980, 0.900, 0.000), Color(1.000, 0.980, 0.900, 1.000), Color(1.000, 0.980, 0.900, 0.000)]}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Cross:scale")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/keys = {"times": PackedFloat32Array(0.000, 0.000, 0.450), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.6, 0.6), Vector2(0.6, 0.6), Vector2(2.6, 2.6)]}
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("CrossB:modulate")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/keys = {"times": PackedFloat32Array(0.000, 0.030, 0.070, 0.400), "transitions": PackedFloat32Array(1, 1, 1, 1), "update": 0, "values": [Color(1.000, 0.950, 0.750, 0.000), Color(1.000, 0.950, 0.750, 0.000), Color(1.000, 0.950, 0.750, 0.700), Color(1.000, 0.950, 0.750, 0.000)]}
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("CrossB:scale")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/keys = {"times": PackedFloat32Array(0.000, 0.030, 0.400), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0.4, 0.4), Vector2(0.4, 0.4), Vector2(1.6, 1.6)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_4"]
+_data = {&"play": SubResource("Animation_3")}
+
+[node name="LightBurst" type="Node2D"]
+metadata/contact_time = 0.0
+metadata/lifetime = 1.2
+
+[node name="Glow" type="Sprite2D" parent="."]
+texture = ExtResource("1_glow")
+modulate = Color(1.000, 0.880, 0.500, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Halo" type="Sprite2D" parent="."]
+texture = ExtResource("2_ring")
+modulate = Color(1.000, 0.720, 0.250, 0.000)
+
+[node name="Ring" type="Sprite2D" parent="."]
+texture = ExtResource("2_ring")
+modulate = Color(1.000, 0.880, 0.500, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="Cross" type="Sprite2D" parent="."]
+texture = ExtResource("3_star")
+modulate = Color(1.000, 0.980, 0.900, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+
+[node name="CrossB" type="Sprite2D" parent="."]
+texture = ExtResource("3_star")
+modulate = Color(1.000, 0.950, 0.750, 0.000)
+material = SubResource("CanvasItemMaterial_1")
+rotation = 0.785
+
+[node name="Motes" type="CPUParticles2D" parent="."]
+emitting = true
+one_shot = true
+explosiveness = 1.0
+texture = ExtResource("3_star")
+color_ramp = SubResource("Gradient_2")
+material = SubResource("CanvasItemMaterial_1")
+amount = 24
+lifetime = 0.8
+spread = 180
+initial_velocity_min = 220
+initial_velocity_max = 600
+damping_min = 300
+damping_max = 500
+gravity = Vector2(0, -60)
+scale_amount_min = 0.1
+scale_amount_max = 0.24
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_4")}
+autoplay = &"play"

@@ -48,6 +48,19 @@ public static class SakuraActions
         }
     }
 
+    // Native temporary stats grant the stat on apply and only take it back from their own
+    // turn-end hook, so removing a positive one early keeps the granted Strength/Dexterity.
+    internal static bool IsPermanentizableTemporaryStat(PowerModel power) =>
+        power is TemporaryStrengthPower or TemporaryDexterityPower
+        && power.Type == PowerType.Buff
+        && power.Amount > 0;
+
+    internal static async Task MakeTemporaryStatsPermanent(Creature creature)
+    {
+        foreach (var power in creature.Powers.Where(IsPermanentizableTemporaryStat).ToList())
+            await PowerCmd.Remove(power);
+    }
+
     internal static async Task RemovePowerWithCardCleanup(PowerModel power)
     {
         var owner = power.Owner;

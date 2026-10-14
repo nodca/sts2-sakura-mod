@@ -1,3 +1,4 @@
+using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Ascension;
 using MegaCrit.Sts2.Core.Entities.Creatures;
@@ -7,7 +8,6 @@ using MegaCrit.Sts2.Core.MonsterMoves;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
 using MegaCrit.Sts2.Core.Nodes.Combat;
-using STS2RitsuLib.Scaffolding.Content;
 using SakuraMod.SakuraModCode.FourthAct.Water;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using SakuraMod.SakuraModCode.FourthAct.Water.Powers;
@@ -20,7 +20,7 @@ using SakuraMod.SakuraModCode.Character;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Water.Models;
 
-public sealed class WateryMonster : ModMonsterTemplate
+public sealed class WateryMonster : FourthActMonsterTemplate
 {
     public const int BaseHp = 440, ToughHp = 465;
     public const int TidalMinimum = 14, TidalMaximum = 18, DeadlyTidalMinimum = 16, DeadlyTidalMaximum = 20;
@@ -28,9 +28,9 @@ public sealed class WateryMonster : ModMonsterTemplate
     public override int MinInitialHp => AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, ToughHp, BaseHp);
     public override int MaxInitialHp => MinInitialHp;
     public override string? CustomVisualsPath => WaterEnemyAssets.Watery;
-    public override IEnumerable<string> AssetPaths => [CustomVisualsPath!];
-    protected override NCreatureVisuals? TryCreateCreatureVisuals() =>
-        SakuraStandeeVisuals.Create(CustomVisualsPath!, "The Watery");
+    protected override IEnumerable<string> MonsterAssetPaths => [CustomVisualsPath!];
+    protected override NCreatureVisuals? CreateStandee() =>
+        SakuraStandeeVisuals.CreateFourthActEnemy(CustomVisualsPath!, "The Watery");
     public override async Task AfterAddedToRoom()
     {
         await base.AfterAddedToRoom();
@@ -61,11 +61,16 @@ public sealed class WateryMonster : ModMonsterTemplate
         TidalRange.Maximum);
     private int CurrentDragon => AscensionHelper.GetValueIfAscension(AscensionLevel.DeadlyEnemies, DeadlyDragonDamage, DragonDamage);
     private int CurrentFlood => AscensionHelper.GetValueIfAscension(AscensionLevel.DeadlyEnemies, DeadlyFloodDamage, FloodDamage);
+    // The reservoir is the dragon's follow-up damage: the water layer rises and the rim
+    // brightens as it fills (full at 30 and 20 water).
+    internal override float AmbientLevel => 0.3f + 0.7f * Mathf.Min(1f, ReservoirTotal / 30f);
+    internal override float StandeeStateGlow => Mathf.Min(1f, ReservoirTotal / 20f);
+    private int ReservoirTotal => Creature.GetPower<WaterReservoirPower>()?.Total ?? 0;
     private WaterReservoirPower Reservoir => Creature.GetPower<WaterReservoirPower>()
         ?? throw new InvalidOperationException("Watery requires its Reservoir power.");
     private async Task TidalDraw(IReadOnlyList<Creature> targets)
     {
-        await FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(CurrentTidal).FromMonster(this));
+        await AttackAsync(DamageCmd.Attack(CurrentTidal).FromMonster(this));
         foreach (var target in CombatState.Players.Select(static p => p.Creature).Where(static c => c.IsAlive))
         {
             var removed = target.Block;
@@ -76,14 +81,15 @@ public sealed class WateryMonster : ModMonsterTemplate
 
     private async Task WaterDragon(IReadOnlyList<Creature> targets)
     {
-        await FourthActEnemyActionCmd.PerformAsync(Creature, SakuraStandeeClip.Attack, async () =>
+        await PerformAsync(async () =>
         {
-            await DamageCmd.Attack(CurrentDragon).FromMonster(this).Execute(null);
+            await WithMoveFx(DamageCmd.Attack(CurrentDragon).FromMonster(this)).Execute(null);
             foreach (var target in CombatState.Players.Select(static p => p.Creature).Where(static c => c.IsAlive).ToList())
             {
                 var water = Reservoir.For(target);
                 if (water <= 0) continue;
-                var command = DamageCmd.Attack(water).FromMonster(this).TargetingFiltered([target]);
+                await TravelAsync(target);
+                var command = WithMoveFx(DamageCmd.Attack(water).FromMonster(this).TargetingFiltered([target]));
                 await command.Execute(null);
                 var unblocked = command.Results.SelectMany(static hit => hit).Sum(static result => result.UnblockedDamage);
                 Reservoir.Consume(target, unblocked);
@@ -93,7 +99,7 @@ public sealed class WateryMonster : ModMonsterTemplate
 
     private async Task Flood(IReadOnlyList<Creature> targets)
     {
-        await FourthActEnemyActionCmd.AttackAsync(Creature, DamageCmd.Attack(CurrentFlood).FromMonster(this));
+        await AttackAsync(DamageCmd.Attack(CurrentFlood).FromMonster(this));
         foreach (var target in CombatState.Players.Select(static p => p.Creature).Where(static c => c.IsAlive).ToList())
         {
             var water = Reservoir.For(target);

@@ -36,6 +36,9 @@ public sealed class FlyMonster : WindMonsterTemplate
         AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, ToughHp, BaseHp);
     public override int MaxInitialHp => MinInitialHp;
 
+    // The soaring currents show only while it is airborne.
+    internal override float AmbientLevel => Creature.GetPower<SoarPower>() is null ? 0f : 1f;
+
     public int HighAttackDamage =>
         AscensionHelper.GetValueIfAscension(AscensionLevel.DeadlyEnemies, DeadlyHighAttackDamage, BaseHighAttackDamage);
     public int DiveDamage =>
@@ -62,18 +65,14 @@ public sealed class FlyMonster : WindMonsterTemplate
     }
 
     private Task HighAttack(IReadOnlyList<Creature> targets) =>
-        FourthActEnemyActionCmd.AttackAsync(
-            Creature,
+        AttackAsync(
             DamageCmd.Attack(HighAttackDamage)
                 .FromMonster(this)
                 .WithHitCount(HighAttackHits));
 
     private async Task Dive(IReadOnlyList<Creature> targets)
     {
-        await FourthActEnemyActionCmd.AttackAsync(
-            Creature,
-            DamageCmd.Attack(DiveDamage).FromMonster(this),
-            FourthActAttackStyle.HeavyWind);
+        await AttackAsync(DamageCmd.Attack(DiveDamage).FromMonster(this));
         FourthActEnemyAudio.Play(FourthActAudioCue.FlyLanding);
         await FlyVisualController.PlayLandingAsync(Creature);
         await PowerCmd.Remove<SoarPower>(Creature);
@@ -81,8 +80,10 @@ public sealed class FlyMonster : WindMonsterTemplate
 
     private async Task Takeoff(IReadOnlyList<Creature> targets)
     {
-        FourthActEnemyAudio.Play(FourthActAudioCue.WindTakeoff);
-        await FlyVisualController.PlayTakeoffAsync(Creature);
-        await PowerCmd.Apply<SoarPower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, false);
+        await PerformAsync(async () =>
+        {
+            await FlyVisualController.PlayTakeoffAsync(Creature);
+            await PowerCmd.Apply<SoarPower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, false);
+        });
     }
 }

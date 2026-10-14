@@ -17,6 +17,8 @@ using SakuraMod.SakuraModCode.FourthAct.Fire.Models;
 using SakuraMod.SakuraModCode.FourthAct.Fire.Visuals;
 using SakuraMod.SakuraModCode.Powers;
 
+using SakuraMod.SakuraModCode.FourthAct.Visuals.Presentation;
+
 namespace SakuraMod.SakuraModCode.FourthAct.Fire.Powers;
 
 internal enum LibraPresentationCause
@@ -51,9 +53,15 @@ public sealed class SwordBlockFeedingPower : SakuraPowerModel
             : 0;
     public override Task AfterBlockGained(Creature creature, decimal amount, ValueProp props, CardModel? cardSource)
     {
-        if (creature.IsPlayer && amount > 0) { _bonuses[creature] = _bonuses.GetValueOrDefault(creature) + FireEnemyRules.SwordBlockBonus; InvokeDisplayAmountChanged(); }
+        if (creature.IsPlayer && amount > 0)
+        {
+            _bonuses[creature] = _bonuses.GetValueOrDefault(creature) + FireEnemyRules.SwordBlockBonus;
+            InvokeDisplayAmountChanged();
+            FourthActFxPlayer.SpawnAt(FourthActFxId.SwordGlint, Owner);
+        }
         return Task.CompletedTask;
     }
+    internal int LargestBonus => _bonuses.Count == 0 ? 0 : _bonuses.Values.Max();
     public override decimal ModifyDamageAdditive(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource) =>
         dealer == Owner && target is not null ? _bonuses.GetValueOrDefault(target) : 0;
     internal void Reset() { _bonuses.Clear(); InvokeDisplayAmountChanged(); }

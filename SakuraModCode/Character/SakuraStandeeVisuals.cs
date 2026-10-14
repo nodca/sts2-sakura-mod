@@ -56,6 +56,11 @@ public static class SakuraStandeeVisuals
         return Create(visualPath, label, layout, animate: true);
     }
 
+    // Fourth-act enemies keep the controller for pose swaps, Fly frames and Big/Little, but
+    // never move on their own; their acting is the element shader and effect layers.
+    internal static NCreatureVisuals CreateFourthActEnemy(string visualPath, string label) =>
+        Create(visualPath, label, StandardLayout(CombatVisualScale), animate: true, motion: false);
+
     internal static NCreatureVisuals CreateWithLayeredIdle(string visualPath, string label)
     {
         var layout = StandardLayout(CombatVisualScale) with
@@ -149,7 +154,8 @@ public static class SakuraStandeeVisuals
         bool animate,
         bool playIdleMotion = true,
         bool attachLayeredIdle = false,
-        bool attachChibiLayeredIdle = false)
+        bool attachChibiLayeredIdle = false,
+        bool motion = true)
     {
         try
         {
@@ -164,7 +170,8 @@ public static class SakuraStandeeVisuals
                     Vector2.One * layout.Scale,
                     layout.Bounds.Position.Y + layout.Bounds.Size.Y,
                     visualPath,
-                    playIdleMotion);
+                    playIdleMotion,
+                    motion);
             if (attachLayeredIdle && isActiveCombat)
                 SakuraStandeeIdleController.Attach(body);
             if (attachChibiLayeredIdle && isActiveCombat)
