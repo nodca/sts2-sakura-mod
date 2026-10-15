@@ -21,7 +21,7 @@ public sealed class TelemetryInstallTokenSuite
         EventName = "run_history.completed",
         RequestId = "run_history",
         Category = TelemetryDataCategory.RunHistory,
-        TimestampUtc = new DateTimeOffset(2026, 9, 5, 12, 0, 0, TimeSpan.Zero),
+        TimestampUtc = DateTimeOffset.UtcNow,
         Payload = JsonNode.Parse("{\"run_key\":\"abc\"}")!
     };
 
@@ -139,7 +139,8 @@ public sealed class TelemetryInstallTokenSuite
         var adapter = new InstallTokenHttpTelemetryAdapter(
             "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", new MemoryTokenStore { Saved = ValidToken("ab") }, transport, new MemoryQuarantine(), _ => { });
 
-        await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
+        var envelope = SampleEnvelope();
+        await adapter.SendAsync(Applicant, [envelope], TestContext.Current.CancellationToken);
         var body = transport.Requests.Last().JsonBody;
 
         RegressionTestHarness.Require(
@@ -148,7 +149,7 @@ public sealed class TelemetryInstallTokenSuite
                 JsonNode.Parse(
                     "{\"schema\":\"ritsulib.telemetry.batch.v1\",\"applicant_id\":\"SakuraMod\",\"events\":[" +
                     "{\"schema\":\"ritsulib.telemetry.v1\",\"applicantId\":\"SakuraMod\",\"eventName\":\"run_history.completed\"," +
-                    "\"requestId\":\"run_history\",\"category\":\"RunHistory\",\"timestampUtc\":\"2026-09-05T12:00:00+00:00\"," +
+                    "\"requestId\":\"run_history\",\"category\":\"RunHistory\",\"timestampUtc\":" + JsonSerializer.Serialize(envelope.TimestampUtc) + "," +
                     "\"properties\":{},\"payload\":{\"run_key\":\"abc\"}}]}")),
             "Expected the install-token adapter to preserve the exact ritsulib batch JSON contract.");
         JsonDocument.Parse(body).Dispose();

@@ -12,16 +12,51 @@ public sealed class TelemetryDeliverySuite
         ApplicantId = "SakuraMod", OwnerModId = "SakuraMod", DisplayName = "SakuraMod", Adapter = null!
     };
 
-    private static TelemetryEnvelope Envelope(string name, string value = "abc") => new()
+    private static TelemetryEnvelope Envelope(string name, string value = "abc", DateTimeOffset? timestamp = null) => new()
     {
         ApplicantId = "SakuraMod", EventName = name, RequestId = "run_history",
         Category = TelemetryDataCategory.RunHistory,
-        TimestampUtc = new DateTimeOffset(2026, 9, 5, 12, 0, 0, TimeSpan.Zero),
+        TimestampUtc = timestamp ?? DateTimeOffset.UtcNow,
         Payload = new JsonObject { ["value"] = value }
     };
 
     private static InstallTokenHttpTelemetryAdapter Adapter(Transport transport, ITelemetryQuarantineStore? quarantine = null) =>
         new("https://example.test/batch", "legacy", "SakuraMod", new Tokens(), transport, quarantine ?? new MemoryQuarantine(), _ => { });
+
+    [Fact]
+    public async Task ExpiredEventIsPreservedWhileValidSiblingsUploadInOrder()
+    {
+        var transport = new Transport();
+        var quarantine = new MemoryQuarantine();
+        var expired = Envelope("expired", timestamp: DateTimeOffset.UtcNow.AddDays(-91));
+        var recent = Envelope("recent", timestamp: DateTimeOffset.UtcNow.AddDays(-89));
+        var adapter = Adapter(transport, quarantine);
+
+        Assert.True((await adapter.SendAsync(Applicant, [recent, expired, Envelope("after")], TestContext.Current.CancellationToken)).Success);
+        Assert.Equal(["recent", "after"], transport.Bodies.SelectMany(EventNames));
+        var saved = Assert.Single(quarantine.Records);
+        Assert.Equal("event_timestamp_expired", saved.Value);
+        Assert.Equal(expired.TimestampUtc, JsonNode.Parse(saved.Key)!["events"]![0]!["timestampUtc"]!.GetValue<DateTimeOffset>());
+        Assert.Equal(1, adapter.Stats.Quarantined);
+    }
+
+    [Fact]
+    public async Task FailedExpiredEventPreservationKeepsQueueRetryable()
+    {
+        var transport = new Transport();
+        var quarantine = new MemoryQuarantine { FailSave = true };
+        var expired = Envelope("expired", timestamp: DateTimeOffset.UtcNow.AddDays(-91));
+        var events = new[] { expired, Envelope("after") };
+        var adapter = Adapter(transport, quarantine);
+
+        Assert.False((await adapter.SendAsync(Applicant, events, TestContext.Current.CancellationToken)).Success);
+        Assert.Empty(transport.Bodies);
+        Assert.Empty(quarantine.Records);
+        quarantine.FailSave = false;
+        Assert.True((await adapter.SendAsync(Applicant, events, TestContext.Current.CancellationToken)).Success);
+        Assert.Equal(["after"], transport.Bodies.SelectMany(EventNames));
+        Assert.Single(quarantine.Records);
+    }
 
     [Fact]
     public async Task BatchesBoundActualEscapedUtf8BytesAndPreserveOrder()

@@ -59,11 +59,6 @@ public sealed class ExtraEffectTransactionSuite
             && SakuraExtraEffectTransaction.ActivationCost(hasLockSakura: true)
                 == SakuraExtraEffectActivationCost.LockSakura,
             "Expected Lock Sakura to be consumed instead of Magic Charge for the next activation.");
-
-        RegressionTestHarness.Require(
-            SakuraExtraEffectPostPlayPlan.ForGameplay(new SakuraExtraEffectActivation(true)).ApplyExtraElementStates
-            && !SakuraExtraEffectPostPlayPlan.ForGameplay(new SakuraExtraEffectActivation(false)).ApplyExtraElementStates,
-            "Expected Extra Effect to apply missing Element States only when the play is activated.");
     }
 
     [Fact]

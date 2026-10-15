@@ -177,7 +177,8 @@ public class ClassicTheNothingMonster : FourthActMonsterTemplate
             foreach (var power in Creature.Powers.ToList())
                 await PowerCmd.Remove(power);
 
-            await PowerCmd.Apply<IntangiblePower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, false);
+            // Native Intangible decrements at enemy turn end; 2 stacks cover the following player turn.
+            await PowerCmd.Apply<IntangiblePower>(new ThrowingPlayerChoiceContext(), Creature, 2, Creature, null, false);
             await PowerCmd.Apply<StrengthPower>(new ThrowingPlayerChoiceContext(), Creature, Strengthen, Creature, null, false);
         });
 

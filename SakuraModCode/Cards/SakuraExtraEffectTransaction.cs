@@ -20,14 +20,6 @@ internal enum SakuraExtraEffectActivationCost
     RedCape
 }
 
-internal readonly record struct SakuraExtraEffectPostPlayPlan(
-    bool ApplyExtraElementStates)
-{
-    internal static SakuraExtraEffectPostPlayPlan ForGameplay(
-        SakuraExtraEffectActivation activation) =>
-        new(ApplyExtraElementStates: activation.IsActive);
-}
-
 internal interface ISakuraExtraEffectCard
 {
     Task PlayWithExtraEffect(

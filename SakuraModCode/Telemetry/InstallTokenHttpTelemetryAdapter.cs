@@ -110,6 +110,7 @@ internal sealed class InstallTokenHttpTelemetryAdapter(
         var batch = new List<byte[]>();
         var emptyBytes = Encoding.UTF8.GetByteCount(SerializeBatch(applicant.ApplicantId, batch));
         var batchBytes = emptyBytes;
+        var expiryCutoff = DateTimeOffset.UtcNow.AddDays(-90);
         foreach (var envelope in events)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -127,9 +128,11 @@ internal sealed class InstallTokenHttpTelemetryAdapter(
             {
                 return QuarantineFailure(exception);
             }
-            var oversized = OversizeReason(json);
+            var rejected = envelope.TimestampUtc < expiryCutoff
+                ? "event_timestamp_expired"
+                : OversizeReason(json);
             var addedBytes = json.Length + (batch.Count == 0 ? 0 : 1);
-            if (batch.Count > 0 && (oversized is not null || batchBytes + addedBytes > MaxBatchBytes || batch.Count == MaxBatchEvents))
+            if (batch.Count > 0 && (rejected is not null || batchBytes + addedBytes > MaxBatchBytes || batch.Count == MaxBatchEvents))
             {
                 var sent = await SendBatchAsync(applicant.ApplicantId, batch, cancellationToken).ConfigureAwait(false);
                 if (!sent.Success)
@@ -139,9 +142,9 @@ internal sealed class InstallTokenHttpTelemetryAdapter(
                 addedBytes = json.Length;
             }
 
-            if (oversized is not null)
+            if (rejected is not null)
             {
-                var saved = Quarantine(singleBody, oversized, cancellationToken);
+                var saved = Quarantine(singleBody, rejected, cancellationToken);
                 if (!saved.Success)
                     return saved;
                 continue;
