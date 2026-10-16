@@ -27,7 +27,7 @@ internal static class SpellReleaseBgmPlayback
 
     private static readonly CardBgmPlayback[] Tracks = RelativePaths.Select(path =>
         CardBgmPlayback.CreateTrack(new CardBgmPlayback.Config(
-            $"{MainFile.ResPath}/{path}", path, MusicChannel, MusicVolume, $"Spell Release ({path})"))).ToArray();
+            path, MusicChannel, MusicVolume, $"Spell Release ({path})"))).ToArray();
 
     public static void Register()
     {

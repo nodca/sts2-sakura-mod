@@ -84,6 +84,12 @@ public sealed class PackageVerifier(IPckInspector pckInspector)
             request.InspectorLogPath,
             cancellationToken);
         ValidatePckPaths(inspection.AddedPaths);
+        foreach (var externalAudio in Directory.EnumerateFiles(request.PackageDirectory, "*.ogg", SearchOption.AllDirectories))
+        {
+            var importedPrefix = $"res://.godot/imported/{Path.GetFileName(externalAudio)}-";
+            if (inspection.AddedPaths.Any(path => path.StartsWith(importedPrefix, StringComparison.Ordinal)))
+                throw new InvalidDataException($"PCK duplicates external audio: {externalAudio}");
+        }
 
         var fileResults = new List<PackageFileResult>(files.Length);
         foreach (var file in files)
@@ -126,6 +132,10 @@ public sealed class PackageVerifier(IPckInspector pckInspector)
 
         foreach (var path in paths)
         {
+            if (path.StartsWith("res://SakuraMod/music/", StringComparison.Ordinal)
+                || path.StartsWith("res://SakuraMod/voices/", StringComparison.Ordinal))
+                throw new InvalidDataException($"PCK duplicates external audio: {path}");
+
             var allowed = path.StartsWith("res://SakuraMod/", StringComparison.Ordinal)
                 || path.StartsWith("res://.godot/imported/", StringComparison.Ordinal)
                 || path.StartsWith("res://.godot/exported/", StringComparison.Ordinal)

@@ -28,8 +28,7 @@ public sealed class SpellTurnBgmSuite
 
         RegressionTestHarness.Require(
             SpellTurnBgmPlayback.MusicChannel != AnotherMeBgmPlayback.MusicChannel
-            && SpellTurnBgmPlayback.RelativePath == "music/platinum.ogg"
-            && SpellTurnBgmPlayback.ResourcePath == $"{MainFile.ResPath}/music/platinum.ogg",
+            && SpellTurnBgmPlayback.RelativePath == "music/platinum.ogg",
             "Expected Spell Turn to own a dedicated platinum track instead of reusing Another Me's.");
     }
 

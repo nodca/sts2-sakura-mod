@@ -2612,7 +2612,7 @@ public sealed class ResourceContractSuite
             recordExtraIndex >= 0
             && showCircleIndex > recordExtraIndex
             && playExtraIndex > showCircleIndex
-            && transaction.Contains("SakuraMagicCirclePresenter.TryShowOrRefresh(card.Owner?.Creature, era);", StringComparison.Ordinal)
+            && transaction.Contains("SakuraMagicCirclePresenter.TryShowOrRefresh(card.Owner?.Creature, era, SakuraActions.ElementSetOf(card));", StringComparison.Ordinal)
             && transaction.Contains("MagicCircleEraFor(card, activation)", StringComparison.Ordinal)
             && presenter.Contains("TryShowOrRefresh", StringComparison.Ordinal)
             && presenter.Contains("if (!_showFailureLogged)", StringComparison.Ordinal)
@@ -2639,7 +2639,7 @@ public sealed class ResourceContractSuite
         RegressionTestHarness.Require(
             presenter.Contains("new(ReferenceEqualityComparer.Instance);", StringComparison.Ordinal)
             && presenter.Contains("if (_states.TryGetValue(caster, out var existing))", StringComparison.Ordinal)
-            && presenter.Contains("existing.Refresh(era, ink, knockout);", StringComparison.Ordinal)
+            && presenter.Contains("existing.Refresh(era, cardElements, ink, knockout);", StringComparison.Ordinal)
             && presenter.Contains("_motion.Refresh();", StringComparison.Ordinal)
             && presenter.Contains("_motion.Era == era", StringComparison.Ordinal)
             && presenter.Contains("(_circle, _outgoing) = (_outgoing, _circle);", StringComparison.Ordinal)

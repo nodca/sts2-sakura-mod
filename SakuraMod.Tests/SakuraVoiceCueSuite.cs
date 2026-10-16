@@ -42,8 +42,8 @@ public sealed class SakuraVoiceCueSuite
             && SakuraVoicePlayback.LineFor(new GrowingMagic()) == SakuraVoiceLines.Seal
             && SakuraVoicePlayback.LineFor(new SpellRelease()) is null
             && SakuraVoicePlayback.LineFor(new ClowArrow()) is null
-            && SakuraVoiceLines.Release.ResourcePath == $"{MainFile.ResPath}/voices/dream_wand.ogg"
-            && SakuraVoiceLines.Seal.ResourcePath == $"{MainFile.ResPath}/voices/stabilize.ogg"
+            && SakuraVoiceLines.Release.RelativePath == "voices/dream_wand.ogg"
+            && SakuraVoiceLines.Seal.RelativePath == "voices/stabilize.ogg"
             && SakuraVoiceLines.Release.Key != SakuraVoiceLines.Seal.Key,
             "Expected Seal/Growing Magic to share the Seal line and Spell Release to route through its own release entry.");
 

@@ -12,14 +12,10 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 /// <summary>
 /// One playable Sakura voice line. <see cref="Key"/> is the per-combat gate and failure-dedup key;
-/// <see cref="RelativePath"/> names both the loose package file FMOD plays and its imported res:// twin;
+/// <see cref="RelativePath"/> names the loose package file used for playback and duration lookup;
 /// <see cref="Gain"/> trims a line's authored loudness against the others.
 /// </summary>
-internal readonly record struct SakuraVoiceLine(string Key, string RelativePath, float Gain = 1f)
-{
-    // The imported res:// twin only supplies the authoritative envelope duration.
-    public string ResourcePath => $"{MainFile.ResPath}/{RelativePath}";
-}
+internal readonly record struct SakuraVoiceLine(string Key, string RelativePath, float Gain = 1f);
 
 internal static class SakuraVoiceLines
 {
@@ -166,7 +162,7 @@ public static class SakuraVoicePlayback
 
             _activeHandle = handle;
             _activeGain = line.Gain;
-            if (!TryStartEnvelope(handle, line.ResourcePath))
+            if (!TryStartEnvelope(handle, externalPath))
             {
                 StopActivePlayback(handle);
                 ReportFailureOnce(line.Key, "could not create the voice volume envelope");
@@ -222,7 +218,7 @@ public static class SakuraVoicePlayback
         if (Engine.GetMainLoop() is not SceneTree tree)
             return false;
 
-        var stream = ResourceLoader.Load<AudioStream>(path);
+        using var stream = AudioStreamOggVorbis.LoadFromFile(path);
         var duration = stream?.GetLength() ?? 0d;
         if (duration <= 0d)
             return false;

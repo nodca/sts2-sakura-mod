@@ -20,7 +20,6 @@ namespace SakuraMod.SakuraModCode.Cards;
 internal sealed class CardBgmPlayback
 {
     internal sealed record Config(
-        string ResourcePath,
         string RelativePath,
         string MusicChannel,
         float MusicVolume,
@@ -93,10 +92,11 @@ internal sealed class CardBgmPlayback
                 return;
             }
 
-            var duration = ResourceLoader.Load<AudioStream>(_config.ResourcePath)?.GetLength() ?? 0d;
+            using var stream = AudioStreamOggVorbis.LoadFromFile(path);
+            var duration = stream?.GetLength() ?? 0d;
             if (duration <= 0d)
             {
-                ReportFailureOnce($"could not read a positive duration from {_config.ResourcePath}");
+                ReportFailureOnce($"could not read a positive duration from {path}");
                 return;
             }
 

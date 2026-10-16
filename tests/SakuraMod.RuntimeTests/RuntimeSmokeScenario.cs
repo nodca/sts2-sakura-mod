@@ -920,8 +920,6 @@ internal static class RuntimeSmokeScenario
             ["growing_magic_portrait"] = "res://SakuraMod/images/card_portraits/ancient/growing_magic.png",
             ["another_me_portrait"] = "res://SakuraMod/images/card_portraits/ancient/another_me.png",
             ["another_me_power_icon"] = "res://SakuraMod/images/powers/another_me.png",
-            ["another_me_bgm"] = AnotherMeBgmPlayback.ResourcePath,
-            ["spell_turn_bgm"] = SpellTurnBgmPlayback.ResourcePath,
             ["spell_turn_audio"] = SpellTurnTransformationVfx.TurnAudioPath,
             ["dark_standee"] = DarkEnemyAssets.Standee,
             ["dark_action"] = DarkEnemyAssets.Action,
@@ -933,10 +931,20 @@ internal static class RuntimeSmokeScenario
             ["eclipse_petal"] = FourthActCombatBackgrounds.EclipsePetalTexturePath,
             ["eclipse_shader"] = FourthActCombatBackgrounds.EclipseShaderPath
         };
-        foreach (var voiceLine in SakuraVoiceLines.All)
-            resources[$"voice_{voiceLine.Key}"] = voiceLine.ResourcePath;
-        foreach (var path in SpellReleaseBgmPlayback.RelativePaths)
-            resources[$"spell_release_bgm_{Path.GetFileNameWithoutExtension(path)}"] = $"{MainFile.ResPath}/{path}";
+        var modDirectory = Path.GetDirectoryName(typeof(MainFile).Assembly.Location)!;
+        var externalAudio = new[] { AnotherMeBgmPlayback.RelativePath, SpellTurnBgmPlayback.RelativePath }
+            .Concat(SpellReleaseBgmPlayback.RelativePaths)
+            .Concat(SakuraVoiceLines.All.Select(static line => line.RelativePath));
+        foreach (var relativePath in externalAudio)
+        {
+            var name = relativePath.Replace('/', '_');
+            var path = Path.Combine(modDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            assertions.True($"external_audio_{name}_exists", File.Exists(path), path);
+            using var stream = AudioStreamOggVorbis.LoadFromFile(path);
+            assertions.True($"external_audio_{name}_duration", stream is not null && stream.GetLength() > 0d, path);
+            assertions.True($"external_audio_{name}_not_packed",
+                !ResourceLoader.Exists($"{MainFile.ResPath}/{relativePath}"), relativePath);
+        }
         for (var index = 0; index < WindEnemyAssets.All.Count; index++)
             resources[$"wind_enemy_{index}"] = WindEnemyAssets.All[index];
         for (var index = 0; index < LibraEnemyAssets.All.Count; index++)
@@ -961,8 +969,6 @@ internal static class RuntimeSmokeScenario
             {
                 resource = ResourceLoader.Load(path);
                 assertions.True($"resource_{name}_loads", resource is not null, path);
-                if (name.StartsWith("spell_release_bgm_", StringComparison.Ordinal))
-                    assertions.True($"resource_{name}_duration", resource is AudioStream audio && audio.GetLength() > 0d, path);
             }
             finally
             {

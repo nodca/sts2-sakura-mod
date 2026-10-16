@@ -75,7 +75,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             PreloadManager.Cache.GetAsset<Texture2D>(paths.Knockout));
     }
 
-    internal static bool TryShowOrRefresh(Creature? caster, SourceEraClass era)
+    internal static bool TryShowOrRefresh(Creature? caster, SourceEraClass era, SakuraElementSet cardElements)
     {
         if (!SakuraModConfig.IsCardVfxEnabled() || TestMode.IsOn || caster is null)
             return false;
@@ -90,7 +90,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             }
 
             var (shader, ink, knockout) = LoadResources(era);
-            ShowOrRefresh(room, casterNode, era, shader, ink, knockout);
+            ShowOrRefresh(room, casterNode, era, cardElements, shader, ink, knockout);
             return true;
         }
         catch (Exception exception)
@@ -109,6 +109,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
         NCombatRoom room,
         NCreature casterNode,
         SourceEraClass era,
+        SakuraElementSet cardElements,
         Shader shader,
         Texture2D ink,
         Texture2D knockout)
@@ -131,7 +132,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             container.AddChildSafely(presenter);
         }
 
-        presenter.Refresh(casterNode, era, shader, ink, knockout);
+        presenter.Refresh(casterNode, era, cardElements, shader, ink, knockout);
     }
 
     internal static Color ColourFor(SourceEraClass era) => era switch
@@ -168,7 +169,13 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
         Cleanup(queueFreeChildren: false);
     }
 
-    private void Refresh(NCreature casterNode, SourceEraClass era, Shader shader, Texture2D ink, Texture2D knockout)
+    private void Refresh(
+        NCreature casterNode,
+        SourceEraClass era,
+        SakuraElementSet cardElements,
+        Shader shader,
+        Texture2D ink,
+        Texture2D knockout)
     {
         if (_disposed
             || !GodotObject.IsInstanceValid(casterNode)
@@ -182,7 +189,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
         {
             if (existing.Matches(casterNode))
             {
-                existing.Refresh(era, ink, knockout);
+                existing.Refresh(era, cardElements, ink, knockout);
                 return;
             }
 
@@ -196,7 +203,8 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             shader,
             ink,
             knockout,
-            era);
+            era,
+            cardElements);
         _states.Add(caster, state);
     }
 
@@ -247,6 +255,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
         private ColorRect _outgoing;
         private ShaderMaterial _outgoingMaterial;
         private SakuraMagicCircleMotion _motion;
+        private readonly SakuraMagicCircleEmblems _emblems;
         private float _transitionAge = SakuraMagicCircleMotion.TransitionDuration;
         private float _outgoingVisibility;
         private bool _disposed;
@@ -258,11 +267,14 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             Shader shader,
             Texture2D ink,
             Texture2D knockout,
-            SourceEraClass era)
+            SourceEraClass era,
+            SakuraElementSet cardElements)
         {
             _caster = caster;
             _casterNode = casterNode;
             _motion = new SakuraMagicCircleMotion(era);
+            _emblems = new SakuraMagicCircleEmblems(ReadActiveElements(caster));
+            _emblems.Trigger(cardElements, _motion.TimeUntilForeground);
 
             _anchor = new Node2D
             {
@@ -322,7 +334,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             _material.SetShaderParameter("magic_circle_polish", era == SourceEraClass.Sakura ? 0f : 1f);
         }
 
-        public void Refresh(SourceEraClass era, Texture2D ink, Texture2D knockout)
+        public void Refresh(SourceEraClass era, SakuraElementSet cardElements, Texture2D ink, Texture2D knockout)
         {
             if (_disposed)
                 return;
@@ -330,12 +342,13 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             if (_motion.Era == era)
             {
                 _motion.Refresh();
+                _emblems.Trigger(cardElements, _motion.TimeUntilForeground);
                 return;
             }
 
             // Two reusable surfaces bound rapid cross-era plays. Keep the last visible
             // outgoing pose if another play arrives before the new rings are visible.
-            if (_motion.Visibility * _motion.Gates.X > 0.001f)
+            if (_motion.Visibility * _motion.Draw.X > 0.001f)
             {
                 (_circle, _outgoing) = (_outgoing, _circle);
                 (_material, _outgoingMaterial) = (_outgoingMaterial, _material);
@@ -346,6 +359,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
                     _transitionAge / SakuraMagicCircleMotion.TransitionDuration);
             _transitionAge = 0f;
             _motion = new SakuraMagicCircleMotion(era, transition: true);
+            _emblems.Trigger(cardElements, _motion.TimeUntilForeground);
             Configure(era, ink, knockout);
             ApplyMotion();
             _outgoing.Visible = _outgoingVisibility > 0f;
@@ -361,6 +375,7 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             if (!float.IsFinite(delta) || delta < 0f)
                 delta = 0f;
             _motion.Advance(delta);
+            _emblems.Advance(delta, ReadActiveElements(_caster));
             _transitionAge += delta;
             _outgoingMaterial.SetShaderParameter("magic_circle_visibility", _outgoingVisibility
                 * (1f - SakuraMagicCircleMotion.Ease(_transitionAge / SakuraMagicCircleMotion.TransitionDuration)));
@@ -375,9 +390,17 @@ internal sealed partial class SakuraMagicCirclePresenter : Node2D
             _material.SetShaderParameter("magic_circle_layer_phases", _motion.Phases);
             _material.SetShaderParameter("magic_circle_visibility", _motion.Visibility);
             _material.SetShaderParameter("magic_circle_layer_visibility", _motion.Gates);
+            _material.SetShaderParameter("magic_circle_layer_draw", _motion.Draw);
+            // Only the Clear mask carries element emblems in its foreground quadrants.
+            var emblems = _motion.Era == SourceEraClass.Clear;
+            _material.SetShaderParameter("magic_circle_emblem_glow", emblems ? _emblems.Glow : Vector4.Zero);
+            _material.SetShaderParameter("magic_circle_emblem_dim", emblems ? _emblems.Dim : 0f);
             _material.SetShaderParameter("magic_circle_pulse", _motion.Pulse);
             _circle.Scale = Vector2.One * _motion.Scale;
         }
+
+        private static SakuraElementSet ReadActiveElements(Creature caster) =>
+            caster.Player is { } player ? SakuraElementState.ReadActive(player) : SakuraElementSet.None;
 
         public void Dispose(bool queueFree)
         {

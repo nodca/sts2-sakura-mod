@@ -66,7 +66,7 @@ public sealed class AnotherMeBgmSuite
             && source.Contains("proxy.Call(StopMusicMethod);", StringComparison.Ordinal)
             && source.Contains("controller.StopCustomMusic();", StringComparison.Ordinal)
             && source.Contains("AudioVanillaBridge.RefreshTrackAndAmbience();", StringComparison.Ordinal)
-            && source.Contains("ResourceLoader.Load<AudioStream>(_config.ResourcePath)?.GetLength()", StringComparison.Ordinal)
+            && source.Contains("AudioStreamOggVorbis.LoadFromFile(path)", StringComparison.Ordinal)
             && source.Contains("completionTween.SetIgnoreTimeScale();", StringComparison.Ordinal)
             && source.Contains("completionTween.SetPauseMode(Tween.TweenPauseMode.Process);", StringComparison.Ordinal)
             && source.Contains("Callable.From<float>(volume => ApplyEnvelopeVolume(handle, volume))", StringComparison.Ordinal)

@@ -111,6 +111,24 @@ public sealed class PackageVerifierSuite
         Assert.Contains("Kero combat companion", exception.Message, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("res://SakuraMod/music/platinum.ogg.import")]
+    [InlineData("res://SakuraMod/voices/cards/sword.ogg.import")]
+    [InlineData("res://.godot/imported/platinum.ogg-test.oggvorbisstr")]
+    [InlineData("res://.godot/imported/sword.ogg-test.oggvorbisstr")]
+    public async Task PackedExternalAudioFailsVerification(string duplicatePath)
+    {
+        using var fixture = new PackageFixture(pckPaths:
+        [
+            "res://SakuraMod/images/charui/combat/kero_companion.png.import",
+            "res://.godot/imported/kero_companion.png-test.ctex",
+            duplicatePath
+        ]);
+
+        var exception = await Assert.ThrowsAsync<InvalidDataException>(fixture.VerifyAsync);
+        Assert.Contains("duplicates external audio", exception.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task UnexpectedPackageAssemblyFailsVerification()
     {

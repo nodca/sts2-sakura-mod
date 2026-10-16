@@ -95,7 +95,7 @@ internal static class SakuraExtraEffectTransaction
     internal static void TryShowMagicCircle(CardModel card, SakuraExtraEffectActivation activation)
     {
         if (MagicCircleEraFor(card, activation) is { } era)
-            SakuraMagicCirclePresenter.TryShowOrRefresh(card.Owner?.Creature, era);
+            SakuraMagicCirclePresenter.TryShowOrRefresh(card.Owner?.Creature, era, SakuraActions.ElementSetOf(card));
     }
 
     internal static async Task Execute(
