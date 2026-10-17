@@ -33,7 +33,9 @@
         <Sts2Path Condition="'$(Sts2Path)' == ''">$(SteamLibraryPath)/common/Slay the Spire 2</Sts2Path>
 
         <ModsPath>$(Sts2Path)/mods/</ModsPath>
-        <Sts2DataDir>$(Sts2Path)/data_sts2_linuxbsd_x86_64</Sts2DataDir>
+        <!-- Proton installs the Windows game assemblies on a Linux host. -->
+        <Sts2DataDir Condition="'$(Sts2DataDir)' == '' and !Exists('$(Sts2Path)/data_sts2_linuxbsd_x86_64/sts2.dll') and Exists('$(Sts2Path)/data_sts2_windows_x86_64/sts2.dll')">$(Sts2Path)/data_sts2_windows_x86_64</Sts2DataDir>
+        <Sts2DataDir Condition="'$(Sts2DataDir)' == ''">$(Sts2Path)/data_sts2_linuxbsd_x86_64</Sts2DataDir>
     </PropertyGroup>
 
     <!-- macOS -->

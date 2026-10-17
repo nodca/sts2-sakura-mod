@@ -962,6 +962,27 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void SwordJadeReleaseDoublesAppearManifestCount()
+    {
+        foreach (var upgraded in new[] { false, true })
+        {
+            var appear = RegressionTestHarness.MutableForCostTest(new Appear());
+            if (upgraded)
+                appear.UpgradeInternal();
+
+            SakuraReleaseState.Apply(appear, ClassicSwordJadeRelic.ReleaseRate);
+            Assert.True(appear.DynamicVars.TryGetValue("ManifestCards", out var count));
+            Assert.Equal(2, count.IntValue);
+            SakuraReleaseState.Reset(appear);
+            Assert.Equal(1, count.IntValue);
+
+            SakuraReleaseState.Apply(appear, 0.5f);
+            Assert.Equal(1, count.IntValue);
+            SakuraReleaseState.Reset(appear);
+        }
+    }
+
+    [Fact]
     public async Task SpellReleaseScalesAndResetsAllTransparentCardValues()
     {
         var gale = RegressionTestHarness.MutableForCostTest(new Gale());
@@ -1467,11 +1488,13 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             flight.DynamicVars.Block.IntValue == 8
             && flight.DynamicVars["SakuraTemporaryDexterityPower"].IntValue == 2
-            && flight.DynamicVars.Energy.IntValue == 2
+            && flight.DynamicVars.Energy.IntValue == 1
+            && flight.DynamicVars.Cards.IntValue == 1
             && upgradedFlight.DynamicVars.Block.IntValue == 11
             && upgradedFlight.DynamicVars["SakuraTemporaryDexterityPower"].IntValue == 3
-            && upgradedFlight.DynamicVars.Energy.IntValue == 2,
-            "Expected Flight to gain 8 Block and 2 Temporary Dexterity, upgrade to 11 Block and 3 Temporary Dexterity, and retain its 2-Energy Extra Effect.");
+            && upgradedFlight.DynamicVars.Energy.IntValue == 1
+            && upgradedFlight.DynamicVars.Cards.IntValue == 1,
+            "Expected Flight to gain 8 Block and 2 Temporary Dexterity, upgrade to 11 Block and 3 Temporary Dexterity, and grant 1 Energy and draw 1 card with Extra before and after upgrading.");
 
         var snooze = new Snooze();
         var upgradedSnooze = RegressionTestHarness.MutableForCostTest(new Snooze());

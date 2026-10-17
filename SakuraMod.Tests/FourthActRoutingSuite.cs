@@ -2,6 +2,7 @@ using System.Text.Json;
 using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Acts;
+using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using SakuraMod.SakuraModCode;
@@ -157,11 +158,23 @@ public sealed class FourthActRoutingSuite
     [InlineData(false, true, false)]
     [InlineData(true, false, false)]
     [InlineData(true, true, true)]
-    public void FourthActEntryRequiresBothTheSettingAndASakuraRun(
+    public void FourthActEntryRequiresBothTheHostSettingAndASakuraHost(
         bool fourthActEnabled,
-        bool isSakuraRun,
+        bool isSakuraHost,
         bool expected) =>
-        Assert.Equal(expected, FourthActEntryRegistration.CanEnter(fourthActEnabled, isSakuraRun));
+        Assert.Equal(expected, FourthActEntryRegistration.CanEnter(fourthActEnabled, isSakuraHost));
+
+    [Fact]
+    public void FourthActEntryUsesTheHostCharacterAndPreservesTheHostDecisionInSaveData()
+    {
+        var saved = JsonSerializer.Serialize(new FourthActEntryState { HostNetId = 42, Enabled = true });
+        var entry = JsonSerializer.Deserialize<FourthActEntryState>(saved)!;
+        Assert.Equal(42UL, entry.HostNetId);
+        Assert.True(FourthActEntryRegistration.CanEnter(entry.Enabled, new ClassicSakura()));
+        Assert.False(FourthActEntryRegistration.CanEnter(entry.Enabled, new Ironclad()));
+        Assert.False(FourthActEntryRegistration.CanEnter(false, new ClassicSakura()));
+        Assert.False(FourthActEntryRegistration.CanEnter(entry.Enabled, (CharacterModel?)null));
+    }
 
     [Fact]
     public void FourthActIsNonRandomAndEncountersAreScopedToIt()

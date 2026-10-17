@@ -69,20 +69,33 @@ internal static class SnowFrostbiteScenario
             await CombatScenarioContext.PlayCardAsync(snow);
 
             var totalDamage = 0;
+            var extraFrostbite = 0;
             foreach (var enemy in enemies)
             {
                 var damage = 1000 - enemy.CurrentHp;
                 totalDamage += damage;
-                assertions.Equal($"{mode}_frostbite_once_{enemy.CombatId}", damage > 0 ? 2 : 0,
-                    enemy.GetPower<SakuraFrostbitePower>()?.Amount ?? 0);
+                var frostbite = enemy.GetPower<SakuraFrostbitePower>()?.Amount ?? 0;
+                var freeze = enemy.GetPower<ClassicFreezePower>()?.Amount ?? 0;
+                if (mode == "clow-extra")
+                {
+                    // Unupgraded Clow hits are 4 each, so the received hit count is damage / 4.
+                    var received = damage / 4;
+                    assertions.Equal($"{mode}_damage_whole_hits_{enemy.CombatId}", 0, damage % 4);
+                    assertions.Equal($"{mode}_frostbite_per_hit_{enemy.CombatId}",
+                        received, frostbite + (freeze > 0 ? 5 : 0));
+                    extraFrostbite += received;
+                    continue;
+                }
+                assertions.Equal($"{mode}_frostbite_once_{enemy.CombatId}", damage > 0 ? 2 : 0, frostbite);
                 assertions.Equal($"{mode}_no_freeze_{enemy.CombatId}", null, enemy.GetPower<ClassicFreezePower>());
                 if (mode.StartsWith("sakura", StringComparison.Ordinal))
                     assertions.Equal($"{mode}_damage_before_frostbite_{enemy.CombatId}",
                         Math.Max(0, hits * 5 - block), damage);
             }
             if (mode.StartsWith("clow", StringComparison.Ordinal))
-                assertions.Equal($"{mode}_damage_before_frostbite", hits * (mode == "clow-upgraded" ? 6 : 4)
-                    + (mode == "clow-extra" ? 10 * enemies.Length : 0), totalDamage);
+                assertions.Equal($"{mode}_damage_before_frostbite", hits * (mode == "clow-upgraded" ? 6 : 4), totalDamage);
+            if (mode == "clow-extra")
+                assertions.Equal($"{mode}_frostbite_total_equals_hits", hits, extraFrostbite);
             hits++;
         }
 

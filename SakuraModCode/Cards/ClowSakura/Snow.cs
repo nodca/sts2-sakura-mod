@@ -27,16 +27,13 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowSnow() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
 {
-    private const int ExtraDamage = 10;
-
     public override SakuraElementSet Elements => SakuraElementSet.Water;
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new SakuraCombatHistoryDamageVar(4, ValueProp.Move, SakuraSnowRules.PlayedWateryCards),
         new SakuraSourceDamageVar(SakuraSnowRules.PerCardDamageVar, 4, ValueProp.Move),
         new SakuraCombatHistoryCountVar(SakuraSnowRules.PlayedWateryCards),
-        new PowerVar<SakuraFrostbitePower>(2),
-        new DynamicVar("ExtraDamage", ExtraDamage)
+        new PowerVar<SakuraFrostbitePower>(2)
     ];
 
     protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -58,9 +55,7 @@ public class ClowSnow() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Unc
             {
                 var receivers = await ResolveSnowMechanics(choiceContext, cues);
                 cues.Finale();
-                receivers.AddRange(SakuraSnowRules.FrostbiteReceivers(
-                    await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies.ToList(), ExtraDamage)));
-                await SakuraSnowRules.ApplyFrostbite(choiceContext, this, receivers);
+                await SakuraSnowRules.ApplyFrostbitePerHit(choiceContext, this, receivers);
             });
 
     private async Task<List<Creature>> ResolveSnowMechanics(

@@ -943,6 +943,29 @@ internal static class SakuraSnowRules
         }
     }
 
+    // One stack per damaging hit, settled in bulk after the whole sequence so
+    // Frostbite's conversion consumes successive thresholds in one application.
+    public static async Task ApplyFrostbitePerHit(
+        PlayerChoiceContext choiceContext,
+        SakuraSourceCard source,
+        IEnumerable<Creature> receivers)
+    {
+        foreach (var hits in receivers.GroupBy(static target => target))
+        {
+            var target = hits.Key;
+            if (!target.IsAlive || target.Side == source.Owner.Creature.Side)
+                continue;
+
+            await PowerCmd.Apply<SakuraFrostbitePower>(
+                choiceContext,
+                target,
+                hits.Count(),
+                source.Owner.Creature,
+                source,
+                false);
+        }
+    }
+
     private static int PlayedCards(CardModel card, Func<CardModel, bool> predicate) =>
         card.Owner is null || card.CombatState is null
             ? 0

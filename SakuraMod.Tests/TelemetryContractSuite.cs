@@ -43,15 +43,15 @@ public sealed class TelemetryContractSuite
         var capture = new TelemetryCaptureContext(SakuraTelemetry.RunHistoryEventName,
             SakuraTelemetry.RunHistoryRequestId, TelemetryDataCategory.RunHistory, "manual", null);
         Assert.False(SakuraTelemetry.ShouldCaptureBalanceTelemetry(capture));
-        Assert.Throws<JsonException>(() => SakuraTelemetryTerminalCapture.WithAbandonedContribution(restored!, () =>
+        Assert.Throws<JsonException>(() => SakuraTelemetryTerminalCapture.WithTerminalContribution(restored!, () =>
         {
             Assert.True(SakuraTelemetry.ShouldCaptureBalanceTelemetry(capture));
             Assert.Equal(identity.RunKey,
-                SakuraTelemetryTerminalCapture.BuildAbandonedContribution()!["run_key"]!.GetValue<string>());
+                SakuraTelemetryTerminalCapture.BuildTerminalContribution()!["run_key"]!.GetValue<string>());
             throw new JsonException("serialization failed");
         }));
         Assert.False(SakuraTelemetry.ShouldCaptureBalanceTelemetry(capture));
-        Assert.Null(SakuraTelemetryTerminalCapture.BuildAbandonedContribution());
+        Assert.Null(SakuraTelemetryTerminalCapture.BuildTerminalContribution());
         entry["data"]!["context_checksum"] = "sha256:changed";
         Assert.Null(SakuraTelemetryTerminalCapture.ReadSavedIdentityEntry(entry));
         entry["schema"] = 2;

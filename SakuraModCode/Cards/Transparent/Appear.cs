@@ -21,17 +21,23 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class Appear() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Common, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, SakuraKeywords.Manifest];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("ManifestCards", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var copy = await SakuraManifestLoop.ManifestTransparentCardToHand(
-            this,
-            choiceContext,
-            freeThisTurn: false,
-            upgraded: IsUpgraded);
+        for (var i = 0; i < DynamicVars["ManifestCards"].IntValue; i++)
+        {
+            var copy = await SakuraManifestLoop.ManifestTransparentCardToHand(
+                this,
+                choiceContext,
+                freeThisTurn: false,
+                upgraded: IsUpgraded);
 
-        if (activation.IsActive && copy is not null && !copy.EnergyCost.CostsX)
-            copy.EnergyCost.SetThisCombat(0, reduceOnly: true);
+            if (copy is null)
+                break;
+            if (activation.IsActive && !copy.EnergyCost.CostsX)
+                copy.EnergyCost.SetThisCombat(0, reduceOnly: true);
+        }
     }
 
     protected override void OnUpgrade() { }

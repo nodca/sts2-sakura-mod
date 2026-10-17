@@ -13,13 +13,13 @@ namespace SakuraMod.SakuraModCode.Telemetry;
 internal static class SakuraTelemetryTerminalCapture
 {
     private static readonly ConditionalWeakTable<SerializableRun, object> AttemptedAbandons = new();
-    [ThreadStatic] private static BalanceRunIdentity? _abandonedRun;
+    [ThreadStatic] private static BalanceRunIdentity? _terminalRun;
 
-    internal static bool IsCapturingAbandonment => _abandonedRun is not null;
+    internal static bool IsCapturingTerminal => _terminalRun is not null;
 
-    internal static JsonNode? BuildAbandonedContribution(JsonNode? basePayload = null)
+    internal static JsonNode? BuildTerminalContribution(JsonNode? basePayload = null)
     {
-        if (_abandonedRun is not { } data) return null;
+        if (_terminalRun is not { } data) return null;
         var version = SakuraTelemetryContract.SakuraModVersion(
             SakuraTelemetryContract.GameplayMods(STS2RitsuLib.Compat.RitsuModManager.GetKnownMods()));
         return SakuraTelemetryReport.Build(data, basePayload,
@@ -27,21 +27,37 @@ internal static class SakuraTelemetryTerminalCapture
             includeCatalogCards: true);
     }
 
-    internal static void WithAbandonedContribution(BalanceRunIdentity data, Action capture)
+    internal static void WithTerminalContribution(BalanceRunIdentity data, Action capture)
     {
-        var previous = _abandonedRun;
+        var previous = _terminalRun;
         try
         {
-            _abandonedRun = data;
+            _terminalRun = data;
             capture();
         }
         finally
         {
-            _abandonedRun = previous;
+            _terminalRun = previous;
         }
     }
 
     internal static BalanceRunIdentity? ReadSavedIdentity(SerializableRun run)
+    {
+        var entry = ReadSavedEntry(run);
+        return run.Players is { Count: > 1 }
+            ? ReadLocalIdentity(entry)?.Identity : ReadSavedIdentityEntry(entry);
+    }
+
+    private static (ulong PlayerNetId, BalanceRunIdentity Identity)? ReadLocalIdentity(JsonObject? entry) =>
+        entry?["schema"]?.GetValue<int>() == 1 && entry["kind"]?.GetValue<string>() == "run"
+            && entry["data"]?["run_key"]?.GetValue<string>() is { } teamRunKey
+            && Guid.TryParseExact(teamRunKey, "D", out _)
+                ? SakuraTelemetryPlayerReport.Read(teamRunKey) : null;
+
+    private static ulong? ReportingPlayerId(SerializableRun run) =>
+        run.Players.Count == 1 ? run.Players[0].NetId : ReadLocalIdentity(ReadSavedEntry(run))?.PlayerNetId;
+
+    private static JsonObject? ReadSavedEntry(SerializableRun run)
     {
         // RitsuLib 0.5.19 exposes RunState slots only. Read its attached save
         // document without loading a run or reading a different save from disk.
@@ -53,7 +69,7 @@ internal static class SakuraTelemetryTerminalCapture
         object?[] entryArgs = [MainFile.ModId, SakuraTelemetry.RunSavedDataKey, null];
         if (!(bool)AccessTools.Method(document.GetType(), "TryGetRaw").Invoke(document, entryArgs)!)
             return null;
-        return ReadSavedIdentityEntry(entryArgs[2] as JsonObject);
+        return entryArgs[2] as JsonObject;
     }
 
     internal static BalanceRunIdentity? ReadSavedIdentityEntry(JsonObject? entry)
@@ -71,40 +87,55 @@ internal static class SakuraTelemetryTerminalCapture
     internal static BalanceRunIdentity? PrepareAbandon(SerializableRun run)
     {
         var client = RitsuLibFramework.GetTelemetryClient(SakuraTelemetry.ApplicantId);
-        if (!SakuraTelemetry.IsSakuraSerializableRun(run)
+        if (!SakuraTelemetry.IsSakuraSerializableRun(run, ReportingPlayerId(run))
             || !client.IsEnabled(SakuraTelemetry.RunHistoryRequestId)
             || AttemptedAbandons.TryGetValue(run, out _))
             return null;
         var data = ReadSavedIdentity(run);
-        if (data?.Context is not { } context || context.PlayerCount != run.Players.Count
+        if (data?.Context is not { } context || context.PlayerCount != 1
             || context.Ascension != run.Ascension || context.GameMode != run.GameMode.ToString())
             throw new InvalidOperationException("Abandoned save has no valid matching telemetry identity.");
 
         AttemptedAbandons.Add(run, new object());
         var coverage = new SakuraTelemetryCoverageAccumulator();
-        if (run.Players.Count == 1)
-            SakuraTelemetryCoverage.CaptureIfEnabled(client, SakuraTelemetryCoverage.CoverageEventName,
-                SakuraTelemetryCoverage.BuildCoveragePayload(data.RunKey,
-                    SakuraTelemetryCoverage.StageTerminalAttempted, 1, 1, coverage));
+        SakuraTelemetryCoverage.CaptureIfEnabled(client, SakuraTelemetryCoverage.CoverageEventName,
+            SakuraTelemetryCoverage.BuildCoveragePayload(data.RunKey,
+                SakuraTelemetryCoverage.StageTerminalAttempted, 1, 1, coverage),
+            properties: new Dictionary<string, object?>
+            {
+                ["report_scope"] = "player", ["party_player_count"] = run.Players.Count
+            });
         return data;
     }
 
-    internal static void CaptureAbandon(SerializableRun run, BalanceRunIdentity data)
+    internal static void CaptureAbandon(SerializableRun run, BalanceRunIdentity data) =>
+        CapturePlayerRun(run, data,
+            ReportingPlayerId(run) ?? throw new InvalidOperationException("Abandoned save has no reporting player."),
+            isVictory: false, isAbandoned: true, "main_menu_abandon");
+
+    internal static void CapturePlayerRun(SerializableRun run, BalanceRunIdentity data,
+        ulong playerNetId, bool isVictory, bool isAbandoned, string captureSource)
     {
         if (!RitsuLibFramework.GetTelemetryClient(SakuraTelemetry.ApplicantId).IsEnabled(SakuraTelemetry.RunHistoryRequestId))
             return;
-        WithAbandonedContribution(data, () =>
+        var report = SakuraTelemetryPlayerReport.Project(run, playerNetId);
+        if (!SakuraTelemetry.IsSakuraSerializableRun(report, report.Players[0].NetId))
+            return;
+        WithTerminalContribution(data, () =>
             TelemetryApi.CaptureVanillaRunHistory(SakuraTelemetry.ApplicantId,
-                JsonSerializer.SerializeToNode(run, JsonSerializationUtility.GetTypeInfo<SerializableRun>())!,
+                JsonSerializer.SerializeToNode(report, JsonSerializationUtility.GetTypeInfo<SerializableRun>())!,
                 properties: new Dictionary<string, object?>
                 {
-                    ["capture_source"] = "main_menu_abandon",
-                    ["is_victory"] = false,
-                    ["is_abandoned"] = true,
+                    ["capture_source"] = captureSource,
+                    ["is_victory"] = isVictory,
+                    ["is_abandoned"] = isAbandoned,
                     ["occurred_at_utc"] = DateTimeOffset.UtcNow.ToString("O"),
                     ["run_game_mode"] = run.GameMode.ToString(),
                     ["run_is_daily"] = false,
-                    ["run_player_count"] = run.Players.Count,
+                    ["run_player_count"] = 1,
+                    ["run_character_ids"] = new[] { report.Players[0].CharacterId!.ToString() },
+                    ["report_scope"] = "player",
+                    ["party_player_count"] = run.Players.Count,
                     ["run_floor_reached"] = run.FloorReached,
                     ["run_ascension"] = run.Ascension,
                     ["run_time_seconds"] = run.RunTime,

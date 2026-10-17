@@ -22,7 +22,8 @@ internal static class SakuraTelemetryRewardCapture
 
     internal static void RegisterSet(RewardsSet set) => Guard(() =>
     {
-        if (set.Player.RunState is not RunState run || !SakuraTelemetryRunHooks.CanObserveRewards(run)) return;
+        if (set.Player.RunState is not RunState run || set.Player != SakuraTelemetry.LocalPlayer(run)
+            || !SakuraTelemetryRunHooks.CanObserveRewards(run)) return;
         foreach (var reward in set.Rewards)
         {
             // Linked/custom rewards have additional choice rules that this observer cannot prove.
@@ -40,6 +41,7 @@ internal static class SakuraTelemetryRewardCapture
         {
             if (reward.SuccessfullySelected || reward.ParentRewardSet is not null
                 || !Contexts.TryGetValue(reward, out var context) || reward.Player.RunState is not RunState run
+                || reward.Player != SakuraTelemetry.LocalPlayer(run)
                 || !SakuraTelemetryRunHooks.CanObserveRewards(run)
                 || run.CurrentMapPointHistoryEntry is not { } point) return;
             var entry = point.GetEntry(reward.Player.NetId);

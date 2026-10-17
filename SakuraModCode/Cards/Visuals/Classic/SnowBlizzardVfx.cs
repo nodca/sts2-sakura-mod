@@ -25,7 +25,7 @@ internal sealed class SnowBlizzardVfx : CelVfxSession
     internal const float ImpactDuration = 0.42f;
     internal const float FadeDuration = 0.26f;
     internal const float InactiveHitAt = -10f;
-    private const float FinaleStrength = 1.35f;
+    private const int FinaleHoldSteps = 3;
     private const float FieldHeadroom = 42f;
     private const float FieldSidePadding = 76f;
     private const float FieldGroundPadding = 8f;
@@ -209,16 +209,10 @@ internal sealed class SnowBlizzardVfx : CelVfxSession
             return;
 
         _finale = true;
-        var now = Elapsed;
-        foreach (var (target, visual) in _targets)
-        {
-            if (!target.IsAlive)
-                continue;
-            _lastHitAt = now;
-            visual.Hit(now, FinaleStrength);
-        }
-        _frontMaterial.SetShaderParameter("gust_at", now);
-        _backMaterial.SetShaderParameter("gust_at", now);
+        // The extra effect deals no damage, so the finale is not a contact: the
+        // whole blizzard, including any powder tail, holds still while the
+        // gameplay settles Frostbite and its creature-bound frost grows.
+        BeginHold(FinaleHoldSteps);
     }
 
     private void FadeAndDispose()

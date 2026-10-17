@@ -1381,7 +1381,6 @@ public sealed class ResourceContractSuite
                 && scene.Contains("shader_parameter/curtain = 0.0", StringComparison.Ordinal)
                 && scene.Contains("shader_parameter/hit_at = -10.0", StringComparison.Ordinal)
                 && scene.Contains("shader_parameter/previous_hit_at = -10.0", StringComparison.Ordinal)
-                && scene.Contains("shader_parameter/gust_at = -10.0", StringComparison.Ordinal)
                 && scene.Contains("shader_parameter/impact_life = 0.42", StringComparison.Ordinal)
                 && scene.Contains("shader_parameter/opacity = 1.0", StringComparison.Ordinal),
                 "Expected weather and both contact slots to ship hidden until their own cues.");
@@ -1440,6 +1439,25 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
+    public void SnowFinaleHoldsTheBlizzardInsteadOfFiringAContact()
+    {
+        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/SnowBlizzardVfx.cs"));
+        var start = source.IndexOf("private void Finale()", StringComparison.Ordinal);
+        var end = source.IndexOf("private void FadeAndDispose()", start, StringComparison.Ordinal);
+        RegressionTestHarness.Require(start >= 0 && end > start, "Expected Snow's finale before its outro.");
+
+        // Clow Snow's extra effect deals no damage, so its finale must not reuse
+        // the hit contact vocabulary; it freezes the field while Frostbite settles.
+        var finale = source[start..end];
+        RegressionTestHarness.Require(
+            finale.Contains("BeginHold(FinaleHoldSteps)", StringComparison.Ordinal)
+            && !finale.Contains(".Hit(", StringComparison.Ordinal)
+            && !source.Contains("gust_at", StringComparison.Ordinal),
+            "Expected Snow's finale to be a cel hold with no contact or gust.");
+    }
+
+    [Fact]
     public void SnowCardsWrapEveryEntryPointOnceAroundSnowMechanics()
     {
         var snow = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -1464,18 +1482,19 @@ public sealed class ResourceContractSuite
         // The activated path must not re-enter PlayCard: that method creates its
         // own session, and the extra-effect play would run the whole blizzard
         // twice. It wraps the mechanical helper directly, cues its finale, and
-        // only then resolves the extra all-enemy damage.
+        // only then settles the per-hit Frostbite.
         var finaleIndex = snow.IndexOf("cues.Finale();", activatedIndex, StringComparison.Ordinal);
-        var extraDamageIndex = snow.IndexOf("await DealDamageToEnemies(", activatedIndex, StringComparison.Ordinal);
+        var extraFrostbiteIndex = snow.IndexOf("ApplyFrostbitePerHit(", activatedIndex, StringComparison.Ordinal);
         RegressionTestHarness.Require(
             snow[activatedIndex..helperIndex].Split("PlayOrResolveAsync(", StringSplitOptions.None).Length - 1 == 1
             && !snow[activatedIndex..helperIndex].Contains("PlayCard(", StringComparison.Ordinal)
             && snow[activatedIndex..helperIndex].Contains("ResolveSnowMechanics(", StringComparison.Ordinal)
             && finaleIndex > activatedIndex
             && finaleIndex < helperIndex
-            && extraDamageIndex > finaleIndex
+            && extraFrostbiteIndex > finaleIndex
+            && extraFrostbiteIndex < helperIndex
             && !snow.Contains("await PlayCard(", StringComparison.Ordinal),
-            "Expected ClowSnow's activated path to wrap one session around the mechanical helper and fire its finale before the extra damage resolves.");
+            "Expected ClowSnow's activated path to wrap one session around the mechanical helper and fire its finale before per-hit Frostbite settles.");
 
         // Every Impact must land its dart before the damage it visualises.
         var impactIndex = snow.IndexOf("cues.Impact(target)", helperIndex, StringComparison.Ordinal);

@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -33,7 +34,7 @@ internal static class SakuraTelemetry
 
     private const string DisplayName = "SakuraMod";
     private const string ConsentDescriptionKey = "SAKURAMOD-TELEMETRY_CONSENT.description";
-    private const string ConsentDescriptionFallback = "Sends completed Standard-mode Kinomoto Sakura run history, card choices and their definitions, aggregate card draw counts, an opaque run key, exact ascension/player count, SakuraMod version, and loaded gameplay Mod ids/versions for balance diagnostics. SakuraMod adds no card-play data, card text, local path, or personal identifier.";
+    private const string ConsentDescriptionFallback = "Sends your completed Standard-mode Kinomoto Sakura run history in solo and multiplayer games, your card choices and their definitions, aggregate card draw counts, an opaque run key, exact ascension and party size, SakuraMod version, and loaded gameplay Mod ids/versions for balance diagnostics. Multiplayer reports contain only your player data and join the same balance statistics. SakuraMod adds no card-play data, card text, local path, or personal identifier.";
     internal const string BalanceContextEventName = "balance_run.context";
     internal const string CardRewardOfferedEventName = "card_reward.offered";
     internal const string CardRewardTakenEventName = "card_reward.taken";
@@ -61,6 +62,13 @@ internal static class SakuraTelemetry
                     SchemaVersion = 1,
                     WritePolicy = RunSavedDataWritePolicy.WhenSet
                 });
+            SakuraTelemetryPlayerReport.Register();
+            RitsuLibFramework.SubscribeLifecycle<RunSavedDataLobbyStagingEvent>(
+                static evt =>
+                {
+                    if (evt.IsHost && evt.Reason == RunSavedDataLobbyStagingReason.Committing)
+                        _runData.Lobby.Set(evt.Lobby, BalanceRunIdentity.Create());
+                }, replayCurrentState: false);
             RitsuLibFramework.RegisterTelemetryContributionProvider(new SakuraBalanceRunContributionProvider());
             RitsuLibFramework.RegisterTelemetryApplicant(CreateApplicant());
             SakuraTelemetryRunHooks.Register();
@@ -105,22 +113,31 @@ internal static class SakuraTelemetry
     internal static bool ShouldCaptureBalanceTelemetry(TelemetryCaptureContext context)
     {
         if (context.SourceData is RunEndedEvent runEndedEvent)
-            return IsSakuraSerializableRun(runEndedEvent.Run);
+            return runEndedEvent.Run.Players.Count == 1 && IsSakuraSerializableRun(runEndedEvent.Run);
         if (context.SourceData is not null)
             return false;
         return context.EventName == RunHistoryEventName
-            ? SakuraTelemetryTerminalCapture.IsCapturingAbandonment
+            ? SakuraTelemetryTerminalCapture.IsCapturingTerminal
             : context.EventName is SakuraTelemetryCoverage.SessionStartedEventName
                 or SakuraTelemetryCoverage.CoverageEventName;
     }
 
     internal static bool IsSakuraSerializableRun(SerializableRun? run) =>
+        IsSakuraSerializableRun(run, LocalContext.NetId);
+
+    internal static bool IsSakuraSerializableRun(SerializableRun? run, ulong? localPlayerId) =>
         run is { GameMode: GameMode.Standard, Players.Count: > 0 }
-        && run.Players.All(player => IsSakuraCharacterId(player.CharacterId));
+        && IsSakuraCharacterId((localPlayerId is { } id
+            ? run.Players.FirstOrDefault(player => player.NetId == id)
+            : run.Players.Count == 1 ? run.Players[0] : null)?.CharacterId);
 
     internal static bool IsEligibleRun(RunState? runState) =>
         runState is { GameMode: GameMode.Standard, Players.Count: > 0 }
-        && runState.Players.All(player => IsSakuraCharacterId(player.Character.Id));
+        && IsSakuraCharacterId(LocalPlayer(runState)?.Character.Id);
+
+    internal static Player? LocalPlayer(RunState runState) =>
+        LocalContext.NetId is { } id ? runState.Players.FirstOrDefault(player => player.NetId == id)
+            : runState.Players.Count == 1 ? runState.Players[0] : null;
 
     internal static bool IsSakuraCharacterId(ModelId? characterId) =>
         IsSakuraCharacterIdEntry(characterId?.Entry);
@@ -133,6 +150,15 @@ internal static class SakuraTelemetry
         if (_runData is null || !IsEligibleRun(runState))
             return null;
 
+        if (runState.Players.Count > 1)
+        {
+            // The host stages only an opaque team key; each consenting client owns its counters locally.
+            if (_runData.TryGet(runState, out var team) && team.IsValid())
+                return SakuraTelemetryPlayerReport.Resolve(team.RunKey, LocalPlayer(runState)!.NetId);
+            MainFile.Logger.Warn("Multiplayer telemetry has no saved team identity; start a new multiplayer run to enable capture.");
+            return null;
+        }
+
         if (_runData.TryGet(runState, out var existing))
             return existing.IsValid() ? existing : null;
 
@@ -143,6 +169,11 @@ internal static class SakuraTelemetry
 
     internal static void PersistRunData(RunState runState, BalanceRunIdentity data)
     {
+        if (runState.Players.Count > 1)
+        {
+            SakuraTelemetryPlayerReport.Persist(data);
+            return;
+        }
         if (_runData is not null)
             _runData.Set(runState, data);
     }
@@ -155,7 +186,7 @@ internal static class SakuraTelemetry
             runKey,
             SakuraTelemetryContract.SakuraModVersion(mods),
             runState.AscensionLevel,
-            runState.Players.Count,
+            1,
             runState.GameMode.ToString(),
             mods);
     }
@@ -205,6 +236,11 @@ internal static class SakuraTelemetryRunHooks
             replayCurrentState: false);
         RitsuLibFramework.SubscribeLifecycle<RunLoadedEvent>(
             static evt => Activate(evt.RunState),
+            replayCurrentState: false);
+        RitsuLibFramework.SubscribeLifecycle<RunEndedEvent>(
+            static evt => SakuraTelemetry.TryExecute(
+                () => _activeHook?.CaptureMultiplayerEnd(evt),
+                exception => SakuraTelemetry.LogCaptureFailure("multiplayer completion", exception)),
             replayCurrentState: false);
         _registered = true;
     }
@@ -272,8 +308,8 @@ internal sealed class SakuraBalanceRunContributionProvider : ITelemetryContribut
 
         try
         {
-            return SakuraTelemetryTerminalCapture.IsCapturingAbandonment
-                ? SakuraTelemetryTerminalCapture.BuildAbandonedContribution(context.BasePayload)
+            return SakuraTelemetryTerminalCapture.IsCapturingTerminal
+                ? SakuraTelemetryTerminalCapture.BuildTerminalContribution(context.BasePayload)
                 : SakuraTelemetryRunHooks.BuildActiveContribution(context.BasePayload);
         }
         catch (Exception exception)
@@ -366,8 +402,7 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
             if (!_captureBalance)
                 return;
 
-            var deck = BoundRunState.Players
-                .SelectMany(static player => player.Deck.Cards)
+            var deck = SakuraTelemetry.LocalPlayer(BoundRunState)!.Deck.Cards
                 .Select(static card => SakuraTelemetryCardClassifier.TryClassify(card, out var info)
                     ? (Valid: true, Instance: (object)card, Card: info)
                     : default)
@@ -382,7 +417,7 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
     {
         Guard("card generated", () =>
         {
-            if (_captureBalance && SakuraTelemetryCardClassifier.TryClassify(card, out var info))
+            if (_captureBalance && IsLocalCard(card) && SakuraTelemetryCardClassifier.TryClassify(card, out var info))
                 _usage.RecordGenerated(card, info);
         });
         return Task.CompletedTask;
@@ -392,7 +427,7 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
     {
         Guard("card draw", () =>
         {
-            if (_captureBalance && SakuraTelemetryCardClassifier.TryClassify(card, out var info))
+            if (_captureBalance && IsLocalCard(card) && SakuraTelemetryCardClassifier.TryClassify(card, out var info))
                 _usage.RecordDraw(card, info);
         });
         return Task.CompletedTask;
@@ -413,8 +448,21 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
     }
 
     internal bool CanObserveRewards => _captureBalance && _runData is not null
-        && BoundRunState.Players.Count == 1
         && RitsuLibFramework.GetTelemetryClient(SakuraTelemetry.ApplicantId).IsEnabled(SakuraTelemetry.RunHistoryRequestId);
+
+    private bool IsLocalCard(CardModel card) =>
+        card.Owner == SakuraTelemetry.LocalPlayer(BoundRunState);
+
+    internal void CaptureMultiplayerEnd(RunEndedEvent evt)
+    {
+        if (!_captureBalance || _runData is null || BoundRunState.Players.Count <= 1
+            || !SakuraTelemetry.IsSakuraSerializableRun(evt.Run)) return;
+        _runData.Usage = _usage.Snapshot();
+        SakuraTelemetry.PersistRunData(BoundRunState, _runData);
+        SakuraTelemetryTerminalCapture.CapturePlayerRun(evt.Run, _runData,
+            SakuraTelemetry.LocalPlayer(BoundRunState)!.NetId, evt.IsVictory, evt.IsAbandoned,
+            "multiplayer_run_ended");
+    }
 
     internal void RecordRewardChoices(IReadOnlyList<SakuraTelemetryRewardChoice> choices)
     {
@@ -463,7 +511,7 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
 
     private void EmitCoverage(string stage)
     {
-        if (_runData is null || BoundRunState.Players.Count != 1)
+        if (_runData is null)
             return;
 
         SakuraTelemetry.TryExecute(
@@ -476,9 +524,11 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
                     SakuraTelemetryCoverage.BuildCoveragePayload(
                         _runData.RunKey,
                         stage,
-                        BoundRunState.Players.Count,
-                        BoundRunState.Players.Count(static player => SakuraTelemetry.IsSakuraCharacterId(player.Character.Id)),
-                        _coverage));
+                        1, 1, _coverage),
+                    properties: new Dictionary<string, object?>
+                    {
+                        ["report_scope"] = "player", ["party_player_count"] = BoundRunState.Players.Count
+                    });
             },
             exception =>
             {
