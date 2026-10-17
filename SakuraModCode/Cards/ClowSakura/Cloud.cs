@@ -35,7 +35,7 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
     [
         new CalculationBaseVar(5),
         new CalculationExtraVar(5),
-        new CalculatedBlockVar(ValueProp.Move).WithMultiplier(SakuraCloudEffects.WateryHandAndExhaustMultiplier)
+        new CalculatedBlockVar(ValueProp.Move).WithMultiplier(SakuraCloudEffects.WateryHandMultiplier)
     ];
 
     protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -117,13 +117,13 @@ internal static class SakuraCloudEffects
     // The source card is never part of its own count. CardModel.OnPlayWrapper moves the played card
     // into PileType.Play before OnPlay runs, so the resolution count already excludes Cloud while the
     // hand preview would otherwise count it as one of its own Watery cards and overstate the Block.
-    internal static int CountWateryCardsInHandAndExhaust(Player owner, CardModel source) =>
+    internal static int CountWateryCardsInHand(Player owner, CardModel source) =>
         CountWateryCards(
-            CardPile.GetCards(owner, PileType.Hand).Concat(CardPile.GetCards(owner, PileType.Exhaust)),
+            CardPile.GetCards(owner, PileType.Hand),
             source);
 
-    internal static decimal WateryHandAndExhaustMultiplier(CardModel card, Creature? _) =>
-        card.Owner is { } owner ? CountWateryCardsInHandAndExhaust(owner, card) : 0;
+    internal static decimal WateryHandMultiplier(CardModel card, Creature? _) =>
+        card.Owner is { } owner ? CountWateryCardsInHand(owner, card) : 0;
 
     // Deck counts read the run deck, whose cards are cloned into combat and never leave the pile, so
     // the Sakura form's own count is stable between preview and resolution.

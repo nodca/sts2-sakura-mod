@@ -404,6 +404,7 @@ internal static class SpellTurnTransformationVfx
                 var stream = PreloadManager.Cache.GetAsset<AudioStream>(path);
                 player.Stop();
                 player.Stream = stream;
+                player.Bus = "SFX";
                 player.PitchScale = pitchScale;
                 player.Play();
             }

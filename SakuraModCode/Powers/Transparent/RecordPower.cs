@@ -53,6 +53,7 @@ public sealed class RecordPower : SakuraPowerModel
         if (!play.IsLastInSeries
             || play.Card.Owner?.Creature != Owner
             || play.Card is Record
+            || play.Card.Type == CardType.Power
             || play.Card.CombatState is null)
             return Task.CompletedTask;
 

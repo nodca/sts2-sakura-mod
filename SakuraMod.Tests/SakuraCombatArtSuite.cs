@@ -413,6 +413,35 @@ public sealed class SakuraCombatArtSuite
     }
 
     [Fact]
+    public void TransformationCostumeChoiceIsStableAndUsesBothOutfits()
+    {
+        var choices = Enumerable.Range(0, 256)
+            .Select(seed => SakuraCombatVisuals.UseGrayTransformation($"COSTUME{seed}", 76561198000000001UL))
+            .ToArray();
+        Assert.InRange(choices.Count(gray => gray), 96, 160);
+        Assert.Equal(choices, Enumerable.Range(0, 256)
+            .Select(seed => SakuraCombatVisuals.UseGrayTransformation($"COSTUME{seed}", 76561198000000001UL)));
+        Assert.Contains(Enumerable.Range(0, 32), seed =>
+            SakuraCombatVisuals.UseGrayTransformation($"COSTUME{seed}", 76561198000000001UL)
+            != SakuraCombatVisuals.UseGrayTransformation($"COSTUME{seed}", 76561198000000002UL));
+    }
+
+    [Theory]
+    [InlineData(SakuraCombatVisuals.GrayTransformationTextureFile, 980, 1492)]
+    [InlineData(SakuraCombatVisuals.GrayTransformationChibiTextureFile, 1024, 1536)]
+    public void GrayTransformationStandeesHaveMatchingImportedRgbaCanvases(string texture, int width, int height)
+    {
+        var path = RegressionTestHarness.FindRepoFile($"SakuraMod/images/{texture}");
+        var header = File.ReadAllBytes(path).AsSpan(0, 26);
+        Assert.Equal(width, BinaryPrimitives.ReadInt32BigEndian(header[16..20]));
+        Assert.Equal(height, BinaryPrimitives.ReadInt32BigEndian(header[20..24]));
+        Assert.Equal(6, header[25]);
+        var import = File.ReadAllText($"{path}.import");
+        Assert.Contains($"source_file=\"res://SakuraMod/images/{texture}\"", import);
+        Assert.Contains("mipmaps/generate=false", import);
+    }
+
+    [Fact]
     public void PinkTransformationUsesOneTransparentWholeSpriteStandee()
     {
         const string relativePath =

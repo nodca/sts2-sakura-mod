@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using SakuraMod.SakuraModCode.Extensions;
 
@@ -15,6 +16,9 @@ internal static class SakuraCombatVisuals
     internal const string PinkTransformationTextureFile = "charui/outfits/pink_transformation_standee.png";
     internal const string PinkTransformationChibiTextureFile =
         "charui/outfits/pink_transformation_chibi_standee.png";
+    internal const string GrayTransformationTextureFile = "charui/outfits/gray_transformation_standee.png";
+    internal const string GrayTransformationChibiTextureFile =
+        "charui/outfits/gray_transformation_chibi_standee.png";
 
     private const float ChibiScale = 0.28f;
     private static readonly Vector2 ChibiVisualPosition = new(-10.56f, -174.08f);
@@ -55,6 +59,11 @@ internal static class SakuraCombatVisuals
     internal static string PinkTransformationChibiVisualPath =>
         PinkTransformationChibiTextureFile.ImagePath();
 
+    // Derive cosmetics without advancing gameplay RNG; saves and clients share the inputs.
+    internal static bool UseGrayTransformation(string runSeed, ulong playerId) =>
+        (StringHelper.GetDeterministicHashCode(
+            FormattableString.Invariant($"sakura_costume_v1:{runSeed}:{playerId}")) & 1) == 0;
+
     internal static SakuraCombatVisualVariant ResolveVariant(
         bool combatArtFeatureEnabled,
         bool useChibi,
@@ -85,7 +94,8 @@ internal static class SakuraCombatVisuals
         bool useChibi,
         bool hasRedCape,
         bool hasFrogRaincoat,
-        bool hasPinkTransformationCostume = false)
+        bool hasPinkTransformationCostume = false,
+        bool useGrayTransformation = false)
     {
         var variant = ResolveVariant(
             SakuraCombatArtFeature.IsEnabled,
@@ -156,7 +166,7 @@ internal static class SakuraCombatVisuals
         if (variant == SakuraCombatVisualVariant.PinkTransformation)
         {
             return SakuraStandeeVisuals.CreateWithWholeSpriteIdle(
-                PinkTransformationVisualPath,
+                useGrayTransformation ? GrayTransformationTextureFile.ImagePath() : PinkTransformationVisualPath,
                 "Sakura Kinomoto pink transformation costume",
                 PinkTransformationScale,
                 PinkTransformationVisualPosition,
@@ -170,7 +180,7 @@ internal static class SakuraCombatVisuals
         if (variant == SakuraCombatVisualVariant.PinkTransformationChibi)
         {
             return SakuraStandeeVisuals.CreateWithWholeSpriteIdle(
-                PinkTransformationChibiVisualPath,
+                useGrayTransformation ? GrayTransformationChibiTextureFile.ImagePath() : PinkTransformationChibiVisualPath,
                 "Sakura Kinomoto chibi pink transformation costume",
                 PinkTransformationChibiScale,
                 PinkTransformationChibiVisualPosition,

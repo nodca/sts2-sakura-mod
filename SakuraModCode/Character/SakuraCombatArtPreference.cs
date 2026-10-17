@@ -123,7 +123,8 @@ internal static class SakuraPlayerCombatVisualPatch
             SakuraCombatArtPreference.IsChibi(player),
             player.GetRelic<ClassicRedCapeRelic>() is not null,
             player.GetRelic<ClassicFrogRaincoatRelic>() is not null,
-            player.GetRelic<ClassicPinkTransformationCostumeRelic>() is not null);
+            player.GetRelic<ClassicPinkTransformationCostumeRelic>() is not null,
+            SakuraCombatVisuals.UseGrayTransformation(player.RunState.Rng.StringSeed, player.NetId));
         return false;
     }
 

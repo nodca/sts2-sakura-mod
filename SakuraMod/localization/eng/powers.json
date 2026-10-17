@@ -27,7 +27,7 @@
   "SAKURA_MOD_POWER_SAKURA_COST_REDUCTION_POWER.description": "A tracked card costs 1 less this turn.",
   "SAKURA_MOD_POWER_SAKURA_COST_REDUCTION_POWER.smartDescription": "Tracked card costs less.",
   "SAKURA_MOD_POWER_RECORD_POWER.title": "Record",
-  "SAKURA_MOD_POWER_RECORD_POWER.description": "Cards you play later this turn are recorded. At the start of your next turn, add copies of them into your [gold]Hand[/gold].",
+  "SAKURA_MOD_POWER_RECORD_POWER.description": "Record up to 3 non-Power cards you play later this turn. At the start of your next turn, add copies of them into your [gold]Hand[/gold].",
   "SAKURA_MOD_POWER_RECORD_POWER.smartDescription": "{Amount} {Amount:plural:card|cards} recorded. At the start of your next turn, add copies of them into your [gold]Hand[/gold].",
   "SAKURA_MOD_POWER_SAKURA_EXTRA_EFFECT_COUNT_THIS_TURN_POWER.title": "Extra Effect Count",
   "SAKURA_MOD_POWER_SAKURA_EXTRA_EFFECT_COUNT_THIS_TURN_POWER.description": "Extra effects triggered this turn.",

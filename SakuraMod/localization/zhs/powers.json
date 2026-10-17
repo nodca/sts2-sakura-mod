@@ -27,7 +27,7 @@
   "SAKURA_MOD_POWER_SAKURA_COST_REDUCTION_POWER.description": "被记录的牌本回合耗能减少 1。",
   "SAKURA_MOD_POWER_SAKURA_COST_REDUCTION_POWER.smartDescription": "被记录的牌耗能降低。",
   "SAKURA_MOD_POWER_RECORD_POWER.title": "记录",
-  "SAKURA_MOD_POWER_RECORD_POWER.description": "记录你本回合此后打出的牌。在你的下回合开始时，将它们的复制加入你的[gold]手牌[/gold]。",
+  "SAKURA_MOD_POWER_RECORD_POWER.description": "记录你本回合此后打出的至多 3 张非能力牌。在你的下回合开始时，将它们的复制加入你的[gold]手牌[/gold]。",
   "SAKURA_MOD_POWER_RECORD_POWER.smartDescription": "已记录 {Amount} 张牌。在你的下回合开始时，将它们的复制加入你的[gold]手牌[/gold]。",
   "SAKURA_MOD_POWER_SAKURA_EXTRA_EFFECT_COUNT_THIS_TURN_POWER.title": "额外效果计数",
   "SAKURA_MOD_POWER_SAKURA_EXTRA_EFFECT_COUNT_THIS_TURN_POWER.description": "本回合触发过[gold]额外效果[/gold]。",

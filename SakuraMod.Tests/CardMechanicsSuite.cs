@@ -272,11 +272,12 @@ public sealed class CardMechanicsSuite
             RegressionTestHarness.DeclaresMethod<RecordPower>("AfterCardPlayed"),
             powerSource.Contains("MaxRecordedCards", StringComparison.Ordinal),
             powerSource.Contains("play.IsLastInSeries", StringComparison.Ordinal),
+            powerSource.Contains("play.Card.Type == CardType.Power", StringComparison.Ordinal),
             powerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal),
             !powerSource.Contains("AddRememberedCardToHand", StringComparison.Ordinal),
             powerSource.Contains("freeThisTurn", StringComparison.Ordinal),
         };
-        RegressionTestHarness.Require(checks.All(static check => check), "Expected Record to be a 2-cost Exhaust Skill that upgrades to 1 and materializes up to three Forgotten copies before the next hand draw.");
+        RegressionTestHarness.Require(checks.All(static check => check), "Expected Record to be a 2-cost Exhaust Skill that upgrades to 1 and materializes up to three Forgotten copies of non-Power cards before the next hand draw.");
     }
 
     [Fact]
@@ -858,7 +859,7 @@ public sealed class CardMechanicsSuite
         // The card's own Watery element must not feed its own multiplier: the played card sits in the
         // Play pile while OnPlay runs, so a preview that counted it would show one Watery card more
         // Block than the play grants.
-        var handAndExhaust = new List<CardModel>
+        var hand = new List<CardModel>
         {
             clowCloud,
             new ClowWatery(),
@@ -867,8 +868,8 @@ public sealed class CardMechanicsSuite
             new Gale()
         };
         RegressionTestHarness.Require(
-            SakuraCloudEffects.CountWateryCards(handAndExhaust, clowCloud) == 3
-            && SakuraCloudEffects.CountWateryCards(handAndExhaust.Where(card => card != clowCloud).ToList(), clowCloud) == 3,
+            SakuraCloudEffects.CountWateryCards(hand, clowCloud) == 3
+            && SakuraCloudEffects.CountWateryCards(hand.Where(card => card != clowCloud).ToList(), clowCloud) == 3,
             "Expected Clow Cloud to count 3 other Watery cards and to ignore itself in both its hand preview and its play resolution.");
     }
 
