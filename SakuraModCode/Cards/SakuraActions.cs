@@ -487,41 +487,4 @@ public static class SakuraActions
             destinationPile.InvokeCardAddFinished();
     }
 
-    public static bool TryExchangeEnergyCosts(CardModel first, CardModel second, bool restOfCombat)
-    {
-        if (!TryGetExchangeableEnergyCost(first, out var firstCost)
-            || !TryGetExchangeableEnergyCost(second, out var secondCost))
-            return false;
-
-        if (restOfCombat)
-        {
-            first.EnergyCost.SetThisCombat(secondCost);
-            second.EnergyCost.SetThisCombat(firstCost);
-        }
-        else
-        {
-            first.EnergyCost.SetThisTurn(secondCost);
-            second.EnergyCost.SetThisTurn(firstCost);
-        }
-
-        return true;
-    }
-
-    internal static bool HasExchangeableEnergyCost(CardModel card) =>
-        card is not SakuraSourceCard { ShowsEnergyCost: false }
-        && !card.EnergyCost.CostsX
-        && card.EnergyCost.GetWithModifiers(CostModifiers.None) >= 0;
-
-    private static bool TryGetExchangeableEnergyCost(CardModel card, out int cost)
-    {
-        if (!HasExchangeableEnergyCost(card))
-        {
-            cost = 0;
-            return false;
-        }
-
-        cost = card.EnergyCost.GetResolved();
-        return cost >= 0;
-    }
-
 }

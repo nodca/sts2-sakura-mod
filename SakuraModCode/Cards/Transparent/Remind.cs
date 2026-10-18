@@ -1,4 +1,5 @@
 using MegaCrit.Sts2.Core;
+using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Commands;
@@ -33,28 +34,39 @@ public class Remind() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var choices = RecallChoices(SakuraMemoryPile.Get(Owner)?.Cards ?? []);
-        var recallCount = ResolveEnergyXValue();
-        var cards = (recallCount <= 0
-            ? []
-            : choices.Count <= recallCount
+        await RecallIntoHand(Owner, choiceContext, 2 * ResolveEnergyXValue(), upgradeCopies: IsUpgraded);
+
+        if (activation.IsActive)
+            await ApplyExtraEffect(choiceContext);
+    }
+
+    // Shared Remind resolution: choose up to count Memory cards (all of them when
+    // there are not more than count), consume them, and add free remembered copies.
+    internal static async Task<int> RecallIntoHand(
+        Player owner,
+        PlayerChoiceContext choiceContext,
+        int count,
+        bool upgradeCopies)
+    {
+        var choices = RecallChoices(SakuraMemoryPile.Get(owner)?.Cards ?? []);
+        if (count <= 0 || choices.Count == 0)
+            return 0;
+
+        var cards = choices.Count <= count
             ? choices.ToList()
-            : await SakuraActions.SelectUpToFromCards(
-                this,
+            : (await CardSelectCmd.FromSimpleGrid(
                 choiceContext,
                 choices,
-                recallCount,
-                cancelable: false,
-                prompt: SelectionPrompt,
-                minSelect: recallCount)).ToList();
+                owner,
+                new CardSelectorPrefs(SelectionPrompt, count, count) { Cancelable = false })).ToList();
 
-        var copies = await SakuraMemoryPile.Consume(Owner, cards);
+        var copies = await SakuraMemoryPile.Consume(owner, cards);
 
         try
         {
             foreach (var copy in copies)
             {
-                if (IsUpgraded)
+                if (upgradeCopies)
                     CardCmd.Upgrade(copy);
                 await SakuraGeneratedCardLifecycle.AddRememberedCardToHand(
                     copy,
@@ -67,9 +79,11 @@ public class Remind() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
             SakuraGeneratedCardLifecycle.RemoveDetachedGeneratedChoices(copies);
         }
 
-        if (activation.IsActive)
-            await ApplyExtraEffect(choiceContext);
+        return copies.Count;
     }
+
+    internal static bool HasRecallChoices(Player owner) =>
+        RecallChoices(SakuraMemoryPile.Get(owner)?.Cards ?? []).Count > 0;
 
     private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext)
     {

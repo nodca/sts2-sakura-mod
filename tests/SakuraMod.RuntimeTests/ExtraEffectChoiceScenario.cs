@@ -43,6 +43,18 @@ internal static class ExtraEffectChoiceScenario
             FixtureMagicCharge,
             player.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0);
 
+        var memory = SakuraMemoryPile.Get(player)
+            ?? throw new InvalidOperationException("Memory pile is unavailable.");
+        var rememberedSource = await CombatScenarioContext.AddGeneratedCardToHandAsync<Snooze>(combat, player);
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(
+            player,
+            async _ => await SakuraActions.MoveExistingCardToPileWithoutVisuals(
+                null,
+                rememberedSource,
+                SakuraMemoryPile.PileType,
+                CardPilePosition.Bottom)));
+        assertions.Equal("fixture_memory_seeded", 1, memory.Cards.Count);
+
         var choice = await CombatScenarioContext.AddGeneratedCardToHandAsync<Choice>(combat, player);
         var energyBefore = playerCombat.Energy;
         var drawBefore = playerCombat.DrawPile.Cards.Count;
@@ -66,7 +78,12 @@ internal static class ExtraEffectChoiceScenario
             playAction.PlayerChoiceContext is GameActionPlayerChoiceContext);
         assertions.Equal("magic_charge_spent_once_then_regained", 1, magicAfter);
         assertions.Equal("extra_effect_trigger_delta", 1, triggerAfter - triggerBefore);
-        assertions.Equal("choice_draw_count", 2, drawBefore - drawAfter);
+        assertions.Equal("choice_extra_does_not_draw", 0, drawBefore - drawAfter);
+        assertions.Equal("choice_extra_remind_consumed_memory", 0, memory.Cards.Count);
+        assertions.Equal(
+            "choice_extra_remind_copy_in_hand",
+            1,
+            playerCombat.Hand.Cards.Count(card => card is Snooze && !card.IsTemporary()));
         assertions.Equal("choice_extra_manifest_count", 1, manifestedCards.Length);
         assertions.Equal("choice_energy_unchanged", energyBefore, playerCombat.Energy);
         assertions.True("choice_result_pile", playerCombat.DiscardPile.Cards.Contains(choice));
@@ -103,7 +120,7 @@ internal static class ExtraEffectChoiceScenario
         RuntimeTestHost.WriteCheckpoint(
             request,
             "extra_effect_choice_verified",
-            "Choice resolved Extra Manifest plus Draw, stacked next-turn discard after normal draw, and cleared debt across native turns.");
+            "Choice resolved Extra Manifest plus Remind, stacked next-turn discard after normal draw, and cleared debt across native turns.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -114,6 +131,7 @@ internal static class ExtraEffectChoiceScenario
                 setup_mutations = new[]
                 {
                     $"RuntimeFixtureAction -> PowerCmd.Apply<{nameof(ClassicMagicChargePower)}>({FixtureMagicCharge})",
+                    $"Generated {nameof(Snooze)} -> Memory pile",
                     $"Generated {nameof(Choice)} -> hand",
                     "TestCardSelector index 0 -> first Manifest atlas option",
                     "Five generated Strikes -> top of draw pile; apply 1 additional discard debt",

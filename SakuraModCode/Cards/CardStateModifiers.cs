@@ -695,25 +695,6 @@ public static class SakuraCardStates
         }
     }
 
-    public static void ExchangeTemporaryState(this CardModel first, CardModel second)
-    {
-        var firstTemporary = first.IsTemporary();
-        var secondTemporary = second.IsTemporary();
-        if (firstTemporary == secondTemporary)
-            return;
-
-        if (firstTemporary)
-        {
-            first.RemoveTemporaryForExchange();
-            second.MakeTemporary();
-        }
-        else
-        {
-            second.RemoveTemporaryForExchange();
-            first.MakeTemporary();
-        }
-    }
-
     public static void AddReplayThisTurn(this CardModel card, int amount)
     {
         if (amount <= 0)

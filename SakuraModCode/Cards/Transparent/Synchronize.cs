@@ -22,7 +22,7 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Synchronize() : TransparentCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Synchronize() : TransparentCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
 

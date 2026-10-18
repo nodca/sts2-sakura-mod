@@ -21,24 +21,34 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, SakuraKeywords.Manifest];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("ManifestCards", 1), new CardsVar("DrawCards", 2)];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [SakuraMemoryPile.PileId, SakuraCardHoverTips.RemindTipKey];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("ManifestCards", 1), new CardsVar("RemindCards", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         if (activation.IsActive)
         {
             await Manifest(choiceContext, DynamicVars["ManifestCards"].IntValue);
-            await Draw(choiceContext, DynamicVars["DrawCards"].IntValue);
+            await RemindWithDebt(choiceContext, DynamicVars["RemindCards"].IntValue);
+            return;
+        }
+
+        // With an empty Memory pile the Remind branch has nothing to offer, so
+        // Choice resolves its Manifest branch directly.
+        if (!Remind.HasRecallChoices(Owner))
+        {
+            await Manifest(choiceContext, DynamicVars["ManifestCards"].IntValue);
             return;
         }
 
         var manifestChoice = SakuraActions.CloneWithCurrentUpgrade<ChoiceManifestChoice>(this);
-        var drawChoice = SakuraActions.CloneWithCurrentUpgrade<ChoiceDrawChoice>(this);
+        var remindChoice = SakuraActions.CloneWithCurrentUpgrade<ChoiceRemindChoice>(this);
         manifestChoice.DynamicVars["ManifestCards"].BaseValue = DynamicVars["ManifestCards"].IntValue;
-        drawChoice.DynamicVars["DrawCards"].BaseValue = DynamicVars["DrawCards"].IntValue;
-        var choice = await SakuraActions.SelectFromCards(this, choiceContext, [manifestChoice, drawChoice], cancelable: false);
-        if (choice is ChoiceDrawChoice)
-            await Draw(choiceContext, DynamicVars["DrawCards"].IntValue);
+        remindChoice.DynamicVars["RemindCards"].BaseValue = DynamicVars["RemindCards"].IntValue;
+        var choice = await SakuraActions.SelectFromCards(this, choiceContext, [manifestChoice, remindChoice], cancelable: false);
+        if (choice is ChoiceRemindChoice)
+            await RemindWithDebt(choiceContext, DynamicVars["RemindCards"].IntValue);
         else
             await Manifest(choiceContext, DynamicVars["ManifestCards"].IntValue);
     }
@@ -53,15 +63,12 @@ public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
         }
     }
 
-    private async Task Draw(PlayerChoiceContext choiceContext, int amount)
+    private async Task RemindWithDebt(PlayerChoiceContext choiceContext, int amount)
     {
-        await CardPileCmd.Draw(choiceContext, amount, Owner, false);
-        await PowerCmd.Apply<ChoiceDrawDebtPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this);
+        var reminded = await Remind.RecallIntoHand(Owner, choiceContext, amount, upgradeCopies: false);
+        if (reminded > 0 && !IsUpgraded)
+            await PowerCmd.Apply<ChoiceDrawDebtPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this);
     }
 
-    protected override void OnUpgrade()
-    {
-        DynamicVars["ManifestCards"].UpgradeValueBy(1);
-        DynamicVars["DrawCards"].UpgradeValueBy(1);
-    }
+    protected override void OnUpgrade() => DynamicVars["ManifestCards"].UpgradeValueBy(1);
 }

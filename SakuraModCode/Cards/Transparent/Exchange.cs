@@ -22,32 +22,27 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Exchange() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Exchange() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     private static LocString PileSelectionPrompt => CardLoc<Exchange>("selectionPrompt");
 
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
-        [SakuraCardHoverTips.TemporaryTipKey, SakuraMemoryPile.PileId];
+        [SakuraCardHoverTips.TemporaryTipKey, SakuraMemoryPile.PileId, SakuraCardHoverTips.RemindTipKey];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Remind", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var cards = await SakuraActions.SelectHandCards(
-            this,
+        var card = await SakuraActions.SelectHandCard(this, choiceContext, CanBecomeForgotten, cancelable: false);
+        if (card is not null)
+            await SakuraForgotten.GrantTemporary(choiceContext, card);
+
+        await PowerCmd.Apply<ExchangeRecallPower>(
             choiceContext,
-            card => card != this && SakuraActions.HasExchangeableEnergyCost(card),
-            2);
-        if (cards.Count == 2)
-        {
-            var first = cards[0];
-            var second = cards[1];
-            var firstWasTemporary = first.IsTemporary();
-            var secondWasTemporary = second.IsTemporary();
-            var costsExchanged = SakuraActions.TryExchangeEnergyCosts(first, second, restOfCombat: false);
-            first.ExchangeTemporaryState(second);
-            if (costsExchanged)
-                CardStateExchangeVfx.Play(first, second, firstWasTemporary, secondWasTemporary);
-        }
+            Owner.Creature,
+            DynamicVars["Remind"].IntValue,
+            Owner.Creature,
+            this);
 
         if (activation.IsActive)
             await ChooseAndExchangePiles(choiceContext);
@@ -129,7 +124,10 @@ public class Exchange() : TransparentExtraEffectCard(0, CardType.Skill, CardRari
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Memory uses the registered custom pile.")
         };
 
-    protected override void OnUpgrade() => RemoveKeywordIfPresent(CardKeyword.Exhaust);
+    private bool CanBecomeForgotten(CardModel card) =>
+        card != this && !card.IsTemporary() && card is not ISakuraForgottenImmune;
+
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
 internal static class ExchangeRules

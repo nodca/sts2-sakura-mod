@@ -32,7 +32,7 @@ internal static class SakuraOptionCardCatalog
 {
     public static IReadOnlyList<Type> CardTypes { get; } =
     [
-        typeof(ChoiceDrawChoice),
+        typeof(ChoiceRemindChoice),
         typeof(ChoiceManifestChoice),
         typeof(TrueOrFalseDrawChoice),
         typeof(TrueOrFalseEnergyChoice),
@@ -52,10 +52,12 @@ public class ChoiceManifestChoice() : SakuraOptionCard(CardType.Skill)
     protected override void OnUpgrade() => DynamicVars["ManifestCards"].UpgradeValueBy(1);
 }
 
-public class ChoiceDrawChoice() : SakuraOptionCard(CardType.Skill)
+public class ChoiceRemindChoice() : SakuraOptionCard(CardType.Skill)
 {
-    public override string EnglishName => "DRAW";
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("DrawCards", 2)];
+    public override string EnglishName => "REMIND";
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
+        [SakuraMemoryPile.PileId, SakuraCardHoverTips.RemindTipKey];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("RemindCards", 1)];
 }
 
 public class TrueOrFalseDrawChoice() : SakuraOptionCard(CardType.Skill)

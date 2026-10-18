@@ -554,26 +554,21 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void ExchangeConnectsDistinctLightweightVisualsForBothEffects()
+    public void ExchangeConnectsLightweightPileExchangeVisual()
     {
         var exchangeSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Exchange.cs"));
-        var cardExchangeVfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/CardStateExchangeVfx.cs"));
         var pileExchangeVfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/PileExchangeVfx.cs"));
 
         RegressionTestHarness.Require(
-            exchangeSource.Contains("CardStateExchangeVfx.Play(first, second", StringComparison.Ordinal)
-            && exchangeSource.Contains("SakuraActions.SelectUpToFromCards(", StringComparison.Ordinal)
+            exchangeSource.Contains("SakuraActions.SelectUpToFromCards(", StringComparison.Ordinal)
             && exchangeSource.Contains("PileExchangeVfx.Play(", StringComparison.Ordinal),
-            "Expected Exchange to use native four-region selection and distinct card-state/pile exchange visuals.");
+            "Expected Exchange to use native four-region selection and the pile exchange visual.");
         RegressionTestHarness.Require(
-            cardExchangeVfx.Contains("TestMode.IsOn", StringComparison.Ordinal)
-            && pileExchangeVfx.Contains("TestMode.IsOn", StringComparison.Ordinal)
-            && !cardExchangeVfx.Contains("IsCardVfxEnabled", StringComparison.Ordinal)
+            pileExchangeVfx.Contains("TestMode.IsOn", StringComparison.Ordinal)
             && !pileExchangeVfx.Contains("IsCardVfxEnabled", StringComparison.Ordinal),
-            "Expected both lightweight Exchange visuals to skip tests without depending on the optional card-VFX setting.");
+            "Expected the lightweight Exchange visual to skip tests without depending on the optional card-VFX setting.");
     }
 
     [Fact]
@@ -1239,22 +1234,18 @@ public sealed class CardMechanicsSuite
             && SakuraActions.ElementSetOf(new Gravitation()) == SakuraElementSet.Earth,
             "Expected Transparent Card elements to map into Classic element identities.");
 
-        RegressionTestHarness.Require(
-            SakuraActions.HasExchangeableEnergyCost(new Gale())
-            && SakuraActions.HasExchangeableEnergyCost(new SpellSeal())
-            && !SakuraActions.HasExchangeableEnergyCost(new Remind())
-            && !SakuraActions.HasExchangeableEnergyCost(new SpellHuoShen())
-            && !SakuraActions.HasExchangeableEnergyCost(new MegaCrit.Sts2.Core.Models.Cards.Clumsy()),
-            "Expected Exchange to accept only cards with displayed, fixed Energy costs.");
-
         var exchange = new Exchange();
         var upgradedExchange = RegressionTestHarness.MutableForCostTest(new Exchange());
         upgradedExchange.UpgradeInternal();
         RegressionTestHarness.Require(
-            exchange.EnergyCost.Canonical == 0
-            && exchange.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && !upgradedExchange.Keywords.Contains(CardKeyword.Exhaust),
-            "Expected Exchange to cost 0 and Exhaust, with the upgrade removing Exhaust.");
+            exchange.EnergyCost.Canonical == 1
+            && upgradedExchange.EnergyCost.GetWithModifiers(CostModifiers.None) == 0
+            && !exchange.CanonicalKeywords.Contains(CardKeyword.Exhaust)
+            && exchange.DynamicVars["Remind"].IntValue == 1
+            && SakuraCardHoverTips.StaticTipKeys(exchange).Contains(SakuraCardHoverTips.RemindTipKey)
+            && new ExchangeRecallPower().StackType == PowerStackType.Counter
+            && RegressionTestHarness.DeclaresMethod<ExchangeRecallPower>("AfterPlayerTurnStart"),
+            "Expected Exchange to cost 1 (0 upgraded) without Exhaust and schedule a stacking next-turn Remind 1.");
 
         RegressionTestHarness.Require(
             Synchronize.CanSynchronize(new Synchronize(), new Gale())
@@ -2228,17 +2219,19 @@ public sealed class CardMechanicsSuite
             choice.EnergyCost.Canonical == 0
             && choice.Rarity == CardRarity.Uncommon
             && choice.DynamicVars["ManifestCards"].IntValue == 1
-            && choice.DynamicVars["DrawCards"].IntValue == 2
+            && choice.DynamicVars["RemindCards"].IntValue == 1
             && upgradedChoice.DynamicVars["ManifestCards"].IntValue == 2
-            && upgradedChoice.DynamicVars["DrawCards"].IntValue == 3
+            && upgradedChoice.DynamicVars["RemindCards"].IntValue == 1
             && choiceSource.Contains("if (activation.IsActive)", StringComparison.Ordinal)
             && choiceSource.Contains("BaseValue", StringComparison.Ordinal)
             && choiceSource.Contains("Manifest(choiceContext", StringComparison.Ordinal)
-            && choiceSource.Contains("Draw(choiceContext", StringComparison.Ordinal)
+            && choiceSource.Contains("RemindWithDebt(choiceContext", StringComparison.Ordinal)
+            && choiceSource.Contains("reminded > 0 && !IsUpgraded", StringComparison.Ordinal)
+            && choiceSource.Contains("Remind.HasRecallChoices(Owner)", StringComparison.Ordinal)
             && choiceSource.Contains("SetThisCombat", StringComparison.Ordinal)
             && appearSource.Contains("SetThisCombat(0, reduceOnly: true)", StringComparison.Ordinal)
             && appearSource.Contains("upgraded: IsUpgraded", StringComparison.Ordinal),
-            "Expected Choice to upgrade both branches, execute both during Extra, and keep manifested cards at their combat cost reductions; Appear should use the same combat-wide Extra cost state.");
+            "Expected Choice to offer Manifest or Remind (Remind only when Memory has cards, with next-turn discard debt removed on upgrade), execute both during Extra, and keep manifested cards at their combat cost reductions; Appear should use the same combat-wide Extra cost state.");
     }
 
     [Fact]

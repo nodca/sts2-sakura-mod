@@ -7,7 +7,7 @@ public sealed class SakuraOptionCardRegistrationSuite
 {
     private static readonly IReadOnlyList<Type> ExpectedOptionCardTypes =
     [
-        typeof(ChoiceDrawChoice),
+        typeof(ChoiceRemindChoice),
         typeof(ChoiceManifestChoice),
         typeof(TrueOrFalseDrawChoice),
         typeof(TrueOrFalseEnergyChoice),
@@ -21,7 +21,7 @@ public sealed class SakuraOptionCardRegistrationSuite
         new Dictionary<Type, string>
         {
             [typeof(ChoiceManifestChoice)] = "MANIFEST",
-            [typeof(ChoiceDrawChoice)] = "DRAW",
+            [typeof(ChoiceRemindChoice)] = "REMIND",
             [typeof(TrueOrFalseDrawChoice)] = "FALSE",
             [typeof(TrueOrFalseEnergyChoice)] = "TRUE",
             [typeof(ExchangeMemoryChoice)] = "MEMORY",

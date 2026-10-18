@@ -352,7 +352,7 @@ public sealed class CardVisualContractSuite
             && SakuraCardVisualFamilies.ContentOwner(new Gale()) == SakuraCardContentOwner.Sakura
             && SakuraCardVisualFamilies.ContentOwner(new AnotherMe()) == SakuraCardContentOwner.Sakura
             && SakuraCardVisualFamilies.ContentOwner(new GrowingMagic()) == SakuraCardContentOwner.Sakura
-            && SakuraCardVisualFamilies.ContentOwner(new ChoiceDrawChoice()) == SakuraCardContentOwner.Sakura
+            && SakuraCardVisualFamilies.ContentOwner(new ChoiceRemindChoice()) == SakuraCardContentOwner.Sakura
             && SakuraCardVisualFamilies.ContentOwner(new MegaCrit.Sts2.Core.Models.Cards.Bash()) == SakuraCardContentOwner.Vanilla,
             "Expected Sakura content ownership to remain independent from the selected full-card layout.");
     }

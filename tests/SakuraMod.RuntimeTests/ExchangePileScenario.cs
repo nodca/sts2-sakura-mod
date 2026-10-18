@@ -84,21 +84,18 @@ internal static class ExchangePileScenario
         var temporaryBefore = memoryBefore
             .Concat(drawBefore)
             .ToDictionary(static card => card, static card => card.IsTemporary());
-        var firstCostBefore = firstHandCard.EnergyCost.GetWithModifiers(CostModifiers.Local);
-        var secondCostBefore = secondHandCard.EnergyCost.GetWithModifiers(CostModifiers.Local);
         var triggerBefore = SakuraActions.ExtraEffectTriggerCountThisTurn(player);
 
         var exchange = await CombatScenarioContext.AddGeneratedCardToHandAsync<Exchange>(combat, player);
         var handChoices = playerCombat.Hand.Cards
-            .Where(card => card != exchange && SakuraActions.HasExchangeableEnergyCost(card))
+            .Where(card => card != exchange && !card.IsTemporary())
             .ToList();
-        var firstIndex = handChoices.IndexOf(firstHandCard);
-        var secondIndex = handChoices.IndexOf(secondHandCard);
-        if (firstIndex < 0 || secondIndex < 0)
-            throw new InvalidOperationException("Exchange fixture cards were not available to the hand selector.");
+        var forgetIndex = handChoices.IndexOf(secondHandCard);
+        if (forgetIndex < 0 || handChoices.Contains(firstHandCard))
+            throw new InvalidOperationException("Exchange fixture cards were not filtered correctly for the hand selector.");
 
         var selector = new TestCardSelector();
-        selector.PrepareToSelect([firstIndex, secondIndex]);
+        selector.PrepareToSelect([forgetIndex]);
         selector.PrepareToSelect([0, 2]);
         using (CardSelectCmd.UseSelector(selector))
         {
@@ -120,21 +117,17 @@ internal static class ExchangePileScenario
         assertions.True(
             "all_exchanged_card_identities_remain_in_combat",
             temporaryBefore.Keys.All(combat.ContainsCard));
+        assertions.True("base_effect_already_forgotten_card_unchanged", firstHandCard.IsTemporary());
+        assertions.True("base_effect_selected_card_forgotten", secondHandCard.IsTemporary());
         assertions.Equal(
-            "base_effect_first_cost_exchanged",
-            secondCostBefore,
-            firstHandCard.EnergyCost.GetWithModifiers(CostModifiers.Local));
-        assertions.Equal(
-            "base_effect_second_cost_exchanged",
-            firstCostBefore,
-            secondHandCard.EnergyCost.GetWithModifiers(CostModifiers.Local));
-        assertions.Equal("base_effect_first_forgotten_removed", false, firstHandCard.IsTemporary());
-        assertions.True("base_effect_second_forgotten_added", secondHandCard.IsTemporary());
+            "base_effect_next_turn_remind_scheduled",
+            1,
+            player.Creature.GetPower<ExchangeRecallPower>()?.Amount ?? 0);
         assertions.Equal(
             "extra_effect_trigger_delta",
             1,
             SakuraActions.ExtraEffectTriggerCountThisTurn(player) - triggerBefore);
-        assertions.True("exchange_result_pile", playerCombat.ExhaustPile.Cards.Contains(exchange));
+        assertions.True("exchange_result_pile", playerCombat.DiscardPile.Cards.Contains(exchange));
         assertions.Equal("selector_released", null, CardSelectCmd.Selector);
         assertions.Equal(
             "draw_ui_count_synchronized_after_exchange",
@@ -231,15 +224,14 @@ internal static class ExchangePileScenario
             ["before"] = new
             {
                 memory_count = memoryBefore.Length,
-                draw_count = drawBefore.Length,
-                first_hand_cost = firstCostBefore,
-                second_hand_cost = secondCostBefore
+                draw_count = drawBefore.Length
             },
             ["after"] = new
             {
                 memory_count = memory.Cards.Count,
                 draw_count = playerCombat.DrawPile.Cards.Count,
                 forgotten_state = forgottenInMemory.IsTemporary(),
+                selected_hand_card_forgotten = secondHandCard.IsTemporary(),
                 result_pile = exchange.Pile?.Type
             }
         };
