@@ -91,7 +91,12 @@ internal static class LabyrinthFieldScenario
         var secondEarth = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowMaze>(combat, player);
         assertions.Equal("first_earth_discount_preview", 1, firstEarth.EnergyCost.GetWithModifiers(CostModifiers.All));
         var energyBeforeEarth = player.PlayerCombatState.Energy;
+        var discard = CardPile.Get(PileType.Discard, player)
+            ?? throw new InvalidOperationException("Combat discard pile is missing.");
+        var dazedBeforeEarth = discard.Cards.OfType<Dazed>().Count();
         await CombatScenarioContext.PlayCardAsync(firstEarth);
+        assertions.Equal("maze_adds_one_dazed_to_discard", dazedBeforeEarth + 1,
+            discard.Cards.OfType<Dazed>().Count());
         assertions.Equal("first_earth_discount_paid", energyBeforeEarth - 1, player.PlayerCombatState.Energy);
         assertions.True("played_card_normally_enters_discard", firstEarth.Pile?.Type == PileType.Discard);
         assertions.Equal("second_earth_full_cost", 2, secondEarth.EnergyCost.GetWithModifiers(CostModifiers.All));

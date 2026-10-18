@@ -117,6 +117,7 @@ internal static class SakuraContentRegistration
             .Concat(SakuraOptionCardCatalog.CardTypes)
             .Append(typeof(MicroLight))
             .Append(typeof(Balance))
+            .Append(typeof(Glare))
             .Distinct();
 
     internal static IEnumerable<Type> ClearLayoutOnlyCardTypes =>

@@ -2160,7 +2160,7 @@ public sealed class CardMechanicsSuite
             && clowWood.DynamicVars["ThornsPower"].IntValue == 2
             && clowWood.DynamicVars["PoisonPower"].IntValue == 1
             && upgradedClowWood.DynamicVars["ThornsPower"].IntValue == 4
-            && upgradedClowWood.DynamicVars["PoisonPower"].IntValue == 1
+            && upgradedClowWood.DynamicVars["PoisonPower"].IntValue == 2
             && !SakuraCardModel.HasMagicChargeExtraEffect(clowWood)
             && sakuraWood.Type == CardType.Power
             && sakuraWood.TargetType == TargetType.None

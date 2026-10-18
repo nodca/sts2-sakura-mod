@@ -121,7 +121,7 @@
   "SAKURA_MOD_CARD_SAKURA_ILLUSION.description": "[gold]Sakura Card[/gold] [gold]Windy[/gold]\nApply {WeakPower:diff()} [gold]Weak[/gold] and {VulnerablePower:diff()} [gold]Vulnerable[/gold].",
   "SAKURA_MOD_CARD_CLOW_MIST.title": "Mist",
   "SAKURA_MOD_CARD_CLOW_MIST.description": "[gold]Earthy[/gold]\nApply {PoisonPower:diff()} [gold]Poison[/gold] to ALL enemies.",
-  "SAKURA_MOD_CARD_CLOW_MIST.extraDescription": "[gold]Extra:[/gold] First remove all enemy [gold]defensive effects[/gold].",
+  "SAKURA_MOD_CARD_CLOW_MIST.extraDescription": "[gold]Extra:[/gold] Apply {ExtraPoison:diff()} additional [gold]Poison[/gold] to ALL enemies.",
   "SAKURA_MOD_CARD_SAKURA_MIST.title": "Mist",
   "SAKURA_MOD_CARD_SAKURA_MIST.description": "[gold]Sakura Card[/gold] [gold]Earthy[/gold]\nRemove all enemy [gold]Block[/gold].\nAt the start of your turn, apply {NoxiousFumesPower:diff()} [gold]Poison[/gold] to ALL enemies.",
   "SAKURA_MOD_CARD_CLOW_RAIN.title": "Rain",
@@ -222,7 +222,7 @@
   "SAKURA_MOD_CARD_SAKURA_POWER.title": "Power",
   "SAKURA_MOD_CARD_SAKURA_POWER.description": "[gold]Sakura Card[/gold] [gold]Fiery[/gold]\nGain {StrengthPower:diff()} [gold]Strength[/gold].",
   "SAKURA_MOD_CARD_CLOW_MAZE.title": "Maze",
-  "SAKURA_MOD_CARD_CLOW_MAZE.description": "[gold]Earthy[/gold]\nGain {Block:diff()} [gold]Block[/gold].",
+  "SAKURA_MOD_CARD_CLOW_MAZE.description": "[gold]Earthy[/gold]\nGain {Block:diff()} [gold]Block[/gold].\nAdd {Cards:diff()} [gold]Dazed[/gold] to your discard pile.",
   "SAKURA_MOD_CARD_CLOW_MAZE.extraDescription": "[gold]Extra:[/gold] Gain 14 additional [gold]Block[/gold].",
   "SAKURA_MOD_CARD_SAKURA_MAZE.title": "Maze",
   "SAKURA_MOD_CARD_SAKURA_MAZE.description": "[gold]Sakura Card[/gold] [gold]Earthy[/gold]\nGain {Block:diff()} [gold]Block[/gold] {Magic:diff()} times.",
@@ -377,5 +377,7 @@
   "SAKURA_MOD_CARD_MICRO_LIGHT.title": "Micro Light",
   "SAKURA_MOD_CARD_MICRO_LIGHT.description": "Reduce the Dark's [gold]Darkness[/gold] by {DarknessPower:diff()} (minimum 1).\nCannot gain [red]Forgotten[/red].",
   "SAKURA_MOD_CARD_BALANCE.title": "Balance",
-  "SAKURA_MOD_CARD_BALANCE.description": "Move both Libra pans 1 point toward 5.\n[gold]Exhaust[/gold]."
+  "SAKURA_MOD_CARD_BALANCE.description": "Move both Libra pans 1 point toward 5.\n[gold]Exhaust[/gold].",
+  "SAKURA_MOD_CARD_GLARE.title": "Glare",
+  "SAKURA_MOD_CARD_GLARE.description": "[gold]Exhaust[/gold]."
 }

@@ -12,7 +12,9 @@ using SakuraMod.SakuraModCode.FourthAct.Visuals;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Fire.Powers;
+using SakuraMod.SakuraModCode.Cards;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using SakuraMod.SakuraModCode.Character;
@@ -76,7 +78,7 @@ public sealed class LibraPanMonster : FireMonsterBase
     public override string? CustomVisualsPath => LibraEnemyAssets.Moon;
     internal override Color StandeeAccent => IsLeftPan ? new Color(0.82f, 0.88f, 1f) : base.StandeeAccent;
     protected override IEnumerable<string> MonsterAssetPaths =>
-        [.. LibraEnemyAssets.All, Fire.Visuals.LibraVisualController.VignetteShaderPath];
+        [.. LibraEnemyAssets.All, Fire.Visuals.LibraVisualController.VignetteShaderPath, Fire.Visuals.LibraHaloVisual.ShaderPath];
 
     protected override NCreatureVisuals? CreateStandee()
     {
@@ -126,25 +128,33 @@ public sealed class FireyMonster : FireMonsterBase
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
         var breath = new MoveState("FLAME_BREATH", Breath, new MultiAttackIntent(FireEnemyRules.FlameBreath, FlameBreathHits), new StatusIntent(FlameBreathHits));
-        var arson = new MoveState("ARSON", Arson, new StatusIntent(ArsonBurns));
-        var kindle = new MoveState("KINDLE", Kindle, new BuffIntent());
+        var arson = new MoveState("ARSON", Arson, new SingleAttackIntent(FireEnemyRules.ArsonAttack), new StatusIntent(ArsonBurns));
+        var kindle = new MoveState("KINDLE", Kindle, new SingleAttackIntent(FireEnemyRules.KindleAttack), new BuffIntent());
         var ball = new MoveState("FIREBALL", Ball, new SingleAttackIntent(() => FireEnemyRules.FireballDamage(
             FourthActCombatRules.PreviewPlayer(CombatState) is { } player ? CountBurns(player) : 0)));
         breath.FollowUpState = arson; arson.FollowUpState = kindle; kindle.FollowUpState = ball; ball.FollowUpState = breath;
         return new MonsterMoveStateMachine([breath, arson, kindle, ball], breath);
     }
-    private async Task Breath(IReadOnlyList<Creature> _) { _isAttacking = true; try { await AttackAsync(DamageCmd.Attack(FireEnemyRules.FlameBreath).FromMonster(this).WithHitCount(FlameBreathHits)); } finally { _isAttacking = false; } }
-    private Task Arson(IReadOnlyList<Creature> _) => PerformAsync(async () => { foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive)) for (var i = 0; i < ArsonBurns; i++) await CardPileCmd.AddGeneratedCardToCombat(CombatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Burn>(player), PileType.Discard, player, CardPilePosition.Random); }, LivingPlayers());
-    private Task Kindle(IReadOnlyList<Creature> _) => PerformAsync(() => { foreach (var player in CombatState.Players) foreach (var burn in CardPile.GetCards(player, PileType.Draw, PileType.Hand, PileType.Discard).OfType<MegaCrit.Sts2.Core.Models.Cards.Burn>()) burn.DynamicVars.Damage.BaseValue++; return Task.CompletedTask; }, LivingPlayers());
-    private async Task Ball(IReadOnlyList<Creature> _) { _isAttacking = true; try { foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive)) { var burns = CountBurns(player); await AttackAsync(DamageCmd.Attack(FireEnemyRules.FireballDamage(burns)).FromMonster(this).TargetingFiltered([player.Creature]), FireballTier(burns), player.Creature); } } finally { _isAttacking = false; } }
+    private Task Breath(IReadOnlyList<Creature> _) => WithBurningHits(() => AttackAsync(DamageCmd.Attack(FireEnemyRules.FlameBreath).FromMonster(this).WithHitCount(FlameBreathHits)));
+    private async Task Arson(IReadOnlyList<Creature> _)
+    {
+        await WithBurningHits(() => AttackAsync(DamageCmd.Attack(FireEnemyRules.ArsonAttack).FromMonster(this)));
+        foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive)) for (var i = 0; i < ArsonBurns; i++) await CardPileCmd.AddGeneratedCardToCombat(CombatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Burn>(player), PileType.Discard, player, CardPilePosition.Random);
+    }
+    // Strike first so the Burn this hit adds is kindled too.
+    private async Task Kindle(IReadOnlyList<Creature> _)
+    {
+        await WithBurningHits(() => AttackAsync(DamageCmd.Attack(FireEnemyRules.KindleAttack).FromMonster(this)));
+        foreach (var player in CombatState.Players) foreach (var burn in CardPile.GetCards(player, PileType.Draw, PileType.Hand, PileType.Discard).OfType<MegaCrit.Sts2.Core.Models.Cards.Burn>()) burn.DynamicVars.Damage.BaseValue++;
+    }
+    // Unblocked hits from any of Firey's attacks shuffle a Burn into the target's discard pile.
+    private async Task WithBurningHits(Func<Task> attack) { _isAttacking = true; try { await attack(); } finally { _isAttacking = false; } }
+    private async Task Ball(IReadOnlyList<Creature> _) { foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive)) { var burns = CountBurns(player); await WithBurningHits(() => AttackAsync(DamageCmd.Attack(FireEnemyRules.FireballDamage(burns)).FromMonster(this).TargetingFiltered([player.Creature]), FireballTier(burns), player.Creature)); } }
     public override async Task AfterDamageReceived(PlayerChoiceContext context, Creature target, DamageResult result, MegaCrit.Sts2.Core.ValueProps.ValueProp props, Creature? dealer, CardModel? cardSource)
     {
         if (_isAttacking && dealer == Creature && target.Player is { } player && result.UnblockedDamage > 0)
             await CardPileCmd.AddGeneratedCardToCombat(CombatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Burn>(player), PileType.Discard, player);
     }
-
-    private IEnumerable<Creature> LivingPlayers() =>
-        CombatState.Players.Select(static player => player.Creature).Where(static creature => creature.IsAlive).ToList();
 
     // Presentation only: the blast grows at 3 and 6 Burns.
     private static int FireballTier(int burns) => burns >= 6 ? 2 : burns >= 3 ? 1 : 0;
@@ -166,25 +176,38 @@ public sealed class LightMonster : FireMonsterBase
     public override async Task AfterAddedToRoom() { await base.AfterAddedToRoom(); var context = new ThrowingPlayerChoiceContext(); await PowerCmd.Apply<LightSovereigntyPower>(context, Creature, 1, Creature, null, true); await PowerCmd.Apply<LightBattlePower>(context, Creature, 1, Creature, null, true); }
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
-        var radiance = new MoveState("RADIANCE", Hit, new SingleAttackIntent(FireEnemyRules.Radiance));
-        var blessing = new MoveState("BENEDICTION", Bless, new SingleAttackIntent(FireEnemyRules.Benediction), new HealIntent());
+        var radiance = new MoveState("RADIANCE", Hit, new SingleAttackIntent(FireEnemyRules.Radiance), new StatusIntent(FireEnemyRules.GlarePerMove));
+        var blessing = new MoveState("BENEDICTION", Bless, new SingleAttackIntent(FireEnemyRules.Benediction), new StatusIntent(FireEnemyRules.GlarePerMove), new HealIntent());
         var judgment = new MoveState("JUDGMENT", Judge, new SingleAttackIntent(() => FireEnemyRules.JudgmentDamage(
             FourthActCombatRules.PreviewPlayer(CombatState) is { } player ? CardPile.GetCards(player, PileType.Hand).Count() : 0,
             IsEmpowered)));
         radiance.FollowUpState = blessing; blessing.FollowUpState = judgment; judgment.FollowUpState = radiance;
         return new MonsterMoveStateMachine([radiance, blessing, judgment], radiance);
     }
-    private Task Hit(IReadOnlyList<Creature> _) => AttackAsync(DamageCmd.Attack(FireEnemyRules.Radiance).FromMonster(this));
+    private async Task Hit(IReadOnlyList<Creature> _)
+    {
+        await AttackAsync(DamageCmd.Attack(FireEnemyRules.Radiance).FromMonster(this));
+        await AddGlare();
+    }
+
+    // Glare is retained under Light's trial, so every unpaid copy swells the next Judgment.
+    private async Task AddGlare()
+    {
+        foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive))
+            for (var i = 0; i < FireEnemyRules.GlarePerMove; i++)
+                await SakuraGeneratedCardLifecycle.AddGeneratedCardToHand(CombatState.CreateCard<Glare>(player));
+    }
 
     // Presentation only: the beam widens at 4 and 8 cards in hand.
     private static int JudgmentTier(int hand) => hand >= 8 ? 2 : hand >= 4 ? 1 : 0;
     private async Task Bless(IReadOnlyList<Creature> _)
     {
         await AttackAsync(DamageCmd.Attack(FireEnemyRules.Benediction).FromMonster(this));
+        await AddGlare();
         await PerformAsync(FourthActMovePresentationCatalog.BenedictionHeal, async () =>
         {
             foreach (var power in Creature.Powers.Where(p => p.TypeForCurrentAmount == PowerType.Debuff).ToList()) await PowerCmd.Remove(power);
-            await CreatureCmd.Heal(Creature, IsEmpowered ? 25 : 15);
+            await CreatureCmd.Heal(Creature, IsEmpowered ? FireEnemyRules.EmpoweredBenedictionHeal : FireEnemyRules.BenedictionHeal);
         }, [Creature]);
     }
     private async Task Judge(IReadOnlyList<Creature> _)

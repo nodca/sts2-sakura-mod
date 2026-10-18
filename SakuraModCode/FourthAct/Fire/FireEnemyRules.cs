@@ -4,8 +4,9 @@ public static class FireEnemyRules
 {
     public const int SwordHp = 240, SwordToughHp = 255, SwordSlash = 12, SwordDoubleCut = 7, SwordBlockBonus = 5;
     public const int LibraPanHp = 140, LibraToughPanHp = 150, LibraAttack = 15, LibraBlock = 8, LibraAttackBonus = 6;
-    public const int FireyHp = 440, FireyToughHp = 465, FlameBreath = 8, Fireball = 18, FireballPerBurn = 4;
+    public const int FireyHp = 440, FireyToughHp = 465, FlameBreath = 8, ArsonAttack = 10, KindleAttack = 12, Fireball = 18, FireballPerBurn = 4;
     public const int LightHp = 520, LightToughHp = 545, Radiance = 20, Benediction = 16, JudgmentBase = 12, JudgmentPerCard = 3, EmpoweredJudgmentPerCard = 4;
+    public const int BenedictionHeal = 12, EmpoweredBenedictionHeal = 20, GlarePerMove = 1;
     public static bool IsLightEmpowered(int currentHp, int maxHp) => currentHp <= maxHp * 0.6m;
     public static int JudgmentDamage(int handSize, bool empowered) => JudgmentBase + Math.Max(0, handSize) * (empowered ? EmpoweredJudgmentPerCard : JudgmentPerCard);
     public static int FireballDamage(int burns) => Fireball + Math.Max(0, burns) * FireballPerBurn;

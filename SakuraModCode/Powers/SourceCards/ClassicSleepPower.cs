@@ -41,7 +41,7 @@ public class ClassicSleepPower : SakuraPowerModel
 
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature target, DamageResult result, ValueProp props, Creature? dealer, CardModel? cardSource)
     {
-        if (target == Owner && result.UnblockedDamage > 0)
+        if (target == Owner && result.UnblockedDamage > 0 && props.IsPoweredAttack())
             await PowerCmd.Remove(this);
     }
 

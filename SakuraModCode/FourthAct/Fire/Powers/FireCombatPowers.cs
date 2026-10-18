@@ -118,6 +118,7 @@ public sealed class LibraPendulumPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
     public override int DisplayAmount => Owner.SlotName == "LEFT" ? Left : Right;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Left", 5), new DynamicVar("Right", 5)];
     internal event Action<LibraPresentationEvent>? PresentationChanged;
 
     public override Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
@@ -242,7 +243,14 @@ public sealed class LibraPendulumPower : SakuraPowerModel
         foreach (var player in combatState.Players.Where(p => p.Creature.IsAlive))
             await CreatureCmd.Kill(player.Creature, true);
     }
-    private void Set(int left, int right) { Left = Math.Clamp(left, 0, 10); Right = Math.Clamp(right, 0, 10); InvokeDisplayAmountChanged(); }
+    private void Set(int left, int right)
+    {
+        Left = Math.Clamp(left, 0, 10);
+        Right = Math.Clamp(right, 0, 10);
+        DynamicVars["Left"].BaseValue = Left;
+        DynamicVars["Right"].BaseValue = Right;
+        InvokeDisplayAmountChanged();
+    }
     private void Notify(
         LibraPresentationCause cause,
         int oldLeft,

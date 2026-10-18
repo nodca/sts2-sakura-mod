@@ -121,7 +121,7 @@
   "SAKURA_MOD_CARD_SAKURA_ILLUSION.description": "[gold]小樱牌[/gold] [gold]风[/gold]\n给予 {WeakPower:diff()} 层[gold]虚弱[/gold]和 {VulnerablePower:diff()} 层[gold]易伤[/gold]。",
   "SAKURA_MOD_CARD_CLOW_MIST.title": "雾",
   "SAKURA_MOD_CARD_CLOW_MIST.description": "[gold]地[/gold]\n给予所有敌人 {PoisonPower:diff()} 层[gold]中毒[/gold]。",
-  "SAKURA_MOD_CARD_CLOW_MIST.extraDescription": "[gold]额外效果：[/gold]先移除所有敌人的[gold]防护效果[/gold]。",
+  "SAKURA_MOD_CARD_CLOW_MIST.extraDescription": "[gold]额外效果：[/gold]额外给予所有敌人 {ExtraPoison:diff()} 层[gold]中毒[/gold]。",
   "SAKURA_MOD_CARD_SAKURA_MIST.title": "雾",
   "SAKURA_MOD_CARD_SAKURA_MIST.description": "[gold]小樱牌[/gold] [gold]地[/gold]\n移除所有敌人的[gold]格挡[/gold]。\n在你的回合开始时，给予所有敌人 {NoxiousFumesPower:diff()} 层[gold]中毒[/gold]。",
   "SAKURA_MOD_CARD_CLOW_RAIN.title": "雨",
@@ -222,7 +222,7 @@
   "SAKURA_MOD_CARD_SAKURA_POWER.title": "力",
   "SAKURA_MOD_CARD_SAKURA_POWER.description": "[gold]小樱牌[/gold] [gold]火[/gold]\n获得 {StrengthPower:diff()} 层[gold]力量[/gold]。",
   "SAKURA_MOD_CARD_CLOW_MAZE.title": "迷",
-  "SAKURA_MOD_CARD_CLOW_MAZE.description": "[gold]地[/gold]\n获得 {Block:diff()} 点[gold]格挡[/gold]。",
+  "SAKURA_MOD_CARD_CLOW_MAZE.description": "[gold]地[/gold]\n获得 {Block:diff()} 点[gold]格挡[/gold]。\n将 {Cards:diff()} 张[gold]晕眩[/gold]放入你的弃牌堆。",
   "SAKURA_MOD_CARD_CLOW_MAZE.extraDescription": "[gold]额外效果：[/gold]额外获得 14 点[gold]格挡[/gold]。",
   "SAKURA_MOD_CARD_SAKURA_MAZE.title": "迷",
   "SAKURA_MOD_CARD_SAKURA_MAZE.description": "[gold]小樱牌[/gold] [gold]地[/gold]\n获得 {Block:diff()} 点[gold]格挡[/gold] {Magic:diff()} 次。",
@@ -377,5 +377,7 @@
   "SAKURA_MOD_CARD_MICRO_LIGHT.title": "微光",
   "SAKURA_MOD_CARD_MICRO_LIGHT.description": "使「暗」的[gold]暗度[/gold]降低 {DarknessPower:diff()}（最低为 1）。\n无法获得[red]遗忘[/red]。",
   "SAKURA_MOD_CARD_BALANCE.title": "平衡",
-  "SAKURA_MOD_CARD_BALANCE.description": "使秤的两盘各向 5 点移动 1 点。\n[gold]消耗[/gold]。"
+  "SAKURA_MOD_CARD_BALANCE.description": "使秤的两盘各向 5 点移动 1 点。\n[gold]消耗[/gold]。",
+  "SAKURA_MOD_CARD_GLARE.title": "灼目",
+  "SAKURA_MOD_CARD_GLARE.description": "[gold]消耗[/gold]。"
 }

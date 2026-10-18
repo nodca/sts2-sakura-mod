@@ -15,9 +15,11 @@ public sealed class FourthActIntentAccuracySuite
     public static TheoryData<MonsterModel, string, Type[]> MoveIntents => new()
     {
         { new FireyMonster(), "FLAME_BREATH", [typeof(MultiAttackIntent), typeof(StatusIntent)] },
-        { new FireyMonster(), "ARSON", [typeof(StatusIntent)] },
+        { new FireyMonster(), "ARSON", [typeof(SingleAttackIntent), typeof(StatusIntent)] },
+        { new FireyMonster(), "KINDLE", [typeof(SingleAttackIntent), typeof(BuffIntent)] },
         { new FireyMonster(), "FIREBALL", [typeof(SingleAttackIntent)] },
-        { new LightMonster(), "BENEDICTION", [typeof(SingleAttackIntent), typeof(HealIntent)] },
+        { new LightMonster(), "RADIANCE", [typeof(SingleAttackIntent), typeof(StatusIntent)] },
+        { new LightMonster(), "BENEDICTION", [typeof(SingleAttackIntent), typeof(StatusIntent), typeof(HealIntent)] },
         { new LightMonster(), "JUDGMENT", [typeof(SingleAttackIntent)] },
         { new FreezeMonster(), "HEAVY_STRIKE", [typeof(MultiAttackIntent), typeof(DebuffIntent)] },
         { new FreezeMonster(), "HEAVY_STRIKE_SECOND", [typeof(MultiAttackIntent), typeof(DebuffIntent)] },

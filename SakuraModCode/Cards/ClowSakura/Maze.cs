@@ -31,10 +31,18 @@ public class ClowMaze() : ClowExtraEffectCard(2, CardType.Skill, CardRarity.Comm
 
     public override bool GainsBlock => true;
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceBlockVar(16, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceBlockVar(17, ValueProp.Move), new CardsVar(1)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
         await GainBlock(play, ReleasedBlock());
+        for (var i = 0; i < DynamicVars.Cards.IntValue; i++)
+        {
+            var dazed = CombatState!.CreateCard<Dazed>(Owner);
+            CardCmd.PreviewCardPileAdd(await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombatWithResult(
+                dazed, PileType.Discard, Owner, CardPilePosition.Bottom));
+        }
+    }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -42,7 +50,7 @@ public class ClowMaze() : ClowExtraEffectCard(2, CardType.Skill, CardRarity.Comm
         await GainBlock(play, ExtraBlock);
     }
 
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(6);
+    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(4);
 }
 
 public class SakuraMaze() : SakuraFormCard(1, CardType.Skill, TargetType.None)

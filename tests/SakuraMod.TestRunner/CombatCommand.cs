@@ -11,6 +11,7 @@ public static class CombatCommand
         "starter-run",
         "clow-shield-singleplayer",
         "clow-mist-slippery",
+        "sleep-wake",
         "clow-fly-airborne",
         "extra-effect-choice",
         "extra-effect-play",

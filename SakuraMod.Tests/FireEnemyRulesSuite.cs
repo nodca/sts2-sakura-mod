@@ -5,6 +5,8 @@ using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Encounters;
 using SakuraMod.SakuraModCode.FourthAct.Fire.Encounters;
 using SakuraMod.SakuraModCode.FourthAct.Fire.Models;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Cards;
+using MegaCrit.Sts2.Core.Entities.Cards;
 
 public sealed class FireEnemyRulesSuite
 {
@@ -22,6 +24,17 @@ public sealed class FireEnemyRulesSuite
     [InlineData(10, true, 52)]
     public void JudgmentUsesResolutionHandSize(int handSize, bool empowered, int expected) =>
         Assert.Equal(expected, FireEnemyRules.JudgmentDamage(handSize, empowered));
+
+    [Fact]
+    public void GlareIsANonEtherealExhaustStatusShownWithTheClearLayout()
+    {
+        var card = new Glare();
+        Assert.Equal(CardType.Status, card.Type);
+        Assert.Equal([CardKeyword.Exhaust], card.CanonicalKeywords);
+        Assert.DoesNotContain(CardKeyword.Ethereal, card.CanonicalKeywords);
+        Assert.Contains(typeof(Glare), SakuraContentRegistration.AllCardTypesForRegistration());
+        Assert.Contains(typeof(Glare), SakuraContentRegistration.ClearLayoutOnlyCardTypes);
+    }
 
     [Theory]
     [InlineData(312, 520, true)]
@@ -58,12 +71,12 @@ public sealed class FireEnemyRulesSuite
     }
 
     [Theory]
-    [InlineData(0, 300f, 0.85f, 560f)]
-    [InlineData(5, 300f, 0.85f, 680f)]
-    [InlineData(10, 300f, 0.85f, 800f)]
-    [InlineData(0, 706f, 0.62f, 560f)]
-    [InlineData(5, 706f, 0.62f, 680f)]
-    [InlineData(10, 706f, 0.62f, 761.14f)]
+    [InlineData(0, 300f, 0.85f, 510f)]
+    [InlineData(5, 300f, 0.85f, 630f)]
+    [InlineData(10, 300f, 0.85f, 750f)]
+    [InlineData(0, 706f, 0.62f, 510f)]
+    [InlineData(5, 706f, 0.62f, 630f)]
+    [InlineData(10, 706f, 0.62f, 711.14f)]
     public void LibraPanCentersUseTheSafeVisibleInterval(
         int points,
         float height,
@@ -79,13 +92,13 @@ public sealed class FireEnemyRulesSuite
     }
 
     [Fact]
-    public void LibraUsesThreeTrimmedRgbaRuntimeAssets()
+    public void LibraUsesThreeRgbaRuntimeAssetsWithPaddedPans()
     {
         var expected = new[]
         {
             (LibraEnemyAssets.Central, 626, 535),
-            (LibraEnemyAssets.Moon, 300, 300),
-            (LibraEnemyAssets.Sun, 544, 706)
+            (LibraEnemyAssets.Moon, 300 + LibraEnemyAssets.PanGlowPadding * 2, 300 + LibraEnemyAssets.PanGlowPadding * 2),
+            (LibraEnemyAssets.Sun, 544 + LibraEnemyAssets.PanGlowPadding * 2, 706 + LibraEnemyAssets.PanGlowPadding * 2)
         };
 
         Assert.Equal(expected.Select(static item => item.Item1), LibraEnemyAssets.All);

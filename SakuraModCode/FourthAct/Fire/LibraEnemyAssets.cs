@@ -6,13 +6,16 @@ public static class LibraEnemyAssets
 {
     private const string Root = "monsters/fourth_act/libra";
 
-    public const float CentralScale = 0.76f;
+    public const float CentralScale = 0.52f;
     public const float MoonScale = 0.85f;
     public const float SunScale = 0.62f;
     public const float MoonWidth = 300f;
     public const float MoonHeight = 300f;
     public const float SunWidth = 544f;
     public const float SunHeight = 706f;
+    // Transparent margin baked around the Pan art so the standee shader's outer glow fades out
+    // before the texture edge instead of being clipped into a visible rectangle.
+    public const int PanGlowPadding = 64;
 
     public static string Central => $"{Root}/central.png".ImagePath();
     public static string Moon => $"{Root}/moon.png".ImagePath();
@@ -23,10 +26,10 @@ public static class LibraEnemyAssets
 
 internal static class LibraVisualLayout
 {
-    internal const float NeutralPanCenterY = 680f;
+    internal const float NeutralPanCenterY = 630f;
     internal const float IdealStep = 24f;
-    internal const float SafeTop = 330f;
-    internal const float SafeBottom = 980f;
+    internal const float SafeTop = 280f;
+    internal const float SafeBottom = 930f;
     internal const float PanVisualCenterOffsetY = -40f;
 
     internal static float PanCenterY(int points, float scaledVisibleHeight)

@@ -297,6 +297,8 @@ internal static class SakuraCombatFacingPotionPatch
     {
         if (target is null || potion.Owner?.Creature is not { } player)
             return;
+        if (target.Side == player.Side)
+            return;
         if (!SakuraStarterCompatibility.IsKinomotoSakura(potion.Owner))
             return;
 

@@ -18,23 +18,22 @@ internal sealed partial class LibraVisualController : Node2D
 
     private const int BindFrameLimit = 180;
     private const float CentralX = 960f;
-    private const float CentralY = 220f;
-    private const float BeamHalfSpan = 737f;
-    private const float BeamYOffset = 40f;
+    private const float CentralY = 180f;
+    // Beam root in central.png texels: just under the crest's lower wing layer.
+    private const float BeamRootTexels = 32f;
     private const float VoteDuration = 0.24f;
     private const float ImbalanceDuration = 0.14f;
     private const float RecenterDuration = 0.30f;
     private static readonly Color Gold = new("e8b94f");
-    private static readonly Color HighlightGold = new("fff2b0");
-    private static readonly Color ShadowGold = new("9c6f24");
-    private static readonly Color RubyRed = new("d82845");
-    private static readonly Color RubyDark = new("580f18");
-    private static readonly Color RubyGlint = new("ffb0be");
     private static readonly Color Warning = new("ff765e");
     private static readonly Color LineOutline = new("533724");
     private static readonly ConditionalWeakTable<Creature, LibraVisualController> Sessions = new();
 
     private Sprite2D? _central;
+    private LibraDialVisual? _dial;
+    private LibraBeamVisual? _beam;
+    private LibraHaloVisual? _leftHalo;
+    private LibraHaloVisual? _rightHalo;
     private Line2D? _leftOutline;
     private Line2D? _leftCore;
     private Line2D? _rightOutline;
@@ -130,7 +129,20 @@ internal sealed partial class LibraVisualController : Node2D
                 Scale = Vector2.One * LibraEnemyAssets.CentralScale,
                 ZIndex = 1
             };
-            _central.AddChild(CreateCrossbeam());
+            var unscale = Vector2.One / LibraEnemyAssets.CentralScale;
+            _beam = new LibraBeamVisual
+            {
+                Position = new Vector2(0f, BeamRootTexels),
+                Scale = unscale,
+                ShowBehindParent = true
+            };
+            _dial = new LibraDialVisual(LibraEnemyAssets.CentralScale)
+            {
+                Position = LibraDialVisual.RingCenterTexels,
+                Scale = unscale
+            };
+            _central.AddChild(_beam);
+            _central.AddChild(_dial);
             (_leftOutline, _leftCore) = CreateSuspensionLine("LeftSuspension");
             (_rightOutline, _rightCore) = CreateSuspensionLine("RightSuspension");
             AddChild(_leftOutline);
@@ -166,7 +178,11 @@ internal sealed partial class LibraVisualController : Node2D
             ApplyIdle(_left, Mathf.Sin(time * 1.45f) * Mathf.DegToRad(1.5f));
             ApplyIdle(_right, -Mathf.Sin(time * 1.45f) * Mathf.DegToRad(1.5f));
         }
+        _beam?.Sway(time);
         RefreshLines(time);
+        var tension = _extreme ? 1f : _critical ? 0.55f + Mathf.Sin(time * 8f) * 0.25f : 0f;
+        _dial?.SetTension(tension);
+        _beam?.SetTension(_criticalSide, tension);
         UpdateVignette((float)delta, time);
     }
 
@@ -232,6 +248,8 @@ internal sealed partial class LibraVisualController : Node2D
         }
 
         _bound = true;
+        _leftHalo = AttachHalo(_left, moon: true);
+        _rightHalo = AttachHalo(_right, moon: false);
         Register(_left.Entity);
         Register(_right.Entity);
         _leftPower.PresentationChanged += OnPresentationChanged;
@@ -241,6 +259,20 @@ internal sealed partial class LibraVisualController : Node2D
         CombatManager.Instance.CombatEnded += OnCombatEnded;
         SnapToCurrentState();
         UpdatePlayerFacing("RIGHT");
+    }
+
+    // Behind the Pan's body, under its creature visuals, so the halo rides every swing.
+    private static LibraHaloVisual? AttachHalo(NCreature pan, bool moon)
+    {
+        var size = moon
+            ? LibraEnemyAssets.MoonWidth * LibraEnemyAssets.MoonScale * 1.9f
+            : LibraEnemyAssets.SunHeight * LibraEnemyAssets.SunScale * 1.35f;
+        if (LibraHaloVisual.TryCreate(moon, size) is not { } halo)
+            return null;
+        halo.Position = pan.Body.Position;
+        pan.Visuals.AddChild(halo);
+        pan.Visuals.MoveChild(halo, 0);
+        return halo;
     }
 
     private static void UpdatePlayerFacing(string? side)
@@ -387,6 +419,19 @@ internal sealed partial class LibraVisualController : Node2D
                 duration);
         if (_central is not null)
             _motionTween.TweenProperty(_central, "rotation", CentralRotation(left, right), duration);
+        SetPointReadouts(left, right);
+        if (_dial is not null)
+        {
+            var dial = _dial;
+            var (fromMoon, fromSun) = dial.Markers;
+            _motionTween.TweenMethod(
+                Callable.From<float>(t => dial.SetMarkers(
+                    Mathf.Lerp(fromMoon, 10 - left, t),
+                    Mathf.Lerp(fromSun, right, t))),
+                0f,
+                1f,
+                duration);
+        }
         await AwaitTweenAsync(_motionTween);
         if (generation != _presentationGeneration)
             return;
@@ -478,7 +523,16 @@ internal sealed partial class LibraVisualController : Node2D
             _central.Position = new Vector2(CentralX, CentralY);
             _central.Rotation = CentralRotation(left, right);
         }
+        SetPointReadouts(left, right);
+        _dial?.SetPoints(left, right);
         RefreshLines(Time.GetTicksMsec() * 0.001f);
+    }
+
+    private void SetPointReadouts(int left, int right)
+    {
+        _beam?.SetPoints(left, right);
+        _leftHalo?.SetPoints(left);
+        _rightHalo?.SetPoints(right);
     }
 
     private float CurrentCentralRotation()
@@ -505,6 +559,12 @@ internal sealed partial class LibraVisualController : Node2D
     {
         SetLineVisible("LEFT", _left?.Entity.IsAlive == true);
         SetLineVisible("RIGHT", _right?.Entity.IsAlive == true);
+        _beam?.SetPendantVisible(left: true, _left?.Entity.IsAlive == true);
+        _beam?.SetPendantVisible(left: false, _right?.Entity.IsAlive == true);
+        if (_left?.Entity.IsAlive != true)
+            _leftHalo?.FadeOut();
+        if (_right?.Entity.IsAlive != true)
+            _rightHalo?.FadeOut();
     }
 
     private void RefreshLines(float time)
@@ -540,7 +600,9 @@ internal sealed partial class LibraVisualController : Node2D
     {
         if (pan is null || outline is null || core is null || !pan.Entity.IsAlive)
             return;
-        var beamTipGlobal = _central!.ToGlobal(new Vector2(left ? -BeamHalfSpan : BeamHalfSpan, BeamYOffset));
+        if (_beam is null)
+            return;
+        var beamTipGlobal = _beam.LineAnchorGlobal(left);
         var halfHeight = (left ? LibraEnemyAssets.MoonHeight : LibraEnemyAssets.SunHeight) * 0.5f;
         var panAnchorGlobal = pan.Body.ToGlobal(new Vector2(left ? -5f : 91f, -halfHeight));
         var points = new[] { ToLocal(beamTipGlobal), ToLocal(panAnchorGlobal) };
@@ -571,177 +633,6 @@ internal sealed partial class LibraVisualController : Node2D
             ZIndex = 0
         };
         return (outline, core);
-    }
-
-    private static Node2D CreateCrossbeam() =>
-        new CrossbeamVisual
-        {
-            Name = "Crossbeam",
-            ShowBehindParent = true,
-            ZIndex = 0
-        };
-
-    private sealed partial class CrossbeamVisual : Node2D
-    {
-        public override void _Draw()
-        {
-            // 1. Lower filigree arches and vertical struts
-            foreach (var side in new[] { -1f, 1f })
-            {
-                DrawArmDecorations(side);
-            }
-
-            // 2. Main horizontal crossbeam
-            var leftEnd = new Vector2(-BeamHalfSpan, BeamYOffset);
-            var rightEnd = new Vector2(BeamHalfSpan, BeamYOffset);
-            DrawLine(leftEnd, rightEnd, LineOutline, 13f, antialiased: true);
-            DrawLine(new Vector2(-BeamHalfSpan + 3f, BeamYOffset + 2.5f), new Vector2(BeamHalfSpan - 3f, BeamYOffset + 2.5f), ShadowGold, 2.5f, antialiased: true);
-            DrawLine(new Vector2(-BeamHalfSpan + 2f, BeamYOffset), new Vector2(BeamHalfSpan - 2f, BeamYOffset), Gold, 8f, antialiased: true);
-            DrawLine(new Vector2(-BeamHalfSpan + 4f, BeamYOffset - 2.5f), new Vector2(BeamHalfSpan - 4f, BeamYOffset - 2.5f), HighlightGold, 2.2f, antialiased: true);
-
-            // 3. Structural cuffs and ruby medallions on both arms
-            foreach (var side in new[] { -1f, 1f })
-            {
-                // Segment collars / cuffs
-                DrawCuff(new Vector2(side * 290f, BeamYOffset));
-                DrawCuff(new Vector2(side * 590f, BeamYOffset));
-
-                // Midpoint Clow ruby star medallion
-                DrawRubyStarMedallion(new Vector2(side * 440f, BeamYOffset));
-
-                // Terminal eyelet, spire crown and support flourish
-                DrawTerminalFlourish(side);
-            }
-        }
-
-        private void DrawArmDecorations(float side)
-        {
-            const int Steps = 16;
-            var archPoints = new Vector2[Steps + 1];
-            for (var i = 0; i <= Steps; i++)
-            {
-                var t = (float)i / Steps;
-                var x = side * Mathf.Lerp(160f, 715f, t);
-                var y = BeamYOffset + 4f + 26f * Mathf.Sin(t * Mathf.Pi);
-                archPoints[i] = new Vector2(x, y);
-            }
-
-            // Draw lower arch
-            DrawPolyline(archPoints, LineOutline, 7f, antialiased: true);
-            DrawPolyline(archPoints, Gold, 4f, antialiased: true);
-            DrawPolyline(archPoints, HighlightGold, 1.5f, antialiased: true);
-
-            // Spindles connecting beam to arch
-            var spindleT = new[] { 0.16f, 0.32f, 0.50f, 0.68f, 0.84f };
-            foreach (var t in spindleT)
-            {
-                var x = side * Mathf.Lerp(160f, 715f, t);
-                var archY = BeamYOffset + 4f + 26f * Mathf.Sin(t * Mathf.Pi);
-                var top = new Vector2(x, BeamYOffset + 4f);
-                var bot = new Vector2(x, archY - 1f);
-
-                DrawLine(top, bot, LineOutline, 5f, antialiased: true);
-                DrawLine(top, bot, Gold, 2.5f, antialiased: true);
-
-                // Central spindle bead
-                var mid = (top + bot) * 0.5f;
-                DrawCircle(mid, 4f, LineOutline);
-                DrawCircle(mid, 2.5f, Gold);
-                DrawCircle(mid + new Vector2(-0.8f, -0.8f), 1f, HighlightGold);
-            }
-
-            // Inner filigree scroll bracket near the central crest
-            var innerScrollBase = new Vector2(side * 175f, BeamYOffset + 6f);
-            var innerScrollMid = new Vector2(side * 210f, BeamYOffset + 24f);
-            var innerScrollTip = new Vector2(side * 230f, BeamYOffset + 14f);
-            DrawPolyline([innerScrollBase, innerScrollMid, innerScrollTip], LineOutline, 5f, antialiased: true);
-            DrawPolyline([innerScrollBase, innerScrollMid, innerScrollTip], Gold, 2.5f, antialiased: true);
-            DrawCircle(innerScrollTip, 4.5f, LineOutline);
-            DrawCircle(innerScrollTip, 2.8f, Gold);
-        }
-
-        private void DrawCuff(Vector2 pos)
-        {
-            var rectOutline = new Rect2(pos.X - 5f, pos.Y - 9f, 10f, 18f);
-            var rectGold = new Rect2(pos.X - 3.5f, pos.Y - 7.5f, 7f, 15f);
-            DrawRect(rectOutline, LineOutline, filled: true);
-            DrawRect(rectGold, Gold, filled: true);
-            DrawLine(new Vector2(pos.X - 1.5f, pos.Y - 6f), new Vector2(pos.X - 1.5f, pos.Y + 6f), HighlightGold, 1.5f);
-        }
-
-        private void DrawRubyStarMedallion(Vector2 center)
-        {
-            // 4-pointed star petal
-            Vector2[] starOutline =
-            [
-                new(center.X, center.Y - 20f),
-                new(center.X + 6f, center.Y - 6f),
-                new(center.X + 20f, center.Y),
-                new(center.X + 6f, center.Y + 6f),
-                new(center.X, center.Y + 20f),
-                new(center.X - 6f, center.Y + 6f),
-                new(center.X - 20f, center.Y),
-                new(center.X - 6f, center.Y - 6f)
-            ];
-            Vector2[] starCore =
-            [
-                new(center.X, center.Y - 17f),
-                new(center.X + 4.5f, center.Y - 4.5f),
-                new(center.X + 17f, center.Y),
-                new(center.X + 4.5f, center.Y + 4.5f),
-                new(center.X, center.Y + 17f),
-                new(center.X - 4.5f, center.Y + 4.5f),
-                new(center.X - 17f, center.Y),
-                new(center.X - 4.5f, center.Y - 4.5f)
-            ];
-            DrawColoredPolygon(starOutline, LineOutline);
-            DrawColoredPolygon(starCore, Gold);
-
-            // Center ruby gem
-            DrawCircle(center, 8f, LineOutline);
-            DrawCircle(center, 6.5f, Gold);
-            DrawCircle(center, 5f, RubyDark);
-            DrawCircle(center, 3.8f, RubyRed);
-            DrawCircle(center + new Vector2(-1.2f, -1.2f), 1.2f, RubyGlint);
-        }
-
-        private void DrawTerminalFlourish(float side)
-        {
-            var eyeletPos = new Vector2(side * BeamHalfSpan, BeamYOffset);
-
-            // Upper spire crown
-            Vector2[] crownOutline =
-            [
-                new(eyeletPos.X, eyeletPos.Y - 22f),
-                new(eyeletPos.X + 6f, eyeletPos.Y - 10f),
-                new(eyeletPos.X, eyeletPos.Y - 8f),
-                new(eyeletPos.X - 6f, eyeletPos.Y - 10f)
-            ];
-            Vector2[] crownGold =
-            [
-                new(eyeletPos.X, eyeletPos.Y - 19f),
-                new(eyeletPos.X + 4f, eyeletPos.Y - 10f),
-                new(eyeletPos.X, eyeletPos.Y - 8.5f),
-                new(eyeletPos.X - 4f, eyeletPos.Y - 10f)
-            ];
-            DrawColoredPolygon(crownOutline, LineOutline);
-            DrawColoredPolygon(crownGold, Gold);
-            DrawLine(new Vector2(eyeletPos.X, eyeletPos.Y - 19f), new Vector2(eyeletPos.X, eyeletPos.Y - 9f), HighlightGold, 1.5f);
-
-            // Lower support bracket curving from arch into eyelet
-            var bracketBase = new Vector2(side * (BeamHalfSpan - 24f), BeamYOffset + 4f);
-            var bracketDrop = new Vector2(side * (BeamHalfSpan - 10f), BeamYOffset + 18f);
-            var bracketEnd = new Vector2(eyeletPos.X, BeamYOffset + 14f);
-            DrawPolyline([bracketBase, bracketDrop, bracketEnd], LineOutline, 5f, antialiased: true);
-            DrawPolyline([bracketBase, bracketDrop, bracketEnd], Gold, 2.5f, antialiased: true);
-
-            // Forged Eyelet Ring
-            DrawCircle(eyeletPos, 13f, LineOutline);
-            DrawCircle(eyeletPos, 9.5f, Gold);
-            DrawArc(eyeletPos, 9.5f, -Mathf.Pi * 0.75f, -Mathf.Pi * 0.25f, 8, HighlightGold, 1.8f, antialiased: true);
-            DrawCircle(eyeletPos, 5f, LineOutline);
-            DrawCircle(eyeletPos, 3f, new Color("362217"));
-        }
     }
 
     private static void ApplyIdle(NCreature? pan, float rotation)

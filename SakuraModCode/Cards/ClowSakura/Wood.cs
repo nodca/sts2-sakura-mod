@@ -44,7 +44,11 @@ public class ClowWood() : ClowCard(1, CardType.Power, CardRarity.Uncommon, Targe
         await ApplyPower<ClassicWoodPower>(choiceContext, Owner.Creature, DynamicVars["PoisonPower"].IntValue);
     }
 
-    protected override void OnUpgrade() => DynamicVars["ThornsPower"].UpgradeValueBy(2);
+    protected override void OnUpgrade()
+    {
+        DynamicVars["ThornsPower"].UpgradeValueBy(2);
+        DynamicVars["PoisonPower"].UpgradeValueBy(1);
+    }
 }
 
 public class SakuraWood() : SakuraFormCard(1, CardType.Power, TargetType.None)

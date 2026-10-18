@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Powers;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
@@ -115,6 +116,9 @@ internal static class SakuraSourceCardText
                     tips.Add(HoverTipFactory.FromCard(generatedCard));
             }
         }
+
+        if (card is ClowMaze)
+            tips.Add(HoverTipFactory.FromCard<Dazed>());
 
         if (ReferencesThroughTip(card))
             tips.Add(HoverTipFactory.FromPower<ClassicThroughPower>());
