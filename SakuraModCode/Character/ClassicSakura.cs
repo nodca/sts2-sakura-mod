@@ -92,6 +92,7 @@ public class ClassicSakura : ModCharacterTemplate<ClassicSakuraCardPool, Classic
         ClassicCardEnergyIcon.SakuraTextPath,
         .. SakuraGlowVisual.AssetPaths,
         .. FreezeShellVisual.AssetPaths,
+        .. SakuraForgottenOverlay.AssetPaths,
         .. SakuraElementStateVisuals.AssetPaths
     ];
 

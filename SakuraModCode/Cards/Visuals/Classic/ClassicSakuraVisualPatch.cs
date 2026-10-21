@@ -154,6 +154,8 @@ internal static class ClassicCardTextLayoutPolicy
 
 internal static class ClassicCardLayout
 {
+    internal const string FaceNodeName = "ClassicSakuraFace";
+
     private static readonly ClassicCardLayoutSpec Spec = new();
 
     private static readonly string[] HiddenCardNodeFieldNames =
@@ -860,7 +862,7 @@ internal static class ClassicCardLayout
 
             _face = new TextureRect
             {
-                Name = "ClassicSakuraFace",
+                Name = FaceNodeName,
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
 

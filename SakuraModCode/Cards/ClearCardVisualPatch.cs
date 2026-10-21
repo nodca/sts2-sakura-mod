@@ -21,6 +21,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 internal static class ClearCardLayout
 {
+    internal const string ArtNodeName = "SakuraClearCardArt";
+
     private static readonly ClearCardLayoutSpec Spec = new();
     private static readonly string[] HiddenCardNodeFieldNames =
     [
@@ -626,7 +628,7 @@ internal static class ClearCardLayout
 
             _art = new TextureRect
             {
-                Name = "SakuraClearCardArt",
+                Name = ArtNodeName,
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
 

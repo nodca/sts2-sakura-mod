@@ -665,56 +665,39 @@ public sealed class CardVisualContractSuite
     }
 
     [Fact]
-    public void HandHighlightPolicyKeepsForgottenStateAndGatesExtraEffectsByPlayability()
+    public void HandHighlightPolicyGatesExtraEffectsByPlayabilityAndLeavesForgottenToOverlay()
     {
         RegressionTestHarness.Require(
             SakuraHandHighlightPolicy.Select(
                 new ClowSword(),
                 isPlayable: true,
-                extraEffectActive: true,
-                isTemporary: false) == SakuraHandHighlightKind.ExtraEffect
+                extraEffectActive: true) == SakuraHandHighlightKind.ExtraEffect
             && SakuraHandHighlightPolicy.Select(
                 new Gale(),
                 isPlayable: true,
-                extraEffectActive: true,
-                isTemporary: false) == SakuraHandHighlightKind.ExtraEffect,
+                extraEffectActive: true) == SakuraHandHighlightKind.ExtraEffect,
             "Expected active Clow and Transparent Extra Effects to select the gold hand highlight.");
-
-        RegressionTestHarness.Require(
-            SakuraHandHighlightPolicy.Select(
-                new Gale(),
-                isPlayable: true,
-                extraEffectActive: true,
-                isTemporary: true) == SakuraHandHighlightKind.Temporary
-            && SakuraHandHighlightPolicy.Select(
-                new Gale(),
-                isPlayable: false,
-                extraEffectActive: false,
-                isTemporary: true) == SakuraHandHighlightKind.Temporary
-            && SakuraHandHighlightPolicy.Select(
-                new Gale(),
-                isPlayable: false,
-                extraEffectActive: true,
-                isTemporary: true) == SakuraHandHighlightKind.Temporary,
-            "Expected Forgotten Transparent Cards to stay red regardless of Extra Effect activation or playability.");
 
         RegressionTestHarness.Require(
             SakuraHandHighlightPolicy.Select(
                 new SakuraSword(),
                 isPlayable: true,
-                extraEffectActive: true,
-                isTemporary: false) == SakuraHandHighlightKind.None
+                extraEffectActive: true) == SakuraHandHighlightKind.None
             && SakuraHandHighlightPolicy.Select(
                 new ClowSword(),
                 isPlayable: false,
-                extraEffectActive: true,
-                isTemporary: false) == SakuraHandHighlightKind.None
+                extraEffectActive: true) == SakuraHandHighlightKind.None
             && SakuraHandHighlightPolicy.Select(
                 new Gale(),
                 isPlayable: true,
-                extraEffectActive: false,
-                isTemporary: false) == SakuraHandHighlightKind.None,
+                extraEffectActive: false) == SakuraHandHighlightKind.None,
             "Expected Sakura-form, unplayable, and inactive Extra Effect cards to keep the native highlight color.");
+
+        var source = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraHandHighlightVisual.cs"));
+        RegressionTestHarness.Require(
+            !source.Contains("IsTemporary", StringComparison.Ordinal),
+            "Expected Forgotten to be shown by the card overlay, not by a hand highlight color that hides playability.");
     }
 
     [Fact]
@@ -726,6 +709,143 @@ public sealed class CardVisualContractSuite
             source.Contains("model.CanPlay(),", StringComparison.Ordinal)
             && !source.Contains("hasNativePlayableHighlight || hasOwnedHighlight", StringComparison.Ordinal),
             "Expected the gold Extra Effect highlight to use CardModel.CanPlay() even after a prior Sakura-owned color was applied.");
+    }
+
+    [Fact]
+    public void ForgottenOverlayShowsOnlyForForgottenHandCards()
+    {
+        RegressionTestHarness.Require(
+            SakuraForgottenOverlayPolicy.ShouldShow(isTemporary: true, isInHand: true)
+            && !SakuraForgottenOverlayPolicy.ShouldShow(isTemporary: false, isInHand: true)
+            && !SakuraForgottenOverlayPolicy.ShouldShow(isTemporary: true, isInHand: false),
+            "Expected the Forgotten overlay only on Forgotten cards that are in the hand.");
+    }
+
+    [Fact]
+    public void ForgottenOverlayLayoutMatchesModAfflictionOverlayWrapperWithMoteMargin()
+    {
+        foreach (var (layout, size, root) in new[]
+                 {
+                     (SakuraCardVisualLayout.None, SakuraCardGeometry.VanillaLayoutSize, Vector2.Zero),
+                     (SakuraCardVisualLayout.Clear, SakuraCardGeometry.ClearLayoutSize, SakuraCardGeometry.ClearLayoutSize * 0.5f),
+                     (SakuraCardVisualLayout.Classic, SakuraCardGeometry.ClassicLayoutSize, SakuraCardGeometry.ClassicLayoutSize * 0.5f)
+                 })
+        {
+            var (rootPosition, frame, topMargin) = SakuraForgottenOverlayPolicy.Layout(layout);
+            var margin = size.Y * SakuraForgottenOverlayPolicy.MoteMarginFraction;
+            RegressionTestHarness.Require(
+                rootPosition == root
+                && frame.Position.IsEqualApprox(new Vector2(size.X * -0.5f, size.Y * -0.5f - margin))
+                && frame.End.IsEqualApprox(size * 0.5f)
+                && Mathf.IsEqualApprox(topMargin, margin / (size.Y + margin)),
+                $"Expected the {layout} overlay to cover the face exactly and extend above it only by the mote margin.");
+        }
+    }
+
+    [Fact]
+    public void ForgottenOverlayFadesOnlyTheCardArt()
+    {
+        RegressionTestHarness.Require(
+            Mathf.IsEqualApprox(SakuraForgottenOverlayPolicy.ArtAlpha(reveal: 0f, boost: 1f), 1f)
+            && Mathf.IsEqualApprox(SakuraForgottenOverlayPolicy.ArtAlpha(reveal: 1f, boost: 0f), SakuraForgottenOverlayPolicy.FadedArtAlpha)
+            && Mathf.IsEqualApprox(SakuraForgottenOverlayPolicy.ArtAlpha(reveal: 1f, boost: 1f), SakuraForgottenOverlayPolicy.PulseArtAlpha)
+            && SakuraForgottenOverlayPolicy.PulseArtAlpha < SakuraForgottenOverlayPolicy.FadedArtAlpha,
+            "Expected Forgotten art to be opaque while hidden, translucent when shown, and fainter during the end-turn pulse.");
+
+        RegressionTestHarness.Require(
+            SakuraForgottenOverlayPolicy.ArtNodeName(SakuraCardVisualLayout.Classic) == ClassicCardLayout.FaceNodeName
+            && SakuraForgottenOverlayPolicy.ArtNodeName(SakuraCardVisualLayout.Clear) == ClearCardLayout.ArtNodeName
+            && SakuraForgottenOverlayPolicy.ArtNodeName(SakuraCardVisualLayout.None) is null,
+            "Expected Sakura faces to fade their single art node and vanilla cards to fall back to the native portrait group.");
+
+        var classic = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/Visuals/Classic/ClassicSakuraVisualPatch.cs"));
+        var clear = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/ClearCardVisualPatch.cs"));
+        var overlay = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraForgottenOverlay.cs"));
+        RegressionTestHarness.Require(
+            classic.Contains("Name = FaceNodeName,", StringComparison.Ordinal)
+            && clear.Contains("Name = ArtNodeName,", StringComparison.Ordinal)
+            && overlay.Contains("\"_portraitCanvasGroup\"", StringComparison.Ordinal)
+            && overlay.Contains("SelfModulate", StringComparison.Ordinal),
+            "Expected the renderers to name their art nodes through the shared constants the Forgotten overlay resolves.");
+    }
+
+    [Fact]
+    public void MemoryVisualTimingHonoursFastModeAndMergesRipples()
+    {
+        RegressionTestHarness.Require(
+            SakuraMemoryVisualTiming.TimeScale(MegaCrit.Sts2.Core.Settings.FastModeType.Normal) == 1f
+            && SakuraMemoryVisualTiming.TimeScale(MegaCrit.Sts2.Core.Settings.FastModeType.Fast) is > 0f and < 1f
+            && SakuraMemoryVisualTiming.TimeScale(MegaCrit.Sts2.Core.Settings.FastModeType.Instant) == 0f,
+            "Expected Memory presentation to shorten in Fast mode and be skipped in Instant mode.");
+
+        RegressionTestHarness.Require(
+            SakuraMemoryVisualTiming.ShouldMergeRipple(now: 10d, lastRippleAt: 9.9d)
+            && !SakuraMemoryVisualTiming.ShouldMergeRipple(now: 10d, lastRippleAt: 9.5d)
+            && !SakuraMemoryVisualTiming.ShouldMergeRipple(now: 10d, lastRippleAt: double.NegativeInfinity),
+            "Expected several cards landing in Memory at once to share one ripple.");
+    }
+
+    [Fact]
+    public void MemoryVisualsNeverTakeOverCardNodesAndResetPooledOverlays()
+    {
+        var memoryPile = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraMemoryPile.cs"));
+        RegressionTestHarness.Require(
+            memoryPile.Contains("skipVisuals: false", StringComparison.Ordinal)
+            && memoryPile.Contains("SakuraMemoryArrivalRipple.EnsureSubscribed(pile, card.Owner);", StringComparison.Ordinal),
+            "Expected Forgotten cards to keep the native flight into Memory, with the ripple driven by the pile's own arrival event.");
+
+        var patches = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraCardVisualPatches.cs"));
+        RegressionTestHarness.Require(
+            !patches.Contains("NCardFlyVfx", StringComparison.Ordinal)
+            && patches.Contains("RegisterPatch<SakuraMemoryRecallCardNodePatch>", StringComparison.Ordinal)
+            && patches.Contains("RegisterPatch<SakuraCardReturnedFromPoolPatch>", StringComparison.Ordinal)
+            && patches.Contains("nameof(NCard.OnReturnedFromPool)", StringComparison.Ordinal),
+            "Expected no takeover of native card flights, the recall start patch, and a pool-reuse reset.");
+
+        var overlay = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraForgottenOverlay.cs"));
+        var lifecycle = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraGeneratedCardLifecycle.cs"));
+        RegressionTestHarness.Require(
+            overlay.Contains("_transitModel", StringComparison.Ordinal)
+            && overlay.Contains("public static void ResetForReuse(NCard card)", StringComparison.Ordinal)
+            && lifecycle.Contains("SakuraMemoryRecallVisual.Mark(card);", StringComparison.Ordinal)
+            && lifecycle.Contains("SakuraMemoryRecallVisual.Unmark(card);", StringComparison.Ordinal),
+            "Expected the recall develop to be bound to its model and every pooled node to be reset before reuse.");
+    }
+
+    [Fact]
+    public void ForgottenOverlayStaysOutOfNativeOverlaySlotAndRidesEndTurnFlash()
+    {
+        var overlay = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraForgottenOverlay.cs"));
+        RegressionTestHarness.Require(
+            !overlay.Contains("_cardOverlay", StringComparison.Ordinal)
+            && !overlay.Contains("SCREEN_TEXTURE", StringComparison.Ordinal)
+            && overlay.Contains("OverlayContainer", StringComparison.Ordinal),
+            "Expected the Forgotten overlay to be an extra OverlayContainer child, not the native Affliction overlay slot.");
+
+        var shader = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraMod/shaders/card_vfx/forgotten_overlay.gdshader"));
+        RegressionTestHarness.Require(
+            !shader.Contains("SCREEN_TEXTURE", StringComparison.Ordinal)
+            && !shader.Contains("hint_screen_texture", StringComparison.Ordinal),
+            "Expected the Forgotten overlay shader not to sample the screen; overlapping hand cards would read a stale copy.");
+
+        var patches = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraCardVisualPatches.cs"));
+        var character = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Character/ClassicSakura.cs"));
+        RegressionTestHarness.Require(
+            patches.Contains("RegisterPatch<SakuraPlayerHandFlashPlayableHoldersPatch>", StringComparison.Ordinal)
+            && patches.Contains("nameof(NPlayerHand.FlashPlayableHolders)", StringComparison.Ordinal)
+            && character.Contains("SakuraForgottenOverlay.AssetPaths", StringComparison.Ordinal),
+            "Expected the end-turn pulse patch to be registered and the overlay shader to be preloaded with the character.");
     }
 
     [Fact]

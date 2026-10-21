@@ -19,7 +19,7 @@ public sealed record RuntimePrerequisites(
 public static class RuntimePreflight
 {
     public const string ExpectedGameVersion = "0.107.1";
-    public const string ExpectedRitsuVersion = "0.6.7";
+    public const string ExpectedRitsuVersion = "0.6.9";
 
     public static RuntimePrerequisites Inspect(string repoRoot)
     {

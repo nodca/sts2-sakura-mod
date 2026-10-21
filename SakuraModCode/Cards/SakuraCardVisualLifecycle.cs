@@ -16,6 +16,7 @@ internal static class SakuraCardLifecycle
     public static void AfterCardUpdateVisuals(NCard card)
     {
         SakuraCardVisualLifecycle.AfterCardUpdateVisuals(card);
+        SakuraForgottenOverlay.Sync(card);
         ApplyParentHolder(card);
     }
 
@@ -45,6 +46,16 @@ internal static class SakuraCardLifecycle
 
     public static void AfterHolderGeometryChanged(NCardHolder holder) =>
         ApplyHolder(holder);
+
+    public static void AfterCardReturnedFromPool(NCard card) =>
+        SakuraForgottenOverlay.ResetForReuse(card);
+
+    // Rides the native end-turn hover flash: every Forgotten hand card warns that it is about to leave.
+    public static void AfterHandFlashPlayableHolders(NPlayerHand hand)
+    {
+        foreach (var holder in hand.ActiveHolders)
+            SakuraForgottenOverlay.Pulse(holder.CardNode);
+    }
 
     private static void ApplyParentHolder(NCard card)
     {

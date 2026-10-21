@@ -19,7 +19,7 @@ public static class PileExchangeVfx
     private static readonly Color DiscardColor = new(1f, 0.78f, 0.56f, 0.78f);
     private static readonly Color PileGlowColor = new(1f, 0.95f, 0.72f, 0.72f);
     private static readonly Color CenterSparkColor = new(1f, 1f, 0.9f, 0.9f);
-    private static readonly Color MemoryColor = new(0.58f, 0.93f, 1f, 0.82f);
+    internal static readonly Color MemoryColor = new(0.58f, 0.93f, 1f, 0.82f);
     private static readonly Color ExhaustColor = new(1f, 0.58f, 0.32f, 0.82f);
     private static readonly Vector2 GhostCardSize = new(30f, 42f);
 

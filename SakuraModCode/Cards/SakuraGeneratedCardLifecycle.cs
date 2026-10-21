@@ -84,15 +84,26 @@ internal static class SakuraGeneratedCardLifecycle
     public static async Task<CardModel> AddRememberedCardToHand(
         CardModel card,
         bool freeThisTurn,
-        PlayerChoiceContext context) =>
-        await AddGeneratedCardToCombat(
-            card,
-            RememberedCopyOptions(freeThisTurn) with
-            {
-                Pile = PileType.Hand
-            },
-            context,
-            refreshGeneratedTransparentHandVisual: false);
+        PlayerChoiceContext context)
+    {
+        // Presentation only: the copy's new card node starts at the Memory button.
+        SakuraMemoryRecallVisual.Mark(card);
+        try
+        {
+            return await AddGeneratedCardToCombat(
+                card,
+                RememberedCopyOptions(freeThisTurn) with
+                {
+                    Pile = PileType.Hand
+                },
+                context,
+                refreshGeneratedTransparentHandVisual: false);
+        }
+        finally
+        {
+            SakuraMemoryRecallVisual.Unmark(card);
+        }
+    }
 
     public static Task<CardModel> AddGeneratedCardToHand(
         CardModel card,

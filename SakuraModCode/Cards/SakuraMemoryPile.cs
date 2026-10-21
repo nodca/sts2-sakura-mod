@@ -62,6 +62,7 @@ internal static class SakuraMemoryPile
     {
         var pile = Get(card.Owner)
             ?? throw new InvalidOperationException("Cannot move a Temporary card into Memory outside combat.");
+        SakuraMemoryArrivalRipple.EnsureSubscribed(pile, card.Owner);
         var result = await CardPileCmd.Add(
             card,
             pile,

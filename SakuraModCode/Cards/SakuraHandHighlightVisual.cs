@@ -14,7 +14,6 @@ internal enum SakuraHandHighlightKind
 {
     None,
     ExtraEffect,
-    Temporary,
 }
 
 internal static class SakuraHandHighlightPolicy
@@ -22,16 +21,9 @@ internal static class SakuraHandHighlightPolicy
     public static SakuraHandHighlightKind Select(
         CardModel? model,
         bool isPlayable,
-        bool extraEffectActive,
-        bool isTemporary)
+        bool extraEffectActive)
     {
-        if (model is null)
-            return SakuraHandHighlightKind.None;
-
-        if (isTemporary && SakuraTransparentCardCatalog.IsTransparentCard(model))
-            return SakuraHandHighlightKind.Temporary;
-
-        if (!isPlayable)
+        if (model is null || !isPlayable)
             return SakuraHandHighlightKind.None;
 
         if (extraEffectActive && SupportsGoldExtraEffectHighlight(model))
@@ -51,7 +43,6 @@ internal static class SakuraHandHighlightVisual
         PrivateAccess.DeclaredField(typeof(NCardHighlight), "_curTween");
     private static readonly StringName HighlightWidthParameterName = new("width");
     private static readonly Color ExtraEffectColor = new(1f, 0.78f, 0.2f, 1f);
-    private static readonly Color TemporaryColor = new(1f, 0.25f, 0.25f, 1f);
     private const float HighlightWidth = 0.12f;
     private const float HighlightShowDuration = 0.32f;
 
@@ -71,8 +62,7 @@ internal static class SakuraHandHighlightVisual
         var kind = SakuraHandHighlightPolicy.Select(
             model,
             model.CanPlay(),
-            SakuraExtraEffectTransaction.ShouldShowAsActive(model),
-            model.IsTemporary());
+            SakuraExtraEffectTransaction.ShouldShowAsActive(model));
 
         if (kind == SakuraHandHighlightKind.None)
         {
@@ -96,13 +86,11 @@ internal static class SakuraHandHighlightVisual
         kind switch
         {
             SakuraHandHighlightKind.ExtraEffect => ExtraEffectColor,
-            SakuraHandHighlightKind.Temporary => TemporaryColor,
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Highlight kind has no owned color."),
         };
 
     private static bool IsOwnedColor(Color color) =>
-        Approximately(color, ExtraEffectColor)
-        || Approximately(color, TemporaryColor);
+        Approximately(color, ExtraEffectColor);
 
     private static float ShaderWidthValue(NCardHighlight highlight)
     {

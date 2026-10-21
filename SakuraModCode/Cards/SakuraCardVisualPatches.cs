@@ -1,5 +1,6 @@
 using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
@@ -29,6 +30,9 @@ internal static class SakuraCardVisualPatchRegistration
         patcher.RegisterPatch<KinomotoSakuraCardHolderSetCardPatch>();
         patcher.RegisterPatch<KinomotoSakuraCardHolderReassignedPatch>();
         patcher.RegisterPatch<KinomotoSakuraPlayerHandRefreshLayoutPatch>();
+        patcher.RegisterPatch<SakuraPlayerHandFlashPlayableHoldersPatch>();
+        patcher.RegisterPatch<SakuraCardReturnedFromPoolPatch>();
+        patcher.RegisterPatch<SakuraMemoryRecallCardNodePatch>();
         patcher.RegisterPatch<KinomotoSakuraHandHolderReadyPatch>();
         patcher.RegisterPatch<KinomotoSakuraHandHolderSetCardPatch>();
         patcher.RegisterPatch<KinomotoSakuraHandHolderUpdateCardPatch>();
@@ -128,6 +132,62 @@ internal sealed class SakuraCardUpdateVisualsPatch : IPatchMethod
     public static void Postfix(NCard __instance)
     {
         SakuraCardLifecycle.AfterCardUpdateVisuals(__instance);
+    }
+}
+
+internal sealed class SakuraPlayerHandFlashPlayableHoldersPatch : IPatchMethod
+{
+    public static string PatchId => "sakura_card_visual_hand_flash_playable_holders";
+    public static string Description => "Pulse Forgotten hand cards when the native end-turn hover flashes playable cards";
+    public static bool IsCritical => true;
+
+    public static ModPatchTarget[] GetTargets() =>
+    [
+        PatchTarget.Method<NPlayerHand>(nameof(NPlayerHand.FlashPlayableHolders), Type.EmptyTypes)
+    ];
+
+    public static void Postfix(NPlayerHand __instance)
+    {
+        SakuraCardLifecycle.AfterHandFlashPlayableHolders(__instance);
+    }
+}
+
+internal sealed class SakuraCardReturnedFromPoolPatch : IPatchMethod
+{
+    public static string PatchId => "sakura_card_visual_returned_from_pool";
+    public static string Description => "Reset Sakura-owned transient card overlay state when a pooled NCard is reused";
+    public static bool IsCritical => true;
+
+    public static ModPatchTarget[] GetTargets() =>
+    [
+        PatchTarget.Method<NCard>(nameof(NCard.OnReturnedFromPool), Type.EmptyTypes)
+    ];
+
+    public static void Postfix(NCard __instance)
+    {
+        SakuraCardLifecycle.AfterCardReturnedFromPool(__instance);
+    }
+}
+
+internal sealed class SakuraMemoryRecallCardNodePatch : IPatchMethod
+{
+    public static string PatchId => "sakura_card_visual_memory_recall_card_node";
+    public static string Description => "Start recalled Memory copies at the Memory button";
+    public static bool IsCritical => true;
+
+    public static ModPatchTarget[] GetTargets() =>
+    [
+        PatchTarget.Method(
+            typeof(CardPileCmd),
+            "CreateCardNodeAndUpdateVisuals",
+            typeof(CardModel),
+            typeof(PileType),
+            typeof(bool))
+    ];
+
+    public static void Postfix(CardModel card, bool owningPlayerIsLocal, NCard? __result)
+    {
+        SakuraMemoryRecallVisual.AfterNativeCardNodeCreated(card, __result, owningPlayerIsLocal);
     }
 }
 
