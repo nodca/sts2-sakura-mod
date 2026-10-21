@@ -48,15 +48,6 @@ public sealed class CardVisualContractSuite
                 new SakuraMod.SakuraModCode.Cards.Time(),
                 [TimeStopVfx.ScenePath, .. sharedCelPaths]),
             new VfxCase(
-                new ClowSword(),
-                [SakuraSwordBladeVfx.ScenePath, SakuraSwordBladeVfx.TargetScenePath, .. sharedCelPaths]),
-            new VfxCase(
-                new SakuraSword(),
-                [SakuraSwordBladeVfx.ScenePath, SakuraSwordBladeVfx.TargetScenePath, .. sharedCelPaths]),
-            new VfxCase(
-                new Blade(),
-                [SakuraSwordBladeVfx.ScenePath, SakuraSwordBladeVfx.TargetScenePath, .. sharedCelPaths]),
-            new VfxCase(
                 new ClowCloud(),
                 [CloudRainWeatherVfx.ScenePath, .. sharedCelPaths]),
             new VfxCase(
@@ -88,18 +79,12 @@ public sealed class CardVisualContractSuite
                 $"Expected {testCase.Card.GetType().Name} to declare exactly its combat VFX run assets.");
         }
 
-        var clearBase = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraCardModel.cs"));
-        var sourceBase = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraSourceCard.cs"));
-        RegressionTestHarness.Require(
-            clearBase.Contains("SakuraCardFrameVisuals.RunAssetPaths(this)", StringComparison.Ordinal)
-            && clearBase.Contains("SakuraCardVfxAssets.RunAssetPaths(this)", StringComparison.Ordinal),
-            "Expected Transparent cards to append VFX roots after their existing Clear visual assets.");
-        RegressionTestHarness.Require(
-            sourceBase.Contains("ClassicCardVisualAssets.RunAssetPaths(this)", StringComparison.Ordinal)
-            && sourceBase.Contains("SakuraCardVfxAssets.RunAssetPaths(this)", StringComparison.Ordinal),
-            "Expected Source cards to append VFX roots after their existing Classic visual assets.");
+        // SakuraCardModel composes every family's run assets as family assets, then
+        // VFX. Classic face paths need Godot, so the fast host checks a Transparent card.
+        var hail = new Hail();
+        Assert.Equal(
+            SakuraCardFrameVisuals.RunAssetPaths(hail).Concat(SakuraCardVfxAssets.RunAssetPaths(hail)),
+            hail.RunAssetPaths);
     }
 
     [Fact]
@@ -110,7 +95,6 @@ public sealed class CardVisualContractSuite
                      "SakuraModCode/Cards/Visuals/Transparent/HailStormVfx.cs",
                      "SakuraModCode/Cards/Visuals/Transparent/BlazePhoenixVfx.cs",
                      "SakuraModCode/Cards/Visuals/Transparent/TimeStopVfx.cs",
-                     "SakuraModCode/Cards/Visuals/Classic/SakuraSwordBladeVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/CloudRainWeatherVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/ArrowBowProjectileVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/SpellTurnTransformationVfx.cs"
@@ -209,8 +193,6 @@ public sealed class CardVisualContractSuite
             "SakuraModCode/Cards/ClowSakura/Arrow.cs"));
         var vfxSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Visuals/Classic/ArrowBowProjectileVfx.cs"));
-        var sourceCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraSourceCard.cs"));
         var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/shaders/card_vfx/arrow_bow.gdshader"));
 
@@ -220,9 +202,6 @@ public sealed class CardVisualContractSuite
             arrowCard.Contains("onHit: volley.Loose", StringComparison.Ordinal)
             && !arrowCard.Contains("HittableEnemies", StringComparison.Ordinal),
             "Expected Arrow to hand each hit's creature to the volley instead of guessing targets up front.");
-        RegressionTestHarness.Require(
-            sourceCard.Contains("private static AttackCommand WithHitObserver", StringComparison.Ordinal),
-            "Expected the per-hit observer to live in one first-class builder on the shared attack helpers.");
         RegressionTestHarness.Require(
             vfxSource.Contains("CelVfxSession.PlayOrResolveAsync", StringComparison.Ordinal)
             && vfxSource.Contains("PreloadManager.Cache", StringComparison.Ordinal)

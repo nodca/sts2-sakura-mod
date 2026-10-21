@@ -1212,7 +1212,7 @@ public sealed class CardMechanicsSuite
             && gravitation.Type == CardType.Skill
             && gravitation.TargetType == TargetType.Self
             && gravitation.CanonicalKeywords.SequenceEqual([SakuraKeywords.Earth])
-            && SakuraCardModel.HasMagicChargeExtraEffect(gravitation)
+            && TransparentCard.HasMagicChargeExtraEffect(gravitation)
             && upgradedGravitation.Keywords.Contains(CardKeyword.Retain)
             && new GravitationHoldPower().StackType == PowerStackType.Single
             && GravitationHoldPower.TryIncreaseReturnedCardCost(gravitation, 1, 0, out var firstReturnCost)
@@ -1399,9 +1399,9 @@ public sealed class CardMechanicsSuite
             && clowFlower.DynamicVars.Energy.IntValue == 2
             && ClowFlower.ExtraEnergy == 2
             && upgradedClowFlower.Keywords.Contains(CardKeyword.Exhaust)
-            && upgradedClowFlower.Keywords.Contains(CardKeyword.Retain)
+            && !upgradedClowFlower.Keywords.Contains(CardKeyword.Retain)
             && upgradedClowFlower.DynamicVars.Energy.IntValue == 3,
-            "Expected Clow Flower to cost 0, gain 2 Energy, Exhaust, gain 2 additional Energy with Extra, and upgrade to 3 Energy with Retain.");
+            "Expected Clow Flower to cost 0, gain 2 Energy, Exhaust, gain 2 additional Energy with Extra, and upgrade to 3 Energy without Retain.");
         RegressionTestHarness.Require(
             sakuraFlower.Rarity == CardRarity.Token
             && sakuraFlower.EnergyCost.Canonical == 0
@@ -1435,7 +1435,7 @@ public sealed class CardMechanicsSuite
             && siege.Rarity == CardRarity.Uncommon
             && siege.TargetType == TargetType.Self
             && siege.CanonicalKeywords.Contains(SakuraKeywords.Earth)
-            && SakuraCardModel.HasMagicChargeExtraEffect(siege)
+            && TransparentCard.HasMagicChargeExtraEffect(siege)
             && siege.DynamicVars.Block.IntValue == 3
             && siege.DynamicVars.Block is BlockVar
             && !siege.DynamicVars.ContainsKey("ExtraBlock")
@@ -1467,7 +1467,7 @@ public sealed class CardMechanicsSuite
             && shade.Rarity == CardRarity.Uncommon
             && shade.TargetType == TargetType.AllEnemies
             && shade.CanonicalKeywords.SequenceEqual([SakuraKeywords.Water])
-            && SakuraCardModel.HasMagicChargeExtraEffect(shade)
+            && TransparentCard.HasMagicChargeExtraEffect(shade)
             && shade.DynamicVars.Block.IntValue == 11
             && shade.DynamicVars.Weak.IntValue == 1
             && upgradedShade.DynamicVars.Block.IntValue == 13
@@ -1497,7 +1497,7 @@ public sealed class CardMechanicsSuite
             && snooze.Rarity == CardRarity.Common
             && snooze.TargetType == TargetType.AnyEnemy
             && snooze.CanonicalKeywords.SequenceEqual([SakuraKeywords.Wind])
-            && SakuraCardModel.HasMagicChargeExtraEffect(snooze)
+            && TransparentCard.HasMagicChargeExtraEffect(snooze)
             && snooze.DynamicVars.Weak.IntValue == 1
             && snooze.DynamicVars.Vulnerable.IntValue == 1
             && snooze.DynamicVars.Cards.IntValue == 1
@@ -1526,7 +1526,7 @@ public sealed class CardMechanicsSuite
             && new Hail().DynamicVars["BonusDamage"].IntValue == 2
             && upgradedHail.DynamicVars.Damage.IntValue == 8
             && upgradedHail.DynamicVars["SakuraFrostbitePower"].IntValue == 2
-            && !SakuraCardModel.HasMagicChargeExtraEffect(new Hail())
+            && !TransparentCard.HasMagicChargeExtraEffect(new Hail())
             && HailRules.TotalDamage(new Hail(), spentMagic: 4) == 14
             && HailRules.TotalDamage(upgradedHail, spentMagic: 5) == 18
             && hailSource.Contains("CaptureOpportunity", StringComparison.Ordinal)
@@ -1588,7 +1588,7 @@ public sealed class CardMechanicsSuite
             && struggle.Type == CardType.Attack
             && struggle.Rarity == CardRarity.Uncommon
             && struggle.CanonicalKeywords.SequenceEqual([SakuraKeywords.Fire])
-            && SakuraCardModel.HasMagicChargeExtraEffect(struggle)
+            && TransparentCard.HasMagicChargeExtraEffect(struggle)
             && struggle.DynamicVars.Damage.IntValue == 14
             && struggle.DynamicVars.ExtraDamage.IntValue == 8
             && upgradedStruggle.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
@@ -1659,7 +1659,7 @@ public sealed class CardMechanicsSuite
             && labyrinth.Rarity == CardRarity.Rare
             && labyrinth.CanonicalKeywords.Contains(SakuraKeywords.Earth)
             && !labyrinth.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && !SakuraCardModel.HasMagicChargeExtraEffect(labyrinth)
+            && !TransparentCard.HasMagicChargeExtraEffect(labyrinth)
             && SakuraCardHoverTips.StaticTipKeys(labyrinth).Contains(SakuraCardHoverTips.LabyrinthTipKey)
             && upgradedLabyrinth.Keywords.Contains(CardKeyword.Innate)
             && !upgradedLabyrinth.Keywords.Contains(CardKeyword.Retain)
@@ -1753,7 +1753,7 @@ public sealed class CardMechanicsSuite
             && kindness.CanonicalKeywords.Contains(SakuraKeywords.Earth)
             && kindness.Type == CardType.Power
             && !kindness.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && !SakuraCardModel.HasMagicChargeExtraEffect(kindness)
+            && !TransparentCard.HasMagicChargeExtraEffect(kindness)
             && kindness.EnergyCost.Canonical == 1
             && upgradedKindness.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
             && upgradedKindness.Keywords.Contains(CardKeyword.Innate)
@@ -1768,7 +1768,7 @@ public sealed class CardMechanicsSuite
             appear.Rarity == CardRarity.Common
             && appear.CanonicalKeywords.Contains(SakuraKeywords.Wind)
             && appear.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
-            && SakuraCardModel.HasMagicChargeExtraEffect(appear)
+            && TransparentCard.HasMagicChargeExtraEffect(appear)
             && SakuraTransparentCardCatalog.TransparentCardTypes.Count == 36
             && SakuraTransparentCardCatalog.TransparentCardTypes.Contains(typeof(Appear))
             && appear.EnergyCost.Canonical == 0
@@ -1787,7 +1787,7 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             promise.CanonicalKeywords.Contains(SakuraKeywords.Earth)
             && !promise.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
-            && SakuraCardModel.HasMagicChargeExtraEffect(promise)
+            && TransparentCard.HasMagicChargeExtraEffect(promise)
             && promise.DynamicVars.Block.IntValue == 7
             && promise.DynamicVars["PromiseManifestPower"].IntValue == 1
             && promise.DynamicVars["PlatingPower"].IntValue == 4
@@ -1811,7 +1811,7 @@ public sealed class CardMechanicsSuite
             && dreaming.Rarity == CardRarity.Rare
             && dreaming.CanonicalKeywords.Contains(SakuraKeywords.Water)
             && !dreaming.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
-            && !SakuraCardModel.HasMagicChargeExtraEffect(dreaming)
+            && !TransparentCard.HasMagicChargeExtraEffect(dreaming)
             && dreaming.EnergyCost.Canonical == 2
             && upgradedDreaming.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
             && upgradedDreaming.Keywords.Contains(CardKeyword.Innate)
@@ -2006,15 +2006,15 @@ public sealed class CardMechanicsSuite
             SakuraSourceCardText.ShouldShowMagicChargeExtraDescription(new ClowSword()),
             "Expected canonical Classic Clow cards to show complete Extra Effect reference text without reading Owner.");
         RegressionTestHarness.Require(
-            SakuraCardModel.ShouldShowMagicChargeExtraEffectDescription(new Gale()),
+            TransparentCard.ShouldShowMagicChargeExtraEffectDescription(new Gale()),
             "Expected canonical Transparent Cards to show complete Extra Effect reference text without reading Owner.");
         RegressionTestHarness.Require(
-            SakuraCardModel.HasMagicChargeExtraEffect(new Gale()),
+            TransparentCard.HasMagicChargeExtraEffect(new Gale()),
             "Expected Gale to retain its Magic Charge extra effect.");
         RegressionTestHarness.Require(
-            SakuraCardModel.HasMagicChargeExtraEffect(new Exchange())
-            && !SakuraCardModel.HasMagicChargeExtraEffect(new Synchronize())
-            && SakuraCardModel.HasMagicChargeExtraEffect(new Remind()),
+            TransparentCard.HasMagicChargeExtraEffect(new Exchange())
+            && !TransparentCard.HasMagicChargeExtraEffect(new Synchronize())
+            && TransparentCard.HasMagicChargeExtraEffect(new Remind()),
             "Expected Exchange and Remind to support Extra effects while Synchronize remains a non-Extra card.");
     }
 
@@ -2152,7 +2152,7 @@ public sealed class CardMechanicsSuite
             && clowWood.DynamicVars["PoisonPower"].IntValue == 1
             && upgradedClowWood.DynamicVars["ThornsPower"].IntValue == 4
             && upgradedClowWood.DynamicVars["PoisonPower"].IntValue == 2
-            && !SakuraCardModel.HasMagicChargeExtraEffect(clowWood)
+            && !TransparentCard.HasMagicChargeExtraEffect(clowWood)
             && sakuraWood.Type == CardType.Power
             && sakuraWood.TargetType == TargetType.None
             && sakuraWood.Rarity == CardRarity.Token

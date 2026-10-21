@@ -18,6 +18,7 @@ public static class CombatCommand
         "exchange-four-pile-selection",
         "manifest-temporary",
         "generated-pile-memory",
+        "forgotten-cleanup-without-transparent",
         "element-turn-cleanup",
         "dream-turn-restoration",
         "spell-turn-transformation",

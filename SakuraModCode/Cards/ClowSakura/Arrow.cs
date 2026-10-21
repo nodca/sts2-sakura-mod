@@ -40,11 +40,14 @@ public class ClowArrow() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Co
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (HandWithoutSelf().Count == 0 && play.Resources.EnergySpent <= 0)
+        // Discards are capped by X so the hand left over at turn end, which
+        // would be discarded anyway, cannot become free hits at X = 0.
+        var x = ResolveEnergyXValue();
+        if (x <= 0)
             return;
 
-        var discarded = await SelectHandCards(choiceContext, discard: true);
-        var count = discarded + ResolveEnergyXValue();
+        var discarded = await SelectHandCards(choiceContext, x, discard: true);
+        var count = discarded + x;
 
         // The session opens around the volley alone. Selecting which cards to
         // discard is an unbounded player interaction, and a cel session is
@@ -59,11 +62,14 @@ public class ClowArrow() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Co
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (HandWithoutSelf().Count == 0 && play.Resources.EnergySpent <= 0)
+        // Discards are capped by X so the hand left over at turn end, which
+        // would be discarded anyway, cannot become free hits at X = 0.
+        var x = ResolveEnergyXValue();
+        if (x <= 0)
             return;
 
-        var discarded = await SelectHandCards(choiceContext, discard: true);
-        var count = discarded + ResolveEnergyXValue();
+        var discarded = await SelectHandCards(choiceContext, x, discard: true);
+        var count = discarded + x;
 
         // The play can reach the activated branch without a target when no
         // enemy is targetable at play time (e.g. mid phase swap); the volley
@@ -81,16 +87,17 @@ public class ClowArrow() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Co
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(2);
 
-    private async Task<int> SelectHandCards(PlayerChoiceContext choiceContext, bool discard)
+    private async Task<int> SelectHandCards(PlayerChoiceContext choiceContext, int maxDiscards, bool discard)
     {
         var hand = HandWithoutSelf();
-        if (hand.Count == 0)
+        var maxSelect = Math.Min(hand.Count, maxDiscards);
+        if (maxSelect <= 0)
             return 0;
 
         var selected = (await CardSelectCmd.FromHand(
             choiceContext,
             Owner,
-            new CardSelectorPrefs(CardSelectorPrefs.DiscardSelectionPrompt, 0, hand.Count)
+            new CardSelectorPrefs(CardSelectorPrefs.DiscardSelectionPrompt, 0, maxSelect)
             {
                 Cancelable = true
             },

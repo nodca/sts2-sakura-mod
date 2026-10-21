@@ -34,7 +34,7 @@ internal static class SakuraHandHighlightPolicy
 
     private static bool SupportsGoldExtraEffectHighlight(CardModel model) =>
         model is ClowExtraEffectCard
-        || SakuraCardModel.HasMagicChargeExtraEffect(model);
+        || TransparentCard.HasMagicChargeExtraEffect(model);
 }
 
 internal static class SakuraHandHighlightVisual

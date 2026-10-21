@@ -32,11 +32,9 @@ public class SpellSeal() : SpellCard(2, CardType.Attack, CardRarity.Basic, Targe
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         SakuraVoicePlayback.TryPlay(this);
-        await DamageCmd.Attack(DynamicVars.Damage.IntValue)
-            .FromCard(this)
-            .Targeting(RequiredTarget(play))
-            .WithHitFx(SakuraNativeHitFx.Blunt, null, SakuraNativeHitFx.HeavyTmpSfx)
-            .Execute(choiceContext);
+        await DealDamage(choiceContext, RequiredTarget(play), DynamicVars.Damage.IntValue,
+            hitVfx: SakuraNativeHitFx.Blunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx,
+            keepAttackerAnim: true);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(4);

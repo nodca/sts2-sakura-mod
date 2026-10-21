@@ -34,7 +34,7 @@ public class TrueOrFalse() : TransparentExtraEffectCard(0, CardType.Skill, CardR
         new CardsVar(2),
         new EnergyVar(1)
     ];
-    protected override bool IsPlayable => SakuraCardModel.UsesMagicChargeExtraEffect(this)
+    protected override bool IsPlayable => TransparentCard.UsesMagicChargeExtraEffect(this)
         ? CanCompleteExtraEffect()
         : CanUseVirtual() || CanUseReal();
 

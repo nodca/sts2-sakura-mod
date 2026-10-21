@@ -123,14 +123,14 @@ public sealed class ExtraEffectTransactionSuite
     {
         RegressionTestHarness.Require(
             SakuraSourceCardText.ShouldShowMagicChargeExtraDescription(new ClowSword())
-            && SakuraCardModel.ShouldShowMagicChargeExtraEffectDescription(new Gale()),
+            && TransparentCard.ShouldShowMagicChargeExtraEffectDescription(new Gale()),
             "Expected canonical reference cards to show their complete Extra Effect descriptions.");
 
         var classic = RegressionTestHarness.MutableForCostTest(new ClowSword());
         var transparent = RegressionTestHarness.MutableForCostTest(new Gale());
         RegressionTestHarness.Require(
             SakuraSourceCardText.ShouldShowMagicChargeExtraDescription(classic)
-            && SakuraCardModel.ShouldShowMagicChargeExtraEffectDescription(transparent),
+            && TransparentCard.ShouldShowMagicChargeExtraEffectDescription(transparent),
             "Expected mutable non-combat cards to show their complete Extra Effect descriptions.");
         RegressionTestHarness.Require(
             !SakuraExtraEffectTransaction.ShouldShowDescription(classic, isInCombat: true)
@@ -157,18 +157,13 @@ public sealed class ExtraEffectTransactionSuite
     [Fact]
     public void ExtraEffectExecuteIsReservedForExtraEffectCards()
     {
-        var sourceCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraSourceCard.cs"));
-        var cardModel = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraCardModel.cs"));
+        // Which cards reach the transaction and where Sakura-Form Void lands are
+        // asserted in play by the extra-effect-play combat scenario.
         var transaction = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/SakuraExtraEffectTransaction.cs"));
 
         RegressionTestHarness.Require(
-            sourceCard.Contains("if (this is ISakuraExtraEffectCard)", StringComparison.Ordinal)
-            && cardModel.Contains("if (this is ISakuraExtraEffectCard)", StringComparison.Ordinal)
-            && sourceCard.Contains("SakuraFormVoid.AfterCardPlayed", StringComparison.Ordinal)
-            && !transaction.Contains("AddVoidToDrawPile", StringComparison.Ordinal)
+            !transaction.Contains("AddVoidToDrawPile", StringComparison.Ordinal)
             && !transaction.Contains("ShouldAddSakuraVoid", StringComparison.Ordinal)
             && !transaction.Contains("ExecuteCoreForTests", StringComparison.Ordinal)
             && !transaction.Contains("internal static async Task ExecuteCore", StringComparison.Ordinal)

@@ -266,8 +266,6 @@ internal static class SpellTurnTransformationScenario
             HailStormVfx.StoneScenePath,
             BlazePhoenixVfx.ScenePath,
             TimeStopVfx.ScenePath,
-            SakuraSwordBladeVfx.ScenePath,
-            SakuraSwordBladeVfx.TargetScenePath,
             SpellTurnTransformationVfx.ScenePath
         };
         foreach (var (scenePath, index) in scenePaths.Select(static (path, index) => (path, index)))

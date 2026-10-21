@@ -445,7 +445,7 @@ public sealed class ResourceContractSuite
                 "AttackCommand.CreateContextAsync(CombatState!, choiceContext, this)",
                 StringComparison.Ordinal)
             && aqua.Split("attack.AddHit(await CreatureCmd.Damage(").Length - 1 == 1
-            && !aqua.Contains("SakuraActions.Attack(", StringComparison.Ordinal),
+            && !aqua.Contains("DealDamage(", StringComparison.Ordinal),
             "Expected Aqua's snapshot damage loop to share one native attack context behind the presentation wrapper.");
         // Each enemy's damage waits for the bird to reach it. Frostbite is read after
         // the complete attack (damage can kill the holder), Return runs inside the cue scope,
@@ -525,7 +525,8 @@ public sealed class ResourceContractSuite
         Assert.Contains("HailStormVfx.PlayOrResolveAsync(this, Owner.Creature, targets, spent, maxSpend", hail, StringComparison.Ordinal);
         var loopIndex = hail.IndexOf("foreach (var target in targets)", StringComparison.Ordinal);
         var impactIndex = hail.IndexOf("cues.Impact(target)", loopIndex, StringComparison.Ordinal);
-        var attackIndex = hail.IndexOf("SakuraActions.Attack(", loopIndex, StringComparison.Ordinal);
+        // Presentation call order: TestMode skips card VFX, so no combat scenario can observe it.
+        var attackIndex = hail.IndexOf("DealDamage(", loopIndex, StringComparison.Ordinal);
         RegressionTestHarness.Require(loopIndex >= 0 && impactIndex > loopIndex && attackIndex > impactIndex
             && hail.Contains("var targets = CombatState!.HittableEnemies.ToList();", StringComparison.Ordinal),
             "Expected each single authoritative hit and its VFX to share the same enemy snapshot.");
@@ -869,7 +870,8 @@ public sealed class ResourceContractSuite
             blaze,
             StringComparison.Ordinal);
         var strikeCue = blaze.IndexOf("cues.Strike()", StringComparison.Ordinal);
-        var attack = blaze.IndexOf("SakuraActions.Attack(", StringComparison.Ordinal);
+        // Presentation call order: TestMode skips card VFX, so no combat scenario can observe it.
+        var attack = blaze.IndexOf("DealDamage(", StringComparison.Ordinal);
         var ash = blaze.IndexOf("cues.AshAsync(", StringComparison.Ordinal);
         var removal = blaze.IndexOf("CardPileCmd.RemoveFromCombat(", StringComparison.Ordinal);
         RegressionTestHarness.Require(
@@ -879,7 +881,7 @@ public sealed class ResourceContractSuite
         RegressionTestHarness.Require(
             blaze.Contains("var target = RequiredTarget(play);", StringComparison.Ordinal)
             && blaze.Contains(
-                "SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage)",
+                "DealDamage(choiceContext, target, DynamicVars.CalculatedDamage)",
                 StringComparison.Ordinal)
             && blaze.Contains("skipVisuals: false", StringComparison.Ordinal)
             && blaze.Contains("BlazeRules.ExhaustedCardMultiplier", StringComparison.Ordinal),
@@ -1086,7 +1088,8 @@ public sealed class ResourceContractSuite
             gale,
             StringComparison.Ordinal);
         var impactIndex = gale.IndexOf("cues.Impact()", StringComparison.Ordinal);
-        var attackIndex = gale.IndexOf("SakuraActions.AttackCommand(", StringComparison.Ordinal);
+        // Presentation call order: TestMode skips card VFX, so no combat scenario can observe it.
+        var attackIndex = gale.IndexOf("DealDamage(", StringComparison.Ordinal);
         RegressionTestHarness.Require(
             impactIndex >= 0
             && attackIndex > impactIndex
@@ -1786,318 +1789,30 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
-    public void SwordBladeDrawsHybridArcSweepWithoutWeaponOrResidue()
+    public void SwordCardsUseVanillaStrikeSlash()
     {
-        var rootScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/combat/card_vfx/sakura_sword_vfx.tscn"));
-        var targetScene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/combat/card_vfx/sakura_sword_target.tscn"));
-        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/shaders/card_vfx/sakura_sword_blade.gdshader"));
-        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Visuals/Classic/SakuraSwordBladeVfx.cs"));
         var sword = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/ClowSakura/Sword.cs"));
         var blade = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Blade.cs"));
-
-        var shaderCode = shader
-            .Split('\n')
-            .Select(static line => line.Trim())
-            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
-            .ToList();
-
-        // No screen copy and no screen sampling. The mark is additive-looking but composited
-        // normally, so nothing here needs the scene behind it.
+        var assets = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/SakuraCardVfxAssets.cs"));
         RegressionTestHarness.Require(
-            !rootScene.Contains("BackBufferCopy", StringComparison.Ordinal)
-            && !shader.Contains("hint_screen_texture", StringComparison.Ordinal)
-            && !shader.Contains("SCREEN_TEXTURE", StringComparison.Ordinal),
-            "Expected the slash to carry no screen copy and sample no screen texture.");
-
-        // One parent, and no debris parent. The effect leaves nothing on screen after it
-        // ends, so there is nothing for a second parent to hold.
+            !sword.Contains("PlayOrResolveAsync", StringComparison.Ordinal)
+            && !blade.Contains("PlayOrResolveAsync", StringComparison.Ordinal)
+            && !assets.Contains("SwordPaths", StringComparison.Ordinal)
+            && !assets.Contains("ClowSword or SakuraSword or Blade", StringComparison.Ordinal),
+            "Expected Sword and Blade to resolve without a dedicated VFX session or asset route.");
         RegressionTestHarness.Require(
-            rootScene.Contains("[node name=\"Slashes\" type=\"Node2D\"", StringComparison.Ordinal)
-            && !rootScene.Contains("Debris", StringComparison.Ordinal)
-            && rootScene.Contains("mouse_filter = 2", StringComparison.Ordinal),
-            "Expected the root scene to expose only the slash parent and ignore input.");
-
-        // One rect and one local material, where the previous revision had a pivoted weapon
-        // rect, a separate wound rect, and a fragment parent. The weapon is gone, so the
-        // pivot that swung it and the anchor that held its wound are gone with it.
+            sword.Split("hitVfx: SakuraNativeHitFx.Slash", StringSplitOptions.None).Length - 1 == 2
+            && blade.Contains("hitVfx: SakuraNativeHitFx.Slash", StringComparison.Ordinal),
+            "Expected both Swords and Blade to use the vanilla Strike slash on their Move hits.");
         RegressionTestHarness.Require(
-            targetScene.Contains("[node name=\"SlashAnchor\" type=\"Node2D\"", StringComparison.Ordinal)
-            && targetScene.Contains("[node name=\"SlashBody\" type=\"ColorRect\"", StringComparison.Ordinal)
-            && targetScene.Split("resource_local_to_scene = true", StringSplitOptions.None).Length - 1 == 1
-            && !targetScene.Contains("BladePivot", StringComparison.Ordinal)
-            && !targetScene.Contains("BladeBody", StringComparison.Ordinal)
-            && !targetScene.Contains("CutBody", StringComparison.Ordinal)
-            && !targetScene.Contains("Fragments", StringComparison.Ordinal),
-            "Expected one slash rect with one local material, and no weapon pivot, wound rect, or fragment parent.");
-
-        foreach (var uniform in new[]
-                 {
-                     "arc_count", "cross_tilt_deg", "single_tilt_deg", "weight", "flash", "opacity"
-                 })
-        {
-            Assert.Contains($"uniform float {uniform}", shader, StringComparison.Ordinal);
-        }
-        Assert.Contains("uniform vec4 arc_phase", shader, StringComparison.Ordinal);
-        Assert.Contains("uniform vec2 region_size", shader, StringComparison.Ordinal);
-        RegressionTestHarness.Require(
-            shader.Contains("region_size = vec2(240.0, 200.0)", StringComparison.Ordinal)
-            && targetScene.Contains("shader_parameter/region_size = Vector2(240, 200)", StringComparison.Ordinal),
-            "Expected the shader's default region to match the scene's, so a preview draws what combat draws.");
-
-        // Every parameter the scene ships must be driven, including the ones whose shipped
-        // value draws almost nothing. The previous revision shipped `extend` at 0 — which
-        // collapsed the blade to zero length — and nothing drove it, so a bare hilt swung
-        // through the target and passed every check here. The rule outlived the parameter:
-        // arc_phase ships at zero, which draws no stroke at all.
-        RegressionTestHarness.Require(
-            targetScene.Contains("shader_parameter/arc_phase = Vector4(0, 0, 0, 0)", StringComparison.Ordinal)
-            && session.Contains("\"arc_phase\"", StringComparison.Ordinal)
-            && session.Contains("Callable.From<float>(value => SetPhase(arc, value))", StringComparison.Ordinal),
-            "Expected the launch beat to drive arc_phase, since the scene ships it at zero and draws nothing there.");
-
-        // The hybrid rendering language, matching the accepted wind and fire marks rather
-        // than the dark-ink cel cards. Gale reached the same place first and for the same
-        // reason: a constant-width dark outline around a thin bright arc reads as weight,
-        // which is the opposite of speed, and a 0.3s effect has too few stepped frames to
-        // read as anything but a hitch. Asserted as absences because a copy-paste from one
-        // of the four ink cards would silently reintroduce the whole language.
-        RegressionTestHarness.Require(
-            !shader.Contains("cel_ink(", StringComparison.Ordinal)
-            && !shader.Contains("cel_bands3(", StringComparison.Ordinal)
-            && !shader.Contains("cel_step_clock", StringComparison.Ordinal)
-            && !shader.Contains("cel_vfx.gdshaderinc", StringComparison.Ordinal)
-            && !shader.Contains("cel_signature.gdshaderinc", StringComparison.Ordinal)
-            && !shaderCode.Any(static line => line.Contains("const float CEL_", StringComparison.Ordinal)),
-            "Expected the hybrid language: a bright core with a transparent falloff, no ink line, no hard bands, no stepped clock.");
-        // Light stays a bounded local field. No additive blend mode and no full-frame bloom,
-        // which is the same limit Gale's halo accepts.
-        // Checked against the stripped source, because the shader's own commentary names
-        // both of these while explaining why it does not use them.
-        RegressionTestHarness.Require(
-            !shaderCode.Any(static line => line.Contains("blend_add", StringComparison.Ordinal))
-            && !shaderCode.Any(static line => line.Contains("bloom", StringComparison.OrdinalIgnoreCase)),
-            "Expected brightness to come from a bounded local field rather than an additive or bloom pass.");
-        // No shader-owned clock, unlike the hybrid state marks. Those persist for many turns
-        // and ride the engine clock; every beat here belongs to one card play, and the freeze
-        // has to be able to actually stop the drawn detail.
-        RegressionTestHarness.Require(
-            !shaderCode.Any(static line => line.Contains("TIME", StringComparison.Ordinal)),
-            "Expected the session to own every beat, since an engine-clocked field could not be frozen on impact.");
-
-        // The weapon is gone. All six parts and the wound are asserted absent by their own
-        // named constants, because this is the change the rework exists to make and a
-        // partial revert would otherwise still pass every assertion above.
-        foreach (var part in new[]
-                 {
-                     "BLADE_ROOT_HALF", "BLADE_TIP_HALF", "FULLER_", "WING_", "GEM_", "GRIP_",
-                     "POMMEL_", "TIP_Y", "CUT_DEG", "CUT_SPAN", "CUT_NOTCH", "draw_cut",
-                     "cut_open", "blade_count", "extend"
-                 })
-        {
-            RegressionTestHarness.Require(
-                !shader.Contains(part, StringComparison.Ordinal),
-                $"Expected no weapon or wound geometry in the slash shader, but found {part}.");
-        }
-
-        // Six cards, six silhouette operators. This one is a polar arc sweep, so both
-        // operators that would pull it toward another card's reading stay absent: cel_smin
-        // is water's mass union and cel_fbm is fire's torn outline.
-        RegressionTestHarness.Require(
-            !shaderCode.Any(static line => line.Contains("cel_smin(", StringComparison.Ordinal))
-            && !shaderCode.Any(static line => line.Contains("cel_fbm(", StringComparison.Ordinal)),
-            "Expected the slash to stay a polar arc sweep: neither smooth union nor turbulence may build it.");
-        RegressionTestHarness.Require(
-            shader.Contains("float ring = length(rel) - radius;", StringComparison.Ordinal)
-            && shader.Contains("float radius = (chord * 0.5) / sin(HALF_SPAN)", StringComparison.Ordinal),
-            "Expected the stroke to be laid along a circular arc whose radius follows from its chord and angular span.");
-
-        float Constant(string name)
-        {
-            var line = shaderCode.FirstOrDefault(candidate =>
-                candidate.StartsWith($"const float {name} =", StringComparison.Ordinal));
-            RegressionTestHarness.Require(line is not null, $"Expected {name} to be a named constant.");
-            var declaration = line ?? string.Empty;
-            var value = declaration[(declaration.IndexOf('=') + 1)..].TrimEnd(';', ' ');
-            return float.Parse(value, CultureInfo.InvariantCulture);
-        }
-
-        // The one axis that separates this from Gale with colour removed. Gale is a closed
-        // crescent area — thick through the belly, with a concave bite — while this is a
-        // line. Hue separates them too, but hue is never allowed to be the only difference,
-        // so the ratio is what gets measured. Evaluated at the smallest region the budget
-        // allows, since that is where the stroke is shortest relative to its width.
-        var span = Constant("SPAN");
-        var heaviestHalf = Constant("MID_HALF_HEAVY");
-        RegressionTestHarness.Require(
-            session.Contains("MinHeight: 140f", StringComparison.Ordinal),
-            "Expected the geometry budget's floor to stay in step with the aspect-ratio gate below.");
-        var shortestChord = span * 140f;
-        RegressionTestHarness.Require(
-            shortestChord / (heaviestHalf * 2f) > 6f,
-            "Expected the stroke to stay a line rather than a crescent area, so it never reads as Gale's blade.");
-        RegressionTestHarness.Require(
-            span > 1f,
-            "Expected the stroke to leave the frame at both ends rather than floating inside its own rect.");
-        RegressionTestHarness.Require(
-            Constant("MID_HALF_LIGHT") < heaviestHalf
-            && Constant("LAY_FAST") < Constant("LAY_SLOW")
-            && Constant("CORE_FRAC") is > 0f and < 1f,
-            "Expected the weight axis to buy width and lay time together, with a core narrower than the stroke.");
-        // Arrive fast, leave slow.
-        RegressionTestHarness.Require(
-            Constant("RISE_END") < 1f - Constant("DECAY_START"),
-            "Expected the stroke to reach full presence faster than it decays.");
-
-        // One constant per side, kept in step: the X the strokes trace has to be the X the
-        // session specified, and the previous revision's wound angle is the same 24 degrees.
-        RegressionTestHarness.Require(
-            shader.Contains("cross_tilt_deg = 24.0", StringComparison.Ordinal)
-            && session.Contains("CrossTiltDegrees = 24f", StringComparison.Ordinal)
-            && targetScene.Contains("shader_parameter/cross_tilt_deg = 24.0", StringComparison.Ordinal),
-            "Expected the session, scene, and shader to agree on the crossing angle.");
-
-        RegressionTestHarness.Require(
-            session.Contains("session.StartClock();", StringComparison.Ordinal)
-            && session.Contains(": CelVfxSession", StringComparison.Ordinal)
-            && session.Contains("CelVfxGeometry.Resolve(room, creature, index, Budget)", StringComparison.Ordinal)
-            && session.Contains("room.CombatVfxContainer.AddChildSafely(root)", StringComparison.Ordinal),
-            "Expected the session to derive from the shared skeleton, start its clock explicitly, and size through the shared resolver.");
-
-        // The hit-stop pauses the launch tween rather than calling BeginHold. That helper
-        // stops the base stepped clock and pushes `held` to shaders that read it; this card
-        // declares no clock uniforms and moves every stroke by tween, and the base class is
-        // explicit that a hold does not pause tween time. Calling it here would have
-        // satisfied the shape of a freeze while freezing nothing, so its absence is asserted
-        // alongside the pause that replaced it.
-        RegressionTestHarness.Require(
-            session.Contains("launch.Pause()", StringComparison.Ordinal)
-            && session.Contains("launch.Play()", StringComparison.Ordinal)
-            && !session.Contains("BeginHold(", StringComparison.Ordinal),
-            "Expected impact to pause the stroke's own tween, since BeginHold cannot freeze tween-driven motion.");
-
-        // No lagging wound, and nothing left behind. The previous revision delayed its wound
-        // two stepped frames so the damage number would land on it, which stretched the whole
-        // chain to accommodate a decoration; the game already owns damage numbers and health
-        // bars, so the freeze and flash land on the same beat as them instead.
-        foreach (var removed in new[]
-                 {
-                     "CutLagSteps", "CutOpenFraction", "CutOpensWithinEnvelope", "cut_open",
-                     "SampleAfterimages", "Afterimage", "AddBallisticDebris", "FragmentPoints",
-                     "SetExtend"
-                 })
-        {
-            RegressionTestHarness.Require(
-                !session.Contains(removed, StringComparison.Ordinal),
-                $"Expected the session to carry no wound, afterimage, or debris machinery, but found {removed}.");
-        }
-
-        // Total length is the point of the rework, so it is asserted on the constants rather
-        // than left to be noticed by eye. The previous revision ran about 1.15s per target
-        // for a Basic attack.
-        RegressionTestHarness.Require(
-            SakuraSwordBladeVfx.StrokeFitsBudget(),
-            "Expected one play to stay inside its time budget.");
-        RegressionTestHarness.Require(
-            SakuraSwordBladeVfx.SingleTargetSeconds() < 0.6f
-            && SakuraSwordBladeVfx.DualTargetSeconds() < 0.9f,
-            "Expected a single stroke and a full flurry to stay short enough to bear repetition.");
-
-        // Extra hits buy crossings inside a fixed envelope, not extra wall time, and the
-        // count is bounded because past four the strokes stop being tellable apart.
-        RegressionTestHarness.Require(
-            SakuraSwordBladeVfx.ArcCount(SwordMode.Single, 4) == 1
-            && SakuraSwordBladeVfx.ArcCount(SwordMode.Dual, 2) == 2
-            && SakuraSwordBladeVfx.ArcCount(SwordMode.Dual, 9) == 4
-            && SakuraSwordBladeVfx.ArcCount(SwordMode.Dual, 0) == 1,
-            "Expected the arc count to follow the hit count for Blade, stay single for Sword, and clamp at four.");
-        RegressionTestHarness.Require(
-            session.Contains("CrossingEnvelope", StringComparison.Ordinal)
-            && session.Contains("var each = _arcCount > 1 ? envelope / _arcCount : 0f;", StringComparison.Ordinal),
-            "Expected crossings to pack into a fixed envelope so four read as denser rather than longer.");
-
-        // The intensity axis is one number, so the tiers cannot drift into separate code
-        // paths. Frequency picks the tier: the Basic attack is lightest and the release token
-        // is heaviest.
-        RegressionTestHarness.Require(
-            SakuraSwordBladeVfx.WeightValue(SlashWeight.Light)
-                < SakuraSwordBladeVfx.WeightValue(SlashWeight.Medium)
-            && SakuraSwordBladeVfx.WeightValue(SlashWeight.Medium)
-                < SakuraSwordBladeVfx.WeightValue(SlashWeight.Heavy),
-            "Expected the weight tiers to stay ordered on one axis.");
-
-        // ClowSword's two paths share one orchestration and differ only by tier. A second
-        // PlayOrResolveAsync in the activated path would be a second source of truth for
-        // what the card looks like.
-        var activatedIndex = sword.IndexOf("Task PlayActivatedCard(", StringComparison.Ordinal);
-        var nextClassIndex = sword.IndexOf("class SakuraSword", StringComparison.Ordinal);
-        // Bounded to the activated method's own body, which ends where the shared helper
-        // begins. Running the slice to the next class instead would swallow PlayStroke,
-        // whose whole job is to hold the one orchestration both paths call.
-        var strokeHelperIndex = sword.IndexOf("private async Task PlayStroke(", StringComparison.Ordinal);
-        RegressionTestHarness.Require(
-            activatedIndex >= 0
-            && strokeHelperIndex > activatedIndex
-            && nextClassIndex > strokeHelperIndex,
-            "Expected ClowSword's activated path, then the shared helper, then SakuraSword's declaration.");
-        RegressionTestHarness.Require(
-            sword.Contains("PlayStroke(choiceContext, play, SlashWeight.Light)", StringComparison.Ordinal)
-            && sword.Contains("PlayStroke(choiceContext, play, SlashWeight.Medium)", StringComparison.Ordinal)
-            && sword.Contains("ExtraHpLoss", StringComparison.Ordinal)
-            && !sword[activatedIndex..strokeHelperIndex].Contains("PlayOrResolveAsync(", StringComparison.Ordinal),
-            "Expected both ClowSword paths to share one orchestration and differ only by weight tier.");
-        RegressionTestHarness.Require(
-            sword.Split("PlayOrResolveAsync(", StringSplitOptions.None).Length - 1 == 2,
-            "Expected exactly two orchestrations in Sword.cs: ClowSword's shared stroke and SakuraSword's own.");
-
-        foreach (var card in new[] { "ClowSword", "SakuraSword" })
-        {
-            var classIndex = sword.IndexOf($"class {card}", StringComparison.Ordinal);
-            RegressionTestHarness.Require(classIndex >= 0, $"Expected {card} to be present.");
-            var body = sword[classIndex..];
-            var impactIndex = body.IndexOf("cues.Impact(target)", StringComparison.Ordinal);
-            var damageIndex = body.IndexOf("await DealDamage(choiceContext, target", StringComparison.Ordinal);
-            RegressionTestHarness.Require(
-                body.Contains("SwordMode.Single", StringComparison.Ordinal)
-                && impactIndex >= 0
-                && damageIndex > impactIndex,
-                $"Expected {card} to use the single-stroke presentation and show its cue before damage resolves.");
-        }
-        // The release token is the rarest of the three plays, so it takes the heaviest tier.
-        RegressionTestHarness.Require(
-            sword.IndexOf("SlashWeight.Heavy", StringComparison.Ordinal) > nextClassIndex,
-            "Expected SakuraSword to take the heaviest tier, since a release token is the rarest play here.");
-        // Enumerated once, and the loop walks that same copy. Enumerating twice could
-        // diverge: the second pass would drop targets the first pass killed.
-        RegressionTestHarness.Require(
-            sword.Split("SakuraThroughResolution.TargetsFor(play)", StringSplitOptions.None).Length - 1 == 1
-            && sword.Contains("var targets = SakuraThroughResolution.TargetsFor(play).ToList();", StringComparison.Ordinal)
-            && sword.Contains("foreach (var target in targets)", StringComparison.Ordinal),
-            "Expected SakuraSword to snapshot its targets exactly once and drive both the visuals and the hit loop from that copy.");
-
-        Assert.Contains("SakuraSwordBladeVfx.PlayOrResolveAsync(", blade, StringComparison.Ordinal);
-        var bladeHitsIndex = blade.IndexOf("var hits = BladeRules.HitCount(this);", StringComparison.Ordinal);
-        var bladeImpactIndex = blade.IndexOf("cues.Impact(target)", StringComparison.Ordinal);
-        var bladeAttackIndex = blade.IndexOf("await SakuraActions.Attack(", StringComparison.Ordinal);
-        RegressionTestHarness.Require(
-            bladeHitsIndex >= 0
-            && bladeImpactIndex > bladeHitsIndex
-            && bladeAttackIndex > bladeImpactIndex
-            && blade.Contains("SwordMode.Dual", StringComparison.Ordinal)
-            && blade.Contains("SlashWeight.Medium", StringComparison.Ordinal)
-            && blade.Contains("crossings: hits", StringComparison.Ordinal),
-            "Expected Blade to read its hit count once, use the dual presentation, and show its cue before the attack.");
-        // The hit count is read once and handed over as a resolved number. A second read
-        // for presentation could disagree with the one the attack used.
-        RegressionTestHarness.Require(
-            blade.Split("BladeRules.HitCount(this)", StringSplitOptions.None).Length - 1 == 1
-            && blade.Contains("hitCount: hits", StringComparison.Ordinal),
-            "Expected Blade's hit count to be read once and shared by the attack and the visuals.");
+            sword.Contains("await DealDamage(choiceContext, target, ExtraHpLoss, ValueProp.Unblockable)", StringComparison.Ordinal)
+            && sword.Split("SakuraThroughResolution.TargetsFor(play)", StringSplitOptions.None).Length - 1 == 1
+            && sword.Contains("foreach (var target in targets)", StringComparison.Ordinal)
+            && blade.Split("BladeRules.HitCount(this)", StringSplitOptions.None).Length - 1 == 1,
+            "Expected Sword and Blade gameplay to remain in place.");
     }
 
     [Fact]

@@ -104,10 +104,8 @@ public sealed class MagicChargeStateSuite
     [Fact]
     public void NonExtraPlayPathsApplyCapturedMidpointOpportunity()
     {
-        var sourceCard = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraSourceCard.cs"));
-        var cardModel = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraCardModel.cs"));
+        // The non-extra play path is asserted in play by the magic-charge-thresholds
+        // combat scenario; every Sakura card shares that single OnPlay.
         var extra = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/SakuraExtraEffectTransaction.cs"));
         var charge = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -115,13 +113,9 @@ public sealed class MagicChargeStateSuite
 
         RegressionTestHarness.Require(
             charge.Contains("TryApplyCapturedOpportunity", StringComparison.Ordinal)
-            && sourceCard.Contains("SakuraMagicCharge.CaptureOpportunity", StringComparison.Ordinal)
-            && sourceCard.Contains("SakuraMagicCharge.TryApplyCapturedOpportunity", StringComparison.Ordinal)
-            && cardModel.Contains("SakuraMagicCharge.CaptureOpportunity", StringComparison.Ordinal)
-            && cardModel.Contains("SakuraMagicCharge.TryApplyCapturedOpportunity", StringComparison.Ordinal)
             && extra.Contains("SakuraMagicCharge.TryApplyCapturedOpportunity", StringComparison.Ordinal)
             && extra.Contains("SakuraMagicCharge.CaptureOpportunity", StringComparison.Ordinal),
-            "Expected Magic Charge to own midpoint opportunity apply for Extra Effect and both non-extra OnPlay paths.");
+            "Expected Magic Charge to own midpoint opportunity apply for Extra Effect and the single non-extra OnPlay path.");
     }
 
     [Fact]

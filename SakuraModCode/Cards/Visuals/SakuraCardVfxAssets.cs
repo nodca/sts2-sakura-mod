@@ -15,8 +15,6 @@ internal static class SakuraCardVfxAssets
         [.. TimeStopVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> BlazePaths =
         [.. BlazePhoenixVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
-    private static readonly IReadOnlyList<string> SwordPaths =
-        [.. SakuraSwordBladeVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> GalePaths =
         [.. GaleWindBladeVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> CloudRainPaths =
@@ -45,7 +43,6 @@ internal static class SakuraCardVfxAssets
         Siege => SiegeEnclosureVfx.AssetPaths,
         Blaze => BlazePaths,
         Time => TimePaths,
-        ClowSword or SakuraSword or Blade => SwordPaths,
         Gale => GalePaths,
         ClowCloud or SakuraCloud or ClowRain or SakuraRain => CloudRainPaths,
         ClowSnow or SakuraSnow => SnowPaths,

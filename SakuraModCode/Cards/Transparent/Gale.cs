@@ -31,8 +31,12 @@ public class Gale() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
         await GaleWindBladeVfx.PlayOrResolveAsync(this, Owner.Creature, target, async cues =>
         {
             cues.Impact();
-            await SakuraActions.AttackCommand(this, target, DynamicVars.Damage.IntValue, DynamicVars.Damage.Props)
-                .Execute(choiceContext);
+            await DealDamage(
+                choiceContext,
+                target,
+                DynamicVars.Damage.IntValue,
+                DynamicVars.Damage.Props,
+                keepAttackerAnim: true);
 
             if (activation.IsActive)
                 await ApplyExtraEffect(choiceContext);

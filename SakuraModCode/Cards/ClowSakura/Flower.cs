@@ -52,11 +52,7 @@ public class ClowFlower() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Un
         await PlayerCmd.GainEnergy(ExtraEnergy, Owner);
     }
 
-    protected override void OnUpgrade()
-    {
-        DynamicVars.Energy.UpgradeValueBy(1);
-        AddKeywordIfMissing(CardKeyword.Retain);
-    }
+    protected override void OnUpgrade() => DynamicVars.Energy.UpgradeValueBy(1);
 }
 
 public class SakuraFlower() : SakuraFormCard(0, CardType.Skill, TargetType.None)

@@ -67,7 +67,7 @@ internal static class SakuraMagicCharge
     }
 
     internal static bool GainsMagicAfterPlay(CardModel card, bool hasSealedBook) =>
-        card is SakuraCardModel && SakuraTransparentCardCatalog.IsTransparentCard(card)
+        SakuraTransparentCardCatalog.IsTransparentCard(card)
         || card is SakuraSourceCard { GrantsMagicCharge: true } && hasSealedBook;
 
     internal static async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardModel card)

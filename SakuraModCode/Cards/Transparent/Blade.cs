@@ -33,34 +33,14 @@ public class Blade() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var target = RequiredTarget(play);
-        // Read once, before the attack, and handed to the visuals as a resolved number.
-        // The hit count is what makes the twin blades cross two or four times; they are
-        // packed into a fixed envelope, so four crosses faster rather than for longer.
-        var hits = BladeRules.HitCount(this);
-        await SakuraSwordBladeVfx.PlayOrResolveAsync(
-            this,
-            Owner.Creature,
-            [target],
-            SwordMode.Dual,
-            // Middle tier: an Uncommon costing 2 sits between the Basic attack and the
-            // release token in how often it is played. Its hit count buys crossing
-            // strokes, not extra weight per stroke.
-            SlashWeight.Medium,
-            async cues =>
-            {
-                // Before the attack: the freeze and the contact flash belong on the frame
-                // the game's own damage numbers land.
-                cues.Impact(target);
-                await SakuraActions.Attack(
-                    choiceContext,
-                    this,
-                    target,
-                    DynamicVars.CalculatedDamage,
-                    hitCount: hits,
-                    // Same family sound as the single-blade cards, per hit.
-                    hitSfx: ClowSword.StrikeSfx);
-            },
-            crossings: hits);
+        await DealDamage(
+            choiceContext,
+            target,
+            DynamicVars.CalculatedDamage,
+            hitCount: BladeRules.HitCount(this),
+            // Same family sound and vanilla slash as the single-blade cards, per hit.
+            hitSfx: ClowSword.StrikeSfx,
+            hitVfx: SakuraNativeHitFx.Slash);
     }
 
     protected override void OnUpgrade()
@@ -94,7 +74,7 @@ internal static class BladeRules
     internal static int HitCount(CardModel card, int baseHits)
     {
         var hits = baseHits;
-        if (SakuraCardModel.UsesMagicChargeExtraEffect(card))
+        if (TransparentCard.UsesMagicChargeExtraEffect(card))
             hits += 2;
         return Math.Max(0, hits);
     }

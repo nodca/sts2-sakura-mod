@@ -13,7 +13,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 /// <summary>How much presentation one Arrow play gets.</summary>
 /// <remarks>
 /// The axis is play frequency, not card name or era, which is the same axis
-/// <c>SlashWeight</c> and <c>FreezeWeight</c> already sit on. A basic Clow Arrow
+/// <c>FreezeWeight</c> already sits on. A basic Clow Arrow
 /// appears many times per combat and what decays under repetition is
 /// description, while short transients keep working; a release-token Sakura
 /// Arrow is rare enough to carry the full show.

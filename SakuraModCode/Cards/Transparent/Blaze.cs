@@ -41,13 +41,13 @@ public class Blaze() : TransparentExtraEffectCard(3, CardType.Attack, CardRarity
         // through BlazeRules.ExhaustedCardMultiplier.
         var fuel = new BlazePhoenixVfx.Fuel(
             CardPile.Get(PileType.Exhaust, Owner)?.Cards.Count ?? 0,
-            SakuraCardModel.UsesMagicChargeExtraEffect(this));
+            TransparentCard.UsesMagicChargeExtraEffect(this));
         await BlazePhoenixVfx.PlayOrResolveAsync(this, Owner.Creature, target, fuel, async cues =>
         {
             // Before the attack: the damage number belongs on the frame the bird
             // strikes, not after it.
             cues.Strike();
-            await SakuraActions.Attack(choiceContext, this, target, DynamicVars.CalculatedDamage);
+            await DealDamage(choiceContext, target, DynamicVars.CalculatedDamage);
             // The removal list is read at removal time, exactly as before; the cue
             // only wraps it so the pile can burn to ash where its button was.
             await cues.AshAsync(() => CardPileCmd.RemoveFromCombat(
@@ -90,6 +90,6 @@ internal static class BlazeRules
     public static decimal ExhaustedCardMultiplier(CardModel card, Creature? target) =>
         card.Owner is { } owner
             ? (CardPile.Get(PileType.Exhaust, owner)?.Cards.Count ?? 0)
-                * (SakuraCardModel.UsesMagicChargeExtraEffect(card) ? 2 : 1)
+                * (TransparentCard.UsesMagicChargeExtraEffect(card) ? 2 : 1)
             : 0;
 }

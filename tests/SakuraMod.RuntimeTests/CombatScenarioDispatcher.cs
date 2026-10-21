@@ -29,6 +29,7 @@ internal static class CombatScenarioDispatcher
             "exchange-four-pile-selection" => await ExchangePileScenario.ExecuteAsync(request, assertions),
             "manifest-temporary" => await ManifestTemporaryScenario.ExecuteAsync(request, assertions),
             "generated-pile-memory" => await GeneratedPileMemoryScenario.ExecuteAsync(request, assertions),
+            "forgotten-cleanup-without-transparent" => await ForgottenCleanupWithoutTransparentScenario.ExecuteAsync(request, assertions),
             "element-turn-cleanup" => await ElementTurnCleanupScenario.ExecuteAsync(request, assertions),
             "dream-turn-restoration" => await DreamTurnRestorationScenario.ExecuteAsync(request, assertions),
             "spell-turn-transformation" => await SpellTurnTransformationScenario.ExecuteAsync(request, assertions),

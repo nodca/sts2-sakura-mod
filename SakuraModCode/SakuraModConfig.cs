@@ -42,7 +42,7 @@ public sealed class SakuraModConfig
                 DataKey,
                 static config => config.EnableCardBgm,
                 static (config, value) => config.EnableCardBgm = value),
-            static () => false);
+            static () => true);
 
     internal static IModSettingsValueBinding<bool> EnableCardVfxBinding { get; } =
         ModSettingsBindings.WithDefault(
@@ -63,7 +63,7 @@ public sealed class SakuraModConfig
             static () => false);
 
     public bool EnableSakuraVoice { get; set; }
-    public bool EnableCardBgm { get; set; }
+    public bool EnableCardBgm { get; set; } = true;
     public bool EnableCardVfx { get; set; } = true;
     public bool EnableFourthAct { get; set; }
     public bool UseChibiCombatArt { get; set; }

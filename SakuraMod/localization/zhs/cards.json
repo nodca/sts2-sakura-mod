@@ -269,7 +269,7 @@
   "SAKURA_MOD_CARD_SAKURA_CHANGE.title": "替",
   "SAKURA_MOD_CARD_SAKURA_CHANGE.description": "[gold]小樱牌[/gold] [gold]地[/gold]\n丢弃你的所有手牌。\n抽 {Cards:diff()} 张牌。",
   "SAKURA_MOD_CARD_CLOW_ARROW.title": "矢",
-  "SAKURA_MOD_CARD_CLOW_ARROW.description": "[gold]火[/gold]\n丢弃任意张手牌。\n对随机敌人造成 {Damage:diff()} 点伤害 X 次，每丢弃 1 张牌再多 1 次。",
+  "SAKURA_MOD_CARD_CLOW_ARROW.description": "[gold]火[/gold]\n丢弃至多 X 张手牌。\n对随机敌人造成 {Damage:diff()} 点伤害 X 次，每丢弃 1 张牌再多 1 次。",
   "SAKURA_MOD_CARD_CLOW_ARROW.extraDescription": "[gold]额外效果：[/gold]改为由你选择目标。",
   "SAKURA_MOD_CARD_SAKURA_ARROW.title": "矢",
   "SAKURA_MOD_CARD_SAKURA_ARROW.description": "[gold]小樱牌[/gold] [gold]火[/gold]\n丢弃你的抽牌堆。\n每丢弃 1 张不同的牌，对随机敌人造成 {Damage:diff()} 点伤害。",

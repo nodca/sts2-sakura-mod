@@ -269,7 +269,7 @@
   "SAKURA_MOD_CARD_SAKURA_CHANGE.title": "Change",
   "SAKURA_MOD_CARD_SAKURA_CHANGE.description": "[gold]Sakura Card[/gold] [gold]Earthy[/gold]\nDiscard your [gold]Hand[/gold].\nDraw {Cards:diff()} {Cards:plural:card|cards}.",
   "SAKURA_MOD_CARD_CLOW_ARROW.title": "Arrow",
-  "SAKURA_MOD_CARD_CLOW_ARROW.description": "[gold]Fiery[/gold]\nDiscard any number of cards.\nDeal {Damage:diff()} damage to a random enemy X times, plus once for each card discarded.",
+  "SAKURA_MOD_CARD_CLOW_ARROW.description": "[gold]Fiery[/gold]\nDiscard up to X cards.\nDeal {Damage:diff()} damage to a random enemy X times, plus once for each card discarded.",
   "SAKURA_MOD_CARD_CLOW_ARROW.extraDescription": "[gold]Extra:[/gold] Choose the target instead.",
   "SAKURA_MOD_CARD_SAKURA_ARROW.title": "Arrow",
   "SAKURA_MOD_CARD_SAKURA_ARROW.description": "[gold]Sakura Card[/gold] [gold]Fiery[/gold]\nDiscard your [gold]Draw Pile[/gold].\nFor each unique card discarded, deal {Damage:diff()} damage to a random enemy.",

@@ -198,7 +198,9 @@ public sealed class TemporaryModifier : SakuraCardStateCapability
 {
     private const string DelayedRemovalTurnsKey = "DelayedRemovalTurns";
     private const string ReturnsToMemoryKey = "ReturnsToMemory";
-    private static readonly ConditionalWeakTable<ICombatState, HashSet<Player>> CleanupFinishedByCombat = new();
+    // Player -> the PlayerCombatState.TurnNumber whose cleanup already ran. Every
+    // Temporary card hears AfterSideTurnEnd; only the first one per turn cleans.
+    private static readonly ConditionalWeakTable<ICombatState, Dictionary<Player, int>> CleanupFinishedByCombat = new();
     private static readonly PileType[] CleanupPileOrder =
     [
         PileType.Hand,
@@ -256,11 +258,14 @@ public sealed class TemporaryModifier : SakuraCardStateCapability
 
     private static async Task CleanupTemporaryCards(PlayerChoiceContext choiceContext, MegaCrit.Sts2.Core.Entities.Players.Player player)
     {
-        if (player.Creature.CombatState is { } combatState)
+        if (player.Creature.CombatState is { } combatState
+            && player.PlayerCombatState is { } playerCombat)
         {
-            var cleanedPlayers = CleanupFinishedByCombat.GetValue(combatState, _ => []);
-            if (!cleanedPlayers.Add(player))
+            var cleanedTurns = CleanupFinishedByCombat.GetValue(combatState, _ => []);
+            if (cleanedTurns.TryGetValue(player, out var cleanedTurn) && cleanedTurn == playerCombat.TurnNumber)
                 return;
+
+            cleanedTurns[player] = playerCombat.TurnNumber;
         }
 
         foreach (var card in TemporaryCardsInCleanupOrder(player))
@@ -322,15 +327,6 @@ public sealed class TemporaryModifier : SakuraCardStateCapability
 
         DelayedRemovalTurns--;
         return true;
-    }
-
-    internal static void ResetCleanupForTurn(Player player)
-    {
-        if (player.Creature.CombatState is null
-            || !CleanupFinishedByCombat.TryGetValue(player.Creature.CombatState, out var cleanedPlayers))
-            return;
-
-        cleanedPlayers.Remove(player);
     }
 }
 
@@ -593,11 +589,6 @@ public static class SakuraCardStates
 
         temporary.DelayRemoval(turns);
         return true;
-    }
-
-    public static void ResetTemporaryCleanupForTurn(Player player)
-    {
-        TemporaryModifier.ResetCleanupForTurn(player);
     }
 
     public static void MakeTemporary(this CardModel card, bool returnsToMemory = true)

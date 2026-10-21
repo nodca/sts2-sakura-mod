@@ -260,7 +260,7 @@ internal static class SakuraDescriptionRegion
         card switch
         {
             ClowExtraEffectCard clowCard => SakuraSourceCardText.ShouldShowMagicChargeExtraDescription(clowCard),
-            _ => SakuraCardModel.ShouldShowMagicChargeExtraEffectDescription(card)
+            _ => TransparentCard.ShouldShowMagicChargeExtraEffectDescription(card)
         };
 
     private static string DescriptionHeader(CardModel card) =>

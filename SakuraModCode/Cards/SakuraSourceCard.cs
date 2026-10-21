@@ -35,11 +35,9 @@ public abstract class SakuraSourceCard(
     CardType type,
     CardRarity rarity,
     TargetType target) :
-    ModCardTemplate(cost, type, rarity, target)
+    SakuraCardModel(cost, type, rarity, target)
 {
     protected static readonly LocString HandPrompt = new("cards", "SAKURAMOD-GENERIC.handPrompt");
-    protected static LocString CardLoc<TCard>(string suffix) where TCard : CardModel =>
-        new("cards", $"{ModelDb.GetId(typeof(TCard)).Entry}.{suffix}");
 
     internal SourceEraClass? Era => SakuraCardCatalog.MetadataFor(GetType()).Era;
     public SourceCardIdentity? Identity => SakuraCardCatalog.MetadataFor(GetType()).Identity;
@@ -54,239 +52,22 @@ public abstract class SakuraSourceCard(
     internal virtual bool AddsVoidOnNormalSakuraPlay => IsSakuraCard;
     internal bool ShowsSakuraCardVoidTip => AddsVoidOnNormalSakuraPlay;
 
-    public override string CustomPortraitPath => CardModel.MissingPortraitPath;
-    public override string PortraitPath => CardModel.MissingPortraitPath;
-    public override string BetaPortraitPath => CardModel.MissingPortraitPath;
-    protected override IEnumerable<string> ExtraRunAssetPaths =>
-        ClassicCardVisualAssets.RunAssetPaths(this).Concat(SakuraCardVfxAssets.RunAssetPaths(this));
+    private protected override IEnumerable<string> FamilyRunAssetPaths =>
+        ClassicCardVisualAssets.RunAssetPaths(this);
 
-    protected sealed override async Task OnPlay(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        if (this is ISakuraExtraEffectCard)
-        {
-            await SakuraExtraEffectTransaction.Execute(this, choiceContext, play);
-            return;
-        }
-
-        var opportunity = SakuraMagicCharge.CaptureOpportunity(Owner);
-        SakuraExtraEffectTransaction.TryShowMagicCircle(this, default);
-        await PlayCard(choiceContext, play);
-        await SakuraMagicCharge.TryApplyCapturedOpportunity(choiceContext, this, opportunity);
-    }
+    protected sealed override Task PlayCard(
+        PlayerChoiceContext choiceContext,
+        CardPlay play,
+        SakuraExtraEffectActivation activation) =>
+        PlayCard(choiceContext, play);
 
     protected abstract Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play);
-
-    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        if (play.Card != this)
-            return;
-
-        await SakuraMagicCharge.AfterCardPlayed(choiceContext, this);
-        await SakuraFormVoid.AfterCardPlayed(choiceContext, this);
-    }
 
     protected int ReleasedValue(string varName) => DynamicVars[varName].IntValue;
 
     protected int ReleasedDamage() => ReleasedValue("Damage");
     protected int ReleasedBlock() => ReleasedValue("Block");
     protected int ReleasedMagic() => ReleasedValue("Magic");
-
-    protected static Creature RequiredTarget(CardPlay play) =>
-        play.Target ?? throw new InvalidOperationException("Card target is required by this card's TargetType.");
-
-    protected async Task<AttackCommand?> DealDamage(
-        PlayerChoiceContext choiceContext,
-        Creature target,
-        int amount,
-        ValueProp props = ValueProp.Move,
-        int hitCount = 1,
-        string? hitSfx = null,
-        Func<Creature, Task>? onHit = null,
-        string? hitVfx = null,
-        string? hitTmpSfx = null,
-        Func<Creature, Godot.Node2D?>? hitVfxNode = null,
-        bool spawnHitVfxAtBase = false)
-    {
-        if (hitCount <= 0)
-            return null;
-
-        var attack = DamageCmd.Attack(amount)
-            .WithHitCount(hitCount)
-            .FromCard(this)
-            .WithValueProp(props)
-            .WithNoAttackerAnim()
-            .Targeting(target);
-        WithHitFx(attack, hitVfx, hitSfx, hitTmpSfx, hitVfxNode, spawnHitVfxAtBase);
-        return await WithHitObserver(attack, onHit).Execute(choiceContext);
-    }
-
-    protected async Task<AttackCommand?> DealDamageToEnemies(
-        PlayerChoiceContext choiceContext,
-        IEnumerable<Creature> targets,
-        int amount,
-        ValueProp props = ValueProp.Move,
-        int hitCount = 1,
-        string? hitVfx = null,
-        string? hitTmpSfx = null,
-        Func<Creature, Godot.Node2D?>? hitVfxNode = null)
-    {
-        if (hitCount <= 0)
-            return null;
-
-        var attack = DamageCmd.Attack(amount)
-            .WithHitCount(hitCount)
-            .FromCard(this)
-            .WithValueProp(props)
-            .WithNoAttackerAnim()
-            .TargetingFiltered(targets.Where(static target => target.IsAlive).ToList());
-        WithHitFx(attack, hitVfx, null, hitTmpSfx, hitVfxNode, spawnHitVfxAtBase: false);
-        return await attack.Execute(choiceContext);
-    }
-
-    /// <summary>
-    /// Applies an optional vanilla hit effect: a scene path through <c>WithHitFx</c>, or a
-    /// per-target node factory through <c>WithHitVfxNode</c> for effects that take a tint or scale.
-    /// </summary>
-    private static void WithHitFx(
-        AttackCommand attack,
-        string? vfx,
-        string? sfx,
-        string? tmpSfx,
-        Func<Creature, Godot.Node2D?>? vfxNode,
-        bool spawnHitVfxAtBase)
-    {
-        if (vfx != null || sfx != null || tmpSfx != null)
-            attack.WithHitFx(vfx, sfx, tmpSfx);
-        if (vfx != null && spawnHitVfxAtBase)
-            attack.WithHitVfxSpawnedAtBase();
-        if (vfxNode != null)
-            attack.WithHitVfxNode(vfxNode);
-    }
-
-    protected async Task<AttackCommand?> DealDamageToRandomEnemies(
-        PlayerChoiceContext choiceContext,
-        int amount,
-        int hitCount,
-        ValueProp props = ValueProp.Move,
-        string? hitVfx = null,
-        string? hitSfx = null,
-        bool spawnHitVfxAtBase = false,
-        Func<Creature, Task>? onHit = null)
-    {
-        if (hitCount <= 0)
-            return null;
-
-        var attack = DamageCmd.Attack(amount)
-            .WithHitCount(hitCount)
-            .FromCard(this)
-            .WithValueProp(props)
-            .WithNoAttackerAnim()
-            .TargetingRandomOpponents(CombatState!)
-            .WithHitFx(hitVfx, hitSfx);
-
-        if (spawnHitVfxAtBase)
-            attack.WithHitVfxSpawnedAtBase();
-
-        return await WithHitObserver(attack, onHit).Execute(choiceContext);
-    }
-
-    /// <summary>
-    /// Attaches a per-hit target observer to an attack, or returns it untouched
-    /// when no caller asked for one.
-    /// </summary>
-    /// <remarks>
-    /// The engine resolves one hit as: call every <c>WithHitVfxNode</c> factory
-    /// with the creature this hit is about to strike, then await
-    /// <c>BeforeDamage</c>, then run <c>CreatureCmd.Damage</c> against that same
-    /// creature. Returning <see langword="null"/> from the factory makes
-    /// <c>AddChildSafely</c> a no-op, so the factory is a pure observer here: the
-    /// caller learns the target without contributing a node.
-    /// <para>
-    /// <c>pending</c> is copied out and cleared before the await because a hit
-    /// whose factory never ran would otherwise replay the previous hit's target.
-    /// That is not hypothetical: the engine skips the factory entirely when
-    /// <c>Creature.GetVfxContainer()</c> is null, which is exactly what happens
-    /// under <c>TestMode</c>, and it also skips it when the attack has no valid
-    /// target left. In both cases no damage follows either, so skipping the
-    /// observer keeps the two in step.
-    /// </para>
-    /// <para>
-    /// There is deliberately no <c>IsAlive</c> check on the way out. A creature
-    /// can only reach <c>pending</c> by the factory having just run for it, and
-    /// nothing applies damage between the factory and <c>BeforeDamage</c>, so a
-    /// target cannot die inside that window. One that died earlier simply never
-    /// reaches the factory again, and gating on <c>IsAlive</c> here would do
-    /// nothing except drop the flash on the hit that killed it — which is the
-    /// one hit that most needs to be seen landing.
-    /// </para>
-    /// <para>
-    /// Both current callers resolve exactly one creature per hit — random
-    /// targeting, or a single fixed target — which is what the observer assumes.
-    /// An attack that damaged several creatures in one hit would fire the
-    /// factory once per creature but run <c>BeforeDamage</c> once, so the
-    /// observer is not built for that shape.
-    /// </para>
-    /// <para>
-    /// The engine's own remark on <c>BeforeDamage</c> asks for a first-class
-    /// builder method once several attacks share the logic. This is that method:
-    /// the alternative is every caller restating the observer pair.
-    /// </para>
-    /// </remarks>
-    private static AttackCommand WithHitObserver(AttackCommand attack, Func<Creature, Task>? onHit)
-    {
-        if (onHit is null)
-            return attack;
-
-        Creature? pending = null;
-        return attack
-            .WithHitVfxNode(target =>
-            {
-                pending = target;
-                return null;
-            })
-            .BeforeDamage(async () =>
-            {
-                var target = pending;
-                pending = null;
-                if (target is not null)
-                    await onHit(target);
-            });
-    }
-
-    protected async Task TriggerCurrentPoison(
-        PlayerChoiceContext choiceContext,
-        IEnumerable<Creature> targets,
-        int triggerCount)
-    {
-        if (triggerCount <= 0)
-            return;
-
-        foreach (var target in targets.Where(static target => target.IsAlive).ToList())
-        {
-            for (var i = 0; i < triggerCount && target.IsAlive; i++)
-            {
-                var poison = target.GetPower<PoisonPower>()?.Amount ?? 0;
-                if (poison <= 0)
-                    break;
-
-                await DealDamage(choiceContext, target, poison, ValueProp.Unblockable);
-            }
-        }
-    }
-
-    protected async Task DealDamageHit(AttackContext attackContext, PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move, string? hitVfx = null)
-    {
-        if (!target.IsAlive)
-            return;
-
-        // This hit bypasses AttackCommand, so it plays the hit VFX the way AttackCommand does.
-        if (hitVfx != null)
-            VfxCmd.PlayOnCreatureCenter(target, hitVfx);
-        attackContext.AddHit(await CreatureCmd.Damage(choiceContext, target, amount, props, Owner.Creature, this));
-    }
-
-    protected async Task GainBlock(CardPlay play, int amount) =>
-        await CreatureCmd.GainBlock(Owner.Creature, amount, ValueProp.Move, play, false);
 
     protected async Task ApplyPower<T>(PlayerChoiceContext choiceContext, Creature target, int amount) where T : PowerModel =>
         await PowerCmd.Apply<T>(choiceContext, target, amount, Owner.Creature, this, false);
@@ -319,12 +100,6 @@ public abstract class SakuraSourceCard(
             var card = combatState.CreateCard<T>(Owner);
             await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Hand, Owner, CardPilePosition.Random);
         }
-    }
-
-    protected void AddKeywordIfMissing(CardKeyword keyword)
-    {
-        if (!Keywords.Contains(keyword))
-            AddKeyword(keyword);
     }
 
 }
