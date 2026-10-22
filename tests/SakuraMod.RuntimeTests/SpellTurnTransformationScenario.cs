@@ -173,6 +173,29 @@ internal static class SpellTurnTransformationScenario
             assertions.True($"aqua_{frozen}_outro_cleans_up", Find("SakuraAquaPhoenixVfx") is null);
         }
 
+        Node2D? FindBack(string name) => room.BackCombatVfxContainer.GetChildren().OfType<Node2D>()
+            .SingleOrDefault(node => node.Name == name);
+        foreach (var extra in new[] { false, true })
+        {
+            var shadeCalls = 0;
+            await ShadeGroundDragonVfx.PlayOrResolveAsync(ModelDb.Card<Shade>(), null, [target], extra, async cues =>
+            {
+                shadeCalls++;
+                var shadow = FindBack("SakuraShadeGroundDragonVfx")
+                    ?? throw new InvalidOperationException("Shade presentation failed to mount on the floor layer.");
+                assertions.True($"shade_{extra}_composite_shows_once_the_body_runs",
+                    shadow.GetNode<Sprite2D>("%Composite").Visible);
+                assertions.Equal($"shade_{extra}_mask_viewport_renders_while_live",
+                    SubViewport.UpdateMode.Always, shadow.GetNode<SubViewport>("%MaskViewport").RenderTargetUpdateMode);
+                await cues.SpreadAsync();
+                await cues.ReachAsync(target);
+                assertions.True($"shade_{extra}_reach_follows_spread", FindBack("SakuraShadeGroundDragonVfx") is not null);
+            });
+            assertions.Equal($"shade_{extra}_gameplay_resolves_once", 1, shadeCalls);
+            await CombatScenarioContext.WaitUntilAsync(() => FindBack("SakuraShadeGroundDragonVfx") is null,
+                $"Shade {(extra ? "extra" : "normal")} cleanup");
+            assertions.True($"shade_{extra}_outro_cleans_up", FindBack("SakuraShadeGroundDragonVfx") is null);
+        }
     }
 
     /// <summary>

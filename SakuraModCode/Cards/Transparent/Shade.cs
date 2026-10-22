@@ -27,10 +27,23 @@ public class Shade() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity.
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
-        await PowerCmd.Apply<WeakPower>(choiceContext, CombatState!.HittableEnemies.ToList(), DynamicVars.Weak.IntValue, Owner.Creature, this, false);
-        if (activation.IsActive)
-            await ApplyExtraEffect(choiceContext, play);
+        var targets = CombatState!.HittableEnemies.ToList();
+        await ShadeGroundDragonVfx.PlayOrResolveAsync(this, Owner.Creature, targets, activation.IsActive, async cues =>
+        {
+            await cues.SpreadAsync();
+            await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
+
+            // Native multi-target Apply is this same per-target loop; splitting it
+            // lets each enemy's Weak land as the shadow passes under it.
+            foreach (var enemy in targets)
+            {
+                await cues.ReachAsync(enemy);
+                await PowerCmd.Apply<WeakPower>(choiceContext, enemy, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
+            }
+
+            if (activation.IsActive)
+                await ApplyExtraEffect(choiceContext, play);
+        });
     }
 
     private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play) =>

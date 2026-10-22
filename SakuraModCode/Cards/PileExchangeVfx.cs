@@ -5,52 +5,131 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.Core.TestSupport;
 using STS2RitsuLib.CardPiles.Nodes;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
+/// <summary>Which card's motif a pile exchange shows.</summary>
+public enum PileExchangeMotif
+{
+    /// <summary>Exchange: two flowers trade places along a vine.</summary>
+    Exchange,
+    /// <summary>Reversal: a diagonally split card plate turns negative.</summary>
+    Reversal
+}
+
+/// <summary>One drawn motif of a pile exchange, advanced on the exchange's clock.</summary>
+internal interface IPileExchangeMotif
+{
+    /// <summary>Where the motif centres, in its root's local space.</summary>
+    Vector2 Focus { get; }
+
+    void Advance(float t);
+}
+
+/// <summary>
+/// Exchange and Reversal swap two whole piles without moving card nodes, so this
+/// is what the player sees of the swap. Each card shows the motif of its own
+/// card face over the two pile buttons, while the cards themselves fly as the
+/// game's own shuffle souls. Local player only, fire-and-forget: nothing here
+/// waits or throws into the swap.
+/// </summary>
 public static class PileExchangeVfx
 {
-    private const float Duration = 0.9f;
+    internal const float Duration = 1.15f;
+    internal const float FadeFrom = 0.88f;
+    private const float SoulsFrom = 0.08f;
+    // The shuffle's own spacing, capped so a huge pile does not flood the HUD.
+    private const int MaxSouls = 12;
+    private const float SoulSpacing = 0.045f;
+    private const float SoulBudget = 0.4f;
     private const int VfxZIndex = 3000;
-    private const int GhostCount = 5;
-    private static readonly Color DrawColor = new(0.66f, 0.9f, 1f, 0.78f);
-    private static readonly Color DiscardColor = new(1f, 0.78f, 0.56f, 0.78f);
-    private static readonly Color PileGlowColor = new(1f, 0.95f, 0.72f, 0.72f);
-    private static readonly Color CenterSparkColor = new(1f, 1f, 0.9f, 0.9f);
     internal static readonly Color MemoryColor = new(0.58f, 0.93f, 1f, 0.82f);
-    private static readonly Color ExhaustColor = new(1f, 0.58f, 0.32f, 0.82f);
-    private static readonly Vector2 GhostCardSize = new(30f, 42f);
+
+    private static Node2D? _activeRoot;
+    private static ActiveExchange _active;
+    private static bool _failureLogged;
+
+    /// <summary>Where the exchange now playing for the local player lies, in global coordinates.</summary>
+    internal readonly record struct ActiveExchange(Vector2 First, Vector2 Second, Vector2 Focus);
 
     public static void Play(
         Player owner,
         PileType firstPileType,
         PileType secondPileType,
         int firstCount,
-        int secondCount)
+        int secondCount,
+        PileExchangeMotif motif = PileExchangeMotif.Exchange)
     {
+        Shader? plateShader = null;
         if (TestMode.IsOn
+            || !SakuraModConfig.IsCardVfxEnabled()
             || !LocalContext.IsMe(owner)
-            || NCombatRoom.Instance is not { } room
-            || room.Ui is null
-            || !TryResolveEndpoint(room, firstPileType, out var firstCenter, out var firstColor)
-            || !TryResolveEndpoint(room, secondPileType, out var secondCenter, out var secondColor))
+            || firstCount + secondCount == 0
+            || NCombatRoom.Instance is not { Ui: { } ui } room
+            || !GodotObject.IsInstanceValid(ui)
+            || motif == PileExchangeMotif.Reversal && (plateShader = ReversalPlateMotif.TryGetShader()) is null
+            || !TryResolveEndpoint(room, firstPileType, out var firstCenter)
+            || !TryResolveEndpoint(room, secondPileType, out var secondCenter)
+            || firstCenter.DistanceSquaredTo(secondCenter) <= 1f)
         {
             return;
         }
 
-        Play(
-            room,
-            firstCenter,
-            secondCenter,
-            firstCount,
-            secondCount,
-            firstColor,
-            secondColor,
-            PileGlowColor,
-            "SakuraPileExchangeVfx");
+        try
+        {
+            var midpoint = (firstCenter + secondCenter) * 0.5f;
+            var root = new Node2D
+            {
+                Name = motif == PileExchangeMotif.Reversal ? "SakuraReversalPlatesVfx" : "SakuraExchangeVineVfx",
+                ZIndex = VfxZIndex,
+                ZAsRelative = false
+            };
+            room.Ui!.AddChildSafely(root);
+            root.GlobalPosition = midpoint;
+
+            var first = firstCenter - midpoint;
+            var second = secondCenter - midpoint;
+            var screenCentre = room.GetViewportRect().Size * 0.5f - midpoint;
+            IPileExchangeMotif drawn = motif == PileExchangeMotif.Reversal
+                ? ReversalPlateMotif.Create(root, plateShader!, first, second, screenCentre.X)
+                : ExchangeVineMotif.Create(root, first, second, screenCentre);
+            Track(root, new ActiveExchange(firstCenter, secondCenter, midpoint + drawn.Focus));
+
+            var tween = root.CreateTween().SetParallel();
+            tween.TweenMethod(Callable.From<float>(drawn.Advance), 0f, Duration, Duration);
+            tween.Finished += root.QueueFreeSafely;
+            LaunchSouls(root, owner, firstPileType, secondPileType, firstCount);
+            LaunchSouls(root, owner, secondPileType, firstPileType, secondCount);
+        }
+        catch (Exception exception)
+        {
+            if (_failureLogged)
+                return;
+            _failureLogged = true;
+            MainFile.Logger.Error($"Pile exchange VFX failed: {exception}");
+        }
     }
+
+    /// <summary>The exchange now playing for <paramref name="owner"/>, if any; the Loop hangs its count on it.</summary>
+    internal static bool TryGetActiveExchange(Player owner, out ActiveExchange exchange)
+    {
+        exchange = _active;
+        return LocalContext.IsMe(owner)
+            && _activeRoot is { } root
+            && GodotObject.IsInstanceValid(root)
+            && root.IsInsideTree();
+    }
+
+    /// <summary>Fades everything out over the last stretch of the exchange.</summary>
+    internal static float FadeAt(float t) =>
+        1f - Math.Clamp((t - FadeFrom) / (Duration - FadeFrom), 0f, 1f);
+
+    /// <summary>Pops step on the 12 Hz cel clock: four frames to full size.</summary>
+    internal static float Stepped(float u) =>
+        u < 1f ? MathF.Floor(u * 4f) / 4f : 1f;
 
     internal static bool TryGetPileCenter(NCombatRoom room, PileType pileType, out Vector2 center)
     {
@@ -58,14 +137,10 @@ public static class PileExchangeVfx
         if (room.Ui is null)
             return false;
 
-        return TryResolveEndpoint(room, pileType, out center, out _);
+        return TryResolveEndpoint(room, pileType, out center);
     }
 
-    private static bool TryResolveEndpoint(
-        NCombatRoom room,
-        PileType pileType,
-        out Vector2 center,
-        out Color color)
+    private static bool TryResolveEndpoint(NCombatRoom room, PileType pileType, out Vector2 center)
     {
         var ui = room.Ui!;
         if (pileType == SakuraMemoryPile.PileType)
@@ -73,81 +148,60 @@ public static class PileExchangeVfx
             center = FindMemoryPileButton(room) is { } memoryButton
                 ? CenterOf(memoryButton)
                 : CenterOf(ui.ExhaustPile) + SakuraMemoryPile.UiOffsetAboveExhaust;
-            color = MemoryColor;
             return true;
         }
 
-        Control? control;
-        switch (pileType)
+        Control? control = pileType switch
         {
-            case PileType.Draw:
-                control = ui.DrawPile;
-                color = DrawColor;
-                break;
-            case PileType.Discard:
-                control = ui.DiscardPile;
-                color = DiscardColor;
-                break;
-            case PileType.Exhaust:
-                control = ui.ExhaustPile;
-                color = ExhaustColor;
-                break;
-            default:
-                center = default;
-                color = default;
-                return false;
-        }
-
-        center = CenterOf(control);
-        return true;
+            PileType.Draw => ui.DrawPile,
+            PileType.Discard => ui.DiscardPile,
+            PileType.Exhaust => ui.ExhaustPile,
+            _ => null
+        };
+        center = control is null ? default : CenterOf(control);
+        return control is not null;
     }
 
-    private static void Play(
-        NCombatRoom room,
-        Vector2 firstCenter,
-        Vector2 secondCenter,
-        int firstCount,
-        int secondCount,
-        Color firstColor,
-        Color secondColor,
-        Color glowColor,
-        string nodeName)
+    private static void Track(Node2D root, ActiveExchange exchange)
     {
-        if (firstCount + secondCount == 0 || firstCenter.DistanceSquaredTo(secondCenter) <= 1f)
-            return;
-
-        var container = (Control?)room.Ui ?? room.CombatVfxContainer;
-        if (container is null)
-            return;
-
-        var midpoint = (firstCenter + secondCenter) * 0.5f;
-        var root = new Node2D
+        _activeRoot = root;
+        _active = exchange;
+        root.TreeExiting += () =>
         {
-            Name = nodeName,
-            ZIndex = VfxZIndex,
-            ZAsRelative = false
+            if (ReferenceEquals(_activeRoot, root))
+                _activeRoot = null;
         };
-        container.AddChildSafely(root);
-        root.GlobalPosition = midpoint;
+    }
 
-        var first = firstCenter - midpoint;
-        var second = secondCenter - midpoint;
-        BuildPileGlow(root, first, glowColor);
-        BuildPileGlow(root, second, glowColor);
-        if (firstCount > 0)
+    // The game's own shuffle soul for each card, spaced like a shuffle. The
+    // souls belong to the combat VFX container and clean themselves up; the
+    // root's tween only schedules them, so a root freed early stops the rest.
+    private static void LaunchSouls(Node2D root, Player owner, PileType from, PileType to, int cards)
+    {
+        var count = Math.Min(cards, MaxSouls);
+        if (count == 0
+            || CardPile.Get(from, owner) is not { } fromPile
+            || CardPile.Get(to, owner) is not { } toPile
+            || owner.Creature.GetVfxContainer() is not { } container)
         {
-            BuildArc(root, first, second, firstColor, -1f);
-            BuildGhostCards(root, first, second, firstColor, -1f, Math.Clamp(firstCount, 1, GhostCount));
+            return;
         }
 
-        if (secondCount > 0)
+        var trailPath = owner.Character.TrailPath;
+        var spacing = Math.Min(SoulSpacing, SoulBudget / count);
+        var tween = root.CreateTween().SetParallel();
+        for (var i = 0; i < count; i++)
         {
-            BuildArc(root, second, first, secondColor, 1f);
-            BuildGhostCards(root, second, first, secondColor, 1f, Math.Clamp(secondCount, 1, GhostCount));
+            tween.TweenCallback(Callable.From(() =>
+                {
+                    if (GodotObject.IsInstanceValid(container)
+                        && NCardFlyShuffleVfx.Create(fromPile, toPile, trailPath) is { } soul)
+                    {
+                        container.AddChildSafely(soul);
+                    }
+                }))
+                .SetDelay(SoulsFrom + i * spacing);
         }
-
-        BuildCenterSpark(root);
-        TaskHelper.RunSafely(Animate(root));
     }
 
     private static Vector2 CenterOf(Control control) =>
@@ -157,200 +211,4 @@ public static class PileExchangeVfx
         room.Ui?.FindChildren("*", recursive: true, owned: false)
             .OfType<NModCardPileButton>()
             .FirstOrDefault(button => button.Definition?.PileType == SakuraMemoryPile.PileType);
-
-    private static void BuildPileGlow(Node2D root, Vector2 position, Color color)
-    {
-        var glow = new Line2D
-        {
-            Name = "PileGlow",
-            Width = 4.5f,
-            DefaultColor = color,
-            Closed = true,
-            Antialiased = true,
-            Points = EllipsePoints(42f, 30f)
-        };
-        glow.Position = position;
-        root.AddChild(glow);
-    }
-
-    private static void BuildArc(Node2D root, Vector2 start, Vector2 end, Color color, float direction)
-    {
-        var arc = new Line2D
-        {
-            Name = "ExchangeArc",
-            Width = 2.4f,
-            DefaultColor = color,
-            Antialiased = true,
-            Points = ArcPoints(start, end, direction)
-        };
-        root.AddChild(arc);
-    }
-
-    private static void BuildGhostCards(Node2D root, Vector2 start, Vector2 end, Color color, float direction, int count)
-    {
-        for (var i = 0; i < count; i++)
-        {
-            var ghost = new Polygon2D
-            {
-                Name = direction < 0f ? "FirstToSecondGhost" : "SecondToFirstGhost",
-                Color = color,
-                Polygon =
-                [
-                    new(-GhostCardSize.X * 0.5f, -GhostCardSize.Y * 0.5f),
-                    new(GhostCardSize.X * 0.5f, -GhostCardSize.Y * 0.5f),
-                    new(GhostCardSize.X * 0.5f, GhostCardSize.Y * 0.5f),
-                    new(-GhostCardSize.X * 0.5f, GhostCardSize.Y * 0.5f)
-                ],
-                Position = start,
-                Rotation = DirectionAngle(start, end) + (direction < 0f ? -0.18f : 0.18f),
-                Scale = Vector2.One * (0.8f + i * 0.04f)
-            };
-            root.AddChild(ghost);
-        }
-    }
-
-    private static void BuildCenterSpark(Node2D root)
-    {
-        for (var i = 0; i < 8; i++)
-        {
-            var angle = Mathf.Tau * i / 8f;
-            var direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-            var line = new Line2D
-            {
-                Name = "CenterSpark",
-                Width = i % 2 == 0 ? 2.4f : 1.6f,
-                DefaultColor = CenterSparkColor,
-                Antialiased = true,
-                Points = [direction * 6f, direction * 28f]
-            };
-            root.AddChild(line);
-        }
-    }
-
-    private static async Task Animate(Node2D root)
-    {
-        if (!root.IsInsideTree())
-            return;
-
-        var tween = root.CreateTween().SetParallel();
-        tween.TweenProperty(root, "modulate:a", 0f, Duration * 0.28f)
-            .SetDelay(Duration * 0.72f)
-            .SetEase(Tween.EaseType.In)
-            .SetTrans(Tween.TransitionType.Quad);
-
-        AnimatePileGlows(root, tween);
-        AnimateArcs(root, tween);
-        AnimateGhosts(root, tween, "FirstToSecondGhost", -1f);
-        AnimateGhosts(root, tween, "SecondToFirstGhost", 1f);
-        AnimateCenterSpark(root, tween);
-
-        await root.ToSignal(tween, Tween.SignalName.Finished);
-        root.QueueFreeSafely();
-    }
-
-    private static void AnimatePileGlows(Node2D root, Tween tween)
-    {
-        foreach (var glow in root.GetChildren().OfType<Line2D>().Where(node => node.Name == "PileGlow"))
-        {
-            tween.TweenProperty(glow, "scale", Vector2.One * 1.35f, Duration * 0.45f)
-                .From(Vector2.One * 0.75f)
-                .SetEase(Tween.EaseType.Out)
-                .SetTrans(Tween.TransitionType.Cubic);
-            tween.TweenProperty(glow, "modulate:a", 0f, Duration * 0.38f)
-                .SetDelay(Duration * 0.52f);
-        }
-    }
-
-    private static void AnimateArcs(Node2D root, Tween tween)
-    {
-        foreach (var arc in root.GetChildren().OfType<Line2D>().Where(node => node.Name == "ExchangeArc"))
-        {
-            tween.TweenProperty(arc, "modulate:a", 0f, Duration * 0.34f)
-                .SetDelay(Duration * 0.58f);
-        }
-    }
-
-    private static void AnimateGhosts(Node2D root, Tween tween, string nodeName, float direction)
-    {
-        var ghosts = root.GetChildren().OfType<Polygon2D>().Where(node => node.Name == nodeName).ToList();
-        for (var i = 0; i < ghosts.Count; i++)
-        {
-            var ghost = ghosts[i];
-            var delay = i * 0.055f;
-            var start = ghost.Position;
-            var end = -start;
-            var control = ArcControlPoint(start, end, direction);
-            tween.TweenMethod(
-                    Callable.From<float>(value => ghost.Position = Quadratic(start, control, end, value)),
-                    0f,
-                    1f,
-                    Duration * 0.68f)
-                .SetDelay(delay)
-                .SetEase(Tween.EaseType.InOut)
-                .SetTrans(Tween.TransitionType.Cubic);
-            tween.TweenProperty(ghost, "rotation", DirectionAngle(start, end) + direction * 0.42f, Duration * 0.68f)
-                .SetDelay(delay)
-                .SetEase(Tween.EaseType.InOut)
-                .SetTrans(Tween.TransitionType.Cubic);
-            tween.TweenProperty(ghost, "modulate:a", 0f, Duration * 0.2f)
-                .SetDelay(delay + Duration * 0.52f);
-        }
-    }
-
-    private static void AnimateCenterSpark(Node2D root, Tween tween)
-    {
-        foreach (var spark in root.GetChildren().OfType<Line2D>().Where(node => node.Name == "CenterSpark"))
-        {
-            tween.TweenProperty(spark, "scale", Vector2.One * 1.55f, Duration * 0.4f)
-                .From(Vector2.One * 0.2f)
-                .SetDelay(Duration * 0.24f)
-                .SetEase(Tween.EaseType.Out)
-                .SetTrans(Tween.TransitionType.Cubic);
-            tween.TweenProperty(spark, "modulate:a", 0f, Duration * 0.28f)
-                .SetDelay(Duration * 0.5f);
-        }
-    }
-
-    private static Vector2[] ArcPoints(Vector2 start, Vector2 end, float direction)
-    {
-        const int pointCount = 28;
-        var points = new Vector2[pointCount];
-        var control = ArcControlPoint(start, end, direction);
-        for (var i = 0; i < pointCount; i++)
-        {
-            var t = i / (float)(pointCount - 1);
-            points[i] = Quadratic(start, control, end, t);
-        }
-
-        return points;
-    }
-
-    private static Vector2 ArcControlPoint(Vector2 start, Vector2 end, float direction)
-    {
-        var midpoint = (start + end) * 0.5f;
-        var distance = start.DistanceTo(end);
-        return midpoint + Vector2.Up * direction * Mathf.Clamp(distance * 0.28f, 52f, 96f);
-    }
-
-    private static Vector2 Quadratic(Vector2 start, Vector2 control, Vector2 end, float t)
-    {
-        var inverse = 1f - t;
-        return start * inverse * inverse + control * 2f * inverse * t + end * t * t;
-    }
-
-    private static Vector2[] EllipsePoints(float radiusX, float radiusY)
-    {
-        const int pointCount = 48;
-        var points = new Vector2[pointCount];
-        for (var i = 0; i < pointCount; i++)
-        {
-            var angle = Mathf.Tau * i / pointCount;
-            points[i] = new Vector2(Mathf.Cos(angle) * radiusX, Mathf.Sin(angle) * radiusY);
-        }
-
-        return points;
-    }
-
-    private static float DirectionAngle(Vector2 start, Vector2 end) =>
-        (end - start).Angle();
 }

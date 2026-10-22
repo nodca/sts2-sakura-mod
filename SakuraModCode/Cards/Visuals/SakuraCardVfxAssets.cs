@@ -13,8 +13,15 @@ internal static class SakuraCardVfxAssets
         [.. HailStormVfx.AssetPaths, .. FreezeShellVisual.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> TimePaths =
         [.. TimeStopVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+    // Stasis's sand plays on later turn ends; declared on the card (Siege precedent).
+    private static readonly IReadOnlyList<string> ClowTimePaths =
+        [.. ClowTimeHourglassVfx.AssetPaths, .. TimeStasisSandFx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+    private static readonly IReadOnlyList<string> SakuraTimePaths =
+        [.. SakuraTimeSweepVfx.AssetPaths, .. TimeFreezeVisual.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> BlazePaths =
         [.. BlazePhoenixVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+    private static readonly IReadOnlyList<string> ShadePaths =
+        [.. ShadeGroundDragonVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> GalePaths =
         [.. GaleWindBladeVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> CloudRainPaths =
@@ -44,14 +51,18 @@ internal static class SakuraCardVfxAssets
         Blaze => BlazePaths,
         Time => TimePaths,
         Gale => GalePaths,
+        Shade => ShadePaths,
         ClowCloud or SakuraCloud or ClowRain or SakuraRain => CloudRainPaths,
         ClowSnow or SakuraSnow => SnowPaths,
         ClowFreeze or SakuraFreeze => FreezePaths,
         SpellTurn => SpellTurnTransformationVfx.AssetPaths,
         ClowSong or SakuraSong => SongPaths,
+        ClowTime => ClowTimePaths,
+        SakuraTime => SakuraTimePaths,
         ClowSilent or SakuraSilent => SilentQuietVisual.AssetPaths,
         Gravitation => GravitationHoldVisual.AssetPaths,
         Transfer => TransferVfx.AssetPaths,
+        Reversal => ReversalPlateMotif.AssetPaths,
         SpellHuoShen or SpellLeiDi or SpellShuiLong or SpellFengHua => SpellTalismanVfx.RunAssetPaths(card),
         _ => []
     };

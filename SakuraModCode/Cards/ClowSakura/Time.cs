@@ -31,8 +31,12 @@ public class ClowTime() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Rare
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2), new PowerVar<ClassicTimeStasisPower>(1)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await PowerCmd.Apply<ClassicTimeStasisPower>(choiceContext, Owner.Creature, ReleasedValue("ClassicTimeStasisPower"), Owner.Creature, this, false);
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        ClowTimeHourglassVfx.PlayOrResolveAsync(this, Owner.Creature, async cues =>
+        {
+            await cues.HaltAsync();
+            await PowerCmd.Apply<ClassicTimeStasisPower>(choiceContext, Owner.Creature, ReleasedValue("ClassicTimeStasisPower"), Owner.Creature, this, false);
+        });
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -51,8 +55,17 @@ public class SakuraTime() : SakuraFormCard(1, CardType.Skill, TargetType.AllEnem
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        foreach (var enemy in CombatState!.HittableEnemies.ToList())
-            await SakuraPowerRules.ApplyBypassingArtifact<ClassicTimePower>(choiceContext, enemy, ReleasedValue("ClassicTimePower"), Owner.Creature, this);
+        var targets = CombatState!.HittableEnemies.ToList();
+        await SakuraTimeSweepVfx.PlayOrResolveAsync(this, Owner.Creature, targets, async cues =>
+        {
+            // Same per-target loop as before; each enemy's Time Stop now lands as
+            // the star passes it.
+            foreach (var enemy in targets)
+            {
+                await cues.ReachAsync(enemy);
+                await SakuraPowerRules.ApplyBypassingArtifact<ClassicTimePower>(choiceContext, enemy, ReleasedValue("ClassicTimePower"), Owner.Creature, this);
+            }
+        });
         await SakuraMagicCharge.AddVoidToDiscardPile(choiceContext, Owner);
     }
 }

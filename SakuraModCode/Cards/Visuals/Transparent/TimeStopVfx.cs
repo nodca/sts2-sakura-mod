@@ -714,65 +714,8 @@ internal sealed class TimeStopVfx : CelVfxSession
     {
         _sealsLaunched = true;
         var index = 0;
-        // Energy and hand are the local player's UI: seal them only for her own play.
-        var local = LocalContext.IsMe(_caster.Player);
-
-        if (_caster.Block > 0
-            && StateDisplay()?.GetNodeOrNull<NHealthBar>("%HealthBar")?.GetNodeOrNull<Control>("%BlockContainer") is { } block
-            && block.IsVisibleInTree())
-        {
-            AddSeal("block", block, [block], ref index);
-        }
-        else if (_caster.Block > 0)
-        {
-            LogMissingTarget("Block");
-        }
-
-        if (local)
-        {
-            if (Room.Ui is { } ui && ui.EnergyCounterContainer is { } container && container.IsVisibleInTree())
-            {
-                var energy = container.GetChildren().OfType<NEnergyCounter>().FirstOrDefault() ?? (Control)container;
-                AddSeal("energy", energy, [energy], ref index);
-            }
-            else
-            {
-                LogMissingTarget("energy");
-            }
-
-            var cards = NPlayerHand.Instance is { } hand
-                ? hand.ActiveHolders
-                    .Select(static holder => holder.CardNode)
-                    .OfType<NCard>()
-                    .Where(static card => GodotObject.IsInstanceValid(card) && card.IsVisibleInTree())
-                    .Select(static card => GodotObject.IsInstanceValid(card.Body) ? card.Body : (Control)card)
-                    .ToList()
-                : [];
-            if (cards.Count > 0)
-                AddSeal("hand", null, cards, ref index);
-        }
-
-        if (StateDisplay()?.GetNodeOrNull<Control>("%PowerContainer") is { } powers)
-        {
-            foreach (var power in powers.GetChildren().OfType<NPower>())
-            {
-                if (power.IsVisibleInTree() && IsElementState(power))
-                    AddSeal("element", power, [power], ref index);
-            }
-        }
-    }
-
-    private static bool IsElementState(NPower power)
-    {
-        try
-        {
-            return power.Model is SakuraElementStatePower;
-        }
-        catch (InvalidOperationException)
-        {
-            // A power node whose model is not bound yet is not a preserved state.
-            return false;
-        }
+        foreach (var group in SakuraPreservedStateTargets.Resolve(Room, _casterNode, _caster, LogMissingTarget))
+            AddSeal(group.Kind, group.Anchor, group.Nodes, ref index);
     }
 
     private void AddSeal(string kind, Control? target, IReadOnlyList<Control> glazed, ref int index)

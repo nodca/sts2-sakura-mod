@@ -1,4 +1,5 @@
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -173,7 +174,7 @@ internal static class ExchangePileScenario
             var secondBefore = secondPile.Cards.ToArray();
             var pairAction = new RuntimeFixtureAction(
                 player,
-                async _ => await directSource.ExchangePiles(firstKind, secondKind));
+                async choice => await directSource.ExchangePiles(choice, firstKind, secondKind));
             await CombatScenarioContext.EnqueueAndWaitAsync(pairAction);
             assertions.True(
                 $"{firstKind}_{secondKind}_first_received_second_in_order",
@@ -201,12 +202,15 @@ internal static class ExchangePileScenario
         await CombatScenarioContext.EnqueueAndWaitAsync(emptySetupAction);
         var emptyExchangeAction = new RuntimeFixtureAction(
             player,
-            async _ => await directSource.ExchangePiles(
+            async choice => await directSource.ExchangePiles(
+                choice,
                 ExchangePileKind.Memory,
                 ExchangePileKind.Exhaust));
         await CombatScenarioContext.EnqueueAndWaitAsync(emptyExchangeAction);
         assertions.Equal("both_empty_memory_remains_empty", 0, emptyMemory.Cards.Count);
         assertions.Equal("both_empty_exhaust_remains_empty", 0, emptyExhaust.Cards.Count);
+
+        await VerifyLoopCyclesAsync(context, combat, assertions);
 
         RuntimeTestHost.WriteCheckpoint(
             request,
@@ -245,6 +249,103 @@ internal static class ExchangePileScenario
                 ExchangePileKind.Discard => playerCombat.DiscardPile,
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
             };
+    }
+
+    private static async Task VerifyLoopCyclesAsync(
+        CombatScenarioContext context,
+        CombatState combat,
+        RuntimeAssertionCollector assertions)
+    {
+        var player = context.Player;
+        var piles = player.PlayerCombatState!;
+        var memory = SakuraMemoryPile.Get(player)!;
+        await ResetPilesAsync(8, 0, 0, 0);
+
+        var clow = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowLoop>(combat, player);
+        clow.UpgradeInternal();
+        await CombatScenarioContext.PlayCardAsync(clow);
+        assertions.Equal("clow_loop_applied_one_draw", 1, player.Creature.GetPower<ClassicLoopPower>()?.Amount ?? 0);
+        await ActAsync(async choice => { await CardPileCmd.Draw(choice, 1, player); });
+        assertions.Equal("ordinary_draw_does_not_trigger_loop", 1, piles.Hand.Cards.Count);
+        await ActAsync(async choice => await CardCmd.Discard(choice, piles.Hand.Cards.ToArray()));
+        assertions.Equal("ordinary_discard_does_not_trigger_clow_loop", 0, piles.Hand.Cards.Count);
+        await ActAsync(async choice => await CardPileCmd.Shuffle(choice, player));
+        assertions.Equal("shuffle_triggers_clow_once", 1, piles.Hand.Cards.Count);
+
+        var sakura = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraLoop>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(sakura);
+        assertions.Equal("sakura_loop_applied_two_draws", 2, player.Creature.GetPower<ClassicLoopSakuraPower>()?.Amount ?? 0);
+        assertions.Equal("clow_loop_stays_independent", 1, player.Creature.GetPower<ClassicLoopPower>()?.Amount ?? 0);
+        var beforeDiscard = piles.Hand.Cards.Count;
+        await ActAsync(async choice => await CardCmd.Discard(choice, piles.Hand.Cards.Take(1).ToArray()));
+        assertions.Equal("discard_no_longer_triggers_sakura_loop", beforeDiscard - 1, piles.Hand.Cards.Count);
+
+        await ResetPilesAsync(0, 8, 0, 0);
+        await ActAsync(async choice => { await CardPileCmd.Draw(choice, 1, player); });
+        assertions.Equal("automatic_shuffle_adds_both_loop_rewards_to_requested_draw", 4, piles.Hand.Cards.Count);
+
+        await ResetPilesAsync(8, 0, 0, 0);
+        var exchange = await CombatScenarioContext.AddGeneratedCardToHandAsync<Exchange>(combat, player);
+        await ActAsync(async choice => await exchange.ExchangePiles(choice, ExchangePileKind.Memory, ExchangePileKind.Exhaust));
+        assertions.Equal("empty_swap_does_not_trigger_loop", 1, piles.Hand.Cards.Count);
+
+        await ActAsync(async _ =>
+        {
+            await CardPileCmd.AddGeneratedCardToCombat(combat.CreateCard<ClowSword>(player), memory.Type, player);
+            await CardPileCmd.AddGeneratedCardToCombat(combat.CreateCard<ClowShield>(player), PileType.Exhaust, player);
+        });
+        var memoryBefore = memory.Cards.ToArray();
+        var exhaustBefore = piles.ExhaustPile.Cards.ToArray();
+        await ActAsync(async choice => await exchange.ExchangePiles(choice, ExchangePileKind.Memory, ExchangePileKind.Exhaust));
+        assertions.Equal("first_counted_swap_only_advances_loop", 1, piles.Hand.Cards.Count);
+        assertions.True("loop_reward_waits_for_complete_memory_swap", memory.Cards.SequenceEqual(exhaustBefore));
+        assertions.True("loop_reward_waits_for_complete_exhaust_swap", piles.ExhaustPile.Cards.SequenceEqual(memoryBefore));
+
+        await ResetPilesAsync(6, 6, 0, 0);
+        var reversal = await CombatScenarioContext.AddGeneratedCardToHandAsync<Reversal>(combat, player);
+        var swappedTopCards = piles.DiscardPile.Cards.Take(3).ToArray();
+        await CombatScenarioContext.PlayCardAsync(reversal, combat.HittableEnemies.First());
+        assertions.Equal("second_counted_swap_triggers_each_loop_once", 3, piles.Hand.Cards.Count);
+        assertions.True("reversal_loop_draws_from_completed_swap", piles.Hand.Cards.SequenceEqual(swappedTopCards));
+
+        await ResetPilesAsync(1, 5, 1, 1);
+        exchange = await CombatScenarioContext.AddGeneratedCardToHandAsync<Exchange>(combat, player);
+        await ActAsync(async choice => await exchange.ExchangePiles(choice, ExchangePileKind.Memory, ExchangePileKind.Exhaust));
+        assertions.Equal("odd_counted_swap_draws_nothing", 1, piles.Hand.Cards.Count);
+        await ActAsync(async choice => await exchange.ExchangePiles(choice, ExchangePileKind.Memory, ExchangePileKind.Exhaust));
+        assertions.Equal("swap_reward_can_trigger_one_additional_shuffle_reward", 7, piles.Hand.Cards.Count);
+        assertions.Equal("small_pile_cycle_finishes_without_phantom_cards", 0, piles.DrawPile.Cards.Count + piles.DiscardPile.Cards.Count);
+
+        await ResetPilesAsync(12, 1, 0, 0);
+        await ActAsync(async choice => { await CardPileCmd.Draw(choice, CardPile.MaxCardsInHand, player); });
+        var fullHand = piles.Hand.Cards.ToArray();
+        await ActAsync(async choice => await CardPileCmd.Shuffle(choice, player));
+        assertions.True("loop_rewards_respect_full_hand", piles.Hand.Cards.SequenceEqual(fullHand));
+
+        Task ActAsync(Func<PlayerChoiceContext, Task> execute) =>
+            CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, execute));
+
+        async Task ResetPilesAsync(int draw, int discard, int remembered, int exhausted)
+        {
+            await ActAsync(async choice =>
+            {
+                foreach (var card in piles.Hand.Cards.Concat(piles.DrawPile.Cards)
+                    .Concat(piles.DiscardPile.Cards).Concat(piles.ExhaustPile.Cards).Concat(memory.Cards).ToArray())
+                    await CardPileCmd.RemoveFromCombat(card);
+                if (player.Creature.GetPower<ClassicMagicChargePower>() is { } charge)
+                    await PowerCmd.Remove(charge);
+                if (player.Creature.GetPower<ExchangeRecallPower>() is { } recall)
+                    await PowerCmd.Remove(recall);
+
+                foreach (var (pile, count) in new[]
+                {
+                    (PileType.Draw, draw), (PileType.Discard, discard),
+                    (memory.Type, remembered), (PileType.Exhaust, exhausted)
+                })
+                    for (var index = 0; index < count; index++)
+                        await CardPileCmd.AddGeneratedCardToCombat(combat.CreateCard<ClowSword>(player), pile, player);
+            });
+        }
     }
 
     private static int DisplayedCount(NCombatCardPile pile) =>

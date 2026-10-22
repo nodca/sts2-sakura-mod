@@ -33,8 +33,19 @@ public class ClassicTimePower : SakuraPowerModel
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override async Task AfterApplied(Creature? applier, CardModel? cardSource) =>
+    public override async Task AfterApplied(Creature? applier, CardModel? cardSource)
+    {
         await StunOwner();
+        TimeFreezeVisual.Mount(Owner);
+    }
+
+    public override Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature target,
+        DamageResult result, ValueProp props, Creature? dealer, CardModel? cardSource)
+    {
+        if (target == Owner && result.TotalDamage > 0)
+            TimeFreezeVisual.NotifyHit(Owner, result.UnblockedDamage > 0);
+        return Task.CompletedTask;
+    }
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {

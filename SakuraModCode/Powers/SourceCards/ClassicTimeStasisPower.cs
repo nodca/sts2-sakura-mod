@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
+using SakuraMod.SakuraModCode.Cards;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
@@ -57,6 +58,7 @@ public class ClassicTimeStasisPower : SakuraPowerModel
     public override Task AfterModifyingPowerAmountReceived(PowerModel power)
     {
         Flash();
+        TimeStasisSandFx.BurstOnPower(power);
         return Task.CompletedTask;
     }
 
@@ -69,6 +71,7 @@ public class ClassicTimeStasisPower : SakuraPowerModel
         {
             _turnEnded = true;
             SakuraElementStatePower.PreserveAllForNextTurn(Owner);
+            TimeStasisSandFx.BurstOnPreserved(Owner);
         }
 
         return Task.CompletedTask;

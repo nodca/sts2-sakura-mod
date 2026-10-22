@@ -908,6 +908,8 @@ internal static class RuntimeSmokeScenario
             ["spell_turn_scene"] = SpellTurnTransformationVfx.ScenePath,
             ["aqua_phoenix_scene"] = AquaPhoenixVfx.ScenePath,
             ["aqua_phoenix_shader"] = AquaPhoenixVfx.ShaderPath,
+            ["shade_ground_dragon_scene"] = ShadeGroundDragonVfx.ScenePath,
+            ["shade_ground_dragon_shader"] = ShadeGroundDragonVfx.ShaderPath,
             ["character_scene"] = "res://SakuraMod/scenes/screens/char_select/sakura_character_select_background.tscn",
             ["rest_site_scene"] = "res://SakuraMod/scenes/rest_site/sakura_rest_site_character.tscn",
             ["texture"] = "res://SakuraMod/images/relics/sealed_wand.png",
@@ -1044,6 +1046,29 @@ internal static class RuntimeSmokeScenario
             secondSplash?.Free();
             aquaRoot?.Free();
             aquaScene?.Dispose();
+        }
+
+        var shadeScene = ResourceLoader.Load<PackedScene>(ShadeGroundDragonVfx.ScenePath);
+        Node2D? shadeRoot = null;
+        try
+        {
+            shadeRoot = shadeScene?.Instantiate<Node2D>();
+            assertions.True("shade_ground_dragon_scene_instantiates", shadeRoot is not null, ShadeGroundDragonVfx.ScenePath);
+            var maskViewport = shadeRoot?.GetNodeOrNull<SubViewport>("MaskViewport");
+            assertions.True(
+                "shade_ground_dragon_mask_viewport_idles_transparent",
+                maskViewport is { TransparentBg: true }
+                && maskViewport.RenderTargetUpdateMode == SubViewport.UpdateMode.Disabled);
+            var composite = shadeRoot?.GetNodeOrNull<Sprite2D>("Composite");
+            assertions.True(
+                "shade_ground_dragon_composite_ships_hidden",
+                composite is { Visible: false, Material: ShaderMaterial material }
+                && material.GetShaderParameter("opacity").AsSingle() == 0f);
+        }
+        finally
+        {
+            shadeRoot?.Free();
+            shadeScene?.Dispose();
         }
 
         var magicChargeScene = ResourceLoader.Load<PackedScene>(SakuraMagicChargeHud.ScenePath);

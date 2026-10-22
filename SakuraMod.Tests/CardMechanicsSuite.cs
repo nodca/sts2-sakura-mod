@@ -567,8 +567,8 @@ public sealed class CardMechanicsSuite
             "Expected Exchange to use native four-region selection and the pile exchange visual.");
         RegressionTestHarness.Require(
             pileExchangeVfx.Contains("TestMode.IsOn", StringComparison.Ordinal)
-            && !pileExchangeVfx.Contains("IsCardVfxEnabled", StringComparison.Ordinal),
-            "Expected the lightweight Exchange visual to skip tests without depending on the optional card-VFX setting.");
+            && pileExchangeVfx.Contains("SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal),
+            "Expected the Exchange visual to skip tests and follow the optional card-VFX setting.");
     }
 
     [Fact]

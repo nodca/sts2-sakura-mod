@@ -44,12 +44,15 @@ public class Reversal() : TransparentExtraEffectCard(0, CardType.Attack, CardRar
             PileType.Draw,
             PileType.Discard,
             drawCards.Count,
-            discardCards.Count);
+            discardCards.Count,
+            PileExchangeMotif.Reversal);
 
         foreach (var card in drawCards)
             await SakuraActions.MoveExistingCardToPileWithoutVisuals(this, card, PileType.Discard, CardPilePosition.Bottom);
         foreach (var card in discardCards)
             await SakuraActions.MoveExistingCardToPileWithoutVisuals(this, card, PileType.Draw, CardPilePosition.Bottom);
+
+        await ClassicLoopPower.AfterPileExchange(choiceContext, Owner, exchangedCards);
 
         var damage = ReversalRules.TotalDamage(
             DynamicVars.Damage.IntValue,

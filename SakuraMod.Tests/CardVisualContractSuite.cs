@@ -45,6 +45,9 @@ public sealed class CardVisualContractSuite
                 new Blaze(),
                 [BlazePhoenixVfx.ScenePath, .. sharedCelPaths]),
             new VfxCase(
+                new Shade(),
+                [ShadeGroundDragonVfx.ScenePath, .. sharedCelPaths]),
+            new VfxCase(
                 new SakuraMod.SakuraModCode.Cards.Time(),
                 [TimeStopVfx.ScenePath, .. sharedCelPaths]),
             new VfxCase(
@@ -95,9 +98,12 @@ public sealed class CardVisualContractSuite
                      "SakuraModCode/Cards/Visuals/Transparent/HailStormVfx.cs",
                      "SakuraModCode/Cards/Visuals/Transparent/BlazePhoenixVfx.cs",
                      "SakuraModCode/Cards/Visuals/Transparent/TimeStopVfx.cs",
+                     "SakuraModCode/Cards/Visuals/Transparent/ShadeGroundDragonVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/CloudRainWeatherVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/ArrowBowProjectileVfx.cs",
-                     "SakuraModCode/Cards/Visuals/Classic/SpellTurnTransformationVfx.cs"
+                     "SakuraModCode/Cards/Visuals/Classic/SpellTurnTransformationVfx.cs",
+                     "SakuraModCode/Cards/Visuals/Classic/ClowTimeHourglassVfx.cs",
+                     "SakuraModCode/Cards/Visuals/Classic/TimeStasisSandFx.cs"
                  })
         {
             var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath));

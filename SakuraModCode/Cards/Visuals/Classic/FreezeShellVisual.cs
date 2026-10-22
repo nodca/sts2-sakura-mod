@@ -29,6 +29,7 @@ internal static partial class FreezeShellVisual
     private const float FrostTintShare = 0.35f;
     // Multiplies the creature's own RGB: lifts blue and pales warm colours.
     private static readonly Vector3 FrozenTint = new(0.80f, 1.02f, 1.30f);
+    private const string TintSource = "freeze";
     private static readonly ConditionalWeakTable<Creature, ShellRoot> Roots = [];
 
     internal static void Mount(Creature creature)
@@ -125,8 +126,6 @@ internal static partial class FreezeShellVisual
         private float _frostPulse;
         private bool _shellShown;
         private bool _retired;
-        private Color _baseModulate = Colors.White;
-        private Color? _writtenModulate;
 
         internal void Start(Creature creature, NCreature node, ColorRect ice, ShaderMaterial material)
         {
@@ -249,16 +248,10 @@ internal static partial class FreezeShellVisual
             _material.SetShaderParameter("region_size", canvas);
         }
 
-        // Only RGB is multiplied; alpha stays with native fades. Whatever RGB the
-        // creature had before (e.g. native background dimming) is the base.
+        // CreatureTint owns the base colour and alpha rules; Freeze only
+        // contributes its factor, so other tint sources compose with it.
         private void ApplyTint(float amount, float hit)
         {
-            if (!GodotObject.IsInstanceValid(_node.Visuals))
-                return;
-            var visuals = _node.Visuals;
-            var current = visuals.Modulate;
-            if (_writtenModulate is not { } written || !SameRgb(current, written))
-                _baseModulate = current;
             if (amount <= 0f)
             {
                 RestoreTint();
@@ -266,27 +259,10 @@ internal static partial class FreezeShellVisual
             }
             var factor = Vector3.One.Lerp(FrozenTint, amount);
             factor = factor.Lerp(new Vector3(1.4f, 1.4f, 1.4f), 0.25f * hit);
-            var tinted = new Color(_baseModulate.R * factor.X, _baseModulate.G * factor.Y,
-                _baseModulate.B * factor.Z, current.A);
-            visuals.Modulate = tinted;
-            _writtenModulate = tinted;
+            CreatureTint.Set(_node, TintSource, factor);
         }
 
-        private void RestoreTint()
-        {
-            if (_writtenModulate is not { } written)
-                return;
-            _writtenModulate = null;
-            if (!GodotObject.IsInstanceValid(_node) || !GodotObject.IsInstanceValid(_node.Visuals))
-                return;
-            var current = _node.Visuals.Modulate;
-            // Leave a colour some other writer set after ours.
-            if (SameRgb(current, written))
-                _node.Visuals.Modulate = new Color(_baseModulate.R, _baseModulate.G, _baseModulate.B, current.A);
-        }
-
-        private static bool SameRgb(Color a, Color b) =>
-            Math.Abs(a.R - b.R) < 0.0001f && Math.Abs(a.G - b.G) < 0.0001f && Math.Abs(a.B - b.B) < 0.0001f;
+        private void RestoreTint() => CreatureTint.Clear(_node, TintSource);
 
         private void OnDied(Creature _) => Retire();
         private void OnCombatEnded(CombatRoom _) => Retire();

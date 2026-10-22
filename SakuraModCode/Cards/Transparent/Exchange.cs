@@ -63,7 +63,7 @@ public class Exchange() : TransparentExtraEffectCard(1, CardType.Skill, CardRari
         if (selectedPiles.Count != 2 || selectedPiles[0].Kind == selectedPiles[1].Kind)
             throw new InvalidOperationException("Exchange requires two distinct pile choices.");
 
-        await ExchangePiles(selectedPiles[0].Kind, selectedPiles[1].Kind);
+        await ExchangePiles(choiceContext, selectedPiles[0].Kind, selectedPiles[1].Kind);
     }
 
     private IReadOnlyList<ExchangePileOptionCard> CreatePileChoices()
@@ -81,7 +81,7 @@ public class Exchange() : TransparentExtraEffectCard(1, CardType.Skill, CardRari
         return choices;
     }
 
-    internal async Task ExchangePiles(ExchangePileKind firstKind, ExchangePileKind secondKind)
+    internal async Task ExchangePiles(PlayerChoiceContext choiceContext, ExchangePileKind firstKind, ExchangePileKind secondKind)
     {
         var firstPile = PileFor(firstKind);
         var secondPile = PileFor(secondKind);
@@ -106,6 +106,8 @@ public class Exchange() : TransparentExtraEffectCard(1, CardType.Skill, CardRari
                 card,
                 firstPile.Type,
                 CardPilePosition.Bottom);
+
+        await ClassicLoopPower.AfterPileExchange(choiceContext, Owner, firstCards.Count + secondCards.Count);
     }
 
     private CardPile PileFor(ExchangePileKind kind) =>

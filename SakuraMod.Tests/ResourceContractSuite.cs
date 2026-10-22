@@ -682,6 +682,251 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
+    public void ShadeGroundDragonKeepsPresentationAndGameplayContracts()
+    {
+        var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/card_vfx/shade_ground_dragon_vfx.tscn"));
+        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/shade_ground_dragon.gdshader"));
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/ShadeGroundDragonVfx.cs"));
+        var shape = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Transparent/ShadeGroundDragonShape.cs"));
+        var shade = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Shade.cs"));
+        var mainFile = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/MainFile.cs"));
+
+        // The mask viewport idles until the body starts; the composite ships hidden.
+        var viewportIndex = scene.IndexOf("[node name=\"MaskViewport\" type=\"SubViewport\"", StringComparison.Ordinal);
+        var compositeIndex = scene.IndexOf("[node name=\"Composite\" type=\"Sprite2D\"", StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            viewportIndex >= 0
+            && compositeIndex > viewportIndex
+            && scene.Contains("transparent_bg = true", StringComparison.Ordinal)
+            && scene.Contains("render_target_update_mode = 0", StringComparison.Ordinal)
+            && scene.Contains("visible = false", StringComparison.Ordinal)
+            && scene.Contains("shader_parameter/opacity = 0.0", StringComparison.Ordinal)
+            && scene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
+            && scene.Contains("mouse_filter = 2", StringComparison.Ordinal),
+            "Expected an idle transparent mask viewport before a hidden composite with a local material and ignored input.");
+
+        foreach (var uniform in new[] { "elapsed", "ink_opacity", "rim_strength", "rim_radius_px", "opacity" })
+            Assert.Contains($"uniform float {uniform}", shader, StringComparison.Ordinal);
+        var shaderCode = shader
+            .Split('\n')
+            .Select(static line => line.Trim())
+            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
+            .ToList();
+        RegressionTestHarness.Require(
+            !shaderCode.Any(static line =>
+                line.Contains("TIME", StringComparison.Ordinal)
+                || line.Contains("hint_screen_texture", StringComparison.Ordinal)),
+            "Expected the shadow composite to take time from the session and read only its own mask.");
+
+        RegressionTestHarness.Require(
+            session.Contains(": CelVfxSession", StringComparison.Ordinal)
+            && session.Contains("session.StartClock();", StringComparison.Ordinal)
+            && session.Contains("PlayCelPrelude(card, caster)", StringComparison.Ordinal)
+            && session.Contains("scope.InvokeAsync(\"spread\"", StringComparison.Ordinal)
+            && session.Contains("scope.InvokeAsync(\"reach\"", StringComparison.Ordinal)
+            && session.Contains("room.BackCombatVfxContainer.AddChildSafely(root)", StringComparison.Ordinal)
+            && session.Contains("PreloadManager.Cache.GetScene(ScenePath)", StringComparison.Ordinal)
+            && session.Contains("protected override float MaximumLifetime => 6.0f;", StringComparison.Ordinal)
+            && !session.Contains("ResourceLoader.Load", StringComparison.Ordinal),
+            "Expected the shared lifecycle and prelude, awaited spread and reach cues, a floor-layer root, and the cached scene.");
+        foreach (var gameplay in new[] { "PowerCmd", "WeakPower", "BlurPower", "CreatureCmd" })
+        {
+            RegressionTestHarness.Require(
+                !session.Contains(gameplay, StringComparison.Ordinal) && !shape.Contains(gameplay, StringComparison.Ordinal),
+                $"Expected the Shade visual to take targets as input and never resolve gameplay ({gameplay}).");
+        }
+        RegressionTestHarness.Require(
+            !mainFile.Contains("Shade", StringComparison.Ordinal),
+            "Expected no process-lifetime Shade preload: the shadow scene is a card run asset.");
+
+        // Block waits for the open wings; each enemy's Weak waits for the head to pass
+        // under it; Blur follows the loop. The native multi-target Apply is gone.
+        Assert.Contains(
+            "ShadeGroundDragonVfx.PlayOrResolveAsync(this, Owner.Creature, targets, activation.IsActive",
+            shade,
+            StringComparison.Ordinal);
+        var snapshotIndex = shade.IndexOf("var targets = CombatState!.HittableEnemies.ToList();", StringComparison.Ordinal);
+        var spreadIndex = shade.IndexOf("await cues.SpreadAsync();", StringComparison.Ordinal);
+        var blockIndex = shade.IndexOf("await CreatureCmd.GainBlock(", StringComparison.Ordinal);
+        var loopIndex = shade.IndexOf("foreach (var enemy in targets)", StringComparison.Ordinal);
+        var reachIndex = shade.IndexOf("await cues.ReachAsync(enemy);", StringComparison.Ordinal);
+        var weakIndex = shade.IndexOf("await PowerCmd.Apply<WeakPower>(choiceContext, enemy,", StringComparison.Ordinal);
+        var extraIndex = shade.IndexOf("await ApplyExtraEffect(choiceContext, play);", StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            snapshotIndex >= 0
+            && spreadIndex > snapshotIndex
+            && blockIndex > spreadIndex
+            && loopIndex > blockIndex
+            && reachIndex > loopIndex
+            && weakIndex > reachIndex
+            && extraIndex > weakIndex
+            && shade.Split("PowerCmd.Apply<WeakPower>(").Length - 1 == 1
+            && !shade.Contains("HittableEnemies.ToList(), DynamicVars.Weak", StringComparison.Ordinal),
+            "Expected spread before Block, reach before each single-target Weak, and Blur after the loop.");
+    }
+
+    public static TheoryData<float, float[], bool> ShadeLayouts => new()
+    {
+        { 500f, [1300f], false },
+        { 500f, [1080f, 1330f, 1580f], false },
+        { 500f, [1080f, 1330f, 1580f], true },
+        { 500f, [980f, 1160f, 1340f, 1520f, 1700f], true },
+        // Widely spread enemies right up to the screen edge.
+        { 300f, [900f, 1400f, 1850f], true },
+        { 300f, [900f, 1400f, 1850f], false },
+        // No hittable enemy still plays the formation and outro.
+        { 500f, [], true }
+    };
+
+    [Theory]
+    [MemberData(nameof(ShadeLayouts))]
+    public void ShadeShadowReachesEnemiesInOrderInsideTheScreenAndTheCap(float casterX, float[] enemyXs, bool extra)
+    {
+        const float viewLeft = 0f;
+        const float viewRight = 1920f;
+        var layout = ShadeGroundDragonShape.For(casterX, 1f, enemyXs, viewLeft, viewRight, extra);
+        var timeline = ShadeGroundDragonShape.TimelineFor(layout);
+
+        // Arrivals follow the floor order, start after the wings open, and never hold
+        // gameplay past the cap however widely the enemies stand.
+        for (var i = 0; i < timeline.Arrivals.Length; i++)
+        {
+            Assert.InRange(timeline.Arrivals[i], ShadeGroundDragonShape.Go, ShadeGroundDragonShape.LastArrivalCap + 1e-4f);
+            if (i > 0)
+                Assert.True(timeline.Arrivals[i] > timeline.Arrivals[i - 1], "Expected the head to pass the enemies in floor order.");
+        }
+        Assert.True(ShadeGroundDragonShape.SpreadCue < ShadeGroundDragonShape.Go);
+        Assert.True(layout.SpeedOut is >= ShadeGroundDragonShape.SpeedOut and <= ShadeGroundDragonShape.SpeedOutCap);
+
+        // The head never runs backwards, and the turn passes the last enemy before it bends.
+        var previous = float.NegativeInfinity;
+        for (var t = 0f; t <= timeline.End; t += 1f / 120f)
+        {
+            var s = ShadeGroundDragonShape.HeadS(t, layout, timeline);
+            Assert.True(s >= previous - 1e-3f, $"Expected the head to advance monotonically (t={t}).");
+            previous = s;
+        }
+        if (enemyXs.Length > 0)
+            Assert.True(layout.XEnd > enemyXs.Max(), "Expected the shadow to turn only after the last enemy.");
+
+        // On screen: an ordinary layout turns inside the margin; the turn's far edge
+        // stays visible whenever the last enemy leaves room for it.
+        if (extra)
+        {
+            var farthest = 0f;
+            for (var s = 0f; s <= layout.SHome; s += 4f)
+                farthest = Math.Max(farthest, ShadeGroundDragonShape.PathPoint(s, layout).X);
+            if (enemyXs.Length == 0 || enemyXs.Max() + 40f <= viewRight - 210f)
+                Assert.True(farthest <= viewRight, $"Expected the turn to stay on screen (reached {farthest}).");
+            Assert.Equal(0f, ShadeGroundDragonShape.VisibleLength(timeline.End, layout, timeline), 3);
+        }
+        else
+        {
+            Assert.Equal(0f, ShadeGroundDragonShape.BodyAlpha(timeline.DissolveEnd, layout, timeline), 3);
+        }
+
+        // Every frame builds and stays inside the mask band the session renders
+        // (screen offset from the floor line = Projection · z).
+        var shapes = new ShadeGroundDragonShape.Shapes();
+        var above = -ShadeGroundDragonVfx.BandAboveFloor;
+        var below = ShadeGroundDragonVfx.BandHeight - ShadeGroundDragonVfx.BandAboveFloor;
+        for (var t = 0f; t <= timeline.End; t += 1f / 30f)
+        {
+            ShadeGroundDragonShape.Build(t, layout, timeline, 1.3f, shapes);
+            var depths = shapes.Polygons.SelectMany(static polygon => polygon.Points)
+                .Concat(shapes.Strokes.SelectMany(static stroke => stroke.Points))
+                .Select(static point => point.Y * ShadeGroundDragonShape.Projection);
+            foreach (var y in depths)
+                Assert.InRange(y, above, below);
+        }
+
+        // Formed and in motion: the body is a strip of quads, and the side profile
+        // is cast up the floor — raised wings and the arched neck stand well above
+        // the path line instead of spreading flat beside it.
+        ShadeGroundDragonShape.Build(ShadeGroundDragonShape.Go, layout, timeline, 1.3f, shapes);
+        Assert.True(shapes.Polygons.Count(static polygon => polygon.Points.Length == 4) >= 80);
+        Assert.Equal(2, shapes.Strokes.Count);
+        var highest = shapes.Polygons.SelectMany(static polygon => polygon.Points).Min(static point => point.Y);
+        Assert.True(highest * ShadeGroundDragonShape.Projection < -200f,
+            $"Expected the cast wings to reach well up the floor (highest {highest * ShadeGroundDragonShape.Projection:F0} px).");
+    }
+
+    [Fact]
+    public void ShadeShadowMirrorsForEnemiesOnTheLeft()
+    {
+        var right = ShadeGroundDragonShape.For(500f, 1f, [1080f, 1330f], 0f, 1920f, true);
+        var left = ShadeGroundDragonShape.For(1420f, -1f, [840f, 590f], 0f, 1920f, true);
+        var rightTimeline = ShadeGroundDragonShape.TimelineFor(right);
+        var leftTimeline = ShadeGroundDragonShape.TimelineFor(left);
+        Assert.Equal(rightTimeline.Arrivals, leftTimeline.Arrivals);
+        Assert.Equal(1920f - right.XEnd, left.XEnd, 3);
+        var p = ShadeGroundDragonShape.PathPoint(400f, right);
+        var q = ShadeGroundDragonShape.PathPoint(400f, left);
+        Assert.Equal(1920f - p.X, q.X, 3);
+        Assert.Equal(p.Y, q.Y, 3);
+    }
+
+    [Fact]
+    public void ShadeTimingKeepsBlockAndTheFirstWeakClose()
+    {
+        // Measured from the card play: shared prelude lead, then body time.
+        const float prelude = 0.18f;
+        var layout = ShadeGroundDragonShape.For(500f, 1f, [1080f, 1330f, 1580f], 0f, 1920f, true);
+        var timeline = ShadeGroundDragonShape.TimelineFor(layout);
+        Assert.InRange(prelude + ShadeGroundDragonShape.SpreadCue, 0.50f, 0.60f);
+        Assert.InRange(prelude + timeline.Arrivals[0], 0.70f, 0.82f);
+        // The wing beat stays inside the cel ceiling for periodic motion.
+        for (var t = ShadeGroundDragonShape.Go; t < ShadeGroundDragonShape.Go + 1f; t += 0.01f)
+            Assert.InRange(ShadeGroundDragonShape.Flap(t), 0.64f, 1.0001f);
+    }
+
+    [Fact]
+    public async Task ShadeCuesNeverWaitOrSkipGameplayWithoutPresentation()
+    {
+        foreach (var enabled in new[] { false, true })
+        {
+            var created = 0;
+            var blocks = 0;
+            var weaks = 0;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            await CelVfxSession.PlayOrResolveAsync<ShadeGroundDragonVfx>(
+                enabled,
+                "shade inert",
+                () =>
+                {
+                    created++;
+                    return null;
+                },
+                static _ => Task.FromResult(true),
+                async scope =>
+                {
+                    var cues = new ShadeGroundDragonVfx.Cues(scope);
+                    await cues.SpreadAsync();
+                    blocks++;
+                    for (var i = 0; i < 5; i++)
+                    {
+                        await cues.ReachAsync(new MegaCrit.Sts2.Core.Entities.Creatures.Creature(
+                            (MegaCrit.Sts2.Core.Entities.Players.Player)null!, 30, 30));
+                        weaks++;
+                    }
+                },
+                static _ => { },
+                static _ => { });
+            watch.Stop();
+            Assert.Equal(enabled ? 1 : 0, created);
+            Assert.Equal(1, blocks);
+            Assert.Equal(5, weaks);
+            Assert.True(watch.Elapsed < TimeSpan.FromSeconds(0.2), "Expected inert cues to add no wait.");
+        }
+    }
+
+    [Fact]
     public void TimeStopMountsTwoGradeLayersAndEndsTheTurnOnTheClack()
     {
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(

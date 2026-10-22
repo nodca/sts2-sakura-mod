@@ -33,13 +33,13 @@ public class ClowLoop() : ClowCard(1, CardType.Power, CardRarity.Uncommon, Targe
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicLoopPower>(choiceContext, Owner.Creature, ReleasedValue("Cards"));
 
-    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
 public class SakuraLoop() : SakuraFormCard(1, CardType.Power, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicLoopSakuraPower>(choiceContext, Owner.Creature, ReleasedValue("Cards"));
