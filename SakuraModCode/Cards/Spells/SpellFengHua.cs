@@ -27,7 +27,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class SpellFengHua() : ElementSpellCard(0, CardType.Attack, TargetType.AnyEnemy, SakuraElementSet.Wind)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(1, ValueProp.Move), new DynamicVar("Magic", 3)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(1, ValueProp.Move), new DynamicVar("Magic", 3), new CardsVar(1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -36,6 +36,10 @@ public class SpellFengHua() : ElementSpellCard(0, CardType.Attack, TargetType.An
         {
             await cues.Release();
             await DealDamage(choiceContext, target, ReleasedDamage(), hitCount: ReleasedMagic(), hitVfx: SakuraNativeHitFx.FlyingSlash);
+            var cardCount = DynamicVars.Cards.IntValue;
+            await CardPileCmd.Draw(choiceContext, cardCount, Owner);
+            await CardCmd.Discard(choiceContext, await CardSelectCmd.FromHandForDiscard(
+                choiceContext, Owner, new CardSelectorPrefs(CardSelectorPrefs.DiscardSelectionPrompt, cardCount), null, this));
         });
     }
 }

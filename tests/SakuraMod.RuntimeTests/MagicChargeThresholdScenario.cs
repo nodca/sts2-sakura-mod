@@ -66,7 +66,9 @@ internal static class MagicChargeThresholdScenario
         var fireSpell = await CombatScenarioContext.AddGeneratedCardToHandAsync<SpellHuoShen>(combat, player);
         await CombatScenarioContext.PlayCardAsync(fireSpell, combat.HittableEnemies.First());
         assertions.True("midpoint_applies_fire_state", player.Creature.HasPower<ClassicFireyPower>());
-        assertions.Equal("midpoint_does_not_spend_charge", 5, charge.Amount);
+        assertions.Equal("fire_spell_adds_charge_at_midpoint", 6, charge.Amount);
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(
+            player, choiceContext => SakuraMagicCharge.SpendMagic(choiceContext, player, 1)));
         assertions.Equal("midpoint_consumes_once", 0, charge.ArmedOpportunityGeneration);
 
         var waterWithoutOpportunity = await CombatScenarioContext.AddGeneratedCardToHandAsync<SpellShuiLong>(combat, player);
@@ -157,7 +159,9 @@ internal static class MagicChargeThresholdScenario
         await CombatScenarioContext.PlayCardAsync(fireAfterOverflow, combat.HittableEnemies.First());
         assertions.True("overflow_opportunity_applies_on_later_card", player.Creature.HasPower<ClassicFireyPower>());
         assertions.Equal("overflow_opportunity_consumed_on_later_card", 0, postFlowerCharge.ArmedOpportunityGeneration);
-        assertions.Equal("overflow_opportunity_does_not_spend_charge", 8, postFlowerCharge.Amount);
+        assertions.Equal("fire_spell_adds_charge_after_overflow", 9, postFlowerCharge.Amount);
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(
+            player, choiceContext => SakuraMagicCharge.SpendMagic(choiceContext, player, 1)));
 
         var lockCard = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraLock>(combat, player);
         await CombatScenarioContext.PlayCardAsync(lockCard);
@@ -189,6 +193,29 @@ internal static class MagicChargeThresholdScenario
         var earthySakuraFlower = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraFlower>(combat, player);
         await CombatScenarioContext.PlayCardAsync(earthySakuraFlower);
         assertions.Equal("earthy_sakura_flower_enters_discard", PileType.Discard, earthySakuraFlower.Pile?.Type);
+
+        // Check the pre-play state: entering Fire on the first play must not grant the bonus.
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choiceContext =>
+        {
+            if (player.Creature.GetPower<ClassicFireyPower>() is { } firey)
+                await PowerCmd.Remove(firey);
+            await PlayerCmd.GainEnergy(3, player);
+        }));
+        foreach (var expectedCount in new[] { 1, 2, 3 })
+        {
+            await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choiceContext =>
+                await CardCmd.Discard(choiceContext, player.PlayerCombatState!.Hand.Cards.ToList())));
+            var fireyCard = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowFirey>(combat, player);
+            if (expectedCount == 3)
+                await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, _ =>
+                {
+                    fireyCard.UpgradeInternal();
+                    return Task.CompletedTask;
+                }));
+            await CombatScenarioContext.PlayCardAsync(fireyCard);
+            assertions.Equal($"firey_generates_{expectedCount}_spells", expectedCount,
+                player.PlayerCombatState!.Hand.Cards.OfType<SpellHuoShen>().Count());
+        }
 
         RuntimeTestHost.WriteCheckpoint(
             request,

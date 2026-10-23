@@ -29,7 +29,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class ClowBig() : ClowCard(1, CardType.Power, CardRarity.Uncommon, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<StrengthPower>(3)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<StrengthPower>(2), new DynamicVar("ExtraTimes", 2)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -43,8 +43,8 @@ public class ClowBig() : ClowCard(1, CardType.Power, CardRarity.Uncommon, Target
                     choiceContext,
                     Owner.Creature,
                     ReleasedValue("StrengthPower"));
-                if (!IsUpgraded)
-                    await ApplyPower<DexterityPower>(choiceContext, Owner.Creature, -1);
+                if (IsUpgraded)
+                    await ApplyPower<ClassicBigUpgradedPower>(choiceContext, Owner.Creature, DynamicVars["ExtraTimes"].IntValue);
             });
     }
 }

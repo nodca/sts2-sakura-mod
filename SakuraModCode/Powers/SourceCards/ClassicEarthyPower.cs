@@ -39,6 +39,7 @@ public class ClassicEarthyPower : SakuraElementStatePower
     {
         SakuraElementStateVisuals.NotifyEarthTriggered(Owner);
         await CreatureCmd.GainBlock(Owner, Block, SakuraPowerValueProps.Block, null, false);
+        await ClassicWoodPower.AfterEarthTriggered(choiceContext, Owner);
     }
 }
 

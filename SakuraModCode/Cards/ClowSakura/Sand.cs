@@ -27,8 +27,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowSand() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
 {
-    private const int ExtraPoison = 7;
-
+    public override bool GainsBlock => true;
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(3, ValueProp.Move), new PowerVar<PoisonPower>(2)];
 
@@ -42,7 +41,7 @@ public class ClowSand() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Com
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await PlayCard(choiceContext, play);
-        await ApplyPower<PoisonPower>(choiceContext, RequiredTarget(play), ExtraPoison);
+        await GainBlock(play, RequiredTarget(play).GetPower<PoisonPower>()?.Amount ?? 0);
     }
 
     protected override void OnUpgrade()

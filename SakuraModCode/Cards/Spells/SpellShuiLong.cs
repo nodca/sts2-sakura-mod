@@ -27,12 +27,14 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class SpellShuiLong() : ElementSpellCard(0, CardType.Attack, TargetType.None, SakuraElementSet.Water)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(4, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(4, ValueProp.Move), new PowerVar<SakuraFrostbitePower>(1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await SpellTalismanVfx.PlayOrResolveAsync(this, async cues =>
         {
             await cues.Release();
             await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.WaterSplash);
+            foreach (var enemy in CombatState!.HittableEnemies.ToList())
+                await ApplyPower<SakuraFrostbitePower>(choiceContext, enemy, ReleasedValue("SakuraFrostbitePower"));
         });
 }

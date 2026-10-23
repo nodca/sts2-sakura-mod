@@ -27,7 +27,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class SpellLeiDi() : ElementSpellCard(0, CardType.Attack, TargetType.None, SakuraElementSet.Earth)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(6, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(6, ValueProp.Move), new DynamicVar("Stabilize", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -39,6 +39,9 @@ public class SpellLeiDi() : ElementSpellCard(0, CardType.Attack, TargetType.None
         {
             await cues.Release();
             await DealDamage(choiceContext, target, ReleasedDamage(), hitSfx: SakuraNativeHitFx.LightningSfx, hitVfx: SakuraNativeHitFx.Lightning, spawnHitVfxAtBase: true);
+            var card = await SakuraActions.SelectStabilizeCandidate(this, choiceContext, cancelable: false);
+            if (card is not null)
+                await card.Stabilize(choiceContext);
         });
     }
 }

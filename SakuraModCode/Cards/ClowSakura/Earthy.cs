@@ -28,14 +28,15 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class ClowEarthy() : ClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 1), new DynamicVar("BonusSpells", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
+        var spellCount = ReleasedMagic()
+            + (SakuraElementState.Has(Owner, SakuraElement.Earth) ? ReleasedValue("BonusSpells") : 0);
         await EnterElementState<ClassicEarthyPower>(choiceContext);
         SakuraElementStateVisuals.NotifyIconicEarthyPlayed(Owner.Creature);
-        await AddGeneratedSpells<SpellLeiDi>(choiceContext, ReleasedMagic());
+        await AddGeneratedSpells<SpellLeiDi>(choiceContext, spellCount);
     }
 
     protected override void OnUpgrade() => DynamicVars["Magic"].UpgradeValueBy(1);

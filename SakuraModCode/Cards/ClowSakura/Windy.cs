@@ -28,14 +28,15 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class ClowWindy() : ClowCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 1), new DynamicVar("BonusSpells", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
+        var spellCount = ReleasedMagic()
+            + (SakuraElementState.Has(Owner, SakuraElement.Wind) ? ReleasedValue("BonusSpells") : 0);
         await EnterElementState<ClassicWindyPower>(choiceContext);
         SakuraElementStateVisuals.NotifyIconicWindyPlayed(Owner.Creature);
-        await AddGeneratedSpells<SpellFengHua>(choiceContext, ReleasedMagic());
+        await AddGeneratedSpells<SpellFengHua>(choiceContext, spellCount);
     }
 
     protected override void OnUpgrade() => DynamicVars["Magic"].UpgradeValueBy(1);

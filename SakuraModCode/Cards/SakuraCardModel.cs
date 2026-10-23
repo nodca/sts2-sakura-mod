@@ -271,11 +271,13 @@ public abstract class SakuraCardModel : ModCardTemplate
         {
             for (var i = 0; i < triggerCount && target.IsAlive; i++)
             {
-                var poison = target.GetPower<PoisonPower>()?.Amount ?? 0;
-                if (poison <= 0)
+                // One native Poison tick: damage equal to its Amount, then lose 1.
+                if (target.GetPower<PoisonPower>() is not { Amount: > 0 } poison)
                     break;
 
-                await DealDamage(choiceContext, target, poison, ValueProp.Unblockable);
+                await DealDamage(choiceContext, target, poison.Amount, ValueProp.Unblockable);
+                if (target.IsAlive)
+                    await PowerCmd.Decrement(poison);
             }
         }
     }

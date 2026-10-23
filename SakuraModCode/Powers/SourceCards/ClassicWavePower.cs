@@ -35,10 +35,14 @@ public class ClassicWavePower : SakuraPowerModel
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        if (Amount <= 0 || play.Card?.Owner?.Creature != Owner || play.Card.Type != CardType.Attack)
+        if (Amount <= 0 || play.Card?.Owner?.Creature != Owner || SakuraActions.ElementSetOf(play.Card) == SakuraElementSet.None)
             return;
 
-        await CreatureCmd.GainBlock(Owner, Amount, SakuraPowerValueProps.Block, null, false);
+        var elementCount = SakuraElementState.ReadActive(play.Card.Owner).AsElements().Count();
+        if (elementCount == 0)
+            return;
+
+        await CreatureCmd.GainBlock(Owner, Amount * elementCount, SakuraPowerValueProps.Block, null, false);
     }
 }
 

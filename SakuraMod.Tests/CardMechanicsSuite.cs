@@ -18,6 +18,15 @@ using STS2RitsuLib.RunData;
 public sealed class CardMechanicsSuite
 {
     [Fact]
+    public void ElementSpellAddedEffectsExposeTheirMechanicTips()
+    {
+        Assert.True(SakuraSourceCardText.ReferencesMagicChargeTip(new SpellHuoShen()));
+        Assert.Contains(SakuraKeywords.Frostbite, SakuraSourceCardText.KeywordTips(new SpellShuiLong()));
+        Assert.Contains(SakuraKeywords.Stabilize, SakuraSourceCardText.KeywordTips(new SpellLeiDi()));
+        Assert.DoesNotContain(SakuraKeywords.Stabilize, SakuraSourceCardText.KeywordTips(new SpellFengHua()));
+    }
+
+    [Fact]
     public void LucidKeepsItsSearchBudgetAndRejectsNonCombatDamageSources()
     {
         var lucid = new Lucid();
@@ -323,6 +332,7 @@ public sealed class CardMechanicsSuite
             new ClowShield(),
             new SakuraShield(),
             new ClowMaze(),
+            new ClowSand(),
             new SakuraMaze(),
             new ClowJump(),
             new ClowIllusion(),
@@ -756,9 +766,15 @@ public sealed class CardMechanicsSuite
             "SakuraMod/localization/eng/cards.json"));
         var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/localization/zhs/cards.json"));
+        var cardModelSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraCardModel.cs"));
+        var triggerPoison = cardModelSource[cardModelSource.IndexOf("Task TriggerCurrentPoison", StringComparison.Ordinal)..];
 
         RegressionTestHarness.Require(
-            sand.EnergyCost.Canonical == 1
+            triggerPoison.IndexOf("PowerCmd.Decrement(poison)", StringComparison.Ordinal)
+                is > 0 and var decrement
+            && decrement < triggerPoison.IndexOf("Task DealDamageHit", StringComparison.Ordinal)
+            && sand.EnergyCost.Canonical == 1
             && sand.Type == CardType.Skill
             && sand.TargetType == TargetType.None
             && !sand.CanonicalKeywords.Contains(CardKeyword.Exhaust)
@@ -773,7 +789,7 @@ public sealed class CardMechanicsSuite
             && chineseCards.Contains("{Triggers:diff()}", StringComparison.Ordinal)
             && chineseCards.Contains("{PoisonPower:diff()}", StringComparison.Ordinal)
             && chineseCards.Contains("{Applications:diff()}", StringComparison.Ordinal),
-            "Expected Sakura Sand to be a 1-cost unexhausted Skill that triggers Poison twice before applying 1 Poison 9 times to all enemies.");
+            "Expected Sakura Sand to be a 1-cost unexhausted Skill that triggers Poison twice, each trigger losing 1 Poison like the native tick, before applying 1 Poison 9 times to all enemies.");
     }
 
     [Fact]
@@ -1147,11 +1163,11 @@ public sealed class CardMechanicsSuite
             System.Text.RegularExpressions.Regex.Matches(
                 powerSources,
                 "CreatureCmd\\.GainBlock\\([^;]*SakuraPowerValueProps\\.Block",
-                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 7
+                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 8
             && System.Text.RegularExpressions.Regex.Matches(
                 powerSources,
                 "CreatureCmd\\.GainBlock\\(",
-                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 7,
+                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 8,
             "Expected every SakuraMod power-generated Block call to use the shared unpowered Block contract without a card source.");
         RegressionTestHarness.Require(
             transparentPowersSource.Contains("SakuraPowerValueProps.Damage", StringComparison.Ordinal)
@@ -2034,14 +2050,16 @@ public sealed class CardMechanicsSuite
             && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraFirey()) == typeof(SpellHuoShen)
             && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraWatery()) == typeof(SpellShuiLong)
             && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraWindy()) == typeof(SpellFengHua)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowMove()) == typeof(SpellEmptySpell)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraMove()) == typeof(SpellEmptySpell)
             && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowSword()) is null,
-            "Expected the four Clow and Sakura element-state cards to preview only their generated spell cards.");
+            "Expected Clow and Sakura element-state cards and Move to preview their generated spell cards.");
         RegressionTestHarness.Require(
-            new ClowEarthy().CanonicalKeywords.Contains(CardKeyword.Retain)
-            && new ClowFirey().CanonicalKeywords.Contains(CardKeyword.Retain)
-            && new ClowWatery().CanonicalKeywords.Contains(CardKeyword.Retain)
-            && new ClowWindy().CanonicalKeywords.Contains(CardKeyword.Retain),
-            "Expected the four Clow element-state cards to retain by default.");
+            !new ClowEarthy().CanonicalKeywords.Contains(CardKeyword.Retain)
+            && !new ClowFirey().CanonicalKeywords.Contains(CardKeyword.Retain)
+            && !new ClowWatery().CanonicalKeywords.Contains(CardKeyword.Retain)
+            && !new ClowWindy().CanonicalKeywords.Contains(CardKeyword.Retain),
+            "Expected the four Clow element-state cards not to retain by default.");
 
         RegressionTestHarness.Require(
             SakuraSourceCardText.StaticTipKeys(new SpellHuoShen()).Count() >= 2,
@@ -2148,23 +2166,23 @@ public sealed class CardMechanicsSuite
             && clowWood.TargetType == TargetType.None
             && clowWood.Rarity == CardRarity.Uncommon
             && clowWood.EnergyCost.Canonical == 1
-            && clowWood.DynamicVars["ThornsPower"].IntValue == 2
             && clowWood.DynamicVars["PoisonPower"].IntValue == 1
-            && upgradedClowWood.DynamicVars["ThornsPower"].IntValue == 4
             && upgradedClowWood.DynamicVars["PoisonPower"].IntValue == 2
             && !TransparentCard.HasMagicChargeExtraEffect(clowWood)
             && sakuraWood.Type == CardType.Power
             && sakuraWood.TargetType == TargetType.None
             && sakuraWood.Rarity == CardRarity.Token
             && sakuraWood.EnergyCost.Canonical == 1
-            && sakuraWood.DynamicVars["ThornsPower"].IntValue == 4
+            && sakuraWood.DynamicVars["PoisonPower"].IntValue == 3
+            && !clowWood.DynamicVars.ContainsKey("ThornsPower")
+            && !sakuraWood.DynamicVars.ContainsKey("ThornsPower")
             && new ClassicWoodPower().Type == PowerType.Buff
             && new ClassicWoodPower().StackType == PowerStackType.Counter
             && new ClassicSakuraWoodPower().Type == PowerType.Buff
             && new ClassicSakuraWoodPower().StackType == PowerStackType.Single
-            && RegressionTestHarness.DeclaresMethod<ClassicWoodPower>("BeforeDamageReceived")
-            && RegressionTestHarness.DeclaresMethod<ThornsPower>("BeforeDamageReceived"),
-            "Expected Clow Wood to grant Thorns and poison attackers per hit, Sakura Wood to poison attackers by current Thorns, both triggering on the native Thorns timing.");
+            && RegressionTestHarness.DeclaresMethod<ClassicWoodPower>("AfterDamageReceived")
+            && !RegressionTestHarness.DeclaresMethod<ClassicWoodPower>("BeforeDamageReceived"),
+            "Expected Wood to drop Thorns: Clow poisons a random enemy on Earth triggers and fully blocked hits, Sakura poisons all enemies on Earth triggers and triggers the attacker's Poison on fully blocked hits.");
     }
 
     [Fact]

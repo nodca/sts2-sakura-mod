@@ -163,6 +163,7 @@ internal static class SakuraSourceCardText
             ClowFirey or SakuraFirey => typeof(SpellHuoShen),
             ClowWatery or SakuraWatery => typeof(SpellShuiLong),
             ClowWindy or SakuraWindy => typeof(SpellFengHua),
+            ClowMove or SakuraMove => typeof(SpellEmptySpell),
             _ => null
         };
 
@@ -221,8 +222,11 @@ internal static class SakuraSourceCardText
 
     internal static IEnumerable<CardKeyword> KeywordTips(SakuraSourceCard card)
     {
-        if (card is ClowFreeze or ClowSnow or SakuraSnow)
+        if (card is ClowFreeze or ClowSnow or SakuraSnow or SpellShuiLong)
             yield return SakuraKeywords.Frostbite;
+
+        if (card is SpellLeiDi)
+            yield return SakuraKeywords.Stabilize;
 
         if (card is SpellTurn)
             yield return SakuraKeywords.Purge;
@@ -256,7 +260,7 @@ internal static class SakuraSourceCardText
         new("cards", $"{ModelDb.GetId(card.GetType()).Entry}.extraDescription");
 
     internal static bool ReferencesMagicChargeTip(SakuraSourceCard card) =>
-        card is GrowingMagic or AnotherMe
+        card is GrowingMagic or AnotherMe or SpellHuoShen
         || card.Identity is SourceCardIdentity.Bubbles
             or SourceCardIdentity.Change
             or SourceCardIdentity.Fight

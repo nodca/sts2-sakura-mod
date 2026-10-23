@@ -27,7 +27,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class SpellHuoShen() : ElementSpellCard(0, CardType.Attack, TargetType.AnyEnemy, SakuraElementSet.Fire)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(5, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(5, ValueProp.Move), new DynamicVar("Charge", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -36,6 +36,7 @@ public class SpellHuoShen() : ElementSpellCard(0, CardType.Attack, TargetType.An
         {
             await cues.Release();
             await DealDamage(choiceContext, target, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.FireBurst);
+            await SakuraMagicCharge.GainMagic(choiceContext, Owner, ReleasedValue("Charge"), this);
         });
     }
 }

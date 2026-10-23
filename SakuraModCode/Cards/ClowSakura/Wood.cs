@@ -28,40 +28,24 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowWood() : ClowCard(1, CardType.Power, CardRarity.Uncommon, TargetType.None)
 {
-    private const int BaseThorns = 2;
-    private const int PoisonPerHit = 1;
+    private const int PoisonPerTrigger = 1;
 
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars =>
-    [
-        new PowerVar<ThornsPower>(BaseThorns),
-        new PowerVar<PoisonPower>(PoisonPerHit)
-    ];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PoisonPower>(PoisonPerTrigger)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await ApplyPower<ThornsPower>(choiceContext, Owner.Creature, DynamicVars["ThornsPower"].IntValue);
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicWoodPower>(choiceContext, Owner.Creature, DynamicVars["PoisonPower"].IntValue);
-    }
 
-    protected override void OnUpgrade()
-    {
-        DynamicVars["ThornsPower"].UpgradeValueBy(2);
-        DynamicVars["PoisonPower"].UpgradeValueBy(1);
-    }
+    protected override void OnUpgrade() => DynamicVars["PoisonPower"].UpgradeValueBy(1);
 }
 
 public class SakuraWood() : SakuraFormCard(1, CardType.Power, TargetType.None)
 {
-    private const int BaseThorns = 4;
+    private const int PoisonPerEarthTrigger = 3;
 
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<ThornsPower>(BaseThorns)];
-    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [HoverTipFactory.FromPower<PoisonPower>()];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PoisonPower>(PoisonPerEarthTrigger)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await ApplyPower<ThornsPower>(choiceContext, Owner.Creature, DynamicVars["ThornsPower"].IntValue);
-        await ApplyPower<ClassicSakuraWoodPower>(choiceContext, Owner.Creature, 1);
-    }
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        await ApplyPower<ClassicSakuraWoodPower>(choiceContext, Owner.Creature, DynamicVars["PoisonPower"].IntValue);
 }

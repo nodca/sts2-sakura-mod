@@ -10,7 +10,7 @@ using STS2RitsuLib.Content;
 public sealed class PublicIdentityCompatibilitySuite
 {
     private const string ExpectedRegisteredEntryHash =
-        "4B7E6E468589EA8D7B67A4D37E5DA1859770613FBE82542790C76BCF7DB1F233";
+        "D0DB039744D2D349AFFB62FB7E594E2FEA1C89F9296B88F11A7A97AC9F74F5AB";
 
     [Fact]
     public void RegisteredPublicEntriesRemainSaveCompatible()
