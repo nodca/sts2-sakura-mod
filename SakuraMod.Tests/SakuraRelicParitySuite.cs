@@ -33,10 +33,11 @@ public sealed class SakuraRelicParitySuite
             && new ClassicRedCapeRelic().Rarity == RelicRarity.Ancient
             && new ClassicPinkTransformationCostumeRelic().Rarity == RelicRarity.Ancient
             && new ClassicFrogRaincoatRelic().Rarity == RelicRarity.Ancient
-            && new ClassicMonsterRelic().Rarity == RelicRarity.Rare,
+            && new ClassicMonsterRelic().Rarity == RelicRarity.Event,
             "Expected special and costume relics to retain their intended rarities.");
         RegressionTestHarness.Require(
-            !rewardableTypes.Contains(typeof(ClassicMonsterRelic)),
+            !rewardableTypes.Contains(typeof(ClassicMonsterRelic))
+            && !new ClassicMonsterRelic().IsAllowedInShops,
             "Expected Monster to remain obtainable only through its dedicated event.");
     }
 

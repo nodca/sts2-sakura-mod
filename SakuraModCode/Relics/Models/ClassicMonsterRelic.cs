@@ -16,7 +16,8 @@ public sealed class ClassicMonsterRelic : SakuraRelicModel
     private const int DexterityLoss = 1;
 
     protected override string IconFileName => "monster.png";
-    public override RelicRarity Rarity => RelicRarity.Rare;
+    public override RelicRarity Rarity => RelicRarity.Event;
+    public override bool IsAllowedInShops => false;
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
