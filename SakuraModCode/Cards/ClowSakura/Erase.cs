@@ -41,12 +41,11 @@ public class ClowErase() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Co
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(4);
 
-    private Task ResolveTargets(PlayerChoiceContext choiceContext, CardPlay play, int killHpPercent) =>
-        SakuraThroughResolution.WithPropagationSuppressed(async () =>
-        {
-            foreach (var target in SakuraThroughResolution.TargetsFor(play))
-                await KillOrDamage(choiceContext, target, killHpPercent);
-        });
+    private async Task ResolveTargets(PlayerChoiceContext choiceContext, CardPlay play, int killHpPercent)
+    {
+        foreach (var target in PlayTargets(play))
+            await KillOrDamage(choiceContext, target, killHpPercent);
+    }
 
     private async Task KillOrDamage(PlayerChoiceContext choiceContext, Creature target, int killHpPercent)
     {
@@ -73,11 +72,8 @@ public class SakuraErase() : SakuraFormCard(1, CardType.Skill, TargetType.AnyEne
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
-        {
-            foreach (var target in SakuraThroughResolution.TargetsFor(play))
-                await ResolveTarget(choiceContext, target);
-        });
+        foreach (var target in PlayTargets(play))
+            await ResolveTarget(choiceContext, target);
     }
 
     private async Task ResolveTarget(PlayerChoiceContext choiceContext, Creature target)

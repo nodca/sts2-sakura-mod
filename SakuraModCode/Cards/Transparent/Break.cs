@@ -25,20 +25,17 @@ public class Break() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        foreach (var target in PlayTargets(play))
         {
-            foreach (var target in SakuraThroughResolution.TargetsFor(play))
-            {
-                var hadBlock = target.Block > 0;
-                if (hadBlock)
-                    await CreatureCmd.LoseBlock(target, target.Block);
+            var hadBlock = target.Block > 0;
+            if (hadBlock)
+                await CreatureCmd.LoseBlock(target, target.Block);
 
-                var damage = DynamicVars.Damage.IntValue * (hadBlock ? 2 : 1);
-                await DealDamage(choiceContext, target, damage, hitVfx: SakuraNativeHitFx.RockShatter, hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx);
-                if (activation.IsActive)
-                    await ApplyExtraEffect(choiceContext, target);
-            }
-        });
+            var damage = DynamicVars.Damage.IntValue * (hadBlock ? 2 : 1);
+            await DealDamage(choiceContext, target, damage, hitVfx: SakuraNativeHitFx.RockShatter, hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx);
+            if (activation.IsActive)
+                await ApplyExtraEffect(choiceContext, target);
+        }
     }
 
     private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, Creature target)

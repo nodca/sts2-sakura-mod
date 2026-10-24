@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -12,60 +13,56 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowChange() : ClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None)
 {
-    public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars =>
-    [
-        new CardsVar(2),
-        new DynamicVar("Magic", 2)
-    ];
+    private static LocString HandSwapPrompt => CardLoc<ClowChange>("handPrompt");
+    private static LocString DiscardSwapPrompt => CardLoc<ClowChange>("discardPrompt");
 
+    public override SakuraElementSet Elements => SakuraElementSet.Earth;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
+
+    // Draw after the swap: drawing first could shuffle the Discard Pile away
+    // and leave nothing to swap with.
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var opportunity = SakuraMagicCharge.CaptureOpportunity(Owner);
-        await SakuraMagicCharge.TryApplyCapturedOpportunity(choiceContext, this, opportunity);
+        await SwapWithDiscard(choiceContext);
+        await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
+    }
 
-        var discarded = await TryDiscardOne(choiceContext);
+    private async Task SwapWithDiscard(PlayerChoiceContext choiceContext)
+    {
+        var handCards = CardPile.GetCards(Owner, PileType.Hand).Where(card => card != this).ToList();
+        var discardCards = CardPile.GetCards(Owner, PileType.Discard).ToList();
+        if (handCards.Count == 0 || discardCards.Count == 0)
+            return;
 
-        var maxSpend = DynamicVars["Magic"].IntValue;
-        var spent = ChangeRules.SpendableMagic(this);
-        if (spent > 0)
-            await SakuraMagicCharge.SpendUpToMagic(choiceContext, Owner, maxSpend);
+        var outgoing = (await CardSelectCmd.FromHand(
+            choiceContext,
+            Owner,
+            new CardSelectorPrefs(HandSwapPrompt, 1) { Cancelable = false },
+            card => handCards.Contains(card),
+            this)).FirstOrDefault();
+        if (outgoing is null)
+            return;
 
-        var drawCount = ChangeRules.DrawCount(discarded, DynamicVars.Cards.IntValue, spent);
-        if (drawCount > 0)
-            await CardPileCmd.Draw(choiceContext, drawCount, Owner, false);
+        var incoming = (await CardSelectCmd.FromSimpleGrid(
+            choiceContext,
+            discardCards,
+            Owner,
+            new CardSelectorPrefs(DiscardSwapPrompt, 1) { Cancelable = false })).FirstOrDefault();
+        if (incoming is null)
+            return;
+
+        ChangeRules.SwapCostsThisTurn(outgoing, incoming);
+        await CardPileCmd.Add(outgoing, PileType.Discard, CardPilePosition.Top, this);
+        await CardPileCmd.Add(incoming, PileType.Hand, CardPilePosition.Bottom, this);
     }
 
     protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Retain);
-
-    private async Task<bool> TryDiscardOne(PlayerChoiceContext choiceContext)
-    {
-        var candidates = CardPile.GetCards(Owner, PileType.Hand).Where(card => card != this).ToList();
-        if (candidates.Count == 0)
-            return false;
-
-        var selected = await CardSelectCmd.FromHand(
-            choiceContext,
-            Owner,
-            new CardSelectorPrefs(HandPrompt, 0, 1)
-            {
-                Cancelable = true,
-                RequireManualConfirmation = false
-            },
-            card => candidates.Contains(card),
-            this);
-
-        var cards = selected.ToList();
-        if (cards.Count == 0)
-            return false;
-
-        await CardCmd.Discard(choiceContext, cards);
-        return true;
-    }
 }
 
 public class SakuraChange() : SakuraFormCard(0, CardType.Skill, TargetType.None)
 {
+    private static LocString CostSwapPrompt => CardLoc<SakuraChange>("selectionPrompt");
+
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(5)];
 
@@ -74,22 +71,37 @@ public class SakuraChange() : SakuraFormCard(0, CardType.Skill, TargetType.None)
         var hand = CardPile.GetCards(Owner, PileType.Hand).Where(card => card != this).ToList();
         if (hand.Count > 0)
             await CardCmd.Discard(choiceContext, hand);
-        await CardPileCmd.Draw(choiceContext, ReleasedValue("Cards"), Owner, false);
+        var drawn = await CardPileCmd.Draw(choiceContext, ReleasedValue("Cards"), Owner, false);
+
+        var candidates = drawn.Where(card => card.Pile?.Type == PileType.Hand && ChangeRules.HasSwappableCost(card)).ToList();
+        if (candidates.Count < 2)
+            return;
+
+        var selected = (await CardSelectCmd.FromHand(
+            choiceContext,
+            Owner,
+            new CardSelectorPrefs(CostSwapPrompt, 0, 2) { Cancelable = true },
+            card => candidates.Contains(card),
+            this)).ToList();
+        if (selected.Count == 2)
+            ChangeRules.SwapCostsThisTurn(selected[0], selected[1]);
     }
 }
 
 internal static class ChangeRules
 {
-    internal static int DrawCount(bool discarded, int baseDraw, int spentMagic) =>
-        (discarded ? baseDraw : 0) + spentMagic;
+    // X-cost and unplayable cards keep their own cost; only fixed costs trade.
+    internal static bool HasSwappableCost(CardModel card) =>
+        !card.EnergyCost.CostsX && card.EnergyCost.GetWithModifiers(CostModifiers.None) >= 0;
 
-    internal static int SpendableMagic(CardModel card)
+    internal static void SwapCostsThisTurn(CardModel first, CardModel second)
     {
-        if (!card.IsMutable || card.Owner is not { } owner)
-            return 0;
+        if (!HasSwappableCost(first) || !HasSwappableCost(second))
+            return;
 
-        var maxSpend = card.DynamicVars["Magic"].IntValue;
-        var current = owner.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0;
-        return Math.Min(current, maxSpend);
+        var firstCost = first.EnergyCost.GetWithModifiers(CostModifiers.All);
+        var secondCost = second.EnergyCost.GetWithModifiers(CostModifiers.All);
+        first.EnergyCost.SetThisTurn(secondCost);
+        second.EnergyCost.SetThisTurn(firstCost);
     }
 }

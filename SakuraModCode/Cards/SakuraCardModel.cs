@@ -50,6 +50,9 @@ public abstract class SakuraCardModel : ModCardTemplate
         await SakuraFormVoid.AfterCardPlayed(choiceContext, this);
     }
 
+    protected static IReadOnlyList<Creature> PlayTargets(CardPlay play) =>
+        play.Target is { } target ? [target] : [];
+
     protected static Creature RequiredTarget(CardPlay play) =>
         play.Target ?? throw new InvalidOperationException("Card target is required by this card's TargetType.");
 

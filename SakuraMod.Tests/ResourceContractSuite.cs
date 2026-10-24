@@ -1962,14 +1962,12 @@ public sealed class ResourceContractSuite
             "Expected exactly one Freeze cage session per card entry point.");
 
         // Gameplay stays verbatim inside the wrapper: block first, then the
-        // propagation-suppressed block enumerating its own targets exactly as it
-        // did before the session existed. The prelude snapshot outside it is a
-        // separate enumeration for presentation, not a second gameplay pass.
+        // target loop. The prelude snapshot outside it is a separate enumeration
+        // for presentation, not a second gameplay pass.
         RegressionTestHarness.Require(
-            freeze.Split("WithPropagationSuppressed", StringSplitOptions.None).Length - 1 == 3
-            && freeze.Split("foreach (var target in SakuraThroughResolution.TargetsFor(play))", StringSplitOptions.None).Length - 1 == 3
+            freeze.Split("foreach (var target in PlayTargets(play))", StringSplitOptions.None).Length - 1 == 3
             && freeze.Split("await GainBlock(play, ReleasedBlock());", StringSplitOptions.None).Length - 1 == 3,
-            "Expected every entry point to keep its block-then-suppressed-loop structure and its own in-loop target enumeration.");
+            "Expected every entry point to keep its block-then-loop structure and its own in-loop target enumeration.");
 
         // The weight axis: plain Clow is the medium tier, the activated path and
         // the Sakura form share the heavy one — one orchestration, no branches.
@@ -2054,7 +2052,7 @@ public sealed class ResourceContractSuite
             "Expected both Swords and Blade to use the vanilla Strike slash on their Move hits.");
         RegressionTestHarness.Require(
             sword.Contains("await DealDamage(choiceContext, target, ExtraHpLoss, ValueProp.Unblockable)", StringComparison.Ordinal)
-            && sword.Split("SakuraThroughResolution.TargetsFor(play)", StringSplitOptions.None).Length - 1 == 1
+            && sword.Split("PlayTargets(play)", StringSplitOptions.None).Length - 1 == 1
             && sword.Contains("foreach (var target in targets)", StringComparison.Ordinal)
             && blade.Split("BladeRules.HitCount(this)", StringSplitOptions.None).Length - 1 == 1,
             "Expected Sword and Blade gameplay to remain in place.");
@@ -3140,13 +3138,13 @@ public sealed class ResourceContractSuite
             && session.Contains("scope.InvokeAsync(\"deliver\"", StringComparison.Ordinal)
             && !session.Contains("ResourceLoader.Load", StringComparison.Ordinal)
             && !session.Contains("TIME", StringComparison.Ordinal)
-            && card.Contains("var targets = SakuraThroughResolution.TargetsFor(play)", StringComparison.Ordinal)
+            && card.Contains("var targets = PlayTargets(play)", StringComparison.Ordinal)
             && card.Contains("TransferVfx.PlayOrResolveAsync", StringComparison.Ordinal)
             && cueIndex >= 0
             && powerIndex > cueIndex
             && deliverIndex > powerIndex
             && gainIndex > deliverIndex,
-            "Expected Transfer to pull the core out of every Through target before its Strength loss and deliver it before Sakura's gains, keeping every PowerCmd on the card.");
+            "Expected Transfer to pull the core out of every target before its Strength loss and deliver it before Sakura's gains, keeping every PowerCmd on the card.");
     }
 
     [Fact]

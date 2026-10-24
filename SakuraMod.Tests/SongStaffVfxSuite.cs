@@ -50,8 +50,8 @@ public sealed class SongStaffVfxSuite
     }
 
     /// <summary>
-    /// The Voice card's Echo adds hits to the same song; each echo beat sits right
-    /// behind its Voice beat, and the total never differs from the hits gameplay
+    /// A Wind card adds a hit to the same song; each echo beat sits right
+    /// behind its Wind card's beat, and the total never differs from the hits gameplay
     /// deals.
     /// </summary>
     [Fact]
@@ -59,7 +59,7 @@ public sealed class SongStaffVfxSuite
     {
         RegressionTestHarness.Require(
             SongBeatSchedule.EchoBeats([1, 3, 1]).SequenceEqual([false, false, true, true, false]),
-            "Expected a Voice card with Echo 2 to sing its beat and then two echo beats, in exhaust order.");
+            "Expected a card with three hits to sing its beat and then two echo beats, in exhaust order.");
         RegressionTestHarness.Require(
             SongBeatSchedule.EchoBeats([2], trailingPlainBeats: 2).SequenceEqual([false, true, false, false]),
             "Expected Clow's activated extra hits to close the song as plain beats.");

@@ -303,9 +303,8 @@ public sealed class CardMechanicsSuite
             && card.CanonicalKeywords.SequenceEqual([CardKeyword.Innate, CardKeyword.Exhaust])
             && card.MaxUpgradeLevel == 0
             && card.DynamicVars["Percent"].IntValue == SakuraEraseRules.NormalHpLossPercent
-            && card.DynamicVars["MaxHpLoss"].IntValue == SakuraEraseRules.EliteBossMaxHpLoss
-            && SakuraThroughResolution.IsEligibleCard(card),
-            "Expected Sakura Erase to be a 1-cost Innate Exhaust Skill that participates in target-scoped Through resolution.");
+            && card.DynamicVars["MaxHpLoss"].IntValue == SakuraEraseRules.EliteBossMaxHpLoss,
+            "Expected Sakura Erase to be a 1-cost Innate Exhaust Skill.");
 
         RegressionTestHarness.Require(
             power.Type == PowerType.Debuff
@@ -418,7 +417,7 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void ThroughCardsExposePersistentPiercingContracts()
+    public void ThroughCardsPayOutWhenCardsCrossMemoryOrExhaust()
     {
         var clow = new ClowThrough();
         var upgradedClow = RegressionTestHarness.MutableForCostTest(new ClowThrough());
@@ -427,58 +426,30 @@ public sealed class CardMechanicsSuite
 
         RegressionTestHarness.Require(
             clow.EnergyCost.Canonical == 2
+            && upgradedClow.EnergyCost.GetWithModifiers(CostModifiers.None) == 1
             && clow.Type == CardType.Power
             && clow.Rarity == CardRarity.Rare
             && clow.TargetType == TargetType.None
             && clow.Elements == SakuraElementSet.Earth
             && clow is not ISakuraExtraEffectCard
-            && clow.DynamicVars["Rate"].IntValue == 50
-            && upgradedClow.DynamicVars["Rate"].IntValue == 100
-            && SakuraSourceCardText.ReferencesThroughTip(clow),
-            "Expected Clow Through to be a 2-cost Rare Earth Power with a 50%/100% charge contribution and no Extra effect.");
+            && clow.DynamicVars.Damage.IntValue == 3
+            && upgradedClow.DynamicVars.Damage.IntValue == 3,
+            "Expected Clow Through to be a 2-cost Rare Earth Power dealing 3 per card and upgrading to 1 Energy.");
 
         RegressionTestHarness.Require(
             sakura.EnergyCost.Canonical == 1
             && sakura.Type == CardType.Power
             && sakura.Rarity == CardRarity.Token
-            && sakura.TargetType == TargetType.None
             && sakura.Elements == SakuraElementSet.Earth
             && sakura.MaxUpgradeLevel == 0
-            && sakura.DynamicVars["Damage"].IntValue == 10
-            && SakuraSourceCardText.ReferencesThroughTip(sakura),
-            "Expected Sakura Through to be a non-upgradable 1-cost Earth Power with 10 bonus damage.");
-
-        var power = new ClassicThroughPower();
-        power.RegisterClowSource(upgraded: false);
-        power.RegisterClowSource(upgraded: true);
-        power.RegisterSakuraSource();
-        RegressionTestHarness.Require(
-            power.CalculateBonusDamage(5) == 17
-            && power.CalculateBonusDamage(6) == 19,
-            "Expected Through contributions to add, with base Clow charge halved using integer floor.");
+            && sakura.DynamicVars.Damage.IntValue == 4,
+            "Expected Sakura Through to be a non-upgradable 1-cost Earth Power dealing 4 per card.");
 
         RegressionTestHarness.Require(
-            SakuraThroughResolution.IsEligibleCard(new ClowSword())
-            && SakuraThroughResolution.IsEligibleCard(new SakuraSword())
-            && SakuraThroughResolution.IsEligibleCard(new Transfer())
-            && SakuraThroughResolution.IsEligibleCard(new SpellHuoShen())
-            && SakuraThroughResolution.IsEligibleCard(new GrowingMagic())
-            && !SakuraThroughResolution.IsEligibleCard(new AnotherMe())
-            && !SakuraThroughResolution.IsEligibleCard(new MegaCrit.Sts2.Core.Models.Cards.Neutralize()),
-            "Expected Through to accept targeted Clow, Sakura, Clear, Spell, and Ancient cards while rejecting untargeted and original cards.");
-    }
-
-    [Fact]
-    public void ThroughPropagationIgnoresImmutableCardSources()
-    {
-        var immutableCard = new ClowSword();
-
-        RegressionTestHarness.Require(
-            !immutableCard.IsMutable
-            && SakuraThroughResolution.ExpandDamageTargets(
-                Array.Empty<Creature>(),
-                immutableCard) is null,
-            "Expected scoped Through propagation to fail open without reading Owner from an immutable card source.");
+            new ClassicThroughPower().StackType == PowerStackType.Counter
+            && new ClassicThroughSakuraPower().StackType == PowerStackType.Counter
+            && RegressionTestHarness.DeclaresMethod<ClassicThroughPower>("AfterCardChangedPiles"),
+            "Expected both Through powers to stack and trigger from native pile changes.");
     }
 
     [Fact]
@@ -1555,21 +1526,14 @@ public sealed class CardMechanicsSuite
         var change = new ClowChange();
         var upgradedChange = RegressionTestHarness.MutableForCostTest(new ClowChange());
         upgradedChange.UpgradeInternal();
-        var changeSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/ClowSakura/Change.cs"));
         RegressionTestHarness.Require(
             change.EnergyCost.Canonical == 1
             && change.Rarity == CardRarity.Common
-            && change.DynamicVars.Cards.IntValue == 2
-            && change.DynamicVars["Magic"].IntValue == 2
+            && !change.Keywords.Contains(CardKeyword.Retain)
             && upgradedChange.Keywords.Contains(CardKeyword.Retain)
-            && ChangeRules.DrawCount(discarded: true, baseDraw: 2, spentMagic: 0) == 2
-            && ChangeRules.DrawCount(discarded: true, baseDraw: 2, spentMagic: 2) == 4
-            && ChangeRules.DrawCount(discarded: false, baseDraw: 2, spentMagic: 2) == 2
-            && changeSource.Contains("CaptureOpportunity", StringComparison.Ordinal)
-            && changeSource.Contains("TryApplyCapturedOpportunity", StringComparison.Ordinal)
-            && changeSource.Contains("SpendUpToMagic", StringComparison.Ordinal),
-            "Expected Clow Change to discard up to 1 card for 2 draws, spend up to 2 Magic Charge for +1 draw each, lock element state before spending, and upgrade to Retain.");
+            && upgradedChange.EnergyCost.GetWithModifiers(CostModifiers.None) == 1
+            && new SakuraChange().DynamicVars.Cards.IntValue == 5,
+            "Expected Clow Change to stay a 1-cost Common that upgrades to Retain, and Sakura Change to draw 5.");
 
         var swing = new Swing();
         var upgradedSwing = RegressionTestHarness.MutableForCostTest(new Swing());
@@ -2076,8 +2040,8 @@ public sealed class CardMechanicsSuite
             "Expected Sakura Wave to preview generated Clow cards instead of directly entering element states.");
         RegressionTestHarness.Require(
             SakuraSourceCardText.ReferencesMagicChargeTip(new ClowLock())
-            && SakuraSourceCardText.ReferencesMagicChargeTip(new ClowChange()),
-            "Expected Clow Lock and Change hover tips to reference Magic Charge.");
+            && !SakuraSourceCardText.ReferencesMagicChargeTip(new ClowChange()),
+            "Expected Clow Lock, but no longer Change, hover tips to reference Magic Charge.");
         RegressionTestHarness.Require(
             SakuraSourceCardText.KeywordTips(new SakuraShield()).Contains(SakuraKeywords.SakuraCard),
             "Expected Sakura card hover tips to explain Sakura Card void generation.");
@@ -2114,8 +2078,8 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             SakuraSourceCardText.CounterpartPreviewIdentity(new ClowVoice()) == SourceCardIdentity.Voice
             && SakuraSourceCardText.StaticTipKeys(new ClowVoice()).Any()
-            && SakuraSourceCardText.KeywordTips(new ClowVoice()).Count() >= 2,
-            "Expected Clow Voice hover tips to include element, counterpart, Invisible, and Echo context.");
+            && SakuraSourceCardText.KeywordTips(new ClowVoice()).SequenceEqual([SakuraKeywords.Invisible]),
+            "Expected Clow Voice hover tips to include element, counterpart, and Invisible context.");
 
         RegressionTestHarness.Require(
             SakuraDescriptionRegion.IsExtraEffectDescriptionLineForTests("[gold]额外效果：[/gold]抽 1 张牌。"),

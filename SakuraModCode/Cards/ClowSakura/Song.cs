@@ -78,12 +78,9 @@ public class ClowSong() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Unc
         return hits;
     }
 
-    /// <summary>Hits one exhausted card sings: the Voice card's Echo adds <c>Magic</c> more.</summary>
+    /// <summary>Hits one exhausted card sings: a Wind card sings once more.</summary>
     internal static int SongCount(CardModel card) =>
-        card is SakuraSourceCard { Identity: SourceCardIdentity.Voice } voice
-        && voice.DynamicVars.TryGetValue("Magic", out var magic)
-            ? 1 + magic.IntValue
-            : 1;
+        SakuraActions.HasElement(card, SakuraElement.Wind) ? 2 : 1;
 
     private Task Sing(PlayerChoiceContext choiceContext, bool[] echoes)
     {

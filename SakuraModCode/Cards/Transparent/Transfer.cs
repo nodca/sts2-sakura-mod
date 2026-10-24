@@ -34,20 +34,17 @@ public class Transfer() : TransparentExtraEffectCard(2, CardType.Skill, CardRari
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var targets = SakuraThroughResolution.TargetsFor(play);
-        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        var targets = PlayTargets(play);
+        await TransferVfx.PlayOrResolveAsync(this, Owner.Creature, targets, activation.IsActive, async cues =>
         {
-            await TransferVfx.PlayOrResolveAsync(this, Owner.Creature, targets, activation.IsActive, async cues =>
+            foreach (var target in targets)
             {
-                foreach (var target in targets)
-                {
-                    await cues.PullOutAsync(target);
-                    await PowerCmd.Apply<StrengthPower>(choiceContext, target, -DynamicVars["EnemyStrengthLoss"].IntValue, Owner.Creature, this, false);
-                    await cues.DeliverAsync(target);
-                    await PowerCmd.Apply<StrengthPower>(choiceContext, Owner.Creature, DynamicVars["StrengthGain"].IntValue, Owner.Creature, this, false);
-                    await PowerCmd.Apply<DexterityPower>(choiceContext, Owner.Creature, DynamicVars["DexterityGain"].IntValue, Owner.Creature, this, false);
-                }
-            });
+                await cues.PullOutAsync(target);
+                await PowerCmd.Apply<StrengthPower>(choiceContext, target, -DynamicVars["EnemyStrengthLoss"].IntValue, Owner.Creature, this, false);
+                await cues.DeliverAsync(target);
+                await PowerCmd.Apply<StrengthPower>(choiceContext, Owner.Creature, DynamicVars["StrengthGain"].IntValue, Owner.Creature, this, false);
+                await PowerCmd.Apply<DexterityPower>(choiceContext, Owner.Creature, DynamicVars["DexterityGain"].IntValue, Owner.Creature, this, false);
+            }
         });
 
         if (activation.IsActive)

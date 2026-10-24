@@ -13,8 +13,6 @@
   "SAKURAMOD-MANIFEST.description": "从随机展示的透明牌中选择 1 张，将其复制加入你的[gold]手牌[/gold]。该复制获得[red]遗忘[/red]。",
   "SAKURAMOD-SAKURA_CARD.title": "小樱牌",
   "SAKURAMOD-SAKURA_CARD.description": "由库洛牌转化而来。打出后，将 1 张[gold]虚空[/gold]洗入抽牌堆。",
-  "SAKURAMOD-ECHO.title": "回音",
-  "SAKURAMOD-ECHO.description": "被歌牌消耗时，额外触发歌牌的效果。",
   "SAKURAMOD-INVISIBLE.title": "无形",
   "SAKURAMOD-INVISIBLE.description": "抽到此牌时，再抽 1 张牌。",
   "SAKURAMOD-REMOVABLE.title": "移除",

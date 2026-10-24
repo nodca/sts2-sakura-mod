@@ -1,14 +1,15 @@
 using MegaCrit.Sts2.Core.Commands;
-using MegaCrit.Sts2.Core.Models.Cards;
-using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.TestProtocol;
-using Break = SakuraMod.SakuraModCode.Cards.Break;
 
 namespace SakuraMod.RuntimeTests;
 
+// Through pays out when cards cross Memory or the Exhaust pile: Clow on entry,
+// Sakura on entry or exit, one trigger per moved card.
 internal static class ThroughPiercingScenario
 {
     public static async Task<Dictionary<string, object?>> ExecuteAsync(
@@ -19,156 +20,71 @@ internal static class ThroughPiercingScenario
         var combat = await context.EnterWeakSlimesCombatAsync();
         var player = context.Player;
         var enemies = combat.Enemies.ToList();
-        assertions.True("through_has_multiple_ordered_enemies", enemies.Count >= 2);
+        var memory = SakuraMemoryPile.Get(player)!;
 
-        var setup = new RuntimeFixtureAction(
-            player,
-            async choiceContext =>
-            {
-                await SakuraMagicCharge.GainMagic(choiceContext, player, 6);
-                foreach (var enemy in enemies)
-                {
-                    await CreatureCmd.GainMaxHp(enemy, 100);
-                    await CreatureCmd.GainBlock(enemy, 100, ValueProp.Unpowered, null, true);
-                    await CreatureCmd.Stun(enemy);
-                }
-            });
-        await CombatScenarioContext.EnqueueAndWaitAsync(setup);
-
-        var through = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowThrough>(combat, player);
-        await CombatScenarioContext.PlayCardAsync(through);
-        assertions.Equal("through_clow_power_amount", 1, player.Creature.GetPower<ClassicThroughPower>()?.Amount ?? 0);
-        assertions.Equal("through_charge_after_power", 8, player.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0);
-
-        var sword = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowSword>(combat, player);
-        var hpBeforeSword = enemies.ToDictionary(static enemy => enemy, static enemy => enemy.CurrentHp);
-        var blockBeforeSword = enemies.ToDictionary(static enemy => enemy, static enemy => enemy.Block);
-        await CombatScenarioContext.PlayCardAsync(sword, enemies[0]);
-        foreach (var enemy in enemies)
+        await ActAsync(async _ =>
         {
-            assertions.Equal(
-                $"through_clow_sword_unblocked_bonus_{enemy.CombatId}",
-                4,
-                hpBeforeSword[enemy] - enemy.CurrentHp);
-            assertions.Equal(
-                $"through_clow_sword_original_blocked_{enemy.CombatId}",
-                6,
-                blockBeforeSword[enemy] - enemy.Block);
-        }
-
-        var clearLastTargetBlock = new RuntimeFixtureAction(
-            player,
-            _ => CreatureCmd.LoseBlock(enemies[^1], enemies[^1].Block));
-        await CombatScenarioContext.EnqueueAndWaitAsync(clearLastTargetBlock);
-        var neutralize = await CombatScenarioContext.AddGeneratedCardToHandAsync<Neutralize>(combat, player);
-        var beforeSecondCard = enemies.ToDictionary(static enemy => enemy, static enemy => enemy.CurrentHp);
-        await CombatScenarioContext.PlayCardAsync(neutralize, enemies[^1]);
-        for (var i = 0; i < enemies.Count - 1; i++)
-            assertions.Equal($"through_once_per_turn_{enemies[i].CombatId}", beforeSecondCard[enemies[i]], enemies[i].CurrentHp);
-        assertions.Equal("through_second_card_hits_only_target", 3, beforeSecondCard[enemies[^1]] - enemies[^1].CurrentHp);
-
-        await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
-        var artifactSetup = new RuntimeFixtureAction(
-            player,
-            async choiceContext =>
+            foreach (var enemy in enemies)
             {
-                foreach (var enemy in enemies.Where(static enemy => enemy.IsAlive))
-                {
-                    await CreatureCmd.Stun(enemy);
-                    await PowerCmd.Apply<StrengthPower>(choiceContext, enemy, 5, enemy, null);
-                }
-                await PowerCmd.Apply<ArtifactPower>(choiceContext, enemies[0], 1, player.Creature, null);
-            });
-        await CombatScenarioContext.EnqueueAndWaitAsync(artifactSetup);
-
-        var originalCard = await CombatScenarioContext.AddGeneratedCardToHandAsync<Neutralize>(combat, player);
-        await CombatScenarioContext.PlayCardAsync(originalCard, enemies[^1]);
-
-        var transfer = await CombatScenarioContext.AddGeneratedCardToHandAsync<Transfer>(combat, player);
-        var strengthBefore = player.Creature.GetPowerAmount<StrengthPower>();
-        var dexterityBefore = player.Creature.GetPowerAmount<DexterityPower>();
-        await CombatScenarioContext.PlayCardAsync(transfer, enemies[0]);
-        assertions.Equal("through_primary_artifact_blocks_strength_loss", 5, enemies[0].GetPowerAmount<StrengthPower>());
-        foreach (var enemy in enemies.Skip(1))
-            assertions.Equal($"through_secondary_strength_loss_{enemy.CombatId}", 3, enemy.GetPowerAmount<StrengthPower>());
-        assertions.Equal("through_transfer_strength_per_target", enemies.Count, player.Creature.GetPowerAmount<StrengthPower>() - strengthBefore);
-        assertions.Equal("through_transfer_dexterity_per_target", enemies.Count, player.Creature.GetPowerAmount<DexterityPower>() - dexterityBefore);
-
-        foreach (var cardCase in new[] { "break", "bubbles", "clow-erase" })
-        {
-            await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
-            var targetSetup = new RuntimeFixtureAction(
-                player,
-                async choiceContext =>
-                {
-                    await PlayerCmd.GainEnergy(10, player);
-                    if (player.Creature.GetPower<StrengthPower>() is { } strength)
-                        await PowerCmd.Remove(strength);
-                    if (player.Creature.GetPower<ClassicMagicChargePower>() is { } charge)
-                        await PowerCmd.Remove(charge);
-                    foreach (var enemy in enemies)
-                    {
-                        await CreatureCmd.SetMaxAndCurrentHp(enemy, 100);
-                        await CreatureCmd.LoseBlock(enemy, enemy.Block);
-                        await CreatureCmd.Stun(enemy);
-                    }
-                    if (cardCase == "break")
-                        await CreatureCmd.GainBlock(enemies[0], 10, ValueProp.Unpowered, null, true);
-                    if (cardCase == "bubbles")
-                    {
-                        foreach (var enemy in enemies)
-                        {
-                            if (enemy.GetPower<StrengthPower>() is { } buff)
-                                await PowerCmd.Remove(buff);
-                            await PowerCmd.Apply<StrengthPower>(choiceContext, enemy, 5, enemy, null);
-                        }
-                    }
-                    if (cardCase == "clow-erase")
-                        await PowerCmd.Apply<MinionPower>(choiceContext, enemies[0], 1, enemies[0], null);
-                });
-            await CombatScenarioContext.EnqueueAndWaitAsync(targetSetup);
-
-            var card = cardCase switch
-            {
-                "break" => (MegaCrit.Sts2.Core.Models.CardModel)await CombatScenarioContext.AddGeneratedCardToHandAsync<Break>(combat, player),
-                "bubbles" => await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowBubbles>(combat, player),
-                _ => await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowErase>(combat, player)
-            };
-            await CombatScenarioContext.PlayCardAsync(card, enemies[0]);
-
-            for (var i = 0; i < enemies.Count; i++)
-            {
-                var enemy = enemies[i];
-                if (cardCase == "clow-erase" && i == 0)
-                {
-                    assertions.True("through_clow_erase_kills_primary_minion", !enemy.IsAlive);
-                    continue;
-                }
-                var expectedDamage = cardCase switch
-                {
-                    "break" => i == 0 ? 14 : 7,
-                    "bubbles" => 5,
-                    _ => 9
-                };
-                assertions.Equal($"through_{cardCase}_damage_once_{enemy.CombatId}", expectedDamage, 100 - enemy.CurrentHp);
-                if (cardCase == "break")
-                    assertions.Equal($"through_break_removes_block_{enemy.CombatId}", 0, enemy.Block);
-                if (cardCase == "bubbles")
-                    assertions.Equal($"through_bubbles_removes_buff_{enemy.CombatId}", 0, enemy.GetPowerAmount<StrengthPower>());
+                await CreatureCmd.GainMaxHp(enemy, 200);
+                await CreatureCmd.GainBlock(enemy, 100, ValueProp.Unpowered, null, true);
+                await CreatureCmd.Stun(enemy);
             }
-        }
+        });
+
+        var clow = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowThrough>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(clow);
+        assertions.Equal("through_clow_power_amount", 3, player.Creature.GetPower<ClassicThroughPower>()?.Amount ?? 0);
+
+        var exhausted = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowSword>(combat, player);
+        await AssertAllEnemiesLoseAsync("through_clow_exhaust_enters", 3, choice => CardCmd.Exhaust(choice, exhausted));
+
+        var remembered = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowShield>(combat, player);
+        await AssertAllEnemiesLoseAsync("through_clow_memory_enters", 3, _ =>
+            SakuraActions.MoveExistingCardToPileWithoutVisuals(null, remembered, memory.Type, CardPilePosition.Bottom));
+        await AssertAllEnemiesLoseAsync("through_clow_ignores_leaving_memory", 0, _ =>
+            ConsumeAsync(remembered));
+
+        var sakura = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraThrough>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(sakura);
+        assertions.Equal("through_sakura_power_amount", 4, player.Creature.GetPower<ClassicThroughSakuraPower>()?.Amount ?? 0);
+
+        var recalled = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowShield>(combat, player);
+        await AssertAllEnemiesLoseAsync("through_both_memory_enters", 7, _ =>
+            SakuraActions.MoveExistingCardToPileWithoutVisuals(null, recalled, memory.Type, CardPilePosition.Bottom));
+        await AssertAllEnemiesLoseAsync("through_sakura_memory_leaves", 4, _ =>
+            ConsumeAsync(recalled));
+        await AssertAllEnemiesLoseAsync("through_exhaust_to_memory_is_one_trigger", 7, _ =>
+            SakuraActions.MoveExistingCardToPileWithoutVisuals(null, exhausted, memory.Type, CardPilePosition.Bottom));
 
         RuntimeTestHost.WriteCheckpoint(
             request,
             "through_piercing_verified",
-            "Through propagated automatic commands and manual Transfer, Break, Bubbles, and Erase target transactions without duplicate damage, including continuation after primary minion death.");
+            "Through dealt unblockable damage to every enemy once per card crossing Memory or the Exhaust pile.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
-            ["enemy_order"] = enemies.Select(static enemy => new { enemy.CombatId, model = enemy.Monster?.Id.Entry }).ToArray(),
-            ["clow_snapshot"] = 8,
-            ["clow_bonus_per_segment"] = 4,
-            ["transfer_target_count"] = enemies.Count
+            ["enemy_count"] = enemies.Count,
+            ["clow_damage_per_card"] = 3,
+            ["sakura_damage_per_card"] = 4
         };
+
+        async Task ConsumeAsync(MegaCrit.Sts2.Core.Models.CardModel card) =>
+            SakuraGeneratedCardLifecycle.RemoveDetachedGeneratedChoices(await SakuraMemoryPile.Consume(player, [card]));
+
+        Task ActAsync(Func<PlayerChoiceContext, Task> execute) =>
+            CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, execute));
+
+        async Task AssertAllEnemiesLoseAsync(string name, int expected, Func<PlayerChoiceContext, Task> execute)
+        {
+            var hpBefore = enemies.ToDictionary(static enemy => enemy, static enemy => enemy.CurrentHp);
+            var blockBefore = enemies.ToDictionary(static enemy => enemy, static enemy => enemy.Block);
+            await ActAsync(execute);
+            foreach (var enemy in enemies)
+            {
+                assertions.Equal($"{name}_{enemy.CombatId}", expected, hpBefore[enemy] - enemy.CurrentHp);
+                assertions.Equal($"{name}_ignores_block_{enemy.CombatId}", blockBefore[enemy], enemy.Block);
+            }
+        }
     }
 }

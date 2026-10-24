@@ -66,25 +66,22 @@ public class SakuraSword() : SakuraFormCard(1, CardType.Attack, TargetType.AnyEn
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
+        // Enumerated once, before any damage resolves: enumerating inside the loop
+        // could drop targets killed by an earlier hit.
+        var targets = PlayTargets(play).ToList();
+        foreach (var target in targets)
         {
-            // Enumerated once, before any damage resolves: enumerating inside the loop
-            // could drop targets killed by an earlier hit.
-            var targets = SakuraThroughResolution.TargetsFor(play).ToList();
-            foreach (var target in targets)
-            {
-                await DealDamage(
-                    choiceContext,
-                    target,
-                    ReleasedDamage(),
-                    hitSfx: ClowSword.StrikeSfx,
-                    hitVfx: SakuraNativeHitFx.Slash);
-                await DealDamage(
-                    choiceContext,
-                    target,
-                    target.CurrentHp * ReleasedMagic() / 100,
-                    ValueProp.Unblockable);
-            }
-        });
+            await DealDamage(
+                choiceContext,
+                target,
+                ReleasedDamage(),
+                hitSfx: ClowSword.StrikeSfx,
+                hitVfx: SakuraNativeHitFx.Slash);
+            await DealDamage(
+                choiceContext,
+                target,
+                target.CurrentHp * ReleasedMagic() / 100,
+                ValueProp.Unblockable);
+        }
     }
 }

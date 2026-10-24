@@ -37,12 +37,9 @@ public class Snooze() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
     {
         var targets = activation.IsActive
             ? CombatState!.HittableEnemies.ToList()
-            : SakuraThroughResolution.TargetsFor(play);
-        await SakuraThroughResolution.WithPropagationSuppressed(async () =>
-        {
-            await PowerCmd.Apply<WeakPower>(choiceContext, targets, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
-            await PowerCmd.Apply<VulnerablePower>(choiceContext, targets, DynamicVars.Vulnerable.IntValue, Owner.Creature, this, false);
-        });
+            : PlayTargets(play);
+        await PowerCmd.Apply<WeakPower>(choiceContext, targets, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
+        await PowerCmd.Apply<VulnerablePower>(choiceContext, targets, DynamicVars.Vulnerable.IntValue, Owner.Creature, this, false);
         await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
     }
 

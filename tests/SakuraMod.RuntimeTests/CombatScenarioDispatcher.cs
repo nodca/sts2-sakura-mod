@@ -47,6 +47,7 @@ internal static class CombatScenarioDispatcher
             "combat-transition-cleanup" => await CombatTransitionCleanupScenario.ExecuteAsync(request, assertions),
             "dark-selection-combat-reentry" => await DarkSelectionCombatReentryScenario.ExecuteAsync(request, assertions),
             "through-piercing" => await ThroughPiercingScenario.ExecuteAsync(request, assertions),
+            "change-swap" => await ChangeSwapScenario.ExecuteAsync(request, assertions),
             "lucid-aoe" => await LucidAoeScenario.ExecuteAsync(request, assertions),
             "sakura-erase" => await SakuraEraseScenario.ExecuteAsync(request, assertions),
             "affliction-visual-layout" => await AfflictionVisualLayoutScenario.ExecuteAsync(request, assertions),

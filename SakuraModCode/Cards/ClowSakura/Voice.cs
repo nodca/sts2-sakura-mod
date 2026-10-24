@@ -28,9 +28,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class ClowVoice() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Common, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
-    public override bool HasTurnEndInHandEffect => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Ethereal, SakuraKeywords.Invisible];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceBlockVar(4, ValueProp.Move), new DynamicVar("Magic", 1), new CardsVar(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceBlockVar(4, ValueProp.Move), new CardsVar(1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await AddVoiceCopies(choiceContext, 1, PileType.Discard);
@@ -38,8 +37,14 @@ public class ClowVoice() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Com
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await AddVoiceCopies(choiceContext, 3, PileType.Discard);
 
-    protected override async Task OnTurnEndInHand(PlayerChoiceContext choiceContext) =>
+    // Also covers Ethereal exhausting it at turn end and Song exhausting it.
+    public override async Task AfterCardExhausted(PlayerChoiceContext choiceContext, CardModel card, bool causedByEthereal)
+    {
+        if (card != this)
+            return;
+
         await CreatureCmd.GainBlock(Owner.Creature, ReleasedBlock() + ClassicVoicePower.BlockBonus(Owner.Creature), ValueProp.Move, null, false);
+    }
 
     public override async Task AfterCardDrawn(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
     {
@@ -47,11 +52,7 @@ public class ClowVoice() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Com
             await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
     }
 
-    protected override void OnUpgrade()
-    {
-        DynamicVars.Block.UpgradeValueBy(2);
-        DynamicVars["Magic"].UpgradeValueBy(1);
-    }
+    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(2);
 
     private async Task AddVoiceCopies(PlayerChoiceContext choiceContext, int count, PileType pile)
     {

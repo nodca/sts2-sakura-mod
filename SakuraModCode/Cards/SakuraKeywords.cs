@@ -13,7 +13,6 @@ public static class SakuraKeywords
     public static readonly CardKeyword Stabilize = Keyword("STABILIZE");
     public static readonly CardKeyword Manifest = Keyword("MANIFEST");
     public static readonly CardKeyword SakuraCard = Keyword("SAKURA_CARD");
-    public static readonly CardKeyword Echo = Keyword("ECHO");
     public static readonly CardKeyword Invisible = Keyword("INVISIBLE");
     public static readonly CardKeyword Removable = Keyword("REMOVABLE");
     public static readonly CardKeyword CostDecreasing = Keyword("COST_DECREASING");
@@ -55,7 +54,6 @@ public static class SakuraKeywords
         "STABILIZE",
         "MANIFEST",
         "SAKURA_CARD",
-        "ECHO",
         "INVISIBLE",
         "REMOVABLE",
         "COST_DECREASING",

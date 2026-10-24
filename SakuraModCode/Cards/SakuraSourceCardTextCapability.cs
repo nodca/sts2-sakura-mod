@@ -120,9 +120,6 @@ internal static class SakuraSourceCardText
         if (card is ClowMaze)
             tips.Add(HoverTipFactory.FromCard<Dazed>());
 
-        if (ReferencesThroughTip(card))
-            tips.Add(HoverTipFactory.FromPower<ClassicThroughPower>());
-
         if (ReferencesSleepTip(card))
             tips.Add(HoverTipFactory.FromPower<ClassicSleepPower>());
 
@@ -166,9 +163,6 @@ internal static class SakuraSourceCardText
             ClowMove or SakuraMove => typeof(SpellEmptySpell),
             _ => null
         };
-
-    internal static bool ReferencesThroughTip(SakuraSourceCard card) =>
-        card is ClowThrough or SakuraThrough;
 
     internal static bool ReferencesSleepTip(SakuraSourceCard card) =>
         card is ClowSleep or SakuraSleep;
@@ -235,10 +229,7 @@ internal static class SakuraSourceCardText
             yield return SakuraKeywords.SakuraCard;
 
         if (card is { IsClowCard: true, Identity: SourceCardIdentity.Voice })
-        {
             yield return SakuraKeywords.Invisible;
-            yield return SakuraKeywords.Echo;
-        }
 
         if (card.Identity is SourceCardIdentity.Return or SourceCardIdentity.Create)
             yield return SakuraKeywords.Removable;
@@ -262,7 +253,6 @@ internal static class SakuraSourceCardText
     internal static bool ReferencesMagicChargeTip(SakuraSourceCard card) =>
         card is GrowingMagic or AnotherMe or SpellHuoShen
         || card.Identity is SourceCardIdentity.Bubbles
-            or SourceCardIdentity.Change
             or SourceCardIdentity.Fight
             or SourceCardIdentity.Glow
             or SourceCardIdentity.Libra

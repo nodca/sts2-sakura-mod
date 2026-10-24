@@ -56,7 +56,7 @@ internal static class SakuraEraseScenario
 
         var eliteCombat = await context.EnterKnightsEliteCombatAsync();
         var eliteEnemies = eliteCombat.Enemies.ToList();
-        assertions.True("erase_elite_has_through_path", eliteEnemies.Count >= 2);
+        assertions.True("erase_elite_has_minion_and_elite", eliteEnemies.Count >= 2);
         var secondaryTarget = eliteEnemies[0];
 
         var eliteSetup = new RuntimeFixtureAction(
@@ -80,24 +80,23 @@ internal static class SakuraEraseScenario
         assertions.True("erase_first_elite_enemy_is_secondary", secondaryTarget.IsSecondaryEnemy);
         assertions.True("erase_later_elite_enemy_is_primary", eliteEnemies.Skip(1).Any(static enemy => enemy.IsPrimaryEnemy));
 
-        var through = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowThrough>(eliteCombat, player);
-        await CombatScenarioContext.PlayCardAsync(through);
-        var piercingErase = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraErase>(eliteCombat, player);
-        await CombatScenarioContext.PlayCardAsync(piercingErase, secondaryTarget);
+        var minionErase = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraErase>(eliteCombat, player);
+        await CombatScenarioContext.PlayCardAsync(minionErase, secondaryTarget);
 
         assertions.Equal("erase_secondary_keeps_max_hp", 100, secondaryTarget.MaxHp);
         assertions.Equal("erase_secondary_receives_debuff", 33, secondaryTarget.GetPowerAmount<SakuraErasePower>());
-        foreach (var elite in eliteEnemies.Skip(1).Where(static enemy => enemy.IsPrimaryEnemy))
-        {
-            assertions.Equal($"erase_elite_loses_max_hp_{elite.CombatId}", 67, elite.MaxHp);
-            assertions.Equal($"erase_elite_current_hp_clamped_{elite.CombatId}", 67, elite.CurrentHp);
-            assertions.Equal($"erase_elite_has_no_debuff_{elite.CombatId}", 0, elite.GetPowerAmount<SakuraErasePower>());
-        }
+
+        var elite = eliteEnemies.Skip(1).First(static enemy => enemy.IsPrimaryEnemy);
+        var eliteErase = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraErase>(eliteCombat, player);
+        await CombatScenarioContext.PlayCardAsync(eliteErase, elite);
+        assertions.Equal("erase_elite_loses_max_hp", 67, elite.MaxHp);
+        assertions.Equal("erase_elite_current_hp_clamped", 67, elite.CurrentHp);
+        assertions.Equal("erase_elite_has_no_debuff", 0, elite.GetPowerAmount<SakuraErasePower>());
 
         RuntimeTestHost.WriteCheckpoint(
             request,
             "sakura_erase_verified",
-            "Sakura Erase respected Artifact, did not stack, triggered after the target side turn, and classified Through targets independently in an elite encounter.");
+            "Sakura Erase respected Artifact, did not stack, triggered after the target side turn, and classified a minion and an elite independently in an elite encounter.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {

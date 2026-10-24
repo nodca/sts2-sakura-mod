@@ -137,8 +137,8 @@ internal static class SongBeatSchedule
     /// Beats that belong to no card (Clow's activated extra hits) close the song.
     /// </summary>
     /// <remarks>
-    /// Only the Voice card's Echo gives a card more than one hit, so the echo
-    /// flag is what lets the staff show the Voice card paying off. The total is
+    /// Only a Wind card sings more than one hit, so the echo flag is what
+    /// lets the staff show the Wind card paying off. The total is
     /// exactly the hit count gameplay already used.
     /// </remarks>
     internal static bool[] EchoBeats(IEnumerable<int> hitsPerCard, int trailingPlainBeats = 0)
@@ -540,7 +540,7 @@ internal sealed class SongStaffVfx : CelVfxSession
     }
 
     /// <summary>
-    /// The Voice card's Echo, made visible: a faint copy of the note that lands
+    /// A Wind card's extra hit, made visible: a faint copy of the note that lands
     /// beside it and drifts on, the way a sound repeats and fades.
     /// </summary>
     private void SpawnEchoGhost(int index)

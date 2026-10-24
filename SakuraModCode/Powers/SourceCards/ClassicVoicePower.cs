@@ -41,7 +41,7 @@ public class ClassicVoicePower : SakuraPowerModel
     internal static int BlockBonus(Creature owner) =>
         (owner.GetPower<ClassicVoicePower>()?.Amount ?? 0) * BlockBonusPerStack;
 
-    // Card previews pass the Voice as cardSource; the turn-end gain itself has no card play,
+    // Card previews pass the Voice as cardSource; the exhaust gain itself has no card play,
     // so ClowVoice adds BlockBonus explicitly and this hook never double counts it.
     public override decimal ModifyBlockAdditive(Creature target, decimal block, ValueProp props, CardModel? cardSource, CardPlay? cardPlay) =>
         cardSource is ClowVoice && cardSource.Owner.Creature == Owner && Amount > 0
