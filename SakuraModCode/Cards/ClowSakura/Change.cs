@@ -11,13 +11,13 @@ using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class ClowChange() : ClowCard(1, CardType.Skill, CardRarity.Common, TargetType.None)
+public class ClowChange() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.None)
 {
     private static LocString HandSwapPrompt => CardLoc<ClowChange>("handPrompt");
     private static LocString DiscardSwapPrompt => CardLoc<ClowChange>("discardPrompt");
 
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new DynamicVar("ExtraCards", 2)];
 
     // Draw after the swap: drawing first could shuffle the Discard Pile away
     // and leave nothing to swap with.
@@ -25,6 +25,12 @@ public class ClowChange() : ClowCard(1, CardType.Skill, CardRarity.Common, Targe
     {
         await SwapWithDiscard(choiceContext);
         await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
+    }
+
+    protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        await PlayCard(choiceContext, play);
+        await CardPileCmd.Draw(choiceContext, ReleasedValue("ExtraCards"), Owner, false);
     }
 
     private async Task SwapWithDiscard(PlayerChoiceContext choiceContext)

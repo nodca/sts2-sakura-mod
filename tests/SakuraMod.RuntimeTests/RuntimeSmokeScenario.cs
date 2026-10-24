@@ -31,6 +31,7 @@ using STS2RitsuLib.Settings;
 using STS2RitsuLib;
 using STS2RitsuLib.RunData;
 using STS2RitsuLib.Scaffolding.Content;
+using STS2RitsuLib.Scaffolding.Characters.Visuals;
 using STS2RitsuLib.Scaffolding.Godot;
 using STS2RitsuLib.Telemetry;
 using SakuraMod.SakuraModCode.Cards;
@@ -55,6 +56,7 @@ using SakuraMod.SakuraModCode.FourthAct.Water;
 using SakuraMod.SakuraModCode.FourthAct.Water.Encounters;
 using SakuraMod.SakuraModCode.FourthAct.Routing;
 using SakuraMod.SakuraModCode.FourthAct.Visuals;
+using SakuraMod.SakuraModCode.FourthAct.Visuals.Presentation;
 using SakuraMod.SakuraModCode.Events;
 using SakuraMod.SakuraModCode.Events.Models;
 using SakuraMod.SakuraModCode.Powers;
@@ -151,6 +153,7 @@ internal static class RuntimeSmokeScenario
             "fourth_act_standee_death_patch_owned_by_sakura",
             standeeDeathPatch?.Prefixes.Any(static patch => patch.owner == SakuraHarmonyOwner) == true);
         var combatArt = InspectSakuraCombatArt(assertions);
+        InspectStandeeAnimationLifetime(assertions);
         RuntimeTestHost.WriteCheckpoint(request, "harmony_verified", "SakuraMod Harmony ownership was inspected.");
         var multiplayerScaling = InspectFourthActMultiplayerScaling(assertions);
         RuntimeTestHost.WriteCheckpoint(
@@ -334,6 +337,34 @@ internal static class RuntimeSmokeScenario
             chibi_player = chibiPlayer.NetId,
             chibi_use_chibi = SakuraCombatArtPreference.IsChibi(chibiPlayer)
         };
+    }
+
+    private static void InspectStandeeAnimationLifetime(RuntimeAssertionCollector assertions)
+    {
+        foreach (var id in new[] { FourthActFxId.WindWallShield, FourthActFxId.WindWallDeflect })
+        {
+            var visuals = SakuraStandeeVisuals.CreateFourthActEnemy(WindEnemyAssets.Windy, "Windy");
+            try
+            {
+                var effect = ResourceLoader.Load<PackedScene>(FourthActFxScenes.PathFor(id)).Instantiate<Node2D>();
+                visuals.GetNode<Marker2D>("%CenterPos").AddChild(effect);
+                try
+                {
+                    ModCreatureVisualPlayback.TryPlayCue(visuals, null, "hurt");
+                }
+                finally
+                {
+                    effect.Free();
+                }
+
+                assertions.Check($"standee_hit_after_{id}_freed", () =>
+                    ModCreatureVisualPlayback.TryPlayCue(visuals, null, "hurt"));
+            }
+            finally
+            {
+                visuals.Free();
+            }
+        }
     }
 
     private static object InspectFourthActMapCreation(RuntimeAssertionCollector assertions)
@@ -1246,13 +1277,13 @@ internal static class RuntimeSmokeScenario
             toggle?.Binding is IDefaultModSettingsValueBinding<bool> defaults && !defaults.CreateDefaultValue());
         assertions.Equal("settings_sakura_voice_binding_reads", false, toggle?.Binding.Read() ?? false);
         assertions.True(
-            "settings_sakura_card_bgm_default_off",
-            !new SakuraModConfig().EnableCardBgm
+            "settings_sakura_card_bgm_default_on",
+            new SakuraModConfig().EnableCardBgm
             && SakuraModConfig.EnableCardBgmBinding is IDefaultModSettingsValueBinding<bool> cardBgmDefaults
-            && !cardBgmDefaults.CreateDefaultValue());
+            && cardBgmDefaults.CreateDefaultValue());
         assertions.Equal(
             "settings_sakura_card_bgm_binding_reads",
-            false,
+            true,
             SakuraModConfig.EnableCardBgmBinding.Read());
         assertions.True(
             "settings_sakura_card_vfx_default_on",

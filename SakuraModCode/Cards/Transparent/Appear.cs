@@ -20,25 +20,29 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class Appear() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Common, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, SakuraKeywords.Manifest];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("ManifestCards", 1)];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, SakuraKeywords.Manifest, CardKeyword.Exhaust];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+        [new CardsVar("ManifestCards", 1), new DynamicVar("ManifestChoices", SakuraManifestLoop.BaseManifestChoiceCount)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        for (var i = 0; i < DynamicVars["ManifestCards"].IntValue; i++)
-        {
-            var copy = await SakuraManifestLoop.ManifestTransparentCardToHand(
-                this,
-                choiceContext,
-                freeThisTurn: false,
-                upgraded: IsUpgraded);
+        // Appear keeps what it reveals, so a wider reveal on upgrade matters
+        // more than a second card would.
+        var manifested = await SakuraManifestLoop.Manifest(
+            this,
+            choiceContext,
+            DynamicVars["ManifestCards"].IntValue,
+            stabilize: true,
+            choiceCount: DynamicVars["ManifestChoices"].IntValue);
+        if (!activation.IsActive)
+            return;
 
-            if (copy is null)
-                break;
-            if (activation.IsActive && !copy.EnergyCost.CostsX)
-                copy.EnergyCost.SetThisCombat(0, reduceOnly: true);
+        foreach (var copy in manifested)
+        {
+            if (!copy.EnergyCost.CostsX)
+                copy.EnergyCost.AddThisTurnOrUntilPlayed(-1, true);
         }
     }
 
-    protected override void OnUpgrade() { }
+    protected override void OnUpgrade() => DynamicVars["ManifestChoices"].UpgradeValueBy(2);
 }

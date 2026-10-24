@@ -10,23 +10,9 @@ public static class SakuraTransparentCardCatalog
     private static readonly IReadOnlyList<Type> TransparentCardTypesInternal =
         SakuraCardCatalog.SourceCardTypes(SourceEraClass.Clear);
 
-    private static readonly IReadOnlyList<Type> DefaultManifestExcludedTransparentCardTypes =
-    [
-        typeof(Gale),
-        typeof(Siege)
-    ];
-
     private static readonly HashSet<Type> TransparentCardTypeSet = TransparentCardTypesInternal.ToHashSet();
-    private static readonly HashSet<Type> DefaultManifestExcludedTransparentCardTypeSet =
-        DefaultManifestExcludedTransparentCardTypes.ToHashSet();
-    private static readonly IReadOnlyList<Type> DefaultManifestAtlasTypesInternal =
-        TransparentCardTypesInternal
-            .Where(type => !DefaultManifestExcludedTransparentCardTypeSet.Contains(type))
-            .ToList();
-    private static readonly HashSet<Type> DefaultManifestAtlasTypeSet = DefaultManifestAtlasTypesInternal.ToHashSet();
     public static IReadOnlyList<Type> AllCardTypes => TransparentCardTypesInternal;
     public static IReadOnlyList<Type> TransparentCardTypes => TransparentCardTypesInternal;
-    public static IReadOnlyList<Type> DefaultManifestAtlasTypes => DefaultManifestAtlasTypesInternal;
 
     public static CardModel[] AllCardTemplates() =>
         AllCardTypes
@@ -49,9 +35,6 @@ public static class SakuraTransparentCardCatalog
         type = TransparentCardTypesInternal.FirstOrDefault(type => ModelDb.GetId(type).Entry == cardId)!;
         return type is not null;
     }
-
-    public static bool IsDefaultManifestAtlasCard(CardModel card) =>
-        DefaultManifestAtlasTypeSet.Contains(card.GetType());
 
     public static CardModel CreateCleanTransparentCard(Player owner, Type type)
     {

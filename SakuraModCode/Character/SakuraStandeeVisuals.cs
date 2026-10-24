@@ -58,8 +58,13 @@ public static class SakuraStandeeVisuals
 
     // Fourth-act enemies keep the controller for pose swaps, Fly frames and Big/Little, but
     // never move on their own; their acting is the element shader and effect layers.
-    internal static NCreatureVisuals CreateFourthActEnemy(string visualPath, string label) =>
-        Create(visualPath, label, StandardLayout(CombatVisualScale), animate: true, motion: false);
+    internal static NCreatureVisuals CreateFourthActEnemy(string visualPath, string label)
+    {
+        var visuals = Create(visualPath, label, StandardLayout(CombatVisualScale), animate: true, motion: false);
+        // RitsuLib must bind to the standee, not cache a temporary child VFX's AnimationPlayer.
+        visuals.AddChild(new AnimationPlayer { Name = "AnimationPlayer" });
+        return visuals;
+    }
 
     internal static NCreatureVisuals CreateWithLayeredIdle(string visualPath, string label)
     {

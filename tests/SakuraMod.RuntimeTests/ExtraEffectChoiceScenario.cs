@@ -85,42 +85,13 @@ internal static class ExtraEffectChoiceScenario
             1,
             playerCombat.Hand.Cards.Count(card => card is Snooze && !card.IsTemporary()));
         assertions.Equal("choice_extra_manifest_count", 1, manifestedCards.Length);
-        assertions.Equal("choice_energy_unchanged", energyBefore, playerCombat.Energy);
+        assertions.Equal("choice_energy_spent", energyBefore - 1, playerCombat.Energy);
         assertions.True("choice_result_pile", playerCombat.DiscardPile.Cards.Contains(choice));
         assertions.Equal("choice_selector_released", null, CardSelectCmd.Selector);
-        assertions.Equal("choice_debt_applied", 1, player.Creature.GetPower<ChoiceDrawDebtPower>()?.Amount ?? 0);
-
-        // Known draw cards distinguish normal draw followed by discard from reduced draw.
-        var nextDraw = Enumerable.Range(0, 5).Select(_ => combat.CreateCard<StrikeIronclad>(player)).ToArray();
-        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choiceContext =>
-        {
-            foreach (var card in nextDraw)
-                await CardPileCmd.AddGeneratedCardToCombat(card, PileType.Draw, player, CardPilePosition.Top);
-            await PowerCmd.Apply<ChoiceDrawDebtPower>(choiceContext, player.Creature, 1, player.Creature, null);
-        }));
-        assertions.Equal("choice_debt_stacked", 2, player.Creature.GetPower<ChoiceDrawDebtPower>()?.Amount ?? 0);
-        selector.PrepareToSelect([0, 1]);
-        using (CardSelectCmd.UseSelector(selector))
-            await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
-        assertions.Equal("choice_next_turn_hand", 3, playerCombat.Hand.Cards.Count);
-        assertions.Equal("choice_normal_draw_then_discard", 2,
-            nextDraw.Count(card => playerCombat.DiscardPile.Cards.Contains(card)));
-        assertions.Equal("choice_remaining_drawn_cards", 3,
-            nextDraw.Count(card => playerCombat.Hand.Cards.Contains(card)));
-        assertions.Equal("choice_debt_consumed", 0, player.Creature.GetPower<ChoiceDrawDebtPower>()?.Amount ?? 0);
-
-        await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
-        assertions.Equal("choice_debt_does_not_repeat", 5, playerCombat.Hand.Cards.Count);
-
-        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player,
-            choiceContext => PowerCmd.Apply<ChoiceDrawDebtPower>(choiceContext, player.Creature, 8, player.Creature, null)));
-        await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
-        assertions.Equal("choice_insufficient_hand_discards_all", 0, playerCombat.Hand.Cards.Count);
-        assertions.Equal("choice_insufficient_hand_clears_debt", 0, player.Creature.GetPower<ChoiceDrawDebtPower>()?.Amount ?? 0);
         RuntimeTestHost.WriteCheckpoint(
             request,
             "extra_effect_choice_verified",
-            "Choice resolved Extra Manifest plus Remind, stacked next-turn discard after normal draw, and cleared debt across native turns.");
+            "Choice spent 1 energy and resolved Extra Manifest plus Remind.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -133,10 +104,7 @@ internal static class ExtraEffectChoiceScenario
                     $"RuntimeFixtureAction -> PowerCmd.Apply<{nameof(ClassicMagicChargePower)}>({FixtureMagicCharge})",
                     $"Generated {nameof(Snooze)} -> Memory pile",
                     $"Generated {nameof(Choice)} -> hand",
-                    "TestCardSelector index 0 -> first Manifest atlas option",
-                    "Five generated Strikes -> top of draw pile; apply 1 additional discard debt",
-                    "TestCardSelector indices 0,1 -> next-turn discard",
-                    "Apply 8 discard debt to verify insufficient-hand resolution"
+                    "TestCardSelector index 0 -> first Manifest atlas option"
                 }
             },
             ["before"] = new

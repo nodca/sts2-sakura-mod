@@ -292,8 +292,6 @@
   "SAKURA_MOD_POWER_LABYRINTH_LOST_POWER.smartDescription": "每回合首次受到的攻击伤害减半。[gold]地元素牌[/gold]造成的伤害不受影响，也不会消耗这次减半。",
   "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.title": "冻结抗性",
   "SAKURA_MOD_POWER_SAKURA_FREEZE_RESISTANCE_POWER.description": "本场战斗，每次转化为冻结所需的冻伤增加 {Amount} 层。",
-  "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.title": "预支",
-  "SAKURA_MOD_POWER_CHOICE_DRAW_DEBT_POWER.description": "下回合抽牌后，丢弃 {Amount} 张牌。",
   "SAKURA_MOD_POWER_EXCHANGE_RECALL_POWER.title": "交换",
   "SAKURA_MOD_POWER_EXCHANGE_RECALL_POWER.description": "下回合抽牌后，[gold]想起[/gold] {Amount}。",
   "SAKURA_MOD_POWER_CLASSIC_BIG_UPGRADED_POWER.title": "大",

@@ -207,23 +207,32 @@ internal static class KindnessExhaustReturnMultiplayerScenario
                     appear.UpgradeInternal();
                 await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(appear, PileType.Hand, owner, CardPilePosition.Bottom);
                 var existingCards = owner.PlayerCombatState.AllCards.ToHashSet();
+                const int manifestCount = 1;
                 selector.PrepareToSelect([0]);
                 var baseline = context.ChecksumCount;
                 await context.SignalAndWaitAsync($"{stage}-ready");
                 if (context.LocalPlayer.NetId == owner.NetId)
                     await context.PlayOwnedCardAsync(appear);
                 await MultiplayerScenarioContext.WaitForStateAsync(
-                    () => appear.Pile?.Type == PileType.Discard
-                        && owner.PlayerCombatState.Hand.Cards.Any(card => !existingCards.Contains(card)),
+                    () => appear.Pile?.Type == PileType.Exhaust
+                        && owner.PlayerCombatState.Hand.Cards.Count(card => !existingCards.Contains(card)) == manifestCount,
                     stage);
                 await context.WaitForActionsAsync();
                 await context.WaitForActionChecksumsAsync(baseline, stage, nameof(PlayCardAction));
-                var generated = owner.PlayerCombatState.Hand.Cards.Single(card => !existingCards.Contains(card));
-                assertions.Equal($"{stage}-forgotten", !hasKindness, generated.IsTemporary());
-                assertions.Equal($"{stage}-upgrade", upgraded ? 1 : 0, generated.CurrentUpgradeLevel);
-                assertions.True($"{stage}-native-hand-animation", !SakuraGeneratedCardLifecycle.IsGeneratedTransparentHandVisualCard(generated));
-                generated.EnergyCost.EndOfTurnCleanup();
-                assertions.Equal($"{stage}-extra-combat-cost", 0m, generated.EnergyCost.GetWithModifiers(CostModifiers.Local));
+                // Appear keeps what it manifests, so Kindness makes no difference here.
+                foreach (var generated in owner.PlayerCombatState.Hand.Cards.Where(card => !existingCards.Contains(card)).ToList())
+                {
+                    assertions.Equal($"{stage}-not-forgotten", false, generated.IsTemporary());
+                    assertions.Equal($"{stage}-upgrade", 0, generated.CurrentUpgradeLevel);
+                    assertions.True($"{stage}-native-hand-animation", !SakuraGeneratedCardLifecycle.IsGeneratedTransparentHandVisualCard(generated));
+                    if (generated.EnergyCost.CostsX)
+                        continue;
+                    var canonical = generated.EnergyCost.Canonical;
+                    if (canonical > 0)
+                        assertions.Equal($"{stage}-extra-turn-discount", canonical - 1m, generated.EnergyCost.GetWithModifiers(CostModifiers.Local));
+                    generated.EnergyCost.EndOfTurnCleanup();
+                    assertions.Equal($"{stage}-discount-ends-with-turn", (decimal)canonical, generated.EnergyCost.GetWithModifiers(CostModifiers.Local));
+                }
                 await context.SignalAndWaitAsync($"{stage}-verified");
             }
 

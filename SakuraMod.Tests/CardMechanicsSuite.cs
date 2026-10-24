@@ -792,9 +792,9 @@ public sealed class CardMechanicsSuite
             new SakuraSweet().EnergyCost.Canonical == 2,
             $"Expected Sakura Sweet to cost 2, found {new SakuraSweet().EnergyCost.Canonical}.");
         RegressionTestHarness.Require(
-            clowSweet.MultiplayerConstraint == CardMultiplayerConstraint.MultiplayerOnly
-            && new SakuraSweet().MultiplayerConstraint == CardMultiplayerConstraint.MultiplayerOnly,
-            "Expected both Sweet forms to use STS2's native multiplayer-only card constraint.");
+            clowSweet.MultiplayerConstraint == CardMultiplayerConstraint.None
+            && new SakuraSweet().MultiplayerConstraint == CardMultiplayerConstraint.None,
+            "Expected both Sweet forms to be available in singleplayer and multiplayer.");
         RegressionTestHarness.Require(
             sourceCardRules.Contains(
                 "GetUnlockedCards(owner.UnlockState, owner.RunState.CardMultiplayerConstraint)",
@@ -953,11 +953,12 @@ public sealed class CardMechanicsSuite
             if (upgraded)
                 appear.UpgradeInternal();
 
+            const int baseCount = 1;
             SakuraReleaseState.Apply(appear, ClassicSwordJadeRelic.ReleaseRate);
             Assert.True(appear.DynamicVars.TryGetValue("ManifestCards", out var count));
-            Assert.Equal(2, count.IntValue);
+            Assert.Equal(baseCount * 2, count.IntValue);
             SakuraReleaseState.Reset(appear);
-            Assert.Equal(1, count.IntValue);
+            Assert.Equal(baseCount, count.IntValue);
 
             SakuraReleaseState.Apply(appear, 0.5f);
             Assert.Equal(1, count.IntValue);
@@ -1529,11 +1530,15 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             change.EnergyCost.Canonical == 1
             && change.Rarity == CardRarity.Common
+            && SakuraExtraEffectTransaction.Supports(change)
+            && change.DynamicVars.Cards.IntValue == 1
+            && change.DynamicVars["ExtraCards"].IntValue == 2
+            && upgradedChange.DynamicVars["ExtraCards"].IntValue == 2
             && !change.Keywords.Contains(CardKeyword.Retain)
             && upgradedChange.Keywords.Contains(CardKeyword.Retain)
             && upgradedChange.EnergyCost.GetWithModifiers(CostModifiers.None) == 1
             && new SakuraChange().DynamicVars.Cards.IntValue == 5,
-            "Expected Clow Change to stay a 1-cost Common that upgrades to Retain, and Sakura Change to draw 5.");
+            "Expected Clow Change to draw 1 plus 2 with Extra and upgrade to Retain at 1 cost, and Sakura Change to draw 5.");
 
         var swing = new Swing();
         var upgradedSwing = RegressionTestHarness.MutableForCostTest(new Swing());
@@ -1748,14 +1753,20 @@ public sealed class CardMechanicsSuite
             appear.Rarity == CardRarity.Common
             && appear.CanonicalKeywords.Contains(SakuraKeywords.Wind)
             && appear.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
+            && appear.CanonicalKeywords.Contains(CardKeyword.Exhaust)
+            && upgradedAppear.Keywords.Contains(CardKeyword.Exhaust)
             && TransparentCard.HasMagicChargeExtraEffect(appear)
             && SakuraTransparentCardCatalog.TransparentCardTypes.Count == 36
             && SakuraTransparentCardCatalog.TransparentCardTypes.Contains(typeof(Appear))
             && appear.EnergyCost.Canonical == 0
             && upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0
+            && appear.DynamicVars["ManifestCards"].IntValue == 1
+            && upgradedAppear.DynamicVars["ManifestCards"].IntValue == 1
+            && appear.DynamicVars["ManifestChoices"].IntValue == 3
+            && upgradedAppear.DynamicVars["ManifestChoices"].IntValue == 5
             && !appear.IsUpgraded
             && upgradedAppear.IsUpgraded,
-            "Expected Appear to cost 0, choose a Temporary Clear Card copy, upgrade the copy when upgraded, and keep Extra Effect.");
+            "Expected Appear to cost 0, Exhaust, Manifest 1 from 3 (5 upgraded) choices, and keep Extra Effect.");
 
         RegressionTestHarness.Require(
             new SakuraDream().EnergyCost.Canonical == 0,
@@ -2198,22 +2209,23 @@ public sealed class CardMechanicsSuite
             "SakuraModCode/Cards/Transparent/Appear.cs"));
 
         RegressionTestHarness.Require(
-            choice.EnergyCost.Canonical == 0
+            choice.EnergyCost.Canonical == 1
             && choice.Rarity == CardRarity.Uncommon
             && choice.DynamicVars["ManifestCards"].IntValue == 1
             && choice.DynamicVars["RemindCards"].IntValue == 1
-            && upgradedChoice.DynamicVars["ManifestCards"].IntValue == 2
+            && upgradedChoice.DynamicVars["ManifestCards"].IntValue == 1
             && upgradedChoice.DynamicVars["RemindCards"].IntValue == 1
             && choiceSource.Contains("if (activation.IsActive)", StringComparison.Ordinal)
             && choiceSource.Contains("BaseValue", StringComparison.Ordinal)
             && choiceSource.Contains("Manifest(choiceContext", StringComparison.Ordinal)
-            && choiceSource.Contains("RemindWithDebt(choiceContext", StringComparison.Ordinal)
-            && choiceSource.Contains("reminded > 0 && !IsUpgraded", StringComparison.Ordinal)
+            && choiceSource.Contains("upgradeCopies: IsUpgraded", StringComparison.Ordinal)
+            && choiceSource.Contains("upgraded: IsUpgraded", StringComparison.Ordinal)
             && choiceSource.Contains("Remind.HasRecallChoices(Owner)", StringComparison.Ordinal)
             && choiceSource.Contains("SetThisCombat", StringComparison.Ordinal)
-            && appearSource.Contains("SetThisCombat(0, reduceOnly: true)", StringComparison.Ordinal)
-            && appearSource.Contains("upgraded: IsUpgraded", StringComparison.Ordinal),
-            "Expected Choice to offer Manifest or Remind (Remind only when Memory has cards, with next-turn discard debt removed on upgrade), execute both during Extra, and keep manifested cards at their combat cost reductions; Appear should use the same combat-wide Extra cost state.");
+            && appearSource.Contains("AddThisTurnOrUntilPlayed(-1, true)", StringComparison.Ordinal)
+            && appearSource.Contains("stabilize: true", StringComparison.Ordinal)
+            && !appearSource.Contains("upgraded: IsUpgraded", StringComparison.Ordinal),
+            "Expected Choice to offer Manifest or Remind (Remind only when Memory has cards, upgrading what it brings in when upgraded), execute both during Extra, and keep manifested cards at their combat cost reductions; Appear should keep its manifested cards and discount them this turn during Extra.");
     }
 
     [Fact]

@@ -18,7 +18,7 @@ using STS2RitsuLib.Cards.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Choice() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, SakuraKeywords.Manifest];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
@@ -30,7 +30,7 @@ public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
         if (activation.IsActive)
         {
             await Manifest(choiceContext, DynamicVars["ManifestCards"].IntValue);
-            await RemindWithDebt(choiceContext, DynamicVars["RemindCards"].IntValue);
+            await RemindCards(choiceContext, DynamicVars["RemindCards"].IntValue);
             return;
         }
 
@@ -48,14 +48,14 @@ public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
         remindChoice.DynamicVars["RemindCards"].BaseValue = DynamicVars["RemindCards"].IntValue;
         var choice = await SakuraActions.SelectFromCards(this, choiceContext, [manifestChoice, remindChoice], cancelable: false);
         if (choice is ChoiceRemindChoice)
-            await RemindWithDebt(choiceContext, DynamicVars["RemindCards"].IntValue);
+            await RemindCards(choiceContext, DynamicVars["RemindCards"].IntValue);
         else
             await Manifest(choiceContext, DynamicVars["ManifestCards"].IntValue);
     }
 
     private async Task Manifest(PlayerChoiceContext choiceContext, int amount)
     {
-        var manifested = await SakuraManifestLoop.Manifest(this, choiceContext, amount);
+        var manifested = await SakuraManifestLoop.Manifest(this, choiceContext, amount, upgraded: IsUpgraded);
         foreach (var card in manifested)
         {
             if (!card.EnergyCost.CostsX)
@@ -63,12 +63,9 @@ public class Choice() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
         }
     }
 
-    private async Task RemindWithDebt(PlayerChoiceContext choiceContext, int amount)
-    {
-        var reminded = await Remind.RecallIntoHand(Owner, choiceContext, amount, upgradeCopies: false);
-        if (reminded > 0 && !IsUpgraded)
-            await PowerCmd.Apply<ChoiceDrawDebtPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this);
-    }
+    private Task RemindCards(PlayerChoiceContext choiceContext, int amount) =>
+        Remind.RecallIntoHand(Owner, choiceContext, amount, upgradeCopies: IsUpgraded);
 
-    protected override void OnUpgrade() => DynamicVars["ManifestCards"].UpgradeValueBy(1);
+    // The upgrade upgrades what Choice brings in; no displayed number changes.
+    protected override void OnUpgrade() { }
 }

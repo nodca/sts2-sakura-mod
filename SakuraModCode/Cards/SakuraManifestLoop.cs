@@ -14,10 +14,12 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public static class SakuraManifestLoop
 {
-    private const int CommonManifestWeight = 6;
-    private const int UncommonManifestWeight = 3;
+    // The Transparent pool is top-heavy (few Commons, many Rares), so a gentler
+    // curve than the usual 6:3:1 keeps the few Commons from crowding every reveal.
+    private const int CommonManifestWeight = 3;
+    private const int UncommonManifestWeight = 2;
     private const int RareManifestWeight = 1;
-    private const int BaseManifestChoiceCount = 3;
+    internal const int BaseManifestChoiceCount = 3;
 
     private static readonly LocString ManifestPrompt = new("cards", "SAKURAMOD-GENERIC.manifestPrompt");
 
@@ -27,8 +29,10 @@ public static class SakuraManifestLoop
         int amount,
         bool stabilize = false,
         Type? excludedType = null,
-        int rareAtlasChoices = 0) =>
-        Manifest(source.Owner, context, amount, stabilize, excludedType, rareAtlasChoices);
+        int rareAtlasChoices = 0,
+        bool upgraded = false,
+        int choiceCount = BaseManifestChoiceCount) =>
+        Manifest(source.Owner, context, amount, stabilize, excludedType, rareAtlasChoices, upgraded, choiceCount);
 
     public static async Task<IReadOnlyList<CardModel>> Manifest(
         Player owner,
@@ -36,7 +40,9 @@ public static class SakuraManifestLoop
         int amount,
         bool stabilize = false,
         Type? excludedType = null,
-        int rareAtlasChoices = 0)
+        int rareAtlasChoices = 0,
+        bool upgraded = false,
+        int choiceCount = BaseManifestChoiceCount)
     {
         List<CardModel> manifested = [];
 
@@ -45,9 +51,15 @@ public static class SakuraManifestLoop
             var source = i < rareAtlasChoices
                 ? ManifestSource.RareAtlas
                 : ManifestSource.Default;
-            var choiceCards = ManifestChoices(owner, excludedType, source);
+            var choiceCards = ManifestChoices(owner, excludedType, source, choiceCount);
             var choices = choiceCards
-                .Select(choice => SakuraGeneratedCardLifecycle.CreateManifestChoice(owner, choice))
+                .Select(choice =>
+                {
+                    var card = SakuraGeneratedCardLifecycle.CreateManifestChoice(owner, choice);
+                    if (upgraded)
+                        SakuraGeneratedCardLifecycle.UpgradeToLevel(card, 1);
+                    return card;
+                })
                 .ToList();
             if (choices.Count == 0)
                 break;
@@ -82,48 +94,12 @@ public static class SakuraManifestLoop
         return manifested;
     }
 
-    public static async Task<CardModel?> ManifestTransparentCardToHand(
-        SakuraCardModel source,
-        PlayerChoiceContext context,
-        bool freeThisTurn,
-        bool upgraded = false)
-    {
-        var owner = source.Owner;
-        var choices = TransparentCardChoices(owner, source.GetType())
-            .Select(card =>
-            {
-                var choice = SakuraGeneratedCardLifecycle.CreateCombatCardFromTemplate(owner, card);
-                if (upgraded)
-                    SakuraGeneratedCardLifecycle.UpgradeToLevel(choice, 1);
-                return choice;
-            })
-            .ToList();
-        if (choices.Count == 0)
-            return null;
-
-        try
-        {
-            var selected = await SakuraActions.SelectFromCards(source, context, choices, cancelable: false);
-            if (selected is null)
-                return null;
-
-            return await SakuraGeneratedCardLifecycle.AddManifestChoiceToCombat(
-                selected,
-                context,
-                freeThisTurn: freeThisTurn);
-        }
-        finally
-        {
-            SakuraGeneratedCardLifecycle.RemoveDetachedGeneratedChoices(choices);
-        }
-    }
-
-    private static List<CardModel> ManifestChoices(Player owner, Type? excludedType, ManifestSource source)
+    private static List<CardModel> ManifestChoices(Player owner, Type? excludedType, ManifestSource source, int choiceCount)
     {
         var weightedSources = source switch
         {
             ManifestSource.RareAtlas => WeightedManifestAtlasSources(card => card.Rarity == CardRarity.Rare),
-            _ => WeightedManifestAtlasSources(SakuraTransparentCardCatalog.IsDefaultManifestAtlasCard)
+            _ => WeightedManifestAtlasSources()
         };
         if (excludedType is not null)
             weightedSources.RemoveAll(card => card.GetType() == excludedType);
@@ -131,7 +107,7 @@ public static class SakuraManifestLoop
         List<CardModel> choices = [];
         var rng = owner.RunState.Rng.CombatCardSelection;
 
-        while (choices.Count < BaseManifestChoiceCount && weightedSources.Count > 0)
+        while (choices.Count < choiceCount && weightedSources.Count > 0)
         {
             var picked = rng.NextItem(weightedSources);
             if (picked is null)
@@ -140,28 +116,6 @@ public static class SakuraManifestLoop
             choices.Add(picked);
             var pickedType = picked.GetType();
             weightedSources.RemoveAll(card => card.GetType() == pickedType);
-        }
-
-        return choices;
-    }
-
-    private static List<CardModel> TransparentCardChoices(Player owner, Type excludedType)
-    {
-        var candidates = SakuraTransparentCardCatalog.TransparentCardTypes
-            .Select(SakuraTransparentCardCatalog.CardTemplate)
-            .Where(card => card.GetType() != excludedType)
-            .ToList();
-        var choices = new List<CardModel>(BaseManifestChoiceCount);
-        var rng = owner.RunState.Rng.CombatCardSelection;
-
-        while (choices.Count < BaseManifestChoiceCount && candidates.Count > 0)
-        {
-            var picked = rng.NextItem(candidates);
-            if (picked is null)
-                break;
-
-            choices.Add(picked);
-            candidates.RemoveAll(card => card.GetType() == picked.GetType());
         }
 
         return choices;

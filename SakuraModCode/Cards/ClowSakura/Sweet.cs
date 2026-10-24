@@ -27,7 +27,6 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowSweet() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
-    public override CardMultiplayerConstraint MultiplayerConstraint => CardMultiplayerConstraint.MultiplayerOnly;
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new HealVar(5)];
@@ -59,7 +58,6 @@ public class ClowSweet() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Unc
 
 public class SakuraSweet() : SakuraFormCard(2, CardType.Power, TargetType.None)
 {
-    public override CardMultiplayerConstraint MultiplayerConstraint => CardMultiplayerConstraint.MultiplayerOnly;
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 10)];
 

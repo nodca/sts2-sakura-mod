@@ -21,7 +21,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class Action() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, SakuraKeywords.Manifest];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new CardsVar("ExtraDraw", 1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new CardsVar("WindDraw", 1), new CardsVar("ExtraDraw", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
@@ -30,7 +30,11 @@ public class Action() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
             : null;
 
         if (card is not null)
+        {
             await CardCmd.Exhaust(choiceContext, card);
+            if (SakuraActions.HasElement(card, SakuraElement.Wind))
+                await CardPileCmd.Draw(choiceContext, DynamicVars["WindDraw"].IntValue, Owner, false);
+        }
 
         var manifested = await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
         foreach (var copy in manifested)
