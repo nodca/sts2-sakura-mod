@@ -31,17 +31,14 @@ public class ClowIllusion() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceBlockVar(7, ValueProp.Move), new DynamicVar("Magic", 2)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await GainBlock(play, ReleasedBlock());
-        await GainBlock(play, ReleasedMagic() * (CardPile.Get(PileType.Exhaust, Owner)?.Cards.Count ?? 0) / 3);
-    }
+    // One Block gain, so Dexterity and other per-gain modifiers apply once.
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        GainBlock(play, ReleasedBlock() + ReleasedMagic() * ExhaustCount() / 3);
 
-    protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await GainBlock(play, ReleasedBlock());
-        await GainBlock(play, ReleasedMagic() * (CardPile.Get(PileType.Exhaust, Owner)?.Cards.Count ?? 0));
-    }
+    protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        GainBlock(play, ReleasedBlock() + ReleasedMagic() * ExhaustCount());
+
+    private int ExhaustCount() => CardPile.Get(PileType.Exhaust, Owner)?.Cards.Count ?? 0;
 
     protected override void OnUpgrade()
     {

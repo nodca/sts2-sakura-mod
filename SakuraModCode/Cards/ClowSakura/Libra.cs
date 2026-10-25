@@ -33,7 +33,15 @@ public class ClowLibra() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Com
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceBlockVar(4, ValueProp.Move), new DynamicVar("Magic", 3)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        ResolveLibra(choiceContext, play, 0);
+
+    // The Extra Block joins the last gain rather than adding one, so Dexterity
+    // counts only the gains the card text names.
+    protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        ResolveLibra(choiceContext, play, ExtraBlock);
+
+    private async Task ResolveLibra(PlayerChoiceContext choiceContext, CardPlay play, int extraBlock)
     {
         if (Owner.Creature.Block == 0)
         {
@@ -41,13 +49,7 @@ public class ClowLibra() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Com
             await GainBlock(play, ReleasedBlock());
         }
 
-        await GainBlock(play, ReleasedBlock());
-    }
-
-    protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await PlayCard(choiceContext, play);
-        await GainBlock(play, ExtraBlock);
+        await GainBlock(play, ReleasedBlock() + extraBlock);
     }
 
     protected override void OnUpgrade()

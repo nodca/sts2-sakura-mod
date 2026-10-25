@@ -2026,9 +2026,14 @@ public sealed class ResourceContractSuite
             "Expected shield cards to be absent from the dedicated card VFX asset route.");
         RegressionTestHarness.Require(
             shield.Contains("await GainBlock(play, CurrentBlock())", StringComparison.Ordinal)
-            && shield.Contains("await GainBlock(play, ReleasedBlock())", StringComparison.Ordinal)
-            && shield.Contains("CurrentHpBlock(Owner.Creature.CurrentHp", StringComparison.Ordinal),
-            "Expected shield gameplay values and the Sakura current-HP conversion to remain in place.");
+            && shield.Contains("await GainBlock(play, ReleasedBlock() + CurrentHpBlock(Owner.Creature.CurrentHp", StringComparison.Ordinal),
+            "Expected shield gameplay values, with Sakura Shield's current-HP Block in the same single gain.");
+        var illusion = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Illusion.cs"));
+        RegressionTestHarness.Require(
+            illusion.Split("GainBlock(play,").Length - 1 == 2
+            && illusion.Contains("GainBlock(play, ReleasedBlock() + ReleasedMagic() * ExhaustCount()", StringComparison.Ordinal),
+            "Expected Clow Illusion to gain its base and Exhaust-scaled Block as one gain, so Dexterity applies once.");
     }
 
     [Fact]

@@ -46,7 +46,7 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
             async cues =>
             {
                 cues.Impact();
-                await ResolveCloudMechanics(choiceContext, play);
+                await ResolveCloudMechanics(choiceContext, play, 0);
             });
 
     protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -57,13 +57,13 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
             async cues =>
             {
                 cues.Impact();
-                await ResolveCloudMechanics(choiceContext, play);
-                await GainBlock(play, ExtraBlock);
+                await ResolveCloudMechanics(choiceContext, play, ExtraBlock);
             });
 
-    private async Task ResolveCloudMechanics(PlayerChoiceContext choiceContext, CardPlay play)
+    // The Extra Block joins the same gain, so Dexterity applies once.
+    private async Task ResolveCloudMechanics(PlayerChoiceContext choiceContext, CardPlay play, int extraBlock)
     {
-        await GainBlock(play, CalculatedBlock());
+        await GainBlock(play, CalculatedBlock() + extraBlock);
 
         if (Owner.Creature.GetPower<ClassicWateryPower>()?.Amount > 0)
             await SakuraCloudEffects.AddRainToHand(Owner, choiceContext, freeForCombat: false);

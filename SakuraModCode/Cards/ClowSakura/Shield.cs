@@ -69,7 +69,7 @@ public class SakuraShield() : SakuraFormCard(1, CardType.Skill, TargetType.None)
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await GainBlock(play, ReleasedBlock());
-        await GainBlock(play, CurrentHpBlock(Owner.Creature.CurrentHp, ReleasedMagic()));
+        // One Block gain, so Dexterity and other per-gain modifiers apply once.
+        await GainBlock(play, ReleasedBlock() + CurrentHpBlock(Owner.Creature.CurrentHp, ReleasedMagic()));
     }
 }
