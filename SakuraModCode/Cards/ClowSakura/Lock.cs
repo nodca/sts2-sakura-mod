@@ -32,7 +32,7 @@ public class ClowLock() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Comm
     private static LocString Prompt => CardLoc<ClowLock>("selectionPrompt");
 
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
@@ -44,7 +44,7 @@ public class ClowLock() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Comm
             card.DelayTemporaryRemoval(1);
         }
 
-        await GainUpgradedCharge(choiceContext, selected);
+        await GainCharge(choiceContext, selected);
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -56,12 +56,12 @@ public class ClowLock() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Comm
             await card.Stabilize(choiceContext);
         }
 
-        await GainUpgradedCharge(choiceContext, selected);
+        await GainCharge(choiceContext, selected);
     }
 
-    private async Task GainUpgradedCharge(PlayerChoiceContext choiceContext, IReadOnlyList<CardModel> selected)
+    private async Task GainCharge(PlayerChoiceContext choiceContext, IReadOnlyList<CardModel> selected)
     {
-        if (IsUpgraded && selected.Count > 0)
+        if (selected.Count > 0)
             await SakuraMagicCharge.GainMagic(choiceContext, Owner, selected.Count * ChargePerSelectedCard, this);
     }
 
@@ -82,6 +82,8 @@ public class ClowLock() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Comm
             card => hand.Contains(card),
             this)).ToList();
     }
+
+    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
 }
 
 public class SakuraLock() : SakuraFormCard(1, CardType.Skill, TargetType.None)

@@ -1,9 +1,6 @@
-using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
-using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
-using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.ValueProps;
@@ -21,10 +18,9 @@ public class Hail() : TransparentCard(1, CardType.Attack, CardRarity.Uncommon, T
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new HailDamageVar(6, ValueProp.Move),
+        new DamageVar(8, ValueProp.Move),
         new PowerVar<SakuraFrostbitePower>(1),
-        new DynamicVar("Magic", 5),
-        new DynamicVar("BonusDamage", 2)
+        new DynamicVar("Magic", 3)
     ];
 
     protected override async Task PlayCard(
@@ -40,8 +36,8 @@ public class Hail() : TransparentCard(1, CardType.Attack, CardRarity.Uncommon, T
         if (spent > 0)
             await SakuraMagicCharge.SpendUpToMagic(choiceContext, Owner, maxSpend);
 
-        var damage = HailRules.TotalDamage(this, spent);
-        var frostbite = DynamicVars["SakuraFrostbitePower"].IntValue;
+        var damage = DynamicVars.Damage.IntValue;
+        var frostbite = HailRules.Frostbite(this, spent);
         var targets = CombatState!.HittableEnemies.ToList();
         await HailStormVfx.PlayOrResolveAsync(this, Owner.Creature, targets, spent, maxSpend, async cues =>
         {
@@ -53,7 +49,7 @@ public class Hail() : TransparentCard(1, CardType.Attack, CardRarity.Uncommon, T
                 cues.Impact(target);
                 await DealDamage(choiceContext, target, damage);
 
-                if (target.IsAlive)
+                if (target.IsAlive && frostbite > 0)
                     await PowerCmd.Apply<SakuraFrostbitePower>(
                         choiceContext,
                         target,
@@ -65,20 +61,13 @@ public class Hail() : TransparentCard(1, CardType.Attack, CardRarity.Uncommon, T
         });
     }
 
-    protected override void OnUpgrade()
-    {
-        DynamicVars.Damage.UpgradeValueBy(2);
-        DynamicVars["SakuraFrostbitePower"].UpgradeValueBy(1);
-    }
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
 }
 
 internal static class HailRules
 {
-    internal static int TotalDamage(CardModel card, int? spentMagic = null)
-    {
-        var spent = spentMagic ?? SpendableMagic(card);
-        return card.DynamicVars.Damage.IntValue + spent * card.DynamicVars["BonusDamage"].IntValue;
-    }
+    internal static int Frostbite(CardModel card, int spentMagic) =>
+        Math.Max(0, spentMagic) * card.DynamicVars["SakuraFrostbitePower"].IntValue;
 
     internal static int SpendableMagic(CardModel card)
     {
@@ -88,40 +77,5 @@ internal static class HailRules
         var maxSpend = card.DynamicVars["Magic"].IntValue;
         var current = owner.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0;
         return Math.Min(current, maxSpend);
-    }
-}
-
-internal sealed class HailDamageVar(decimal damage, ValueProp props) : DamageVar(damage, props)
-{
-    public override void UpdateCardPreview(
-        CardModel card,
-        CardPreviewMode previewMode,
-        Creature? target,
-        bool runGlobalHooks)
-    {
-        var baseValue = HailRules.TotalDamage(card);
-        decimal preview = baseValue;
-        if (card.Enchantment is not null)
-        {
-            preview += card.Enchantment.EnchantDamageAdditive(preview, Props);
-            preview *= card.Enchantment.EnchantDamageMultiplicative(preview, Props);
-            if (!card.IsEnchantmentPreview)
-                EnchantedValue = preview;
-        }
-
-        if (runGlobalHooks && card.IsMutable && card.Owner is { } owner)
-            preview = Hook.ModifyDamage(
-                owner.RunState,
-                card.CombatState,
-                target,
-                owner.Creature,
-                baseValue,
-                Props,
-                card,
-                ModifyDamageHookType.All,
-                previewMode,
-                out _);
-
-        PreviewValue = preview;
     }
 }

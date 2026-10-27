@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
@@ -24,5 +25,14 @@ public sealed class BigLittleCardSuite
         Assert.Equal(PowerStackType.Counter, new ClassicLittleUpgradedPower().StackType);
         Assert.True(RegressionTestHarness.DeclaresMethod<ClassicBigUpgradedPower>("BeforeCardPlayed"));
         Assert.True(RegressionTestHarness.DeclaresMethod<ClassicLittleUpgradedPower>("BeforeCardPlayed"));
+    }
+
+    [Fact]
+    public void UpgradedBigReadsOriginalCostThroughDiscounts()
+    {
+        var swing = RegressionTestHarness.MutableForCostTest(new Swing());
+        swing.EnergyCost.SetThisTurn(0, true);
+        Assert.Equal(0, swing.EnergyCost.GetWithModifiers(CostModifiers.Local));
+        Assert.Equal(2, ClassicSizeCostRules.OriginalPreviewCost(swing));
     }
 }

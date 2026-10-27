@@ -21,7 +21,6 @@ public readonly record struct GeneratedCardOptions
 {
     public PileType? Pile { get; init; }
     public CardPilePosition? Position { get; init; }
-    public bool RemoveTemporary { get; init; }
     public bool AddTemporary { get; init; }
     public bool PreventTemporaryMemoryReturn { get; init; }
     public bool FreeThisTurn { get; init; }
@@ -77,32 +76,6 @@ internal static class SakuraGeneratedCardLifecycle
             context,
             refreshGeneratedTransparentHandVisual);
         return cards;
-    }
-
-    // Recalled Memory cards return as ordinary combat cards: stale Temporary is
-    // stripped and never re-granted; only the free-this-turn cost applies.
-    public static async Task<CardModel> AddRememberedCardToHand(
-        CardModel card,
-        bool freeThisTurn,
-        PlayerChoiceContext context)
-    {
-        // Presentation only: the copy's new card node starts at the Memory button.
-        SakuraMemoryRecallVisual.Mark(card);
-        try
-        {
-            return await AddGeneratedCardToCombat(
-                card,
-                RememberedCopyOptions(freeThisTurn) with
-                {
-                    Pile = PileType.Hand
-                },
-                context,
-                refreshGeneratedTransparentHandVisual: false);
-        }
-        finally
-        {
-            SakuraMemoryRecallVisual.Unmark(card);
-        }
     }
 
     public static Task<CardModel> AddGeneratedCardToHand(
@@ -262,9 +235,6 @@ internal static class SakuraGeneratedCardLifecycle
         GeneratedCardOptions options,
         out bool temporaryGranted)
     {
-        if (options.RemoveTemporary)
-            card.RemoveTemporaryForExchange();
-
         temporaryGranted = false;
         if (options.AddTemporary)
         {
@@ -450,13 +420,6 @@ internal static class SakuraGeneratedCardLifecycle
         new()
         {
             AddTemporary = true,
-            FreeThisTurn = freeThisTurn
-        };
-
-    internal static GeneratedCardOptions RememberedCopyOptions(bool freeThisTurn) =>
-        new()
-        {
-            RemoveTemporary = true,
             FreeThisTurn = freeThisTurn
         };
 

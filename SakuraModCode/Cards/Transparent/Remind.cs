@@ -41,7 +41,7 @@ public class Remind() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
     }
 
     // Shared Remind resolution: choose up to count Memory cards (all of them when
-    // there are not more than count), consume them, and add free remembered copies.
+    // there are not more than count) and move those cards into the hand, free this turn.
     internal static async Task<int> RecallIntoHand(
         Player owner,
         PlayerChoiceContext choiceContext,
@@ -60,26 +60,7 @@ public class Remind() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
                 owner,
                 new CardSelectorPrefs(SelectionPrompt, count, count) { Cancelable = false })).ToList();
 
-        var copies = await SakuraMemoryPile.Consume(owner, cards);
-
-        try
-        {
-            foreach (var copy in copies)
-            {
-                if (upgradeCopies)
-                    CardCmd.Upgrade(copy);
-                await SakuraGeneratedCardLifecycle.AddRememberedCardToHand(
-                    copy,
-                    freeThisTurn: true,
-                    context: choiceContext);
-            }
-        }
-        finally
-        {
-            SakuraGeneratedCardLifecycle.RemoveDetachedGeneratedChoices(copies);
-        }
-
-        return copies.Count;
+        return (await SakuraMemoryPile.RecallToHand(owner, cards, upgradeCopies)).Count;
     }
 
     internal static bool HasRecallChoices(Player owner) =>

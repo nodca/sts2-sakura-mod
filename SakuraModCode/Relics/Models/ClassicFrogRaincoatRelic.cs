@@ -94,21 +94,8 @@ public class ClassicFrogRaincoatRelic : SakuraRelicModel
         return (total % trigger, total / trigger);
     }
 
-    private async Task RememberOne(PlayerChoiceContext choiceContext, CardModel selected)
-    {
-        var copies = await SakuraMemoryPile.Consume(Owner, [selected]);
-        try
-        {
-            await SakuraGeneratedCardLifecycle.AddRememberedCardToHand(
-                copies.Single(),
-                freeThisTurn: true,
-                context: choiceContext);
-        }
-        finally
-        {
-            SakuraGeneratedCardLifecycle.RemoveDetachedGeneratedChoices(copies);
-        }
-    }
+    private async Task RememberOne(PlayerChoiceContext choiceContext, CardModel selected) =>
+        await SakuraMemoryPile.RecallToHand(Owner, [selected]);
 
     private void SetMemoryState(int remainder, int pendingReminds)
     {

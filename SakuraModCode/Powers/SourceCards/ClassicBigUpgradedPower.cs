@@ -16,8 +16,8 @@ public sealed class ClassicBigUpgradedPower : SakuraPowerModel
 {
     internal const int MinimumCost = 2;
 
-    // The cost is read when the play starts, before AfterCardPlayed cleans up
-    // until-played cost modifiers.
+    // Big reads the original cost so Release and other discounts keep the bonus.
+    // X cards still use the X they capture when the play starts.
     private CardModel? _resolvingCard;
     private int _resolvingCost;
 
@@ -31,7 +31,7 @@ public sealed class ClassicBigUpgradedPower : SakuraPowerModel
         if (cardPlay.Card.Owner == Owner.Player)
         {
             _resolvingCard = cardPlay.Card;
-            _resolvingCost = ClassicSizeCostRules.PlayedCost(cardPlay);
+            _resolvingCost = ClassicSizeCostRules.OriginalPlayedCost(cardPlay);
         }
 
         return Task.CompletedTask;
@@ -60,7 +60,7 @@ public sealed class ClassicBigUpgradedPower : SakuraPowerModel
 
         var cost = cardSource == _resolvingCard
             ? _resolvingCost
-            : ClassicSizeCostRules.PreviewCost(cardSource);
+            : ClassicSizeCostRules.OriginalPreviewCost(cardSource);
         return cost >= MinimumCost
             ? (Owner.GetPower<StrengthPower>()?.Amount ?? 0) * Amount
             : 0;
@@ -76,7 +76,15 @@ internal static class ClassicSizeCostRules
             ? play.IsAutoPlay ? 0 : (int)play.Resources.EnergySpent
             : play.Card.EnergyCost.GetWithModifiers(CostModifiers.All);
 
-    // Cost shown before playing: X cards would spend the current Energy.
-    public static int PreviewCost(CardModel card) =>
-        card.EnergyCost.GetAmountToSpend();
+    // Printed cost including upgrades but no temporary or combat modifiers.
+    public static int OriginalPlayedCost(CardPlay play) =>
+        play.Card.EnergyCost.CostsX
+            ? PlayedCost(play)
+            : play.Card.EnergyCost.GetWithModifiers(CostModifiers.None);
+
+    // Before playing, X cards would spend the current Energy.
+    public static int OriginalPreviewCost(CardModel card) =>
+        card.EnergyCost.CostsX
+            ? card.EnergyCost.GetAmountToSpend()
+            : card.EnergyCost.GetWithModifiers(CostModifiers.None);
 }

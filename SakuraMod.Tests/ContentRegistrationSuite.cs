@@ -52,7 +52,7 @@ public sealed class ContentRegistrationSuite
     public void StarterRaritiesRemainStable()
     {
         RegressionTestHarness.Require(new Gale().Rarity == CardRarity.Common, "Expected Gale to be a Common Transparent Card, not a Basic starter.");
-        RegressionTestHarness.Require(new Siege().Rarity == CardRarity.Uncommon, "Expected Siege to be an Uncommon Transparent Card, not a Basic starter.");
+        RegressionTestHarness.Require(new Siege().Rarity == CardRarity.Common, "Expected Siege to be a Common Transparent Card, not a Basic starter.");
 
     }
 

@@ -9,7 +9,7 @@
   "SAKURAMOD-ENTER_LABYRINTH.title": "迷途",
   "SAKURAMOD-ENTER_LABYRINTH.description": "每回合首次受到的攻击伤害减半。[gold]地元素牌[/gold]造成的伤害不受影响，也不会消耗这次减半。",
   "SAKURAMOD-REMIND.title": "想起",
-  "SAKURAMOD-REMIND.description": "从[gold]记忆区[/gold]选择 N 张牌（不足则全选），将其移出，并把复制加入你的[gold]手牌[/gold]。复制本回合耗能为 0。",
+  "SAKURAMOD-REMIND.description": "从[gold]记忆区[/gold]选择 N 张牌放入你的[gold]手牌[/gold]。其本回合耗能为 0。",
   "SAKURAMOD-SPELL_CARD.title": "符咒",
   "SAKURAMOD-SPELL_CARD.description": "不属于[gold]库洛牌[/gold]的一类特殊卡牌，多为消耗性牌。",
   "SAKURAMOD-EARTHY_CARD.title": "地",

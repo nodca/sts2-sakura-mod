@@ -9,7 +9,7 @@
   "SAKURAMOD-ENTER_LABYRINTH.title": "Lost",
   "SAKURAMOD-ENTER_LABYRINTH.description": "Take half damage from the first attack hit each turn. Damage from [gold]Earthy[/gold] cards is unaffected and does not consume this reduction.",
   "SAKURAMOD-REMIND.title": "Remind",
-  "SAKURAMOD-REMIND.description": "Choose N cards in [gold]Memory[/gold] (all of them, if fewer). Remove them and add copies into your [gold]Hand[/gold]. The copies cost 0 this turn.",
+  "SAKURAMOD-REMIND.description": "Put N cards from [gold]Memory[/gold] into your [gold]Hand[/gold]. They cost 0 this turn.",
   "SAKURAMOD-SPELL_CARD.title": "Spell",
   "SAKURAMOD-SPELL_CARD.description": "A special card type that is not a Clow Card, usually consumed after being played.",
   "SAKURAMOD-EARTHY_CARD.title": "Earthy",

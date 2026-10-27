@@ -126,9 +126,9 @@ internal static class SakuraMemoryArrivalRipple
 }
 
 /// <summary>
-/// Recall: copies leaving Memory for the hand appear at the Memory button and develop out of the
+/// Recall: cards leaving Memory for the hand appear at the Memory button and develop out of the
 /// blank glass card while native code carries them into the hand, like a draw. The gameplay path
-/// (generated-card add and its hooks) is unchanged; only the new card node's start is moved.
+/// (native CardPileCmd.Add and its hooks) is unchanged; only the new card node's start is moved.
 /// </summary>
 internal static class SakuraMemoryRecallVisual
 {

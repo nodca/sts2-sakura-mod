@@ -19,7 +19,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 /// pure function of body time (seconds after the shared prelude) and the hit
 /// timestamps, evaluated in <see cref="OnFrame"/>; the same model and constants
 /// drive <c>scripts/render_hail_vfx.gd</c>. No screen shake: native damage
-/// already shakes by unblocked amount, which grows with the spent charge.
+/// already shakes by unblocked amount.
 /// </remarks>
 internal sealed class HailStormVfx : CelVfxSession
 {

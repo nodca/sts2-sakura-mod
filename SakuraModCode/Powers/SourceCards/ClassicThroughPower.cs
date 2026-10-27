@@ -2,19 +2,22 @@ using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Powers;
 using SakuraMod.SakuraModCode.Cards;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
 // Clow Through: whenever one of the owner's cards enters Memory or the Exhaust
-// pile, deal Amount unblockable damage to all enemies. Every card movement is
+// pile, apply Amount Poison to all enemies. Every card movement is
 // one trigger, so swapping a pile into Memory triggers once per card.
 public class ClassicThroughPower : SakuraPowerModel
 {
     protected override string IconFileName => "through.svg";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [HoverTipFactory.FromPower<PoisonPower>()];
 
     public override async Task AfterCardChangedPiles(CardModel card, PileType oldPileType, AbstractModel? clonedBy)
     {
@@ -29,7 +32,9 @@ public class ClassicThroughPower : SakuraPowerModel
             return;
 
         Flash();
-        await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(), enemies, Amount, SakuraPowerValueProps.HpLoss, Owner, null);
+        var choiceContext = new ThrowingPlayerChoiceContext();
+        foreach (var enemy in enemies)
+            await PowerCmd.Apply<PoisonPower>(choiceContext, enemy, Amount, Owner, null);
     }
 
     protected virtual bool Triggers(PileType oldPileType, PileType newPileType) =>

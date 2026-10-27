@@ -25,14 +25,12 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
-    public override bool GainsBlock => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
         [SakuraMemoryPile.PileId, SakuraCardHoverTips.TemporaryTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new SpiralDamageVar(6, ValueProp.Move),
-        new SpiralBlockVar(3, ValueProp.Move),
+        new SpiralDamageVar(8, ValueProp.Move),
         new DynamicVar("MemoryScale", 1),
         new CardsVar("NextTurnCopies", 1),
         new CardsVar("ExtraCopies", 3)
@@ -42,11 +40,8 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
     {
         var target = RequiredTarget(play);
         var damage = SpiralRules.ScaledValue(this, DynamicVars.Damage);
-        var block = SpiralRules.ScaledValue(this, DynamicVars.Block);
         await DealDamage(choiceContext, target, damage, hitVfx: SakuraNativeHitFx.Slash);
-        await CreatureCmd.GainBlock(Owner.Creature, block, ValueProp.Move, play, false);
-        if (IsUpgraded)
-            await ScheduleNextTurnCopies(choiceContext);
+        await ScheduleNextTurnCopies(choiceContext);
         if (activation.IsActive)
             await ApplyExtraEffect(choiceContext, play);
     }
@@ -76,7 +71,7 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
             refreshGeneratedTransparentHandVisual: false);
     }
 
-    protected override void OnUpgrade() { }
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
 }
 
 internal static class SpiralRules
@@ -114,27 +109,6 @@ internal sealed class SpiralDamageVar(decimal damage, ValueProp props) : DamageV
 
         if (runGlobalHooks)
             preview = Hook.ModifyDamage(card.Owner.RunState, card.CombatState, target, card.Owner.Creature, baseValue, Props, card, ModifyDamageHookType.All, previewMode, out _);
-
-        PreviewValue = preview;
-    }
-}
-
-internal sealed class SpiralBlockVar(decimal block, ValueProp props) : BlockVar(block, props)
-{
-    public override void UpdateCardPreview(CardModel card, CardPreviewMode previewMode, Creature? target, bool runGlobalHooks)
-    {
-        decimal baseValue = SpiralRules.ScaledValue(card, this);
-        var preview = baseValue;
-        if (card.Enchantment is not null)
-        {
-            preview += card.Enchantment.EnchantBlockAdditive(preview);
-            preview *= card.Enchantment.EnchantBlockMultiplicative(preview);
-            if (!card.IsEnchantmentPreview)
-                EnchantedValue = preview;
-        }
-
-        if (runGlobalHooks && card.CombatState is not null)
-            preview = Hook.ModifyBlock(card.CombatState, card.Owner.Creature, baseValue, Props, card, null, out _);
 
         PreviewValue = preview;
     }

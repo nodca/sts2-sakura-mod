@@ -76,27 +76,40 @@ internal static class SakuraMemoryPile
         card.Owner.GetRelic<ClassicFrogRaincoatRelic>()?.RecordMemoryEntries(1);
     }
 
-    internal static async Task<IReadOnlyList<CardModel>> Consume(
+    // Recall moves the real Memory records back, mirroring how they entered: per-card
+    // combat state (Release, upgrades, enchantments) and the deck link stay intact.
+    // A full hand sends the rest to the Discard Pile through native CardPileCmd.Add.
+    internal static async Task<IReadOnlyList<CardModel>> RecallToHand(
         Player player,
-        IReadOnlyList<CardModel> selected)
+        IReadOnlyList<CardModel> selected,
+        bool upgrade = false)
     {
         if (selected.Count == 0)
             return [];
 
         var pile = Get(player)
-            ?? throw new InvalidOperationException("Cannot consume Memory outside combat.");
+            ?? throw new InvalidOperationException("Cannot recall from Memory outside combat.");
         ValidateSelection(pile.Cards, selected);
 
-        var copies = selected.Select(static card => card.CreateClone()).ToList();
+        foreach (var card in selected)
+        {
+            if (card.IsTemporary())
+                card.RemoveTemporaryForExchange();
+            if (upgrade && card.IsUpgradable)
+                CardCmd.Upgrade(card);
+            card.EnergyCost.SetThisTurnOrUntilPlayed(0, reduceOnly: true);
+            SakuraMemoryRecallVisual.Mark(card);
+        }
+
         try
         {
-            await CardPileCmd.RemoveFromCombat(selected, skipVisuals: true);
-            return copies;
+            var results = await CardPileCmd.Add(selected, PileType.Hand, CardPilePosition.Bottom);
+            return results.Where(static result => result.success).Select(static result => result.cardAdded).ToList();
         }
-        catch
+        finally
         {
-            SakuraGeneratedCardLifecycle.RemoveDetachedGeneratedChoices(copies);
-            throw;
+            foreach (var card in selected)
+                SakuraMemoryRecallVisual.Unmark(card);
         }
     }
 

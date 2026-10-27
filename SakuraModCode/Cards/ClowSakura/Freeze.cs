@@ -33,7 +33,7 @@ public class ClowFreeze() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.U
     [
         new SakuraSourceDamageVar(14, ValueProp.Move),
         new SakuraSourceBlockVar(6, ValueProp.Move),
-        new PowerVar<SakuraFrostbitePower>(2)
+        new PowerVar<SakuraFrostbitePower>(3)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)

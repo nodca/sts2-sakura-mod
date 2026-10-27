@@ -18,7 +18,6 @@ public sealed class GeneratedCardLifecycleSuite
             var options = SakuraGeneratedCardLifecycle.ManifestChoiceOptions(addTemporary, hasKindness, freeThisTurn);
             Assert.Equal(expected, options.AddTemporary);
             Assert.Equal(freeThisTurn, options.FreeThisTurn);
-            Assert.False(options.RemoveTemporary);
             Assert.True(SakuraGeneratedCardLifecycle.TemporaryCopyOptions(freeThisTurn).AddTemporary);
         }
     }
@@ -42,18 +41,12 @@ public sealed class GeneratedCardLifecycleSuite
     }
 
     [Fact]
-    public void GeneratedCopyOptionsEncodeTemporaryAndRememberedSemantics()
+    public void GeneratedCopyOptionsEncodeTemporarySemantics()
     {
         var temporaryCopy = SakuraGeneratedCardLifecycle.TemporaryCopyOptions(freeThisTurn: true);
         RegressionTestHarness.Require(temporaryCopy.AddTemporary, "Expected temporary copy to add Temporary.");
         RegressionTestHarness.Require(!temporaryCopy.PreventTemporaryMemoryReturn, "Expected ordinary Temporary copies to enter Memory.");
         RegressionTestHarness.Require(temporaryCopy.FreeThisTurn, "Expected temporary copy to honor free-this-turn.");
-
-        var rememberedCopy = SakuraGeneratedCardLifecycle.RememberedCopyOptions(freeThisTurn: true);
-        RegressionTestHarness.Require(rememberedCopy.RemoveTemporary, "Expected remembered copy to remove stale Temporary.");
-        RegressionTestHarness.Require(!rememberedCopy.AddTemporary, "Expected remembered copy not to gain Temporary.");
-        RegressionTestHarness.Require(!rememberedCopy.PreventTemporaryMemoryReturn, "Expected remembered copies not to need a Memory exception.");
-        RegressionTestHarness.Require(rememberedCopy.FreeThisTurn, "Expected remembered copy to honor free-this-turn.");
 
     }
 

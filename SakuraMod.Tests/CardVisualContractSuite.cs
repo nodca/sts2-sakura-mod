@@ -794,13 +794,13 @@ public sealed class CardVisualContractSuite
 
         var overlay = File.ReadAllText(
             RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraForgottenOverlay.cs"));
-        var lifecycle = File.ReadAllText(
-            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraGeneratedCardLifecycle.cs"));
+        var memoryPileSource = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraMemoryPile.cs"));
         RegressionTestHarness.Require(
             overlay.Contains("_transitModel", StringComparison.Ordinal)
             && overlay.Contains("public static void ResetForReuse(NCard card)", StringComparison.Ordinal)
-            && lifecycle.Contains("SakuraMemoryRecallVisual.Mark(card);", StringComparison.Ordinal)
-            && lifecycle.Contains("SakuraMemoryRecallVisual.Unmark(card);", StringComparison.Ordinal),
+            && memoryPileSource.Contains("SakuraMemoryRecallVisual.Mark(card);", StringComparison.Ordinal)
+            && memoryPileSource.Contains("SakuraMemoryRecallVisual.Unmark(card);", StringComparison.Ordinal),
             "Expected the recall develop to be bound to its model and every pooled node to be reset before reuse.");
     }
 

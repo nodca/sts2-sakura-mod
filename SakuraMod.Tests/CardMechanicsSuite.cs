@@ -344,7 +344,6 @@ public sealed class CardMechanicsSuite
             new ClowFreeze(),
             new SakuraFreeze(),
             new SakuraSong(),
-            new Spiral(),
             new Shade(),
             new Siege(),
             new Promise(),
@@ -356,7 +355,8 @@ public sealed class CardMechanicsSuite
             new ClowNothing(),
             new ClowVoice(),
             new Choice(),
-            new Blank()
+            new Blank(),
+            new Spiral()
         ];
         var nimble = new NimbleEnchantment();
 
@@ -432,9 +432,9 @@ public sealed class CardMechanicsSuite
             && clow.TargetType == TargetType.None
             && clow.Elements == SakuraElementSet.Earth
             && clow is not ISakuraExtraEffectCard
-            && clow.DynamicVars.Damage.IntValue == 3
-            && upgradedClow.DynamicVars.Damage.IntValue == 3,
-            "Expected Clow Through to be a 2-cost Rare Earth Power dealing 3 per card and upgrading to 1 Energy.");
+            && clow.DynamicVars["PoisonPower"].IntValue == 2
+            && upgradedClow.DynamicVars["PoisonPower"].IntValue == 2,
+            "Expected Clow Through to be a 2-cost Rare Earth Power applying 2 Poison per card and upgrading to 1 Energy.");
 
         RegressionTestHarness.Require(
             sakura.EnergyCost.Canonical == 1
@@ -442,8 +442,8 @@ public sealed class CardMechanicsSuite
             && sakura.Rarity == CardRarity.Token
             && sakura.Elements == SakuraElementSet.Earth
             && sakura.MaxUpgradeLevel == 0
-            && sakura.DynamicVars.Damage.IntValue == 4,
-            "Expected Sakura Through to be a non-upgradable 1-cost Earth Power dealing 4 per card.");
+            && sakura.DynamicVars["PoisonPower"].IntValue == 3,
+            "Expected Sakura Through to be a non-upgradable 1-cost Earth Power applying 3 Poison per card.");
 
         RegressionTestHarness.Require(
             new ClassicThroughPower().StackType == PowerStackType.Counter
@@ -1315,26 +1315,24 @@ public sealed class CardMechanicsSuite
             && spiral.Type == CardType.Attack
             && spiral.TargetType == TargetType.AnyEnemy
             && spiral.CanonicalKeywords.SequenceEqual([SakuraKeywords.Wind])
-            && spiral.DynamicVars.Damage.IntValue == 6
+            && !spiral.GainsBlock
+            && spiral.DynamicVars.Damage.IntValue == 8
             && spiral.DynamicVars.Damage is SpiralDamageVar
-            && spiral.DynamicVars.Block.IntValue == 3
-            && spiral.DynamicVars.Block is SpiralBlockVar
             && spiral.DynamicVars["MemoryScale"].IntValue == 1
             && spiral.DynamicVars["NextTurnCopies"].IntValue == 1
             && spiral.DynamicVars["ExtraCopies"].IntValue == 3
-            && SpiralRules.OutputWithMemory(6, 0) == 6
-            && SpiralRules.OutputWithMemory(6, 2) == 8
-            && SpiralRules.OutputWithMemory(6, 4) == 10
-            && SpiralRules.OutputWithMemory(6, 6) == 12
-            && upgradedSpiral.DynamicVars.Damage.IntValue == 6
-            && upgradedSpiral.DynamicVars.Block.IntValue == 3
-            && SpiralRules.OutputWithMemory(upgradedSpiral.DynamicVars.Damage.IntValue, 4) == 10
+            && SpiralRules.OutputWithMemory(8, 0) == 8
+            && SpiralRules.OutputWithMemory(8, 4) == 12
+            && upgradedSpiral.DynamicVars.Damage.IntValue == 11
+            && upgradedSpiral.DynamicVars["NextTurnCopies"].IntValue == 1
+            && SpiralRules.OutputWithMemory(upgradedSpiral.DynamicVars.Damage.IntValue, 4) == 15
+            && !spiralSource.Contains("IsUpgraded", StringComparison.Ordinal)
             && new SpiralNextTurnPower().InstanceType == PowerInstanceType.Instanced
             && new SpiralNextTurnPower().StackType == PowerStackType.Counter
             && !new SpiralNextTurnPower().IsVisible
             && RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("BeforeHandDraw")
             && !RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("AfterPlayerTurnStart"),
-            "Expected Spiral and Spiral+ to deal 6 damage and gain 3 Block plus Memory, with the upgrade value supplied by a one-shot next-hand-draw Power.");
+            "Expected Spiral to deal 8 (11 upgraded) damage plus Memory and always schedule a one-shot next-hand-draw Spiral.");
         RegressionTestHarness.Require(
             spiralSource.Contains("AddTemporaryGeneratedCardsToHand<Spiral>", StringComparison.Ordinal)
             && spiralSource.Contains("freeThisTurn: true", StringComparison.Ordinal)
@@ -1346,7 +1344,7 @@ public sealed class CardMechanicsSuite
             && spiralNextTurnPowerSource.Contains("AddTemporary = true", StringComparison.Ordinal)
             && !spiralNextTurnPowerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal)
             && !spiralNextTurnPowerSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal),
-            "Expected Spiral+ to put a base Forgotten Spiral on top before next turn's draw, while Extra generates three base Forgotten Spirals that cost 0 this turn.");
+            "Expected Spiral to put a base Forgotten Spiral on top before next turn's draw, while Extra generates three base Forgotten Spirals that cost 0 this turn.");
 
         var blockedHit = new DamageResult(null!, ValueProp.Move) { UnblockedDamage = 0 };
         var unblockedHit = new DamageResult(null!, ValueProp.Move) { UnblockedDamage = 1 };
@@ -1424,7 +1422,7 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             siege.EnergyCost.Canonical == 0
             && siege.Type == CardType.Skill
-            && siege.Rarity == CardRarity.Uncommon
+            && siege.Rarity == CardRarity.Common
             && siege.TargetType == TargetType.Self
             && siege.CanonicalKeywords.Contains(SakuraKeywords.Earth)
             && TransparentCard.HasMagicChargeExtraEffect(siege)
@@ -1448,7 +1446,7 @@ public sealed class CardMechanicsSuite
             && new SiegePendingPower().IsVisible
             && RegressionTestHarness.DeclaresMethod<SiegePendingPower>("BeforeSideTurnEnd")
             && RegressionTestHarness.DeclaresMethod<SiegePendingPower>("AfterSideTurnEnd"),
-            "Expected Siege to be a zero-cost Uncommon that gains 3-to-4 Block per enemy with no flat base Block, resolves its lethal Extra damage before the enemy turn-end synchronization boundary, then applies Weak and removes itself after the native side-turn tick without persistent combat growth.");
+            "Expected Siege to be a zero-cost Common that gains 3-to-4 Block per enemy with no flat base Block, resolves its lethal Extra damage before the enemy turn-end synchronization boundary, then applies Weak and removes itself after the native side-turn tick without persistent combat growth.");
 
         var shade = new Shade();
         var upgradedShade = RegressionTestHarness.MutableForCostTest(new Shade());
@@ -1515,21 +1513,21 @@ public sealed class CardMechanicsSuite
             "SakuraModCode/Cards/Transparent/Hail.cs"));
         RegressionTestHarness.Require(
             new Hail().TargetType == TargetType.AllEnemies
-            && new Hail().DynamicVars.Damage.IntValue == 6
+            && new Hail().DynamicVars.Damage.IntValue == 8
             && new Hail().DynamicVars["SakuraFrostbitePower"].IntValue == 1
-            && new Hail().DynamicVars["Magic"].IntValue == 5
-            && new Hail().DynamicVars["BonusDamage"].IntValue == 2
-            && upgradedHail.DynamicVars.Damage.IntValue == 8
-            && upgradedHail.DynamicVars["SakuraFrostbitePower"].IntValue == 2
+            && new Hail().DynamicVars["Magic"].IntValue == 3
+            && upgradedHail.DynamicVars.Damage.IntValue == 11
+            && upgradedHail.DynamicVars["SakuraFrostbitePower"].IntValue == 1
             && !TransparentCard.HasMagicChargeExtraEffect(new Hail())
-            && HailRules.TotalDamage(new Hail(), spentMagic: 4) == 14
-            && HailRules.TotalDamage(upgradedHail, spentMagic: 5) == 18
+            && HailRules.Frostbite(new Hail(), spentMagic: 0) == 0
+            && HailRules.Frostbite(new Hail(), spentMagic: 3) == 3
+            && HailRules.Frostbite(upgradedHail, spentMagic: 3) == 3
             && hailSource.Contains("CaptureOpportunity", StringComparison.Ordinal)
             && hailSource.Contains("TryApplyCapturedOpportunity", StringComparison.Ordinal)
             && hailSource.IndexOf("TryApplyCapturedOpportunity", StringComparison.Ordinal)
                 < hailSource.IndexOf("SpendUpToMagic", StringComparison.Ordinal)
             && hailSource.Contains("SpendUpToMagic", StringComparison.Ordinal),
-            "Expected Hail to lock element state before spending Magic Charge, deal 6/8 damage to all enemies, apply 1/2 Frostbite, and spend up to 5 Magic Charge for +2 damage each.");
+            "Expected Hail to lock element state before spending Magic Charge, deal 8/11 damage to all enemies, and spend up to 3 Magic Charge for 1 Frostbite each.");
 
         var clowLock = new ClowLock();
         var upgradedClowLock = RegressionTestHarness.MutableForCostTest(new ClowLock());
@@ -1537,11 +1535,12 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             clowLock.EnergyCost.Canonical == 0
             && clowLock.Rarity == CardRarity.Common
-            && clowLock.DynamicVars.Cards.IntValue == 2
+            && clowLock.DynamicVars.Cards.IntValue == 1
+            && upgradedClowLock.DynamicVars.Cards.IntValue == 2
             && !clowLock.Keywords.Contains(CardKeyword.Retain)
             && !upgradedClowLock.Keywords.Contains(CardKeyword.Retain)
             && ClowLock.ChargePerSelectedCard == 1,
-            "Expected Clow Lock to cost 0, choose 2 cards, and upgrade into 1 Magic Charge per chosen card instead of Retain.");
+            "Expected Clow Lock to cost 0, choose 1 card (2 upgraded), and gain 1 Magic Charge per chosen card.");
 
         var change = new ClowChange();
         var upgradedChange = RegressionTestHarness.MutableForCostTest(new ClowChange());
@@ -1838,12 +1837,12 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             new ClowFreeze().DynamicVars.Damage.IntValue == 14
             && new ClowFreeze().DynamicVars.Block.IntValue == 6
-            && new ClowFreeze().DynamicVars["SakuraFrostbitePower"].IntValue == 2
-            && SakuraFreezeRules.DoubledApplicationAmount(0, 2) == 4
-            && SakuraFreezeRules.DoubledApplicationAmount(5, 2) == 9
+            && new ClowFreeze().DynamicVars["SakuraFrostbitePower"].IntValue == 3
+            && SakuraFreezeRules.DoubledApplicationAmount(0, 3) == 6
+            && SakuraFreezeRules.DoubledApplicationAmount(5, 3) == 11
             && upgradedClowFreeze.DynamicVars.Damage.IntValue == 18
             && upgradedClowFreeze.DynamicVars.Block.IntValue == 8,
-            "Expected Clow Freeze to deal 14 damage, gain 6 Block, apply 2 Frostbite, atomically double Frostbite with Extra, and upgrade to 18/8.");
+            "Expected Clow Freeze to deal 14 damage, gain 6 Block, apply 3 Frostbite, atomically double Frostbite with Extra, and upgrade to 18/8.");
 
         var sakuraFreeze = new SakuraFreeze();
         RegressionTestHarness.Require(
