@@ -24,6 +24,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class Repair() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
+    internal const int ExtraRegen = 3;
+
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<RegenPower>(3)];
 
@@ -35,7 +37,7 @@ public class Repair() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
     }
 
     private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await PowerCmd.Apply<RepairRegenerationPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
+        await PowerCmd.Apply<RegenPower>(choiceContext, Owner.Creature, ExtraRegen, Owner.Creature, this, false);
 
     protected override void OnUpgrade() => DynamicVars["RegenPower"].UpgradeValueBy(1);
 }

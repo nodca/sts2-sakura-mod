@@ -28,7 +28,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class ClowMist() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PoisonPower>(4), new DynamicVar("ExtraPoison", 6)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PoisonPower>(4)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPowerToEnemies<PoisonPower>(choiceContext, ReleasedValue("PoisonPower"));
@@ -36,7 +36,12 @@ public class ClowMist() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Comm
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await PlayCard(choiceContext, play);
-        await ApplyPowerToEnemies<PoisonPower>(choiceContext, ReleasedValue("ExtraPoison"));
+        // Double every enemy's Poison, including the stacks this play just applied.
+        foreach (var enemy in CombatState!.HittableEnemies.ToList())
+        {
+            if (enemy.GetPower<PoisonPower>() is { Amount: > 0 } poison)
+                await ApplyPower<PoisonPower>(choiceContext, enemy, poison.Amount);
+        }
     }
 
     protected override void OnUpgrade() => DynamicVars.Poison.UpgradeValueBy(2);

@@ -38,7 +38,7 @@ public class ClowMove() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Unco
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await AddGeneratedSpells<SpellEmptySpell>(choiceContext, ReleasedMagic() + ExtraEmptySpells);
 
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+    protected override void OnUpgrade() => DynamicVars["Magic"].UpgradeValueBy(1);
 }
 
 public class SakuraMove() : SakuraFormCard(0, CardType.Skill, TargetType.None)

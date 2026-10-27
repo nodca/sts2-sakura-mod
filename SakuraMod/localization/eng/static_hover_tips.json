@@ -12,8 +12,6 @@
   "SAKURAMOD-REMIND.description": "Choose N cards in [gold]Memory[/gold] (all of them, if fewer). Remove them and add copies into your [gold]Hand[/gold]. The copies cost 0 this turn.",
   "SAKURAMOD-SPELL_CARD.title": "Spell",
   "SAKURAMOD-SPELL_CARD.description": "A special card type that is not a Clow Card, usually consumed after being played.",
-  "SAKURAMOD-UNREAL.title": "Unreal",
-  "SAKURAMOD-UNREAL.description": "When this card exhausts another card, add a copy of this card into your [gold]Discard Pile[/gold].",
   "SAKURAMOD-EARTHY_CARD.title": "Earthy",
   "SAKURAMOD-EARTHY_CARD.description": "With 5 or more Magic Charge, playing an Earthy card enters [gold]Earthy state[/gold] until the end of turn.\nIn Earthy state, each Earthy card you play grants 4 [gold]Block[/gold].",
   "SAKURAMOD-EARTHY_SPELL_CARD.title": "Earthy",

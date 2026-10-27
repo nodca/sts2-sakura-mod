@@ -786,8 +786,8 @@ public sealed class CardMechanicsSuite
             clowSweet.EnergyCost.Canonical == 1,
             $"Expected Clow Sweet to cost 1, found {clowSweet.EnergyCost.Canonical}.");
         RegressionTestHarness.Require(
-            clowSweet.DynamicVars.Heal.IntValue == 5,
-            $"Expected Clow Sweet Heal to be 5, found {clowSweet.DynamicVars.Heal.IntValue}.");
+            clowSweet.DynamicVars.Heal.IntValue == 4,
+            $"Expected Clow Sweet Heal to be 4, found {clowSweet.DynamicVars.Heal.IntValue}.");
         RegressionTestHarness.Require(
             new SakuraSweet().EnergyCost.Canonical == 2,
             $"Expected Sakura Sweet to cost 2, found {new SakuraSweet().EnergyCost.Canonical}.");
@@ -1396,9 +1396,9 @@ public sealed class CardMechanicsSuite
             && sakuraFlower.Type == CardType.Skill
             && sakuraFlower.TargetType == TargetType.None
             && sakuraFlower.Elements == SakuraElementSet.Earth
-            && sakuraFlower.CanonicalKeywords.SequenceEqual([CardKeyword.Retain, CardKeyword.Exhaust])
+            && sakuraFlower.CanonicalKeywords.SequenceEqual([CardKeyword.Exhaust])
             && sakuraFlower.DynamicVars.Energy.IntValue == 5,
-            "Expected Sakura Flower to Retain, Exhaust, and gain 5 Energy.");
+            "Expected Sakura Flower to Exhaust without Retain and gain 5 Energy.");
         RegressionTestHarness.Require(
             FlowerRules.TryRemoveExhaust(clowFlower, clowFlower, true, exhaustKeywords)
             && !exhaustKeywords.Contains(CardKeyword.Exhaust)
@@ -1410,9 +1410,13 @@ public sealed class CardMechanicsSuite
             && FlowerRules.ResultPileForPlay(true, PileType.Exhaust) == PileType.Discard
             && FlowerRules.ResultPileForPlay(false, PileType.Exhaust) == PileType.Exhaust
             && FlowerRules.ResultPileForPlay(true, PileType.None) == PileType.None
+            && FlowerRules.KeepsPlay(true, null, 1)
+            && FlowerRules.KeepsPlay(true, 1, 2)
+            && !FlowerRules.KeepsPlay(true, 2, 2)
+            && !FlowerRules.KeepsPlay(false, null, 1)
             && SakuraSourceCardText.ElementStatesReferencedBy(clowFlower).SequenceEqual([SakuraElement.Earth])
             && SakuraSourceCardText.ElementStatesReferencedBy(sakuraFlower).SequenceEqual([SakuraElement.Earth]),
-            "Expected each Flower to avoid Exhaust only for its own play that began in Earthy state and to expose the Earthy-state hover tip.");
+            "Expected each Flower to avoid Exhaust only on its first play each turn that began in Earthy state and to expose the Earthy-state hover tip.");
 
         var siege = new Siege();
         var upgradedSiege = RegressionTestHarness.MutableForCostTest(new Siege());
@@ -1468,13 +1472,12 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             flight.DynamicVars.Block.IntValue == 8
             && flight.DynamicVars["SakuraTemporaryDexterityPower"].IntValue == 2
-            && flight.DynamicVars.Energy.IntValue == 1
-            && flight.DynamicVars.Cards.IntValue == 1
+            && flight.DynamicVars.Energy.IntValue == 2
+            && !flight.DynamicVars.ContainsKey("Cards")
             && upgradedFlight.DynamicVars.Block.IntValue == 11
             && upgradedFlight.DynamicVars["SakuraTemporaryDexterityPower"].IntValue == 3
-            && upgradedFlight.DynamicVars.Energy.IntValue == 1
-            && upgradedFlight.DynamicVars.Cards.IntValue == 1,
-            "Expected Flight to gain 8 Block and 2 Temporary Dexterity, upgrade to 11 Block and 3 Temporary Dexterity, and grant 1 Energy and draw 1 card with Extra before and after upgrading.");
+            && upgradedFlight.DynamicVars.Energy.IntValue == 2,
+            "Expected Flight to gain 8 Block and 2 Temporary Dexterity, upgrade to 11 Block and 3 Temporary Dexterity, and grant 2 Energy with Extra before and after upgrading.");
 
         var snooze = new Snooze();
         var upgradedSnooze = RegressionTestHarness.MutableForCostTest(new Snooze());
@@ -1498,9 +1501,13 @@ public sealed class CardMechanicsSuite
         var upgradedBreak = RegressionTestHarness.MutableForCostTest(new Break());
         upgradedBreak.UpgradeInternal();
         RegressionTestHarness.Require(
-            breakCard.DynamicVars.Damage.IntValue == 7
-            && upgradedBreak.DynamicVars.Damage.IntValue == 10,
-            "Expected Break to deal 7 damage and upgrade to 10 before its conditional Block payoff.");
+            breakCard.DynamicVars.Damage.IntValue == 8
+            && breakCard.DynamicVars.Vulnerable.IntValue == 1
+            && breakCard.DynamicVars["ExtraVulnerable"].IntValue == 2
+            && upgradedBreak.DynamicVars.Damage.IntValue == 12
+            && upgradedBreak.DynamicVars.Vulnerable.IntValue == 1
+            && upgradedBreak.DynamicVars["ExtraVulnerable"].IntValue == 2,
+            "Expected Break to deal 8 damage and apply 1 Vulnerable (2 more with Extra), upgrading only damage to 12.");
 
         var upgradedHail = RegressionTestHarness.MutableForCostTest(new Hail());
         upgradedHail.UpgradeInternal();
@@ -1524,6 +1531,18 @@ public sealed class CardMechanicsSuite
             && hailSource.Contains("SpendUpToMagic", StringComparison.Ordinal),
             "Expected Hail to lock element state before spending Magic Charge, deal 6/8 damage to all enemies, apply 1/2 Frostbite, and spend up to 5 Magic Charge for +2 damage each.");
 
+        var clowLock = new ClowLock();
+        var upgradedClowLock = RegressionTestHarness.MutableForCostTest(new ClowLock());
+        upgradedClowLock.UpgradeInternal();
+        RegressionTestHarness.Require(
+            clowLock.EnergyCost.Canonical == 0
+            && clowLock.Rarity == CardRarity.Common
+            && clowLock.DynamicVars.Cards.IntValue == 2
+            && !clowLock.Keywords.Contains(CardKeyword.Retain)
+            && !upgradedClowLock.Keywords.Contains(CardKeyword.Retain)
+            && ClowLock.ChargePerSelectedCard == 1,
+            "Expected Clow Lock to cost 0, choose 2 cards, and upgrade into 1 Magic Charge per chosen card instead of Retain.");
+
         var change = new ClowChange();
         var upgradedChange = RegressionTestHarness.MutableForCostTest(new ClowChange());
         upgradedChange.UpgradeInternal();
@@ -1531,14 +1550,15 @@ public sealed class CardMechanicsSuite
             change.EnergyCost.Canonical == 1
             && change.Rarity == CardRarity.Common
             && SakuraExtraEffectTransaction.Supports(change)
-            && change.DynamicVars.Cards.IntValue == 1
+            && change.DynamicVars.Cards.IntValue == 2
             && change.DynamicVars["ExtraCards"].IntValue == 2
+            && upgradedChange.DynamicVars.Cards.IntValue == 3
             && upgradedChange.DynamicVars["ExtraCards"].IntValue == 2
             && !change.Keywords.Contains(CardKeyword.Retain)
-            && upgradedChange.Keywords.Contains(CardKeyword.Retain)
+            && !upgradedChange.Keywords.Contains(CardKeyword.Retain)
             && upgradedChange.EnergyCost.GetWithModifiers(CostModifiers.None) == 1
             && new SakuraChange().DynamicVars.Cards.IntValue == 5,
-            "Expected Clow Change to draw 1 plus 2 with Extra and upgrade to Retain at 1 cost, and Sakura Change to draw 5.");
+            "Expected Clow Change to draw 2 plus 2 with Extra and upgrade to draw 3 without Retain at 1 cost, and Sakura Change to draw 5.");
 
         var swing = new Swing();
         var upgradedSwing = RegressionTestHarness.MutableForCostTest(new Swing());
@@ -2050,9 +2070,10 @@ public sealed class CardMechanicsSuite
             !SakuraSourceCardText.ElementStatesReferencedBy(new SakuraWave()).Any(),
             "Expected Sakura Wave to preview generated Clow cards instead of directly entering element states.");
         RegressionTestHarness.Require(
-            SakuraSourceCardText.ReferencesMagicChargeTip(new ClowLock())
+            SakuraSourceCardText.ReferencesMagicChargeTip(new SakuraLock())
+            && SakuraSourceCardText.ReferencesMagicChargeTip(new ClowLock())
             && !SakuraSourceCardText.ReferencesMagicChargeTip(new ClowChange()),
-            "Expected Clow Lock, but no longer Change, hover tips to reference Magic Charge.");
+            "Expected Clow and Sakura Lock, but no longer Change, hover tips to reference Magic Charge.");
         RegressionTestHarness.Require(
             SakuraSourceCardText.KeywordTips(new SakuraShield()).Contains(SakuraKeywords.SakuraCard),
             "Expected Sakura card hover tips to explain Sakura Card void generation.");
@@ -2141,14 +2162,14 @@ public sealed class CardMechanicsSuite
             && clowWood.TargetType == TargetType.None
             && clowWood.Rarity == CardRarity.Uncommon
             && clowWood.EnergyCost.Canonical == 1
-            && clowWood.DynamicVars["PoisonPower"].IntValue == 1
-            && upgradedClowWood.DynamicVars["PoisonPower"].IntValue == 2
+            && clowWood.DynamicVars["PoisonPower"].IntValue == 2
+            && upgradedClowWood.DynamicVars["PoisonPower"].IntValue == 3
             && !TransparentCard.HasMagicChargeExtraEffect(clowWood)
             && sakuraWood.Type == CardType.Power
             && sakuraWood.TargetType == TargetType.None
             && sakuraWood.Rarity == CardRarity.Token
             && sakuraWood.EnergyCost.Canonical == 1
-            && sakuraWood.DynamicVars["PoisonPower"].IntValue == 3
+            && sakuraWood.DynamicVars["PoisonPower"].IntValue == 4
             && !clowWood.DynamicVars.ContainsKey("ThornsPower")
             && !sakuraWood.DynamicVars.ContainsKey("ThornsPower")
             && new ClassicWoodPower().Type == PowerType.Buff

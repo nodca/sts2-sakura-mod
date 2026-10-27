@@ -25,17 +25,20 @@ using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class ClowSand() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
+public class ClowSand() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Common, TargetType.AnyEnemy)
 {
+    internal const int PoisonTriggerCount = 1;
+
     public override bool GainsBlock => true;
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(3, ValueProp.Move), new PowerVar<PoisonPower>(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PoisonPower>(2)];
 
+    // Clow Sand cashes out one target's Poison once; Sakura Sand does it to all enemies, twice.
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        await DealDamage(choiceContext, target, ReleasedDamage(), hitVfx: SakuraNativeHitFx.SandyImpact);
         await ApplyPower<PoisonPower>(choiceContext, target, ReleasedValue("PoisonPower"));
+        await TriggerCurrentPoison(choiceContext, [target], PoisonTriggerCount);
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -44,11 +47,7 @@ public class ClowSand() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Com
         await GainBlock(play, RequiredTarget(play).GetPower<PoisonPower>()?.Amount ?? 0);
     }
 
-    protected override void OnUpgrade()
-    {
-        DynamicVars.Damage.UpgradeValueBy(2);
-        DynamicVars["PoisonPower"].UpgradeValueBy(1);
-    }
+    protected override void OnUpgrade() => DynamicVars["PoisonPower"].UpgradeValueBy(1);
 }
 
 public class SakuraSand() : SakuraFormCard(1, CardType.Skill, TargetType.None)

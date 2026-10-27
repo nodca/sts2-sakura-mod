@@ -33,15 +33,19 @@ public class ClowFlower() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Un
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(2)];
 
+    private int? _keptOnTurn;
+
     protected override PileType GetResultPileTypeForCardPlay()
     {
-        return FlowerRules.ResultPileForPlay(
-            FlowerRules.IsInEarthyState(this),
-            base.GetResultPileTypeForCardPlay());
+        var ordinaryResultPile = base.GetResultPileTypeForCardPlay();
+        var keepsPlay = FlowerRules.KeepsThisTurn(this, _keptOnTurn);
+        if (keepsPlay)
+            _keptOnTurn = FlowerRules.CurrentTurn(this);
+        return FlowerRules.ResultPileForPlay(keepsPlay, ordinaryResultPile);
     }
 
     public override bool TryModifyKeywordsInCombat(CardModel card, ISet<CardKeyword> keywords) =>
-        FlowerRules.TryRemoveExhaust(this, card, FlowerRules.IsInEarthyState(this), keywords);
+        FlowerRules.TryRemoveExhaust(this, card, FlowerRules.KeepsThisTurn(this, _keptOnTurn), keywords);
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PlayerCmd.GainEnergy(ReleasedValue("Energy"), Owner);
@@ -58,18 +62,22 @@ public class ClowFlower() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Un
 public class SakuraFlower() : SakuraFormCard(0, CardType.Skill, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain, CardKeyword.Exhaust];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(5)];
+
+    private int? _keptOnTurn;
 
     protected override PileType GetResultPileTypeForCardPlay()
     {
-        return FlowerRules.ResultPileForPlay(
-            FlowerRules.IsInEarthyState(this),
-            base.GetResultPileTypeForCardPlay());
+        var ordinaryResultPile = base.GetResultPileTypeForCardPlay();
+        var keepsPlay = FlowerRules.KeepsThisTurn(this, _keptOnTurn);
+        if (keepsPlay)
+            _keptOnTurn = FlowerRules.CurrentTurn(this);
+        return FlowerRules.ResultPileForPlay(keepsPlay, ordinaryResultPile);
     }
 
     public override bool TryModifyKeywordsInCombat(CardModel card, ISet<CardKeyword> keywords) =>
-        FlowerRules.TryRemoveExhaust(this, card, FlowerRules.IsInEarthyState(this), keywords);
+        FlowerRules.TryRemoveExhaust(this, card, FlowerRules.KeepsThisTurn(this, _keptOnTurn), keywords);
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await PlayerCmd.GainEnergy(ReleasedValue("Energy"), Owner);
@@ -80,19 +88,30 @@ internal static class FlowerRules
     internal static bool IsInEarthyState(CardModel card) =>
         card.Owner?.Creature.GetPower<ClassicEarthyPower>()?.Amount > 0;
 
+    internal static int? CurrentTurn(CardModel card) =>
+        card.Owner?.PlayerCombatState?.TurnNumber;
+
+    // Earthy state spares a Flower from Exhaust only on its first play each turn,
+    // so returning it to hand (Gravitation, draw loops) cannot farm Energy.
+    internal static bool KeepsPlay(bool isInEarthyState, int? keptOnTurn, int? currentTurn) =>
+        isInEarthyState && (currentTurn is null || keptOnTurn != currentTurn);
+
+    internal static bool KeepsThisTurn(CardModel card, int? keptOnTurn) =>
+        KeepsPlay(IsInEarthyState(card), keptOnTurn, CurrentTurn(card));
+
     internal static bool TryRemoveExhaust(
         CardModel source,
         CardModel card,
-        bool isInEarthyState,
+        bool keepsPlay,
         ISet<CardKeyword> keywords) =>
         ReferenceEquals(source, card)
-        && isInEarthyState
+        && keepsPlay
         && keywords.Remove(CardKeyword.Exhaust);
 
     internal static PileType ResultPileForPlay(
-        bool wasInEarthyStateWhenPlayed,
+        bool keepsPlay,
         PileType ordinaryResultPile) =>
-        wasInEarthyStateWhenPlayed && ordinaryResultPile == PileType.Exhaust
+        keepsPlay && ordinaryResultPile == PileType.Exhaust
             ? PileType.Discard
             : ordinaryResultPile;
 }

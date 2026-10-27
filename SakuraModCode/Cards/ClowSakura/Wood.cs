@@ -28,7 +28,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowWood() : ClowCard(1, CardType.Power, CardRarity.Uncommon, TargetType.None)
 {
-    private const int PoisonPerTrigger = 1;
+    private const int PoisonPerTrigger = 2;
 
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PoisonPower>(PoisonPerTrigger)];
@@ -41,7 +41,7 @@ public class ClowWood() : ClowCard(1, CardType.Power, CardRarity.Uncommon, Targe
 
 public class SakuraWood() : SakuraFormCard(1, CardType.Power, TargetType.None)
 {
-    private const int PoisonPerEarthTrigger = 3;
+    private const int PoisonPerEarthTrigger = 4;
 
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PoisonPower>(PoisonPerEarthTrigger)];

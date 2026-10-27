@@ -48,10 +48,10 @@ internal static class ClowMistSlipperyScenario
         var hpBefore = target.CurrentHp;
         await CombatScenarioContext.PlayCardAsync(mist);
 
-        var expectedPoison = poisonBefore + 10;
+        var expectedPoison = (poisonBefore + 4) * 2;
         assertions.Equal("mist_preserves_slippery", slipperyBefore, target.GetPower<SlipperyPower>()?.Amount ?? 0);
         assertions.Equal("mist_extra_deals_no_immediate_damage", hpBefore, target.CurrentHp);
-        assertions.Equal("mist_extra_applies_ten_poison", expectedPoison, target.GetPower<PoisonPower>()?.Amount ?? 0);
+        assertions.Equal("mist_extra_doubles_poison_after_applying_four", expectedPoison, target.GetPower<PoisonPower>()?.Amount ?? 0);
         assertions.Equal(
             "mist_extra_effect_spends_then_regains_magic_charge",
             1,
@@ -71,15 +71,15 @@ internal static class ClowMistSlipperyScenario
         var secondMist = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowMist>(combat, player);
         secondMist.UpgradeInternal();
         var hpBeforeSecondMist = target.CurrentHp;
-        var expectedTotalPoison = expectedPoison + 12;
+        var expectedTotalPoison = (expectedPoison + 6) * 2;
         await CombatScenarioContext.PlayCardAsync(secondMist);
         assertions.Equal("upgraded_mist_extra_deals_no_immediate_damage", hpBeforeSecondMist, target.CurrentHp);
-        assertions.Equal("upgraded_mist_extra_applies_twelve_poison", expectedTotalPoison, target.GetPower<PoisonPower>()?.Amount ?? 0);
+        assertions.Equal("upgraded_mist_extra_doubles_poison_after_applying_six", expectedTotalPoison, target.GetPower<PoisonPower>()?.Amount ?? 0);
 
         RuntimeTestHost.WriteCheckpoint(
             request,
             "clow_mist_slippery_verified",
-            "Clow Mist Extra applies 10 Poison, or 12 when upgraded, without immediate damage or removing Slippery.");
+            "Clow Mist Extra applies 4 Poison (6 upgraded) then doubles it, without immediate damage or removing Slippery.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {

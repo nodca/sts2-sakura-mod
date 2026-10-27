@@ -202,6 +202,10 @@ internal static class SakuraSourceCardText
             case ClowMist:
                 yield return SakuraCardHoverTips.MistDefenseTipKey;
                 break;
+            case ClowLock:
+                yield return SakuraCardHoverTips.TemporaryTipKey;
+                yield return SakuraMemoryPile.PileId;
+                break;
         }
 
         foreach (var element in card.Elements.AsElements())
@@ -209,9 +213,6 @@ internal static class SakuraSourceCardText
 
         foreach (var element in ElementStatesReferencedBy(card))
             yield return ElementStateTipKey(element);
-
-        if (card is { IsClowCard: true, Identity: SourceCardIdentity.Lock })
-            yield return "SAKURAMOD-UNREAL";
     }
 
     internal static IEnumerable<CardKeyword> KeywordTips(SakuraSourceCard card)
@@ -221,6 +222,12 @@ internal static class SakuraSourceCardText
 
         if (card is SpellLeiDi)
             yield return SakuraKeywords.Stabilize;
+
+        if (card is ClowLock)
+        {
+            yield return CardKeyword.Retain;
+            yield return SakuraKeywords.Stabilize;
+        }
 
         if (card is SpellTurn)
             yield return SakuraKeywords.Purge;

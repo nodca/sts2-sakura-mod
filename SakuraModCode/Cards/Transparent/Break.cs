@@ -21,33 +21,20 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class Break() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(7, ValueProp.Move), new PowerVar<VulnerablePower>(1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(8, ValueProp.Move), new PowerVar<VulnerablePower>(1), new DynamicVar("ExtraVulnerable", 2)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         foreach (var target in PlayTargets(play))
         {
-            var hadBlock = target.Block > 0;
-            if (hadBlock)
+            if (target.Block > 0)
                 await CreatureCmd.LoseBlock(target, target.Block);
 
-            var damage = DynamicVars.Damage.IntValue * (hadBlock ? 2 : 1);
-            await DealDamage(choiceContext, target, damage, hitVfx: SakuraNativeHitFx.RockShatter, hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx);
-            if (activation.IsActive)
-                await ApplyExtraEffect(choiceContext, target);
+            await DealDamage(choiceContext, target, DynamicVars.Damage.IntValue, hitVfx: SakuraNativeHitFx.RockShatter, hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx);
+            var vulnerable = DynamicVars.Vulnerable.IntValue + (activation.IsActive ? DynamicVars["ExtraVulnerable"].IntValue : 0);
+            await PowerCmd.Apply<VulnerablePower>(choiceContext, target, vulnerable, Owner.Creature, this, false);
         }
     }
 
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, Creature target)
-    {
-        if (target.HasPower<ArtifactPower>())
-            await PowerCmd.Apply<ArtifactPower>(choiceContext, target, -1, Owner.Creature, this, false);
-        await PowerCmd.Apply<VulnerablePower>(choiceContext, target, DynamicVars.Vulnerable.IntValue, Owner.Creature, this, false);
-    }
-
-    protected override void OnUpgrade()
-    {
-        DynamicVars.Damage.UpgradeValueBy(3);
-        DynamicVars.Vulnerable.UpgradeValueBy(1);
-    }
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(4);
 }

@@ -61,17 +61,12 @@ internal static class ThreePlayerRepairJumpMultiplayerScenario
             await context.SignalAndWaitAsync($"repair-played-{player.NetId}");
             await MultiplayerScenarioContext.WaitForStateAsync(
                 () => repair.Pile?.Type == PileType.Exhaust
-                    && player.Creature.GetPower<RegenPower>()?.Amount == 3
-                    && player.Creature.HasPower<RepairRegenerationPower>(),
-                $"Repair regeneration powers for player {player.NetId}");
+                    && player.Creature.GetPower<RegenPower>()?.Amount == ActivatedRegen(repair),
+                $"Repair regeneration for player {player.NetId}");
             assertions.Equal(
                 $"repair_regen_type_{player.NetId}",
                 PowerType.Buff,
                 player.Creature.GetPower<RegenPower>()?.TypeForCurrentAmount);
-            assertions.Equal(
-                $"repair_protection_type_{player.NetId}",
-                PowerType.Buff,
-                player.Creature.GetPower<RepairRegenerationPower>()?.TypeForCurrentAmount);
             await context.WaitForActionsAsync();
             await context.SignalAndWaitAsync($"repair-settled-{player.NetId}");
         }
@@ -88,11 +83,8 @@ internal static class ThreePlayerRepairJumpMultiplayerScenario
                 $"activated Jump debuff removal for player {player.NetId}");
             assertions.Equal(
                 $"repair_regen_after_jump_{player.NetId}",
-                3,
+                ActivatedRegen(cards[player.NetId].Repair),
                 player.Creature.GetPower<RegenPower>()?.Amount ?? 0);
-            assertions.True(
-                $"repair_protection_after_jump_{player.NetId}",
-                player.Creature.HasPower<RepairRegenerationPower>());
             await context.WaitForActionsAsync();
             await context.SignalAndWaitAsync($"jump-settled-{player.NetId}");
         }
@@ -117,19 +109,16 @@ internal static class ThreePlayerRepairJumpMultiplayerScenario
         foreach (var player in players)
         {
             assertions.Equal(
-                $"repair_regen_retained_after_turn_{player.NetId}",
-                3,
+                $"repair_regen_decays_once_after_turn_{player.NetId}",
+                ActivatedRegen(cards[player.NetId].Repair) - 1,
                 player.Creature.GetPower<RegenPower>()?.Amount ?? 0);
-            assertions.True(
-                $"repair_protection_retained_after_turn_{player.NetId}",
-                player.Creature.HasPower<RepairRegenerationPower>());
         }
 
         await context.SignalAndWaitAsync("comparison-ready");
         RuntimeTestHost.WriteCheckpoint(
             request,
             "repair_jump_regeneration_verified",
-            "All three players retained Repair regeneration through activated Jump and the turn boundary.");
+            "All three players kept Repair regeneration through activated Jump, then it decayed normally at the turn boundary.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -153,7 +142,6 @@ internal static class ThreePlayerRepairJumpMultiplayerScenario
                     net_id = player.NetId,
                     regen = player.Creature.GetPower<RegenPower>()?.Amount ?? 0,
                     regen_type = player.Creature.GetPower<RegenPower>()?.TypeForCurrentAmount.ToString(),
-                    protection = player.Creature.GetPower<RepairRegenerationPower>()?.Amount ?? 0,
                     vulnerable = player.Creature.GetPower<VulnerablePower>()?.Amount ?? 0,
                     turn = player.PlayerCombatState?.TurnNumber,
                     phase = player.PlayerCombatState?.Phase.ToString()
@@ -161,6 +149,10 @@ internal static class ThreePlayerRepairJumpMultiplayerScenario
             }
         };
     }
+
+    // Activated Repair stacks its Extra Regeneration on top of the base amount.
+    private static int ActivatedRegen(Repair repair) =>
+        repair.DynamicVars["RegenPower"].IntValue + Repair.ExtraRegen;
 
     private sealed record ActorCards(Repair Repair, ClowJump Jump);
 }

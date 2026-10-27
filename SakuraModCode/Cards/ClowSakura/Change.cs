@@ -17,7 +17,7 @@ public class ClowChange() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Co
     private static LocString DiscardSwapPrompt => CardLoc<ClowChange>("discardPrompt");
 
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new DynamicVar("ExtraCards", 2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2), new DynamicVar("ExtraCards", 2)];
 
     // Draw after the swap: drawing first could shuffle the Discard Pile away
     // and leave nothing to swap with.
@@ -57,12 +57,11 @@ public class ClowChange() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Co
         if (incoming is null)
             return;
 
-        ChangeRules.SwapCostsThisTurn(outgoing, incoming);
         await CardPileCmd.Add(outgoing, PileType.Discard, CardPilePosition.Top, this);
         await CardPileCmd.Add(incoming, PileType.Hand, CardPilePosition.Bottom, this);
     }
 
-    protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Retain);
+    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
 }
 
 public class SakuraChange() : SakuraFormCard(0, CardType.Skill, TargetType.None)

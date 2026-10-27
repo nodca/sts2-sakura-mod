@@ -29,7 +29,7 @@ public class ClowSweet() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Unc
 {
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new HealVar(5)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new HealVar(4)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {

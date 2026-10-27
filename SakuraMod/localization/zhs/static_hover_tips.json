@@ -12,8 +12,6 @@
   "SAKURAMOD-REMIND.description": "从[gold]记忆区[/gold]选择 N 张牌（不足则全选），将其移出，并把复制加入你的[gold]手牌[/gold]。复制本回合耗能为 0。",
   "SAKURAMOD-SPELL_CARD.title": "符咒",
   "SAKURAMOD-SPELL_CARD.description": "不属于[gold]库洛牌[/gold]的一类特殊卡牌，多为消耗性牌。",
-  "SAKURAMOD-UNREAL.title": "虚幻",
-  "SAKURAMOD-UNREAL.description": "此牌消耗其他手牌时，将此牌的复制品加入弃牌堆。",
   "SAKURAMOD-EARTHY_CARD.title": "地",
   "SAKURAMOD-EARTHY_CARD.description": "魔力充能达到 5 点后，打出地元素牌会进入[gold]地元素状态[/gold]，持续到回合结束。\n地元素状态下，每打出 1 张地元素牌，获得 4 点[gold]格挡[/gold]。",
   "SAKURAMOD-EARTHY_SPELL_CARD.title": "地",

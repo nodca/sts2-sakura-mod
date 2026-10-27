@@ -138,9 +138,8 @@ internal static class ThreePlayerRepairJumpLoadMultiplayerScenario
             await context.SignalAndWaitAsync($"loaded-repair-played-{player.NetId}");
             await MultiplayerScenarioContext.WaitForStateAsync(
                 () => repair.Pile?.Type == PileType.Exhaust
-                    && player.Creature.GetPower<RegenPower>()?.Amount == 3
-                    && player.Creature.HasPower<RepairRegenerationPower>(),
-                $"loaded Repair regeneration powers for player {player.NetId}");
+                    && player.Creature.GetPower<RegenPower>()?.Amount == ActivatedRegen(repair),
+                $"loaded Repair regeneration for player {player.NetId}");
             await context.WaitForActionsAsync();
             await context.SignalAndWaitAsync($"loaded-repair-settled-{player.NetId}");
         }
@@ -157,11 +156,8 @@ internal static class ThreePlayerRepairJumpLoadMultiplayerScenario
                 $"loaded Jump debuff removal for player {player.NetId}");
             assertions.Equal(
                 $"loaded_repair_regen_after_jump_{player.NetId}",
-                3,
+                ActivatedRegen(cards[player.NetId].Repair),
                 player.Creature.GetPower<RegenPower>()?.Amount ?? 0);
-            assertions.True(
-                $"loaded_repair_protection_after_jump_{player.NetId}",
-                player.Creature.HasPower<RepairRegenerationPower>());
             await context.WaitForActionsAsync();
             await context.SignalAndWaitAsync($"loaded-jump-settled-{player.NetId}");
         }
@@ -186,19 +182,16 @@ internal static class ThreePlayerRepairJumpLoadMultiplayerScenario
         foreach (var player in players)
         {
             assertions.Equal(
-                $"loaded_repair_regen_retained_after_turn_{player.NetId}",
-                3,
+                $"loaded_repair_regen_decays_once_after_turn_{player.NetId}",
+                ActivatedRegen(cards[player.NetId].Repair) - 1,
                 player.Creature.GetPower<RegenPower>()?.Amount ?? 0);
-            assertions.True(
-                $"loaded_repair_protection_retained_after_turn_{player.NetId}",
-                player.Creature.HasPower<RepairRegenerationPower>());
         }
 
         await context.SignalAndWaitAsync("loaded-comparison-ready");
         RuntimeTestHost.WriteCheckpoint(
             request,
             "loaded_repair_jump_regeneration_verified",
-            "All three loaded players retained Repair regeneration through activated Jump and the turn boundary.");
+            "All three loaded players kept Repair regeneration through activated Jump, then it decayed normally at the turn boundary.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -222,7 +215,6 @@ internal static class ThreePlayerRepairJumpLoadMultiplayerScenario
                 {
                     net_id = player.NetId,
                     regen = player.Creature.GetPower<RegenPower>()?.Amount ?? 0,
-                    protection = player.Creature.GetPower<RepairRegenerationPower>()?.Amount ?? 0,
                     vulnerable = player.Creature.GetPower<VulnerablePower>()?.Amount ?? 0,
                     turn = player.PlayerCombatState?.TurnNumber,
                     phase = player.PlayerCombatState?.Phase.ToString()
@@ -230,6 +222,10 @@ internal static class ThreePlayerRepairJumpLoadMultiplayerScenario
             }
         };
     }
+
+    // Activated Repair stacks its Extra Regeneration on top of the base amount.
+    private static int ActivatedRegen(Repair repair) =>
+        repair.DynamicVars["RegenPower"].IntValue + Repair.ExtraRegen;
 
     private static Task MoveToHandAsync(CardModel card) =>
         card.Pile?.Type == PileType.Hand

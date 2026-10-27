@@ -25,50 +25,63 @@ using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class ClowLock() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.None)
+public class ClowLock() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Common, TargetType.None)
 {
+    internal const int ChargePerSelectedCard = 1;
+
+    private static LocString Prompt => CardLoc<ClowLock>("selectionPrompt");
+
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 2), new EnergyVar(2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(2)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var hand = CardPile.GetCards(Owner, PileType.Hand).Where(card => card != this).ToList();
-        if (hand.Count == 0)
-            return;
-
-        var selected = (await CardSelectCmd.FromHand(
-            choiceContext,
-            Owner,
-            new CardSelectorPrefs(CardSelectorPrefs.ExhaustSelectionPrompt, 0, Math.Min(ReleasedMagic(), hand.Count))
-            {
-                Cancelable = true
-            },
-            card => hand.Contains(card),
-            this)).ToList();
-        if (selected.Count == 0)
-            return;
-
+        // Retain this turn; a Forgotten card also skips this turn's move into Memory.
+        var selected = await SelectLockedCards(choiceContext);
         foreach (var card in selected)
-            await CardCmd.Exhaust(choiceContext, card, false);
+        {
+            card.GiveSingleTurnRetain();
+            card.DelayTemporaryRemoval(1);
+        }
 
-        var copy = CreateClone();
-        await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
-            copy,
-            PileType.Discard,
-            Owner,
-            CardPilePosition.Bottom);
-
-        await SakuraMagicCharge.GainMagic(choiceContext, Owner, selected.Count, this);
+        await GainUpgradedCharge(choiceContext, selected);
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await PlayCard(choiceContext, play);
-        await PlayerCmd.GainEnergy(ReleasedValue("Energy"), Owner);
+        var selected = await SelectLockedCards(choiceContext);
+        foreach (var card in selected)
+        {
+            card.AddKeyword(CardKeyword.Retain);
+            await card.Stabilize(choiceContext);
+        }
+
+        await GainUpgradedCharge(choiceContext, selected);
     }
 
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+    private async Task GainUpgradedCharge(PlayerChoiceContext choiceContext, IReadOnlyList<CardModel> selected)
+    {
+        if (IsUpgraded && selected.Count > 0)
+            await SakuraMagicCharge.GainMagic(choiceContext, Owner, selected.Count * ChargePerSelectedCard, this);
+    }
+
+    private async Task<IReadOnlyList<CardModel>> SelectLockedCards(PlayerChoiceContext choiceContext)
+    {
+        var hand = CardPile.GetCards(Owner, PileType.Hand).Where(card => card != this).ToList();
+        if (hand.Count == 0)
+            return [];
+
+        return (await CardSelectCmd.FromHand(
+            choiceContext,
+            Owner,
+            new CardSelectorPrefs(Prompt, Math.Min(DynamicVars.Cards.IntValue, hand.Count))
+            {
+                Cancelable = false,
+                RequireManualConfirmation = false
+            },
+            card => hand.Contains(card),
+            this)).ToList();
+    }
 }
 
 public class SakuraLock() : SakuraFormCard(1, CardType.Skill, TargetType.None)

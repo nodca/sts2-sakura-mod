@@ -27,7 +27,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowShadow() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.None)
 {
-    private const int ExtraBlur = 2;
+    private const int ExtraBlur = 1;
 
     public override bool GainsBlock => true;
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
