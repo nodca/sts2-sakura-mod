@@ -116,11 +116,8 @@ public sealed class SpellTalismanVfxSuite
     {
         var vfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Visuals/Classic/SpellTalismanVfx.cs"));
-        var renderer = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Visuals/Classic/ClassicSakuraVisualPatch.cs"));
-
         RegressionTestHarness.Require(
-            renderer.Contains($"Name = \"{SpellTalismanVfx.FaceNodeName}\"", StringComparison.Ordinal),
+            ClassicCardLayout.FaceNodeName == SpellTalismanVfx.FaceNodeName,
             "Expected the full-face renderer to still name its face node the way the talisman looks it up.");
         RegressionTestHarness.Require(
             vfx.Contains("CelVfxSession.PlayOrResolveAsync", StringComparison.Ordinal)

@@ -127,25 +127,27 @@ public sealed class FireyMonster : FireMonsterBase
     public override async Task AfterAddedToRoom() { await base.AfterAddedToRoom(); await PowerCmd.Apply<FireSovereigntyPower>(new ThrowingPlayerChoiceContext(), Creature, 1, Creature, null, true); }
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
-        var breath = new MoveState("FLAME_BREATH", Breath, new MultiAttackIntent(FireEnemyRules.FlameBreath, FlameBreathHits), new StatusIntent(FlameBreathHits));
+        var breath = new MoveState("FLAME_BREATH", Breath, new MultiAttackIntent(FireEnemyRules.FlameBreath, FlameBreathHits), new StatusIntent(FlameBreathHits), new BuffIntent());
         var arson = new MoveState("ARSON", Arson, new SingleAttackIntent(FireEnemyRules.ArsonAttack), new StatusIntent(ArsonBurns));
-        var kindle = new MoveState("KINDLE", Kindle, new SingleAttackIntent(FireEnemyRules.KindleAttack), new BuffIntent());
         var ball = new MoveState("FIREBALL", Ball, new SingleAttackIntent(() => FireEnemyRules.FireballDamage(
             FourthActCombatRules.PreviewPlayer(CombatState) is { } player ? CountBurns(player) : 0)));
-        breath.FollowUpState = arson; arson.FollowUpState = kindle; kindle.FollowUpState = ball; ball.FollowUpState = breath;
-        return new MonsterMoveStateMachine([breath, arson, kindle, ball], breath);
+        arson.FollowUpState = breath; breath.FollowUpState = ball; ball.FollowUpState = arson;
+        return new MonsterMoveStateMachine([arson, breath, ball], arson);
     }
-    private Task Breath(IReadOnlyList<Creature> _) => WithBurningHits(() => AttackAsync(DamageCmd.Attack(FireEnemyRules.FlameBreath).FromMonster(this).WithHitCount(FlameBreathHits)));
+    // Breathe first so the Burns these hits add are kindled too.
+    private async Task Breath(IReadOnlyList<Creature> _)
+    {
+        await WithBurningHits(() => AttackAsync(DamageCmd.Attack(FireEnemyRules.FlameBreath).FromMonster(this).WithHitCount(FlameBreathHits)));
+        await PerformAsync(FourthActMovePresentationCatalog.BreathKindle, () =>
+        {
+            foreach (var player in CombatState.Players) foreach (var burn in CardPile.GetCards(player, PileType.Draw, PileType.Hand, PileType.Discard).OfType<MegaCrit.Sts2.Core.Models.Cards.Burn>()) burn.DynamicVars.Damage.BaseValue++;
+            return Task.CompletedTask;
+        }, CombatState.Players.Select(static p => p.Creature).Where(static c => c.IsAlive).ToList());
+    }
     private async Task Arson(IReadOnlyList<Creature> _)
     {
         await WithBurningHits(() => AttackAsync(DamageCmd.Attack(FireEnemyRules.ArsonAttack).FromMonster(this)));
         foreach (var player in CombatState.Players.Where(p => p.Creature.IsAlive)) for (var i = 0; i < ArsonBurns; i++) await CardPileCmd.AddGeneratedCardToCombat(CombatState.CreateCard<MegaCrit.Sts2.Core.Models.Cards.Burn>(player), PileType.Discard, player, CardPilePosition.Random);
-    }
-    // Strike first so the Burn this hit adds is kindled too.
-    private async Task Kindle(IReadOnlyList<Creature> _)
-    {
-        await WithBurningHits(() => AttackAsync(DamageCmd.Attack(FireEnemyRules.KindleAttack).FromMonster(this)));
-        foreach (var player in CombatState.Players) foreach (var burn in CardPile.GetCards(player, PileType.Draw, PileType.Hand, PileType.Discard).OfType<MegaCrit.Sts2.Core.Models.Cards.Burn>()) burn.DynamicVars.Damage.BaseValue++;
     }
     // Unblocked hits from any of Firey's attacks shuffle a Burn into the target's discard pile.
     private async Task WithBurningHits(Func<Task> attack) { _isAttacking = true; try { await attack(); } finally { _isAttacking = false; } }

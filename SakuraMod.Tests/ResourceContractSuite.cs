@@ -3041,7 +3041,8 @@ public sealed class ResourceContractSuite
         foreach (var relativePath in new[]
                  {
                      "SakuraModCode/Cards/ClearCardVisualPatch.cs",
-                     "SakuraModCode/Cards/Visuals/Classic/ClassicSakuraVisualPatch.cs"
+                     "SakuraModCode/Cards/Visuals/Classic/ClassicSakuraVisualPatch.cs",
+                     "SakuraModCode/Cards/SakuraCardVisualFace.cs"
                  })
         {
             var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath));

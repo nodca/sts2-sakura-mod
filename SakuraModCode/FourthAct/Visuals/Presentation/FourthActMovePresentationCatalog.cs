@@ -49,6 +49,8 @@ internal static class FourthActMovePresentationCatalog
     internal const string ShadowSurge = "SHADOW_SURGE";
     internal const string DarkTransition = "DARK_TRANSITION";
     internal const string BenedictionHeal = "BENEDICTION_HEAL";
+    internal const string BreathKindle = "BREATH_KINDLE";
+    internal const string RockfallCharge = "ROCKFALL_CHARGE";
 
     // Long-lived layers a monster keeps while it is alive (FourthActStandeeMaterial owns them).
     private static readonly Dictionary<Type, FourthActFxId> Ambients = new()
@@ -108,7 +110,7 @@ internal static class FourthActMovePresentationCatalog
 
     internal static IReadOnlySet<string> SubActionIds { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
-        ShadowClaws, ShadowBite, ShadowVeil, ShadowSurge, DarkTransition, BenedictionHeal
+        ShadowClaws, ShadowBite, ShadowVeil, ShadowSurge, DarkTransition, BenedictionHeal, BreathKindle, RockfallCharge
     };
 
     internal static FourthActFxId? AmbientOf(Type monster) =>
@@ -216,8 +218,6 @@ internal static class FourthActMovePresentationCatalog
                 ("HEAVY_STRIKE", new(ice, Cue.FrostCast, Cue.HeavyHit, Fx.IceGather,
                     ImpactCycle: [Fx.IceSpikeA, Fx.IceSpikeB])),
                 ("COLD_BLOW", new(ice, Cue.FrostCast, Cue.BluntHit, Fx.FrostGather, Fx.FrostBlast)),
-                ("HEAVY_STRIKE_SECOND", new(ice, Cue.FrostCast, Cue.HeavyHit, Fx.IceGather,
-                    ImpactCycle: [Fx.IceSpikeA, Fx.IceSpikeB])),
                 ("ICE_FORMATION", new(ice, Cue.IceForm, ImpactFx: Fx.IceWall, ImpactAnchor: FourthActFxAnchor.Feet))),
             [typeof(RainMonster)] = Entries(
                 ("DOWNPOUR", new(water, Cue.WaterWave, Cue.BluntHit, Fx.RainCloud, Fx.DownpourSplash,
@@ -229,9 +229,6 @@ internal static class FourthActMovePresentationCatalog
             [typeof(WateryMonster)] = Entries(
                 ("TIDAL_DRAW", new(water, Cue.TidalPull, Cue.BluntHit, Fx.TidalVortex, Fx.TidalDrain)),
                 ("WATER_DRAGON", new(water, Cue.WaterEruption, Cue.HeavyHit, Fx.DragonRise, Fx.DragonSplash,
-                    TravelFx: Fx.WaterDragon, Shake: ShakeStrength.Medium)),
-                ("TIDAL_DRAW_SECOND", new(water, Cue.TidalPull, Cue.BluntHit, Fx.TidalVortex, Fx.TidalDrain)),
-                ("WATER_DRAGON_SECOND", new(water, Cue.WaterEruption, Cue.HeavyHit, Fx.DragonRise, Fx.DragonSplash,
                     TravelFx: Fx.WaterDragon, Shake: ShakeStrength.Medium)),
                 ("FLOOD", new(water, Cue.WaterStomp, Cue.HeavyHit, Fx.FloodRise, Fx.FloodSurge,
                     CastAnchor: FourthActFxAnchor.Feet, ImpactAnchor: FourthActFxAnchor.Feet, Shake: ShakeStrength.Weak))),
@@ -247,7 +244,7 @@ internal static class FourthActMovePresentationCatalog
             [typeof(FireyMonster)] = Entries(
                 ("FLAME_BREATH", new(fire, Cue.FlameBreath, CastFx: Fx.FireCore, TravelFx: Fx.FlameStream)),
                 ("ARSON", new(fire, Cue.FireCast, CastFx: Fx.FireCore, ImpactFx: Fx.FireImpact, TravelFx: Fx.Firebrand)),
-                ("KINDLE", new(fire, Cue.Buff, CastFx: Fx.FireRing, ImpactFx: Fx.EmberRise, ImpactAnchor: FourthActFxAnchor.Feet)),
+                (BreathKindle, new(fire, Cue.Buff, CastFx: Fx.FireRing, ImpactFx: Fx.EmberRise, Charge: false, ImpactAnchor: FourthActFxAnchor.Feet)),
                 // Variant: 0/1/2 by the target's Burn count.
                 ("FIREBALL", new(fire, Cue.FireballCast, Cue.FireImpact, Fx.FireballCharge,
                     TravelFx: Fx.FireballShot, CastAnchor: FourthActFxAnchor.Head,
@@ -283,7 +280,7 @@ internal static class FourthActMovePresentationCatalog
                     ImpactCycle: [Fx.FissureSmall, Fx.FissureMedium, Fx.FissureLarge])),
                 ("ROCKFALL", new(earth, Cue.RockAttack, Cue.BluntHit, Fx.DebrisLift, Shake: ShakeStrength.VeryWeak,
                     ImpactCycle: [Fx.RockDropA, Fx.RockDropB])),
-                ("QUAKE_CHARGE", new(earth, Cue.EarthCharge, ImpactFx: Fx.EarthArmor)),
+                (RockfallCharge, new(earth, Cue.EarthCharge, ImpactFx: Fx.EarthArmor, Charge: false)),
                 ("LANDSLIDE", new(earth, Cue.EarthPlow, Cue.LandslideSlam, Fx.DustChurn, Fx.LandslideBurst,
                     TravelFx: Fx.LandslideWave, CastAnchor: FourthActFxAnchor.Feet, ImpactAnchor: FourthActFxAnchor.Feet,
                     Shake: ShakeStrength.Strong))),

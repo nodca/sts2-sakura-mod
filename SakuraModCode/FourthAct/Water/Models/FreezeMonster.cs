@@ -35,10 +35,9 @@ public sealed class FreezeMonster : FourthActMonsterTemplate
     {
         var heavy = new MoveState("HEAVY_STRIKE", Heavy, new MultiAttackIntent(CurrentHeavyDamage, HeavyHits), new DebuffIntent());
         var cold = new MoveState("COLD_BLOW", Cold, new SingleAttackIntent(() => CurrentColdDamage), new DefendIntent());
-        var secondHeavy = new MoveState("HEAVY_STRIKE_SECOND", Heavy, new MultiAttackIntent(CurrentHeavyDamage, HeavyHits), new DebuffIntent());
         var ice = new MoveState("ICE_FORMATION", Ice, new DefendIntent(), new DebuffIntent());
-        heavy.FollowUpState = cold; cold.FollowUpState = secondHeavy; secondHeavy.FollowUpState = ice; ice.FollowUpState = heavy;
-        return new MonsterMoveStateMachine([heavy, cold, secondHeavy, ice], heavy);
+        heavy.FollowUpState = cold; cold.FollowUpState = ice; ice.FollowUpState = heavy;
+        return new MonsterMoveStateMachine([heavy, cold, ice], heavy);
     }
     private int CurrentHeavyDamage => AscensionHelper.GetValueIfAscension(AscensionLevel.DeadlyEnemies, DeadlyHeavyDamage, HeavyDamage);
     private int CurrentColdDamage => AscensionHelper.GetValueIfAscension(AscensionLevel.DeadlyEnemies, DeadlyColdDamage, ColdDamage);

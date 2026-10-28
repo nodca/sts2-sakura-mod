@@ -8,6 +8,7 @@ using SakuraMod.SakuraModCode.Relics;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
 using STS2RitsuLib.Scaffolding.Characters;
+using STS2RitsuLib.Scaffolding.Content;
 using STS2RitsuLib.Scaffolding.Visuals.StateMachine;
 
 namespace SakuraMod.SakuraModCode.Character;
@@ -29,6 +30,15 @@ public class ClassicSakura : ModCharacterTemplate<ClassicSakuraCardPool, Classic
     public override int BaseOrbSlotCount => 0;
     public override float AttackAnimDelay => 0.15f;
     public override float CastAnimDelay => 0.25f;
+
+    public override CharacterAssetProfile AssetProfile => new(
+        VanillaRelicVisualOverrides:
+        [
+            new(CharacterOwnedVanillaRelicModelId.YummyCookie, new RelicAssetProfile(
+                IconPath: "relics/yummy_cookie_sakura.png".ImagePath(),
+                IconOutlinePath: "relics/yummy_cookie_sakura_outline.png".ImagePath(),
+                BigIconPath: "relics/big/yummy_cookie_sakura.png".ImagePath()))
+        ]);
 
     protected override IEnumerable<CardModel> LocalStartingDeck =>
     [

@@ -2,6 +2,7 @@ using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using SakuraMod.SakuraModCode.Cards;
+using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -124,6 +125,15 @@ internal static class SakuraCardVisualLifecycle
     private const string RecoverableObjectName = "Godot.CompressedTexture2D";
     private static readonly object RecoveryLogLock = new();
     private static readonly HashSet<string> RecoveryLogKeys = [];
+    private static readonly ConditionalWeakTable<NCard, SakuraCardFaceState> FaceStates = new();
+
+    internal static ISakuraCardLayoutAdapter? AdapterFor(SakuraCardVisualLayout layout) =>
+        layout switch
+        {
+            SakuraCardVisualLayout.Clear => ClearCardLayout.Instance,
+            SakuraCardVisualLayout.Classic => ClassicCardLayout.Instance,
+            _ => null
+        };
 
     public static void AfterCardReload(NCard card)
     {
@@ -132,7 +142,11 @@ internal static class SakuraCardVisualLifecycle
 
     public static void IsolateCardVisuals(NCard card)
     {
-        RestoreStaleCardVisuals(card, SakuraCardVisualFamilies.Layout(card));
+        if (FaceStates.TryGetValue(card, out var state)
+            && !ReferenceEquals(state.Adapter, AdapterFor(SakuraCardVisualFamilies.Layout(card))))
+        {
+            state.Restore(card);
+        }
     }
 
     public static void RestoreHolderVisuals(NCardHolder holder)
@@ -157,7 +171,7 @@ internal static class SakuraCardVisualLifecycle
             return false;
         }
 
-        var renderer = RendererId(layout);
+        var renderer = AdapterFor(layout)!.Id;
         var ledger = SakuraCardMutationLedgers.For(holder);
         ledger.Begin(renderer);
         mutation = new SakuraHolderVisualMutation(ledger, renderer);
@@ -168,14 +182,14 @@ internal static class SakuraCardVisualLifecycle
         NCardHolder holder,
         SakuraCardMutationLedger ledger)
     {
-        ClearCardLayout.ApplyHolderVisuals(holder, ledger);
-        ClassicCardLayout.ApplyHolderVisuals(holder, ledger);
+        if (AdapterFor(SakuraCardVisualFamilies.Layout(holder.CardNode)) is { } adapter)
+            SakuraCardFace.ApplyHolder(holder, ledger, adapter);
     }
 
     public static void ApplyDescriptionVisibility(NCard? card, bool visible)
     {
-        ClearCardLayout.ApplyDescriptionVisibility(card, visible);
-        ClassicCardLayout.ApplyDescriptionVisibility(card, visible);
+        if (card is not null && FaceStates.TryGetValue(card, out var state))
+            SakuraCardFace.ApplyDescriptionVisibility(card, state, visible);
     }
 
     public static void CompleteHolderVisuals(SakuraHolderVisualMutation mutation)
@@ -223,12 +237,9 @@ internal static class SakuraCardVisualLifecycle
         if (layout == SakuraCardVisualLayout.None)
             return true;
 
-        return layout switch
-        {
-            SakuraCardVisualLayout.Clear => ClearCardLayout.TryRestoreOwnedTexturesForRecovery(card),
-            SakuraCardVisualLayout.Classic => ClassicCardLayout.TryRestoreOwnedTexturesForRecovery(card),
-            _ => false,
-        };
+        return FaceStates.TryGetValue(card, out var state)
+            && ReferenceEquals(state.Adapter, AdapterFor(layout))
+            && SakuraCardFace.TryRestoreOwnedTexturesForRecovery(card, state);
     }
 
     private static void LogRecoveryOnce(
@@ -260,29 +271,29 @@ internal static class SakuraCardVisualLifecycle
             + $"(owner={owner}, layout={layout}): {recoveryException}");
     }
 
-    private static void RestoreStaleCardVisuals(NCard card, SakuraCardVisualLayout currentLayout)
+    private static void RestoreCardVisualsIfTracked(NCard card)
     {
-        if (currentLayout != SakuraCardVisualLayout.Clear)
-            ClearCardLayout.RestoreCardIfTracked(card);
-        if (currentLayout != SakuraCardVisualLayout.Classic)
-            ClassicCardLayout.RestoreCardIfTracked(card);
-    }
-
-    private static void RestoreAllCardVisualsIfTracked(NCard card)
-    {
-        ClearCardLayout.RestoreCardIfTracked(card);
-        ClassicCardLayout.RestoreCardIfTracked(card);
+        if (FaceStates.TryGetValue(card, out var state))
+            state.Restore(card);
     }
 
     private static void ApplyCardVisuals(NCard card)
     {
-        ClearCardLayout.Apply(card);
-        ClassicCardLayout.Apply(card);
+        if (AdapterFor(SakuraCardVisualFamilies.Layout(card)) is not { } adapter)
+        {
+            RestoreCardVisualsIfTracked(card);
+            return;
+        }
+
+        var state = FaceStates.GetOrCreateValue(card);
+        state.Capture(card, adapter);
+        SakuraCardFace.Apply(card, state);
+        state.MarkApplied();
     }
 
     public static void BeforeCardUpdateVisuals(NCard card)
     {
-        RestoreAllCardVisualsIfTracked(card);
+        RestoreCardVisualsIfTracked(card);
         SakuraVanillaCardVisualRestorer.RestoreCurrentModelCostIfVanillaRoute(card);
     }
 
@@ -299,14 +310,6 @@ internal static class SakuraCardVisualLifecycle
     private static bool IsRecoverableGodotObjectLifetimeException(Exception exception) =>
         exception is ObjectDisposedException { ObjectName: RecoverableObjectName }
         || exception.InnerException is not null && IsRecoverableGodotObjectLifetimeException(exception.InnerException);
-
-    private static SakuraCardRendererId RendererId(SakuraCardVisualLayout layout) =>
-        layout switch
-        {
-            SakuraCardVisualLayout.Clear => SakuraCardRendererId.Clear,
-            SakuraCardVisualLayout.Classic => SakuraCardRendererId.Classic,
-            _ => throw new ArgumentOutOfRangeException(nameof(layout), layout, "Layout has no Sakura renderer.")
-        };
 }
 
 internal readonly record struct SakuraHolderVisualMutation(

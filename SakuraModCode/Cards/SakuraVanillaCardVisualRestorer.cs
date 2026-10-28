@@ -50,6 +50,10 @@ internal static class SakuraVanillaCardVisualRestorer
             label.Modulate = Colors.White;
         if (label.SelfModulate != Colors.White)
             label.SelfModulate = Colors.White;
+        // SetTextAutoSize only refits the font when the text changes; clearing it makes the
+        // native cost update refit to the restored vanilla box instead of keeping the Sakura size.
+        if (label.Text.Length > 0)
+            label.Text = string.Empty;
     }
 
     private static T? FieldValue<T>(FieldInfo? field, object instance)

@@ -14,16 +14,15 @@ public sealed class FourthActIntentAccuracySuite
 {
     public static TheoryData<MonsterModel, string, Type[]> MoveIntents => new()
     {
-        { new FireyMonster(), "FLAME_BREATH", [typeof(MultiAttackIntent), typeof(StatusIntent)] },
+        { new FireyMonster(), "FLAME_BREATH", [typeof(MultiAttackIntent), typeof(StatusIntent), typeof(BuffIntent)] },
         { new FireyMonster(), "ARSON", [typeof(SingleAttackIntent), typeof(StatusIntent)] },
-        { new FireyMonster(), "KINDLE", [typeof(SingleAttackIntent), typeof(BuffIntent)] },
         { new FireyMonster(), "FIREBALL", [typeof(SingleAttackIntent)] },
         { new LightMonster(), "RADIANCE", [typeof(SingleAttackIntent), typeof(StatusIntent)] },
         { new LightMonster(), "BENEDICTION", [typeof(SingleAttackIntent), typeof(StatusIntent), typeof(HealIntent)] },
         { new LightMonster(), "JUDGMENT", [typeof(SingleAttackIntent)] },
         { new FreezeMonster(), "HEAVY_STRIKE", [typeof(MultiAttackIntent), typeof(DebuffIntent)] },
-        { new FreezeMonster(), "HEAVY_STRIKE_SECOND", [typeof(MultiAttackIntent), typeof(DebuffIntent)] },
         { new FreezeMonster(), "ICE_FORMATION", [typeof(DefendIntent), typeof(DebuffIntent)] },
+        { new EarthyMonster(), "ROCKFALL", [typeof(MultiAttackIntent), typeof(BuffIntent), typeof(DefendIntent)] },
         { new EarthyMonster(), "LANDSLIDE", [typeof(SingleAttackIntent), typeof(CardDebuffIntent)] },
         { new SleepMonster(), "SLEEP", [typeof(CardDebuffIntent)] },
         { new DarkMonster(), "CONFINEMENT", [typeof(SingleAttackIntent), typeof(CardDebuffIntent)] },
@@ -45,6 +44,24 @@ public sealed class FourthActIntentAccuracySuite
     {
         var move = Assert.IsType<MoveState>(GenerateMoves(new FireyMonster()).States[moveId]);
         Assert.Equal(expected, Assert.Single(move.Intents.OfType<StatusIntent>()).CardCount);
+    }
+
+    public static TheoryData<MonsterModel, string[]> ThreeMoveLoops => new()
+    {
+        { new FireyMonster(), ["ARSON", "FLAME_BREATH", "FIREBALL"] },
+        { new WateryMonster(), ["TIDAL_DRAW", "WATER_DRAGON", "FLOOD"] },
+        { new EarthyMonster(), ["TREMOR", "ROCKFALL", "LANDSLIDE"] },
+        { new FreezeMonster(), ["HEAVY_STRIKE", "COLD_BLOW", "ICE_FORMATION"] },
+    };
+
+    [Theory]
+    [MemberData(nameof(ThreeMoveLoops))]
+    public void CompressedLoopsCycleThroughThreeMoves(MonsterModel monster, string[] loop)
+    {
+        var states = GenerateMoves(monster).States;
+        Assert.Equal(loop.Order(), states.Keys.Order());
+        for (var i = 0; i < loop.Length; i++)
+            Assert.Equal(loop[(i + 1) % loop.Length], Assert.IsType<MoveState>(states[loop[i]]).FollowUpState?.Id);
     }
 
     [Fact]

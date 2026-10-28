@@ -52,6 +52,7 @@ internal static class CombatScenarioDispatcher
             "lucid-aoe" => await LucidAoeScenario.ExecuteAsync(request, assertions),
             "sakura-erase" => await SakuraEraseScenario.ExecuteAsync(request, assertions),
             "affliction-visual-layout" => await AfflictionVisualLayoutScenario.ExecuteAsync(request, assertions),
+            "card-layout-pooled-reuse" => await CardLayoutPooledReuseScenario.ExecuteAsync(request, assertions),
             "queen-bound-cleanup" => await QueenBoundCleanupScenario.ExecuteAsync(request, assertions),
             "fourth-act-card-afflictions" => await FourthActCardAfflictionScenario.ExecuteAsync(request, assertions),
             "fourth-act-audio" => await FourthActAudioScenario.ExecuteAsync(request, assertions),

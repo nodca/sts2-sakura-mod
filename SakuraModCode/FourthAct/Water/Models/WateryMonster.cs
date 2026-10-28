@@ -41,11 +41,9 @@ public sealed class WateryMonster : FourthActMonsterTemplate
     {
         var draw = new MoveState("TIDAL_DRAW", TidalDraw, new TidalDrawIntent(() => CurrentTidal, () => TidalRange), new WaterBlockStealIntent());
         var dragon = new MoveState("WATER_DRAGON", WaterDragon, new SingleAttackIntent(() => CurrentDragon));
-        var secondDraw = new MoveState("TIDAL_DRAW_SECOND", TidalDraw, new TidalDrawIntent(() => CurrentTidal, () => TidalRange), new WaterBlockStealIntent());
-        var secondDragon = new MoveState("WATER_DRAGON_SECOND", WaterDragon, new SingleAttackIntent(() => CurrentDragon));
         var flood = new MoveState("FLOOD", Flood, new SingleAttackIntent(() => CurrentFlood), new DefendIntent());
-        draw.FollowUpState = dragon; dragon.FollowUpState = secondDraw; secondDraw.FollowUpState = secondDragon; secondDragon.FollowUpState = flood; flood.FollowUpState = draw;
-        return new MonsterMoveStateMachine([draw, dragon, secondDraw, secondDragon, flood], draw);
+        draw.FollowUpState = dragon; dragon.FollowUpState = flood; flood.FollowUpState = draw;
+        return new MonsterMoveStateMachine([draw, dragon, flood], draw);
     }
     private (int Minimum, int Maximum) TidalRange =>
         (CurrentTidalMinimum, CurrentTidalMaximum);

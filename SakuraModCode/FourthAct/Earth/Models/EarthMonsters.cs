@@ -282,16 +282,14 @@ public sealed class EarthyMonster : EarthMonsterBase
     protected override MonsterMoveStateMachine GenerateMoveStateMachine()
     {
         var tremor = new MoveState("TREMOR", Tremor, new SingleAttackIntent(() => EarthEnemyRules.EarthyTremorDamage(SedimentCount, IsDeadly)));
-        var rockfall = new MoveState("ROCKFALL", Rockfall, new MultiAttackIntent(IsDeadly ? EarthEnemyRules.EarthyRockfallA9Damage : EarthEnemyRules.EarthyRockfallDamage, EarthEnemyRules.EarthyRockfallHits));
-        var charge = new MoveState("QUAKE_CHARGE", Charge, new BuffIntent(), new DefendIntent());
+        var rockfall = new MoveState("ROCKFALL", Rockfall, new MultiAttackIntent(IsDeadly ? EarthEnemyRules.EarthyRockfallA9Damage : EarthEnemyRules.EarthyRockfallDamage, EarthEnemyRules.EarthyRockfallHits), new BuffIntent(), new DefendIntent());
         var landslide = new MoveState("LANDSLIDE", Landslide, new SingleAttackIntent(IsDeadly ? EarthEnemyRules.EarthyLandslideA9Damage : EarthEnemyRules.EarthyLandslideDamage), new CardDebuffIntent());
 
         tremor.FollowUpState = rockfall;
-        rockfall.FollowUpState = charge;
-        charge.FollowUpState = landslide;
+        rockfall.FollowUpState = landslide;
         landslide.FollowUpState = tremor;
 
-        return new MonsterMoveStateMachine([tremor, rockfall, charge, landslide], tremor);
+        return new MonsterMoveStateMachine([tremor, rockfall, landslide], tremor);
     }
 
     private async Task Tremor(IReadOnlyList<Creature> _)
@@ -310,19 +308,19 @@ public sealed class EarthyMonster : EarthMonsterBase
         }
     }
 
+    // Strike first, then charge: the Strength lands on Landslide and the next Tremor.
     private async Task Rockfall(IReadOnlyList<Creature> _)
     {
         var damage = IsDeadly ? EarthEnemyRules.EarthyRockfallA9Damage : EarthEnemyRules.EarthyRockfallDamage;
         await AttackAsync(DamageCmd.Attack(damage).FromMonster(this).WithHitCount(EarthEnemyRules.EarthyRockfallHits));
+        await PerformAsync(FourthActMovePresentationCatalog.RockfallCharge, async () =>
+        {
+            var str = IsDeadly ? EarthEnemyRules.EarthyChargeA9Strength : EarthEnemyRules.EarthyChargeStrength;
+            var block = IsTough ? EarthEnemyRules.EarthyChargeA8Block : EarthEnemyRules.EarthyChargeBlock;
+            await PowerCmd.Apply<StrengthPower>(new ThrowingPlayerChoiceContext(), Creature, str, Creature, null, false);
+            await CreatureCmd.GainBlock(Creature, block, ValueProp.Move, null, false);
+        }, [Creature]);
     }
-
-    private Task Charge(IReadOnlyList<Creature> _) => PerformAsync(async () =>
-    {
-        var str = IsDeadly ? EarthEnemyRules.EarthyChargeA9Strength : EarthEnemyRules.EarthyChargeStrength;
-        var block = IsTough ? EarthEnemyRules.EarthyChargeA8Block : EarthEnemyRules.EarthyChargeBlock;
-        await PowerCmd.Apply<StrengthPower>(new ThrowingPlayerChoiceContext(), Creature, str, Creature, null, false);
-        await CreatureCmd.GainBlock(Creature, block, ValueProp.Move, null, false);
-    }, [Creature]);
 
     private async Task Landslide(IReadOnlyList<Creature> _)
     {

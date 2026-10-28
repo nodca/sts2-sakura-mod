@@ -45,6 +45,7 @@ public static class CombatCommand
         "lucid-aoe",
         "sakura-erase",
         "affliction-visual-layout",
+        "card-layout-pooled-reuse",
         "queen-bound-cleanup",
         "fourth-act-card-afflictions",
         "fourth-act-audio",

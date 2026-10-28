@@ -743,15 +743,14 @@ public sealed class CardVisualContractSuite
             && SakuraForgottenOverlayPolicy.ArtNodeName(SakuraCardVisualLayout.None) is null,
             "Expected Sakura faces to fade their single art node and vanilla cards to fall back to the native portrait group.");
 
-        var classic = File.ReadAllText(
-            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/Visuals/Classic/ClassicSakuraVisualPatch.cs"));
-        var clear = File.ReadAllText(
-            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/ClearCardVisualPatch.cs"));
+        var face = File.ReadAllText(
+            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraCardVisualFace.cs"));
         var overlay = File.ReadAllText(
             RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/SakuraForgottenOverlay.cs"));
         RegressionTestHarness.Require(
-            classic.Contains("Name = FaceNodeName,", StringComparison.Ordinal)
-            && clear.Contains("Name = ArtNodeName,", StringComparison.Ordinal)
+            ((ISakuraCardLayoutAdapter)ClassicCardLayout.Instance).ArtNodeName == ClassicCardLayout.FaceNodeName
+            && ((ISakuraCardLayoutAdapter)ClearCardLayout.Instance).ArtNodeName == ClearCardLayout.ArtNodeName
+            && face.Contains("Name = RequireAdapter().ArtNodeName,", StringComparison.Ordinal)
             && overlay.Contains("\"_portraitCanvasGroup\"", StringComparison.Ordinal)
             && overlay.Contains("SelfModulate", StringComparison.Ordinal),
             "Expected the renderers to name their art nodes through the shared constants the Forgotten overlay resolves.");
@@ -839,7 +838,8 @@ public sealed class CardVisualContractSuite
         foreach (var relativePath in new[]
                  {
                      "SakuraModCode/Cards/Visuals/Classic/ClassicSakuraVisualPatch.cs",
-                     "SakuraModCode/Cards/ClearCardVisualPatch.cs"
+                     "SakuraModCode/Cards/ClearCardVisualPatch.cs",
+                     "SakuraModCode/Cards/SakuraCardVisualFace.cs"
                  })
         {
             var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath));
@@ -861,7 +861,8 @@ public sealed class CardVisualContractSuite
         foreach (var relativePath in new[]
                  {
                      "SakuraModCode/Cards/Visuals/Classic/ClassicSakuraVisualPatch.cs",
-                     "SakuraModCode/Cards/ClearCardVisualPatch.cs"
+                     "SakuraModCode/Cards/ClearCardVisualPatch.cs",
+                     "SakuraModCode/Cards/SakuraCardVisualFace.cs"
                  })
         {
             var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath));

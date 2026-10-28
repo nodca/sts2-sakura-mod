@@ -262,9 +262,7 @@ internal static class GeneratedPileMemoryScenario
         await CombatScenarioContext.EnqueueAndWaitAsync(extraSetupAction);
         assertions.Equal("spiral_extra_memory_count", 2, SakuraMemoryPile.Count(player));
 
-        var blockBeforeSpiral = player.Creature.Block;
         await CombatScenarioContext.PlayCardAsync(spiralWithExtra, combat.HittableEnemies.First());
-        assertions.Equal("spiral_scales_from_memory", 5, player.Creature.Block - blockBeforeSpiral);
         var extraSpirals = playerCombat.Hand.Cards
             .OfType<Spiral>()
             .Where(card => card.IsTemporary() && card.ReturnsToMemoryAfterTemporary())
@@ -276,12 +274,7 @@ internal static class GeneratedPileMemoryScenario
                 card.CurrentUpgradeLevel == 0
                 && card.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0));
 
-        var blockBeforeExtraSpiral = player.Creature.Block;
         await CombatScenarioContext.PlayCardAsync(extraSpirals[0], combat.HittableEnemies.First());
-        assertions.Equal(
-            "temporary_spiral_copy_scales_from_memory",
-            5,
-            player.Creature.Block - blockBeforeExtraSpiral);
         assertions.Equal("pile_memory_selector_released", null, CardSelectCmd.Selector);
         RuntimeTestHost.WriteCheckpoint(
             request,

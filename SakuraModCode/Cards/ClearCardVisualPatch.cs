@@ -1,85 +1,41 @@
 using Godot;
-using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.UI;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Cards;
-using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
-using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
-using MegaCrit.Sts2.Core.Nodes.HoverTips;
-using MegaCrit.Sts2.Core.Nodes.Screens;
-using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
-using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
-using MegaCrit.Sts2.Core.Nodes.Vfx;
 using MegaCrit.Sts2.addons.mega_text;
 using SakuraMod.SakuraModCode.Character;
-using STS2RitsuLib.Patching;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-internal static class ClearCardLayout
+/// <summary>Clear full-card layout adapter: Clear art, scaled text boxes, and the native cost icon.</summary>
+internal sealed class ClearCardLayout : ISakuraCardLayoutAdapter
 {
     internal const string ArtNodeName = "SakuraClearCardArt";
 
-    private static readonly ClearCardLayoutSpec Spec = new();
-    private static readonly string[] HiddenCardNodeFieldNames =
-    [
-        "_ancientBanner",
-        "_ancientBorder",
-        "_ancientBorderGlassOverlay",
-        "_ancientPortrait",
-        "_ancientTextBg",
-        "_banner",
-        "_cardVfxContainer",
-        "_frame",
-        "_lock",
-        "_portrait",
-        "_portraitBorder",
-        "_portraitCanvasGroup",
-        "_rareGlow",
-        "_sparkles",
-        "_starIcon",
-        "_typeLabel",
-        "_typePlaque",
-        "_uncommonGlow",
-    ];
+    private const float SizeScale = 1.05f;
 
-    private static readonly List<FieldInfo> HiddenCardNodeFields =
-        HiddenCardNodeFieldNames
-            .Select(OptionalCardField)
-            .OfType<FieldInfo>()
-            .ToList();
+    public static readonly ClearCardLayout Instance = new();
 
-    private static readonly FieldInfo? TitleLabelField = PrivateAccess.DeclaredField(typeof(NCard), "_titleLabel");
-    private static readonly FieldInfo? DescriptionLabelField = PrivateAccess.DeclaredField(typeof(NCard), "_descriptionLabel");
-    private static readonly FieldInfo? EnergyIconField = PrivateAccess.DeclaredField(typeof(NCard), "_energyIcon");
-    private static readonly FieldInfo? EnergyLabelField = PrivateAccess.DeclaredField(typeof(NCard), "_energyLabel");
-    private static readonly FieldInfo? RareGlowField = PrivateAccess.DeclaredField(typeof(NCard), "_rareGlow");
-    private static readonly FieldInfo? UncommonGlowField = PrivateAccess.DeclaredField(typeof(NCard), "_uncommonGlow");
-    private static readonly FieldInfo? HandFlashField = PrivateAccess.DeclaredField(typeof(NHandCardHolder), "_flash");
-    private static readonly StringName FontColorName = new("font_color");
-    private static readonly StringName FontOutlineColorName = new("font_outline_color");
-    private static readonly StringName FontSizeName = new("font_size");
-    private static readonly StringName OutlineSizeName = new("outline_size");
-    private static readonly StringName FontShadowColorName = new("font_shadow_color");
-    private static readonly StringName ShadowOffsetXName = new("shadow_offset_x");
-    private static readonly StringName ShadowOffsetYName = new("shadow_offset_y");
-    private static readonly StringName ShadowOutlineSizeName = new("shadow_outline_size");
-    private const string DefaultHighlightTexturePath = "res://images/packed/card_template/card_frame_sdf.exr";
     private static readonly Dictionary<Type, SakuraCardTextureResource> ClearCardArtResources = [];
-    private static readonly SakuraCardTextureResource DefaultHighlightTextureResource =
-        SakuraCardTextureResource.FromPath(DefaultHighlightTexturePath);
-    private static readonly ConditionalWeakTable<NCard, ClearCardState> CardStates = new();
+    private static readonly Rect2 TitleTextBox = Scaled(new Rect2(new Vector2(23f, 8f), new Vector2(160f, 34f)));
+    private static readonly Rect2 EnglishNameBox = Scaled(new Rect2(new Vector2(23f, 396f), new Vector2(160f, 30f)));
+    private static readonly Rect2 EnergyCostBox = Scaled(new Rect2(new Vector2(-14f, -12f), new Vector2(56f, 56f)));
+    private static readonly Rect2 EnergyCostLabelBox = Scaled(new Rect2(new Vector2(12f, -2f), new Vector2(44f, 44f)));
+    private static readonly int EnglishNameFontSize = Mathf.RoundToInt(22 * SizeScale);
 
-    private static FieldInfo? OptionalCardField(string fieldName) =>
-        typeof(NCard).GetField(
-            fieldName,
-            BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+    private ClearCardLayout()
+    {
+    }
 
-    public static bool IsClearCard(NCard? card) =>
-        SakuraCardVisualFamilies.UsesClearLayout(card);
+    public SakuraCardRendererId Id => SakuraCardRendererId.Clear;
+
+    public SakuraCardLayoutGeometry Geometry => SakuraCardGeometry.ClearLayout;
+
+    string ISakuraCardLayoutAdapter.ArtNodeName => ArtNodeName;
+
+    public string EnglishNameNodeName => "SakuraClearCardEnglishName";
+
+    public TextureRect.StretchModeEnum ArtStretchMode => TextureRect.StretchModeEnum.KeepAspectCentered;
 
     public static void PreloadVisualResources()
     {
@@ -87,158 +43,33 @@ internal static class ClearCardLayout
                      .Concat(SakuraOptionCardCatalog.CardTypes)
                      .Concat(SakuraContentRegistration.ClearLayoutOnlyCardTypes))
             _ = ClearCardTexture(cardType);
-        _ = ClearCardHighlightTexture();
+        _ = SakuraCardHighlightResources.ResolveClear();
     }
 
-    public static void RestoreCardIfTracked(NCard card)
-    {
-        if (CardStates.TryGetValue(card, out var existingState))
-            existingState.Restore(card);
-    }
+    public bool Accepts(CardModel model) => true;
 
-    public static void Apply(NCard card)
-    {
-        if (!IsClearCard(card))
-        {
-            if (CardStates.TryGetValue(card, out var existingState))
-                existingState.Restore(card);
+    public Texture2D? ArtTexture(NCard card, CardModel model) =>
+        ClearCardTexture(model.GetType());
 
-            return;
-        }
+    public Texture2D HighlightTexture() =>
+        SakuraCardHighlightResources.ResolveClear();
 
-        var state = CardStates.GetOrCreateValue(card);
-        state.Capture(card);
-        ApplyCardLayout(card, state);
-        state.MarkApplied();
-    }
+    public Rect2 TitleBox(CardModel model) => TitleTextBox;
 
-    public static bool TryRestoreOwnedTexturesForRecovery(NCard card)
-    {
-        if (!IsClearCard(card)
-            || card.Model is null
-            || !CardStates.TryGetValue(card, out var state)
-            || !state.IsApplied
-            || !IsGodotInstanceUsable(state.Art)
-            || !IsGodotInstanceUsable(card.CardHighlight))
-        {
-            return false;
-        }
+    public void ApplyEnglishName(Label label, NCard card, CardModel model) =>
+        SakuraCardFace.ApplyEnglishName(
+            label,
+            EnglishNameBox,
+            ClearCardVisualAssets.EnglishName(model),
+            visible: true,
+            EnglishNameFontSize,
+            model);
 
-        var artTexture = ClearCardTexture(card.Model.GetType());
-        var highlightTexture = ClearCardHighlightTexture();
-        var descriptionTexture = SakuraDescriptionRegion.ShapeTexture(card.Model);
-        if (!IsGodotInstanceUsable(artTexture)
-            || !IsGodotInstanceUsable(highlightTexture)
-            || !IsGodotInstanceUsable(state.DescriptionRegion?.Background)
-            || !IsGodotInstanceUsable(descriptionTexture))
-            return false;
-
-        SetTextureIfDifferent(state.Art!, artTexture);
-        SetTextureIfDifferent(card.CardHighlight!, highlightTexture);
-        SetTextureIfDifferent(state.DescriptionRegion!.Background, descriptionTexture);
-        return state.Art!.Visible
-            && HasTexture(state.Art, artTexture)
-            && HasTexture(card.CardHighlight!, highlightTexture)
-            && HasTexture(state.DescriptionRegion.Background, descriptionTexture);
-    }
-
-    private static void ApplyCardLayout(NCard card, ClearCardState state)
-    {
-        var model = card.Model;
-        if (model is null)
-            return;
-        if (!IsGodotInstanceUsable(card.Body))
-            return;
-
-        var highlight = card.CardHighlight;
-        if (highlight is null)
-            return;
-
-        var nodes = state.GetOrCreateNodes(card);
-
-        var layout = ClearCardLayoutContext.For(card);
-        SakuraCardGeometryLifecycle.ApplyCardRoot(
-            card,
-            layout.RootBox,
-            layout.RootPivotOffset,
-            layout.TransformVfxViewport);
-        card.Body.SelfModulate = new Color(1f, 1f, 1f, 0f);
-
-        ApplyArtLayout(state.GetOrCreateArt(card), card);
-        SakuraCardGeometryLifecycle.ApplyCardHighlight(highlight, Spec.HighlightBox, Spec.HighlightZIndex);
-        SetTextureIfDifferent(highlight, ClearCardHighlightTexture());
-
-        ApplyTitleLayout(card, nodes.TitleLabel, model);
-        ApplyEnglishNameLayout(state.GetOrCreateEnglishNameLabel(card), model);
-        ApplyDescriptionRegion(card, nodes.DescriptionLabel, model, state);
-        ApplyCostLayout(
-            nodes.EnergyIcon,
-            nodes.EnergyLabel,
-            Spec.EnergyCostBox,
-            Spec.EnergyCostLabelBox,
-            model.EnergyIcon);
-
-        state.HideLateRewardGlows(card);
-        foreach (var hiddenNode in nodes.HiddenNodes(card))
-            Hide(hiddenNode);
-    }
-
-    private static void ApplyArtLayout(TextureRect art, NCard card)
-    {
-        if (art.ExpandMode != TextureRect.ExpandModeEnum.IgnoreSize)
-            art.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-        if (art.StretchMode != TextureRect.StretchModeEnum.KeepAspectCentered)
-            art.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
-        ApplyBox(art, Spec.ArtBox);
-        var texture = ClearCardTexture(card);
-        SetTextureIfDifferent(art, texture);
-        var visible = art.Texture is not null;
-        if (art.Visible != visible)
-            art.Visible = visible;
-        if (art.ZIndex != Spec.ArtZIndex)
-            art.ZIndex = Spec.ArtZIndex;
-    }
-
-    private static void ApplyTopLeftAnchors(Control? control)
-    {
-        SakuraCardVisualInfrastructure.ApplyTopLeftAnchors(control);
-    }
-
-    private static void ApplyCenteredAnchors(Control? control)
-    {
-        if (control is null)
-            return;
-
-        if (control.AnchorLeft != 0.5f)
-            control.AnchorLeft = 0.5f;
-        if (control.AnchorTop != 0.5f)
-            control.AnchorTop = 0.5f;
-        if (control.AnchorRight != 0.5f)
-            control.AnchorRight = 0.5f;
-        if (control.AnchorBottom != 0.5f)
-            control.AnchorBottom = 0.5f;
-    }
-
-    private static void ApplyThemeColorOverride(Control control, StringName name, Color color)
-    {
-        SakuraCardVisualInfrastructure.ApplyThemeColorOverride(control, name, color);
-    }
-
-    private static void ApplyThemeConstantOverride(Control control, StringName name, int value)
-    {
-        SakuraCardVisualInfrastructure.ApplyThemeConstantOverride(control, name, value);
-    }
-
-    private static void ApplyThemeFontSizeOverride(Control control, StringName name, int value)
-    {
-        SakuraCardVisualInfrastructure.ApplyThemeFontSizeOverride(control, name, value);
-    }
-
-    private static void ApplyDescriptionRegion(
+    public void ApplyDescription(
         NCard card,
-        MegaRichTextLabel? description,
         CardModel model,
-        ClearCardState state)
+        MegaRichTextLabel? description,
+        SakuraCardFaceState state)
     {
         if (description is null)
             return;
@@ -258,169 +89,18 @@ internal static class ClearCardLayout
             visible: true);
     }
 
-    public static void ApplyHolderVisuals(
-        NCardHolder holder,
-        SakuraCardMutationLedger ledger)
+    public void ApplyCost(SakuraCardFaceNodes nodes, CardModel model) =>
+        SakuraCardFace.ApplyCost(
+            nodes.EnergyIcon,
+            nodes.EnergyLabel,
+            EnergyCostBox,
+            EnergyCostLabelBox,
+            model.EnergyIcon);
+
+    public Panel? CreateDescriptionPanel() => null;
+
+    public void ApplyHolderExtras(Control? handFlash, SakuraCardMutationLedger ledger)
     {
-        if (!IsClearCard(holder.CardNode))
-            return;
-
-        var flash = HandFlash(holder);
-        ledger.Borrow(flash, SakuraControlProperty.Modulate);
-
-        SakuraHandHighlightVisual.Apply(holder, ledger);
-        ApplyHandFlashColor(holder, flash);
-    }
-
-    public static void ApplyDescriptionVisibility(NCard? card, bool visible)
-    {
-        if (card?.Model is not { } model
-            || !SakuraDescriptionRegion.AppliesTo(model)
-            || !CardStates.TryGetValue(card, out var state)
-            || !state.IsApplied
-            || state.DescriptionRegion is not { } region)
-        {
-            return;
-        }
-
-        var description = state.GetOrCreateNodes(card).DescriptionLabel;
-        var showIdentity = card.Visibility == ModelVisibility.Visible;
-        SakuraDescriptionRegion.ApplyVisibility(
-            region.Background,
-            description,
-            visible && showIdentity);
-    }
-
-    private static void ApplyHandFlashColor(NCardHolder holder, Control? flash)
-    {
-        var highlight = holder.CardNode?.CardHighlight;
-        if (flash is null || highlight is null)
-            return;
-
-        var highlightColor = highlight.Modulate;
-        var flashColor = flash.Modulate;
-        var targetColor = new Color(highlightColor.R, highlightColor.G, highlightColor.B, flashColor.A);
-        if (flashColor != targetColor)
-            flash.Modulate = targetColor;
-    }
-
-    private static void ApplyTitleLayout(NCard card, MegaLabel? title, CardModel model)
-    {
-        ApplyBox(title, Spec.TitleBox);
-        if (title is null)
-            return;
-
-        if (!title.Visible)
-            title.Visible = true;
-        var color = NameTextColor(model);
-        ApplyTextCanvasColor(title);
-        ApplyThemeColorOverride(title, FontColorName, color);
-        ApplyThemeColorOverride(title, FontOutlineColorName, Spec.NameTextOutlineColor);
-        ApplyThemeColorOverride(title, FontShadowColorName, Spec.TitleTextShadowColor);
-        ApplyThemeConstantOverride(title, OutlineSizeName, Spec.TitleTextOutlineSize);
-        ApplyThemeConstantOverride(title, ShadowOffsetXName, Spec.TitleTextShadowOffset);
-        ApplyThemeConstantOverride(title, ShadowOffsetYName, Spec.TitleTextShadowOffset);
-        ApplyThemeConstantOverride(title, ShadowOutlineSizeName, Spec.TitleTextShadowOutlineSize);
-        ApplyThemeFontSizeOverride(title, FontSizeName, Spec.TitleTextFontSize);
-        if (title.ZIndex != Spec.TextZIndex)
-            title.ZIndex = Spec.TextZIndex;
-        if (title.HorizontalAlignment != HorizontalAlignment.Center)
-            title.HorizontalAlignment = HorizontalAlignment.Center;
-        if (title.VerticalAlignment != VerticalAlignment.Center)
-            title.VerticalAlignment = VerticalAlignment.Center;
-        if (title.AutowrapMode != TextServer.AutowrapMode.Off)
-            title.AutowrapMode = TextServer.AutowrapMode.Off;
-        if (title.MinFontSize != SakuraCardVisualStyle.NativeTitleMinFontSize)
-            title.MinFontSize = SakuraCardVisualStyle.NativeTitleMinFontSize;
-        if (title.MaxFontSize != SakuraCardVisualStyle.NativeTitleMaxFontSize)
-            title.MaxFontSize = SakuraCardVisualStyle.NativeTitleMaxFontSize;
-    }
-
-    private static void ApplyEnglishNameLayout(Label label, CardModel model)
-    {
-        ApplyBox(label, Spec.EnglishNameBox);
-        var text = ClearCardVisualAssets.EnglishName(model);
-        if (label.Text != text)
-            label.Text = text;
-        if (!label.Visible)
-            label.Visible = true;
-        if (label.ZIndex != Spec.TextZIndex)
-            label.ZIndex = Spec.TextZIndex;
-        if (label.HorizontalAlignment != HorizontalAlignment.Center)
-            label.HorizontalAlignment = HorizontalAlignment.Center;
-        if (label.VerticalAlignment != VerticalAlignment.Center)
-            label.VerticalAlignment = VerticalAlignment.Center;
-        if (label.AutowrapMode != TextServer.AutowrapMode.Off)
-            label.AutowrapMode = TextServer.AutowrapMode.Off;
-        ApplyTextCanvasColor(label);
-        ApplyThemeColorOverride(label, FontColorName, NameTextColor(model));
-        ApplyThemeColorOverride(label, FontOutlineColorName, Spec.NameTextOutlineColor);
-        ApplyThemeFontSizeOverride(label, FontSizeName, Spec.EnglishNameFontSize);
-        ApplyThemeConstantOverride(label, OutlineSizeName, Spec.NameTextOutlineSize);
-    }
-
-    private static void ApplyTextCanvasColor(CanvasItem item)
-    {
-        if (item.Modulate != Colors.White)
-            item.Modulate = Colors.White;
-        if (item.SelfModulate != Colors.White)
-            item.SelfModulate = Colors.White;
-    }
-
-    private static void ApplyCostLayout(
-        TextureRect? icon,
-        MegaLabel? label,
-        Rect2 box,
-        Rect2? labelBox = null,
-        Texture2D? iconTexture = null)
-    {
-        ApplyTopLeftAnchors(icon);
-        ApplyTopLeftAnchors(label);
-        ApplyBox(icon, box);
-        ApplyBox(label, labelBox ?? box);
-
-        if (icon is not null)
-        {
-            if (icon.ExpandMode != TextureRect.ExpandModeEnum.IgnoreSize)
-                icon.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
-            if (icon.StretchMode != TextureRect.StretchModeEnum.Scale)
-                icon.StretchMode = TextureRect.StretchModeEnum.Scale;
-            if (iconTexture is not null)
-                SetTextureIfDifferent(icon, iconTexture);
-        }
-
-        if (label is null)
-            return;
-
-        if (!label.Visible)
-            label.Visible = true;
-        ApplyTextCanvasColor(label);
-        if (label.ZIndex != Spec.TextZIndex)
-            label.ZIndex = Spec.TextZIndex;
-        if (label.HorizontalAlignment != HorizontalAlignment.Center)
-            label.HorizontalAlignment = HorizontalAlignment.Center;
-        if (label.VerticalAlignment != VerticalAlignment.Center)
-            label.VerticalAlignment = VerticalAlignment.Center;
-        if (label.MinFontSize != 22)
-            label.MinFontSize = 22;
-        if (label.MaxFontSize != 36)
-            label.MaxFontSize = 36;
-    }
-
-    private static Texture2D? ClearCardTexture(NCard card) =>
-        ClearCardTexture(card.Model!.GetType());
-
-    private static void SetTextureIfDifferent(TextureRect textureRect, Texture2D? texture)
-    {
-        SakuraCardVisualInfrastructure.SetTextureIfDifferent(textureRect, texture);
-    }
-
-    private static bool HasTexture(TextureRect textureRect, Texture2D? texture) =>
-        SakuraCardVisualInfrastructure.HasTexture(textureRect, texture);
-
-    private static bool TryGetTexture(TextureRect textureRect, out Texture2D? texture)
-    {
-        return SakuraCardVisualInfrastructure.TryGetTexture(textureRect, out texture);
     }
 
     private static Texture2D? ClearCardTexture(Type cardType)
@@ -434,451 +114,6 @@ internal static class ClearCardLayout
         return resource.TryResolve(out var texture) ? texture : null;
     }
 
-    private static Texture2D ClearCardHighlightTexture() =>
-        SakuraCardHighlightResources.ResolveClear();
-
-    private static Texture2D? DefaultHighlightTexture()
-    {
-        return DefaultHighlightTextureResource.TryResolve(out var texture) ? texture : null;
-    }
-
-    private static Color NameTextColor(CardModel model) =>
-        model.IsUpgraded ? Spec.UpgradedNameTextColor : Spec.DefaultNameTextColor;
-
-    private static void ApplyBox(Control? control, Rect2 box)
-    {
-        SakuraCardVisualInfrastructure.ApplyBox(control, box);
-    }
-
-    private static Control? HandFlash(NCardHolder holder) =>
-        holder is NHandCardHolder handHolder
-            ? FieldValue<Control>(HandFlashField, handHolder)
-            : null;
-
-    private static T? FieldValue<T>(FieldInfo? field, object instance)
-        where T : class =>
-        field?.GetValue(instance) as T;
-
-    private static void Hide(object? node)
-    {
-        if (node is CanvasItem canvasItem && IsGodotInstanceUsable(canvasItem))
-            canvasItem.Visible = false;
-    }
-
-    private static bool IsGodotInstanceUsable(GodotObject? instance)
-    {
-        return SakuraCardVisualInfrastructure.IsGodotInstanceUsable(instance);
-    }
-
-    private static bool TryGetOwnedBodyChild<T>(NCard card, T? node, int? childIndex, out T result)
-        where T : Node
-    {
-        result = null!;
-        if (!IsGodotInstanceUsable(card.Body) || !IsGodotInstanceUsable(node))
-            return false;
-
-        result = node!;
-        AttachOwnedBodyChild(card, result, childIndex);
-        return true;
-    }
-
-    private static void AttachOwnedBodyChild(NCard card, Node node, int? childIndex = null)
-    {
-        if (!IsGodotInstanceUsable(card.Body) || !IsGodotInstanceUsable(node))
-            return;
-
-        var parent = node.GetParent();
-        if (!ReferenceEquals(parent, card.Body))
-        {
-            if (parent is not null && IsGodotInstanceUsable(parent))
-                parent.RemoveChild(node);
-            card.Body.AddChild(node);
-        }
-
-        if (childIndex is not { } index)
-            return;
-
-        var maxIndex = Mathf.Max(card.Body.GetChildCount() - 1, 0);
-        card.Body.MoveChild(node, Mathf.Clamp(index, 0, maxIndex));
-    }
-
-    private static bool HasAncestor<T>(Node node)
-        where T : Node
-    {
-        for (var current = node.GetParent(); current is not null; current = current.GetParent())
-        {
-            if (current is T)
-                return true;
-        }
-
-        return false;
-    }
-
-    private sealed class ClearCardState
-    {
-        private const SakuraControlProperty BoxProperties =
-            SakuraControlProperty.Position
-            | SakuraControlProperty.Size
-            | SakuraControlProperty.CustomMinimumSize
-            | SakuraControlProperty.Scale
-            | SakuraControlProperty.PivotOffset;
-        private const SakuraControlProperty TextureBoxProperties =
-            BoxProperties
-            | SakuraControlProperty.Anchors
-            | SakuraControlProperty.TextureExpandMode
-            | SakuraControlProperty.TextureStretchMode;
-
-        private SakuraCardMutationLedger? _ledger;
-        private TextureRect? _art;
-        private Label? _englishNameLabel;
-        private SakuraDescriptionRegionNodes? _descriptionRegion;
-        private ClearCardNodes? _nodes;
-
-        public TextureRect? Art => _art;
-
-        public Label? EnglishNameLabel => _englishNameLabel;
-
-        public SakuraDescriptionRegionNodes? DescriptionRegion => _descriptionRegion;
-
-        public bool IsApplied =>
-            _ledger?.IsApplied(SakuraCardRendererId.Clear) == true;
-
-        public void Capture(NCard card)
-        {
-            var ledger = Ledger(card);
-            ledger.Begin(SakuraCardRendererId.Clear);
-            var nodes = GetOrCreateNodes(card);
-            var hiddenNodes = nodes.HiddenNodes(card);
-            var layout = ClearCardLayoutContext.For(card);
-            SakuraCardGeometryLifecycle.BorrowCardGeometry(
-                ledger,
-                card,
-                hiddenNodes,
-                layout.TransformVfxViewport);
-            ledger.Borrow(card.Body, SakuraControlProperty.SelfModulate);
-            ledger.BorrowTexture(card.CardHighlight);
-
-            ledger.Borrow(
-                nodes.TitleLabel,
-                BoxProperties
-                | SakuraControlProperty.Visibility
-                | SakuraControlProperty.Modulate
-                | SakuraControlProperty.SelfModulate
-                | SakuraControlProperty.ZIndex
-                | SakuraControlProperty.HorizontalAlignment
-                | SakuraControlProperty.VerticalAlignment
-                | SakuraControlProperty.AutowrapMode
-                | SakuraControlProperty.FontBounds);
-            BorrowTitleTheme(ledger, nodes.TitleLabel);
-            ledger.Borrow(
-                nodes.DescriptionLabel,
-                BoxProperties
-                | SakuraControlProperty.Visibility
-                | SakuraControlProperty.FontBounds
-                | SakuraControlProperty.RichTextLayout);
-            ledger.Borrow(nodes.EnergyIcon, TextureBoxProperties);
-            ledger.Borrow(
-                nodes.EnergyLabel,
-                BoxProperties
-                | SakuraControlProperty.Anchors
-                | SakuraControlProperty.Visibility
-                | SakuraControlProperty.Modulate
-                | SakuraControlProperty.SelfModulate
-                | SakuraControlProperty.ZIndex
-                | SakuraControlProperty.HorizontalAlignment
-                | SakuraControlProperty.VerticalAlignment
-                | SakuraControlProperty.FontBounds);
-            foreach (var hiddenNode in hiddenNodes)
-            {
-                if (SakuraCardVisualInfrastructure.IsReloadOwnedVisibility(card, hiddenNode))
-                    ledger.YieldVisibilityToNative(hiddenNode);
-                else
-                    ledger.BorrowVisibility(hiddenNode);
-            }
-            ledger.Own(GetOrCreateArt(card));
-            ledger.Own(GetOrCreateEnglishNameLabel(card));
-            if (nodes.DescriptionLabel is not null)
-            {
-                var region = GetOrCreateDescriptionRegion(card);
-                ledger.Own(region.Background);
-            }
-        }
-
-        public void MarkApplied()
-        {
-            _ledger?.MarkApplied(SakuraCardRendererId.Clear);
-        }
-
-        public void Restore(NCard card)
-        {
-            _ledger?.Restore(SakuraCardRendererId.Clear);
-            RestoreVanillaHighlightDefaultsIfSakuraTextureLeaked(card);
-        }
-
-        public ClearCardNodes GetOrCreateNodes(NCard card)
-        {
-            _nodes ??= ClearCardNodes.From(card);
-            return _nodes;
-        }
-
-        public TextureRect GetOrCreateArt(NCard card)
-        {
-            if (TryGetOwnedBodyChild(card, _art, 0, out var existingArt))
-                return existingArt;
-
-            _art = new TextureRect
-            {
-                Name = ArtNodeName,
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-
-            AttachOwnedBodyChild(card, _art, 0);
-            return _art;
-        }
-
-        public Label GetOrCreateEnglishNameLabel(NCard card)
-        {
-            if (TryGetOwnedBodyChild(card, _englishNameLabel, null, out var existingLabel))
-                return existingLabel;
-
-            _englishNameLabel = new Label
-            {
-                Name = "SakuraClearCardEnglishName",
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-
-            AttachOwnedBodyChild(card, _englishNameLabel);
-            return _englishNameLabel;
-        }
-
-        public SakuraDescriptionRegionNodes GetOrCreateDescriptionRegion(NCard card)
-        {
-            _descriptionRegion = SakuraDescriptionRegion.NodesFor(card);
-            return _descriptionRegion;
-        }
-
-        public void HideLateRewardGlows(NCard card)
-        {
-            HideBorrowed(FieldValue<CanvasItem>(RareGlowField, card));
-            HideBorrowed(FieldValue<CanvasItem>(UncommonGlowField, card));
-        }
-
-        private SakuraCardMutationLedger Ledger(NCard card)
-        {
-            _ledger ??= SakuraCardMutationLedgers.For(card);
-            return _ledger;
-        }
-
-        private static void BorrowTitleTheme(SakuraCardMutationLedger ledger, Control? title)
-        {
-            ledger.BorrowThemeColor(title, FontColorName);
-            ledger.BorrowThemeColor(title, FontOutlineColorName);
-            ledger.BorrowThemeColor(title, FontShadowColorName);
-            ledger.BorrowThemeConstant(title, OutlineSizeName);
-            ledger.BorrowThemeConstant(title, ShadowOffsetXName);
-            ledger.BorrowThemeConstant(title, ShadowOffsetYName);
-            ledger.BorrowThemeConstant(title, ShadowOutlineSizeName);
-            ledger.BorrowThemeFontSize(title, FontSizeName);
-        }
-
-        private void HideBorrowed(CanvasItem? item)
-        {
-            _ledger?.BorrowVisibility(item);
-            Hide(item);
-        }
-
-        private static void RestoreVanillaHighlightDefaultsIfSakuraTextureLeaked(NCard card)
-        {
-            if (!SakuraCardVisualFamilies.IsVanilla(card))
-                return;
-            if (!IsGodotInstanceUsable(card.CardHighlight))
-                return;
-
-            var highlight = card.CardHighlight!;
-            if (!SakuraCardHighlightResources.IsSakuraHighlight(highlight.Texture))
-                return;
-
-            ApplyCenteredAnchors(highlight);
-            if (highlight.Position != Spec.DefaultHighlightPosition)
-                highlight.Position = Spec.DefaultHighlightPosition;
-            if (highlight.Size != Spec.DefaultHighlightSize)
-                highlight.Size = Spec.DefaultHighlightSize;
-            if (highlight.CustomMinimumSize != Vector2.Zero)
-                highlight.CustomMinimumSize = Vector2.Zero;
-            if (highlight.Scale != Vector2.One)
-                highlight.Scale = Vector2.One;
-            if (highlight.PivotOffset != Spec.DefaultHighlightPivotOffset)
-                highlight.PivotOffset = Spec.DefaultHighlightPivotOffset;
-            if (highlight.ExpandMode != TextureRect.ExpandModeEnum.FitHeight)
-                highlight.ExpandMode = TextureRect.ExpandModeEnum.FitHeight;
-            if (highlight.StretchMode != TextureRect.StretchModeEnum.KeepAspectCentered)
-                highlight.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
-            if (highlight.ZIndex != 0)
-                highlight.ZIndex = 0;
-            if (highlight.MouseFilter != Control.MouseFilterEnum.Ignore)
-                highlight.MouseFilter = Control.MouseFilterEnum.Ignore;
-            SetTextureIfDifferent(highlight, DefaultHighlightTexture());
-        }
-
-    }
-
-    private sealed class ClearCardNodes
-    {
-        private ClearCardNodes(
-            MegaLabel? titleLabel,
-            MegaRichTextLabel? descriptionLabel,
-            TextureRect? energyIcon,
-            MegaLabel? energyLabel)
-        {
-            TitleLabel = titleLabel;
-            DescriptionLabel = descriptionLabel;
-            EnergyIcon = energyIcon;
-            EnergyLabel = energyLabel;
-        }
-
-        public MegaLabel? TitleLabel { get; }
-
-        public MegaRichTextLabel? DescriptionLabel { get; }
-
-        public TextureRect? EnergyIcon { get; }
-
-        public MegaLabel? EnergyLabel { get; }
-
-        public IReadOnlyList<CanvasItem> HiddenNodes(NCard card)
-        {
-            var nodes = HiddenCardNodeFields
-                .Select(field => field.GetValue(card))
-                .OfType<CanvasItem>()
-                .ToList();
-
-            // Shadow is a scene-only node in card.tscn and has no NCard field.
-            if (card.Body.GetNodeOrNull<CanvasItem>("Shadow") is { } shadow)
-                nodes.Add(shadow);
-
-            return nodes.Distinct().ToList();
-        }
-
-        public static ClearCardNodes From(NCard card) =>
-            new(
-                FieldValue<MegaLabel>(TitleLabelField, card),
-                FieldValue<MegaRichTextLabel>(DescriptionLabelField, card),
-                FieldValue<TextureRect>(EnergyIconField, card),
-                FieldValue<MegaLabel>(EnergyLabelField, card));
-    }
-
-    private readonly record struct ClearCardLayoutContext(
-        Rect2 RootBox,
-        Vector2 RootPivotOffset,
-        SubViewport? TransformVfxViewport)
-    {
-        public static ClearCardLayoutContext For(NCard card)
-        {
-            var context = new ClearCardLayoutContext(
-                Spec.DefaultCardCenteredRootBox,
-                Spec.DefaultRootPivotOffset,
-                null);
-            var priority = 0;
-            if (HasAncestor<NHoverTipCardContainer>(card))
-                return new ClearCardLayoutContext(Spec.RootBox, Spec.DefaultRootPivotOffset, null);
-
-            var parent = card.GetParent();
-            if (parent is NCardHolder || IsGeneratedTransparentHandEntryCard(card, parent))
-            {
-                context = ForCenteredOrigin(null);
-                priority = 4;
-            }
-
-            SubViewport? viewport = null;
-            for (; parent is not null; parent = parent.GetParent())
-            {
-                if (parent is SubViewport subViewport)
-                    viewport = subViewport;
-
-                if (parent is NCardTransformVfx)
-                {
-                    context = priority < 3
-                        ? ForCenteredOrigin(viewport)
-                        : context with { TransformVfxViewport = viewport };
-                    break;
-                }
-
-                if (parent is NMerchantCard && priority < 2)
-                {
-                    context = ForCenteredOrigin(null);
-                    priority = 2;
-                    continue;
-                }
-
-                if (parent is NInspectCardScreen && priority < 1)
-                {
-                    context = new ClearCardLayoutContext(Spec.CenteredRootBox, Vector2.Zero, null);
-                    priority = 1;
-                }
-            }
-
-            return context;
-        }
-
-        private static bool IsGeneratedTransparentHandEntryCard(NCard card, Node? parent) =>
-            parent is NCombatUi
-            && card.DisplayingPile == PileType.Hand
-            && SakuraGeneratedCardLifecycle.IsGeneratedTransparentHandVisualCard(card.Model);
-
-        private static ClearCardLayoutContext ForCenteredOrigin(SubViewport? transformVfxViewport) =>
-            new(Spec.CenteredRootBox, Spec.DefaultRootPivotOffset, transformVfxViewport);
-    }
-
-    private sealed class ClearCardLayoutSpec
-    {
-        private const float SizeScale = 1.05f;
-
-        public Vector2 RootSize => SakuraCardGeometry.ClearLayout.RootSize;
-        public Vector2 DefaultCardSize => NCard.defaultSize;
-        public Vector2 DefaultCardCenteredOffset => (DefaultCardSize - RootSize) * 0.5f;
-        public Vector2 DefaultRootPivotOffset => RootSize * 0.5f;
-        public Rect2 RootBox => new(Vector2.Zero, RootSize);
-        public Rect2 DefaultCardCenteredRootBox => new(DefaultCardCenteredOffset, RootSize);
-        public Rect2 CenteredRootBox => SakuraCardGeometry.ClearLayout.CenteredRootBox;
-        public Rect2 ArtBox => RootBox;
-        public Vector2 HighlightMargin => SakuraCardGeometry.ClearLayout.HighlightMargin;
-        public Rect2 HighlightBox => new(-HighlightMargin, RootSize + HighlightMargin * 2f);
-        public Rect2 TitleBox { get; } = Scaled(new Rect2(new Vector2(23f, 8f), new Vector2(160f, 34f)));
-        public Rect2 EnglishNameBox { get; } = Scaled(new Rect2(new Vector2(23f, 396f), new Vector2(160f, 30f)));
-        public Rect2 DescriptionPanelBox { get; } = Scaled(new Rect2(new Vector2(12f, 230f), new Vector2(182f, 156f)));
-        public Rect2 DescriptionBox { get; } = Scaled(new Rect2(new Vector2(16f, 238f), new Vector2(174f, 140f)));
-        public Rect2 EnergyCostBox { get; } = Scaled(new Rect2(new Vector2(-14f, -12f), new Vector2(56f, 56f)));
-        public Rect2 EnergyCostLabelBox { get; } = Scaled(new Rect2(new Vector2(12f, -2f), new Vector2(44f, 44f)));
-        public Color DescriptionPanelColor { get; } = new(0f, 0f, 0f, 0.72f);
-        public Color DefaultNameTextColor { get; } = new(1f, 1f, 1f, 1f);
-        public Color UpgradedNameTextColor => SakuraCardVisualStyle.UpgradedNameTextColor;
-        public Color NameTextOutlineColor { get; } = new(0.03f, 0.03f, 0.03f, 0.95f);
-        public Color TitleTextShadowColor { get; } = new(0f, 0f, 0f, 0.1882353f);
-        public Vector2 DefaultHighlightPosition { get; } = new(-381f, -475f);
-        public Vector2 DefaultHighlightSize { get; } = new(759f, 951f);
-        public Vector2 DefaultHighlightPivotOffset { get; } = new(150f, 211f);
-        public int TitleTextFontSize => SakuraCardVisualStyle.NativeTitleFontSize;
-        public int TitleTextOutlineSize => SakuraCardVisualStyle.NativeTitleOutlineSize;
-        public int TitleTextShadowOffset => SakuraCardVisualStyle.NativeTitleShadowOffset;
-        public int TitleTextShadowOutlineSize => SakuraCardVisualStyle.NativeTitleShadowOutlineSize;
-        public int EnglishNameFontSize { get; } = ScaledToInt(22);
-        public int NameTextOutlineSize { get; } = ScaledToInt(3);
-        public int DescriptionPanelCornerRadius { get; } = ScaledToInt(4);
-        public int ArtZIndex { get; } = 0;
-        public int HighlightZIndex => SakuraCardGeometry.ClearLayout.HighlightZIndex;
-        public int DescriptionPanelZIndex { get; } = 0;
-        public int TextZIndex { get; } = 0;
-
-        private static Vector2 Scaled(Vector2 value) =>
-            value * SizeScale;
-
-        private static Rect2 Scaled(Rect2 value) =>
-            new(value.Position * SizeScale, value.Size * SizeScale);
-
-        private static float Scaled(float value) =>
-            value * SizeScale;
-
-        private static int ScaledToInt(int value) =>
-            Mathf.RoundToInt(value * SizeScale);
-    }
-
+    private static Rect2 Scaled(Rect2 value) =>
+        new(value.Position * SizeScale, value.Size * SizeScale);
 }

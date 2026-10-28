@@ -7,8 +7,8 @@ using SakuraMod.TestProtocol;
 
 namespace SakuraMod.RuntimeTests;
 
-// Clow Change swaps a hand card with a discard card and trades their costs
-// for the turn.
+// Clow Change swaps a hand card with a discard card. The cost trade was
+// removed in bd2c87a8; only the pile swap remains.
 internal static class ChangeSwapScenario
 {
     public static async Task<Dictionary<string, object?>> ExecuteAsync(
@@ -31,8 +31,6 @@ internal static class ChangeSwapScenario
         var expensive = combat.CreateCard<Struggle>(player);
         await ActAsync(_ => SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
             expensive, PileType.Discard, player, CardPilePosition.Bottom));
-        assertions.Equal("cheap_cost_before", 0, cheap.EnergyCost.GetWithModifiers(CostModifiers.All));
-        assertions.Equal("expensive_cost_before", 2, expensive.EnergyCost.GetWithModifiers(CostModifiers.All));
 
         var change = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowChange>(combat, player);
         var selector = new TestCardSelector();
@@ -45,13 +43,9 @@ internal static class ChangeSwapScenario
 
         assertions.True("swapped_in_card_in_hand", piles.Hand.Cards.Contains(expensive));
         assertions.True("swapped_out_card_in_discard", piles.DiscardPile.Cards.Contains(cheap));
-        assertions.Equal("swapped_in_card_takes_cheap_cost", 0, expensive.EnergyCost.GetWithModifiers(CostModifiers.All));
-        assertions.Equal("swapped_out_card_takes_expensive_cost", 2, cheap.EnergyCost.GetWithModifiers(CostModifiers.All));
+        assertions.Equal("swapped_in_card_keeps_own_cost", 2, expensive.EnergyCost.GetWithModifiers(CostModifiers.All));
 
-        await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
-        assertions.Equal("swapped_cost_expires_at_turn_end", 2, expensive.EnergyCost.GetWithModifiers(CostModifiers.None));
-
-        RuntimeTestHost.WriteCheckpoint(request, "change_swap_verified", "Clow Change swapped a hand card with a discard card and traded their costs for the turn.");
+        RuntimeTestHost.WriteCheckpoint(request, "change_swap_verified", "Clow Change swapped a hand card with a discard card and left both costs unchanged.");
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["swapped_in"] = expensive.Id.Entry,
