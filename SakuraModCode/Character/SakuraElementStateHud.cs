@@ -28,28 +28,40 @@ namespace SakuraMod.SakuraModCode.Character;
 
 internal static class SakuraElementFacetProjection
 {
-    internal const float DiscRadiusRatio = 232f / 512f;
+    /// <summary>The 176 px board inside the 208 px root; the margin only holds glow.</summary>
+    internal const float DiscRadiusRatio = 88f / 208f;
 
+    /// <summary>Anime Lasin-board layout: water top, fire right, wind bottom, earth left.</summary>
     public static SakuraElement? FromOffset(float horizontal, float vertical, float radius)
     {
         if ((horizontal * horizontal) + (vertical * vertical) > radius * radius)
             return null;
 
         if (MathF.Abs(horizontal) > MathF.Abs(vertical))
-            return horizontal >= 0f ? SakuraElement.Wind : SakuraElement.Water;
+            return horizontal >= 0f ? SakuraElement.Fire : SakuraElement.Earth;
 
-        return vertical >= 0f ? SakuraElement.Earth : SakuraElement.Fire;
+        return vertical >= 0f ? SakuraElement.Wind : SakuraElement.Water;
     }
 }
 
+/// <summary>
+/// Syaoran's Lasin board above Kinomoto Sakura's energy counter: the one persistent
+/// presentation of the four element states. Each medallion shows whether its state
+/// is up, how many turns it has left or that it is permanent, and whether a
+/// sovereignty locks it. Trigger beams on the stage leave from these medallions.
+/// </summary>
 internal static class SakuraElementStateHud
 {
     internal const string ScenePath = MainFile.ResPath + "/scenes/combat/sakura_element_state_hud.tscn";
     private const float MountHorizontalOffset = 8f;
     private const float MountGap = 12f;
-    private static readonly Color ActiveFacetColor = Colors.White;
-    private static readonly Color InactiveFacetColor = new(0.62f, 0.64f, 0.66f, 0.86f);
-    private static readonly Color PulseColor = new(1.45f, 1.3f, 0.82f, 1f);
+    /// <summary>Transparent margin around the board that only holds medallion glow.</summary>
+    private const float BoardMargin = 16f;
+    private const float LightUpDuration = 0.45f;
+    private const float FlashDuration = 0.36f;
+    private static readonly Color LockedPlateTint = new(0.62f, 0.64f, 0.66f, 1f);
+    private static readonly Color DialFlashColor = new(1.7f, 1.55f, 1.15f, 1f);
+    private static readonly Color CrackPulseColor = new(1.25f, 1.18f, 0.82f, 1f);
     private static readonly ConditionalWeakTable<NCombatUi, HudState> MountedStates = new();
     private static readonly ConditionalWeakTable<Player, HudState> MountedPlayerStates = new();
 
@@ -70,16 +82,17 @@ internal static class SakuraElementStateHud
         var scene = ResourceLoader.Load<PackedScene>(ScenePath)
             ?? throw new InvalidOperationException($"Could not load Kinomoto Sakura element HUD scene: {ScenePath}");
         var root = scene.Instantiate<Control>();
+        // The gap is measured from the visible board, not from the glow margin around it.
         root.Position = new Vector2(
             ((energyCounter.Size.X - root.Size.X) * 0.5f) + MountHorizontalOffset,
-            -root.Size.Y - MountGap);
+            -root.Size.Y + BoardMargin - MountGap);
         energyCounter.AddChildSafely(root);
 
         var state = new HudState(player, combatState, root);
         MountedStates.Add(ui, state);
         MountedPlayerStates.Add(player, state);
         root.TreeExiting += () => OnRootExiting(ui, state);
-        state.Refresh(animateNewlyActive: false);
+        state.Refresh(animate: false);
     }
 
     public static void Unmount(NCombatUi ui)
@@ -112,16 +125,37 @@ internal static class SakuraElementStateHud
         }
     }
 
+    /// <summary>Presentation-only: the medallion and the dial flash as a trigger beat starts.</summary>
+    internal static void NotifyTriggered(Player? player, SakuraElement element)
+    {
+        if (player is not null && MountedPlayerStates.TryGetValue(player, out var state))
+            state.Flash(element);
+    }
+
+    /// <summary>
+    /// Where a trigger beam starts. False when this player has no live HUD on this
+    /// machine — a teammate, or a HUD already torn down — and the caller falls back.
+    /// </summary>
+    internal static bool TryGetMedallionCenter(Player? player, SakuraElement element, out Vector2 globalPosition)
+    {
+        globalPosition = default;
+        return player is not null
+            && MountedPlayerStates.TryGetValue(player, out var state)
+            && state.TryGetMedallionCenter(element, out globalPosition);
+    }
+
     private sealed class HudState : IDisposable
     {
         private readonly Player _player;
         private readonly Creature _creature;
         private readonly CombatState _combatState;
         private readonly IReadOnlyList<ElementSlot> _slots;
+        private readonly TextureRect _dial;
+        private readonly ShaderMaterial _sheenMaterial;
         private readonly HashSet<Creature> _observedEnemies = [];
-        private SakuraElementSet _activeStates;
         private SakuraElementSet _lockedStates;
         private SakuraElement? _hoveredFacet;
+        private Tween? _dialTween;
         private bool _disposed;
 
         public HudState(Player player, CombatState combatState, Control root)
@@ -130,12 +164,17 @@ internal static class SakuraElementStateHud
             _creature = player.Creature;
             _combatState = combatState;
             Root = root;
+            _dial = root.GetNode<TextureRect>("%Dial");
+            var board = root.GetNode<TextureRect>("%Board");
+            _sheenMaterial = board.Material?.Duplicate() as ShaderMaterial
+                ?? throw new InvalidOperationException("Kinomoto Sakura element HUD board requires a ShaderMaterial.");
+            board.Material = _sheenMaterial;
             _slots =
             [
-                new(root.GetNode<TextureRect>("%WindFacet"), root.GetNode<Control>("%WindLock"), SakuraElement.Wind),
-                new(root.GetNode<TextureRect>("%FireFacet"), root.GetNode<Control>("%FireLock"), SakuraElement.Fire),
-                new(root.GetNode<TextureRect>("%EarthFacet"), root.GetNode<Control>("%EarthLock"), SakuraElement.Earth),
-                new(root.GetNode<TextureRect>("%WaterFacet"), root.GetNode<Control>("%WaterLock"), SakuraElement.Water),
+                new(root.GetNode<Control>("%WaterMedallion"), SakuraElement.Water),
+                new(root.GetNode<Control>("%FireMedallion"), SakuraElement.Fire),
+                new(root.GetNode<Control>("%WindMedallion"), SakuraElement.Wind),
+                new(root.GetNode<Control>("%EarthMedallion"), SakuraElement.Earth),
             ];
             Root.GuiInput += OnGuiInput;
             Root.MouseExited += OnMouseExited;
@@ -150,25 +189,26 @@ internal static class SakuraElementStateHud
         public Control Root { get; }
         public Player Player => _player;
 
-        public void Refresh(bool animateNewlyActive)
+        public void Refresh(bool animate)
         {
             if (_disposed)
                 return;
 
-            var next = SakuraElementState.ReadActive(_player);
-            var nextLocks = SakuraElementState.ReadLocks(_combatState);
-            var newlyActive = animateNewlyActive
-                ? SakuraElementState.NewlyActive(_activeStates, next)
-                : SakuraElementSet.None;
+            var active = SakuraElementState.ReadActive(_player);
+            var locks = SakuraElementState.ReadLocks(_combatState);
+            var vfx = SakuraModConfig.IsCardVfxEnabled();
+            _sheenMaterial.SetShaderParameter("sheen_strength", vfx ? 1f : 0f);
             foreach (var slot in _slots)
             {
                 slot.Apply(
-                    next.HasElement(slot.Element),
-                    nextLocks.HasElement(slot.Element),
-                    newlyActive.HasElement(slot.Element));
+                    active.HasElement(slot.Element),
+                    SakuraElementState.IsPermanent(_player, slot.Element),
+                    SakuraElementState.ReadTurns(_player, slot.Element),
+                    locks.HasElement(slot.Element),
+                    animate && vfx,
+                    vfx);
             }
-            _activeStates = next;
-            _lockedStates = nextLocks;
+            _lockedStates = locks;
         }
 
         public void PulseLocks(SakuraElementSet locks)
@@ -177,6 +217,29 @@ internal static class SakuraElementStateHud
                 return;
             foreach (var slot in _slots.Where(slot => locks.HasElement(slot.Element)))
                 slot.PulseLock();
+        }
+
+        public void Flash(SakuraElement element)
+        {
+            if (_disposed || !_dial.IsInsideTree())
+                return;
+
+            _slots.First(slot => slot.Element == element).Flash();
+            KillTween(ref _dialTween);
+            _dial.SelfModulate = DialFlashColor;
+            _dialTween = _dial.CreateTween();
+            _dialTween.TweenProperty(_dial, "self_modulate", Colors.White, FlashDuration * 1.4f)
+                .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Sine);
+        }
+
+        public bool TryGetMedallionCenter(SakuraElement element, out Vector2 globalPosition)
+        {
+            globalPosition = default;
+            if (_disposed || !GodotObject.IsInstanceValid(Root) || !Root.IsInsideTree())
+                return false;
+
+            globalPosition = _slots.First(slot => slot.Element == element).GlobalCenter;
+            return true;
         }
 
         private void OnPowerApplied(PowerModel power) => RefreshForPlayerPower(power);
@@ -190,11 +253,11 @@ internal static class SakuraElementStateHud
                 || !GodotObject.IsInstanceValid(Root)
                 || !Root.IsInsideTree()
                 || !ReferenceEquals(_creature.CombatState, _combatState)
-                || !SakuraElementState.IsTriggerPower(power))
+                || !(SakuraElementState.IsTriggerPower(power) || power is SakuraPermanentElementPower))
             {
                 return;
             }
-            Refresh(animateNewlyActive: true);
+            Refresh(animate: true);
         }
 
         private void OnCreaturesChanged(ICombatState _) => RebindEnemies();
@@ -214,19 +277,19 @@ internal static class SakuraElementStateHud
                 enemy.PowerRemoved += OnEnemyPowerRemoved;
                 enemy.Died += OnEnemyDied;
             }
-            Refresh(animateNewlyActive: false);
+            Refresh(animate: false);
         }
 
         private void OnEnemyPowerApplied(PowerModel power) => RefreshForSovereignty(power);
         private void OnEnemyPowerIncreased(PowerModel power, int _, bool __) => RefreshForSovereignty(power);
         private void OnEnemyPowerDecreased(PowerModel power, bool _) => RefreshForSovereignty(power);
         private void OnEnemyPowerRemoved(PowerModel power) => RefreshForSovereignty(power);
-        private void OnEnemyDied(Creature _) => Refresh(animateNewlyActive: false);
+        private void OnEnemyDied(Creature _) => Refresh(animate: false);
 
         private void RefreshForSovereignty(PowerModel power)
         {
             if (power is WindSovereigntyPower or DarkSovereigntyPower or WaterSovereigntyPower or FireSovereigntyPower or LightSovereigntyPower or EarthSovereigntyPower)
-                Refresh(animateNewlyActive: false);
+                Refresh(animate: false);
         }
 
         private void UnsubscribeEnemy(Creature enemy)
@@ -255,6 +318,7 @@ internal static class SakuraElementStateHud
             Root.GuiInput -= OnGuiInput;
             Root.MouseExited -= OnMouseExited;
             HideHoverTip();
+            KillTween(ref _dialTween);
             foreach (var slot in _slots)
                 slot.Dispose();
         }
@@ -289,35 +353,34 @@ internal static class SakuraElementStateHud
         private void ShowHoverTip(SakuraElement facet)
         {
             HideHoverTip();
-            var slot = _slots.First(candidate => candidate.Element == facet);
-            var key = SakuraSourceCardText.ElementStateTipKey(slot.Element);
+            var key = SakuraSourceCardText.ElementStateTipKey(facet);
             var tips = new List<IHoverTip>
             {
                 new HoverTip(
                     new LocString("static_hover_tips", $"{key}.title"),
                     new LocString("static_hover_tips", $"{key}.description"))
             };
-            if (_lockedStates.HasElement(slot.Element))
+            if (_lockedStates.HasElement(facet))
             {
-                if (slot.Element == SakuraElement.Wind
+                if (facet == SakuraElement.Wind
                     && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<WindSovereigntyPower>()))
                 {
                     tips.Add(HoverTipFactory.FromPower<WindSovereigntyPower>());
                 }
                 if (_combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<DarkSovereigntyPower>()))
                     tips.Add(HoverTipFactory.FromPower<DarkSovereigntyPower>());
-                if (slot.Element == SakuraElement.Water
+                if (facet == SakuraElement.Water
                     && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<WaterSovereigntyPower>()))
                 {
                     tips.Add(HoverTipFactory.FromPower<WaterSovereigntyPower>());
                 }
-                if (slot.Element == SakuraElement.Fire
+                if (facet == SakuraElement.Fire
                     && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<FireSovereigntyPower>()))
                     tips.Add(HoverTipFactory.FromPower<FireSovereigntyPower>());
-                if (slot.Element is SakuraElement.Fire or SakuraElement.Earth
+                if (facet is SakuraElement.Fire or SakuraElement.Earth
                     && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<LightSovereigntyPower>()))
                     tips.Add(HoverTipFactory.FromPower<LightSovereigntyPower>());
-                if (slot.Element == SakuraElement.Earth
+                if (facet == SakuraElement.Earth
                     && _combatState.Enemies.Any(static enemy => enemy.IsAlive && enemy.HasPower<EarthSovereigntyPower>()))
                     tips.Add(HoverTipFactory.FromPower<EarthSovereigntyPower>());
             }
@@ -327,89 +390,150 @@ internal static class SakuraElementStateHud
         private void HideHoverTip() => NHoverTipSet.Remove(Root);
     }
 
+    /// <summary>
+    /// One medallion. Plate is always shown; Lit, Glow, the turn count and the
+    /// permanent ring follow the state; Crack follows the sovereignty lock.
+    /// </summary>
     private sealed class ElementSlot : IDisposable
     {
-        private readonly TextureRect _facet;
-        private readonly Control _lock;
-        private Tween? _pulseTween;
-        private Tween? _lockPulseTween;
+        private readonly Control _medallion;
+        private readonly TextureRect _plate;
+        private readonly TextureRect _glow;
+        private readonly TextureRect _lit;
+        private readonly TextureRect _permanentRing;
+        private readonly TextureRect _crack;
+        private readonly Label _turns;
+        private readonly ShaderMaterial _litMaterial;
+        private readonly ShaderMaterial _glowMaterial;
+        private Tween? _lightTween;
+        private Tween? _crackPulseTween;
+        private bool _isActive;
+        private bool _isPermanent;
+        private int _turnCount;
 
-        public ElementSlot(
-            TextureRect facet,
-            Control lockOverlay,
-            SakuraElement element)
+        public ElementSlot(Control medallion, SakuraElement element)
         {
-            _facet = facet;
-            _lock = lockOverlay;
+            _medallion = medallion;
             Element = element;
+            _plate = medallion.GetNode<TextureRect>("Plate");
+            _glow = medallion.GetNode<TextureRect>("Glow");
+            _lit = medallion.GetNode<TextureRect>("Lit");
+            _permanentRing = medallion.GetNode<TextureRect>("PermanentRing");
+            _crack = medallion.GetNode<TextureRect>("Crack");
+            _turns = medallion.GetNode<Label>("Turns");
+            _litMaterial = _lit.Material?.Duplicate() as ShaderMaterial
+                ?? throw new InvalidOperationException($"Kinomoto Sakura {element} medallion requires a ShaderMaterial.");
+            _lit.Material = _litMaterial;
+            _glowMaterial = _glow.Material?.Duplicate() as ShaderMaterial
+                ?? throw new InvalidOperationException($"Kinomoto Sakura {element} glow requires a ShaderMaterial.");
+            _glow.Material = _glowMaterial;
         }
 
         public SakuraElement Element { get; }
 
-        public void Apply(bool isActive, bool isLocked, bool pulse)
+        public Vector2 GlobalCenter => _medallion.GetGlobalRect().GetCenter();
+
+        public void Apply(bool isActive, bool isPermanent, int turns, bool isLocked, bool animate, bool vfx)
         {
-            _facet.Modulate = isActive
-                ? ActiveFacetColor
-                : isLocked ? new Color(0.48f, 0.5f, 0.54f, 0.78f) : InactiveFacetColor;
-            _lock.Visible = isLocked;
-            if (pulse)
-                Pulse();
-            else
-                ResetPulse();
+            var lightUp = animate && isActive && !_isActive;
+            var renewed = animate && isActive && _isActive && (turns > _turnCount || (isPermanent && !_isPermanent));
+            _isActive = isActive;
+            _isPermanent = isPermanent;
+            _turnCount = turns;
+
+            _lit.Visible = isActive;
+            _glow.Visible = isActive;
+            _permanentRing.Visible = isActive && isPermanent;
+            _turns.Visible = isActive && !isPermanent;
+            _turns.Text = turns.ToString();
+            _crack.Visible = isLocked;
+            _plate.Modulate = isLocked && !isActive ? LockedPlateTint : Colors.White;
+            _litMaterial.SetShaderParameter("flow_strength", vfx ? 1f : 0f);
+            _glowMaterial.SetShaderParameter("breath", vfx ? 1f : 0f);
+
+            if (lightUp)
+                LightUp();
+            else if (renewed)
+                Flash();
+            else if (!isActive)
+                ResetLight();
+        }
+
+        public void Flash()
+        {
+            if (!_isActive || !_medallion.IsInsideTree())
+                return;
+
+            KillTween(ref _lightTween);
+            _litMaterial.SetShaderParameter("light_progress", 1f);
+            _litMaterial.SetShaderParameter("flash", 1f);
+            _medallion.Scale = Vector2.One * 1.14f;
+            _lightTween = _medallion.CreateTween().SetParallel();
+            _lightTween.TweenMethod(Callable.From<float>(value => _litMaterial.SetShaderParameter("flash", value)),
+                1f, 0f, FlashDuration);
+            _lightTween.TweenProperty(_medallion, "scale", Vector2.One, FlashDuration)
+                .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
         }
 
         public void PulseLock()
         {
-            if (!_lock.Visible || !_lock.IsInsideTree()
-                || _lockPulseTween is { } active && active.IsValid() && active.IsRunning())
+            if (!_crack.Visible || !_crack.IsInsideTree()
+                || _crackPulseTween is { } active && active.IsValid() && active.IsRunning())
             {
                 return;
             }
 
-            _lock.PivotOffset = _lock.Size * 0.5f;
-            _lockPulseTween = _lock.CreateTween();
-            _lockPulseTween.TweenProperty(_lock, "scale", Vector2.One * 0.9f, 0.08f)
+            _crackPulseTween = _crack.CreateTween();
+            _crackPulseTween.TweenProperty(_crack, "scale", Vector2.One * 0.9f, 0.08f)
                 .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Quad);
-            _lockPulseTween.Parallel().TweenProperty(
-                _lock,
-                "self_modulate",
-                new Color(1.25f, 1.18f, 0.82f, 1f),
-                0.08f);
-            _lockPulseTween.TweenProperty(_lock, "scale", Vector2.One, 0.12f)
+            _crackPulseTween.Parallel().TweenProperty(_crack, "self_modulate", CrackPulseColor, 0.08f);
+            _crackPulseTween.TweenProperty(_crack, "scale", Vector2.One, 0.12f)
                 .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
-            _lockPulseTween.Parallel().TweenProperty(_lock, "self_modulate", Colors.White, 0.12f);
+            _crackPulseTween.Parallel().TweenProperty(_crack, "self_modulate", Colors.White, 0.12f);
         }
 
         public void Dispose()
         {
-            ResetPulse();
-            if (_lockPulseTween is { } tween && tween.IsValid())
-                tween.Kill();
-            _lockPulseTween = null;
-            _lock.Scale = Vector2.One;
-            _lock.SelfModulate = Colors.White;
+            ResetLight();
+            KillTween(ref _crackPulseTween);
+            _crack.Scale = Vector2.One;
+            _crack.SelfModulate = Colors.White;
         }
 
-        private void Pulse()
+        /// <summary>The light spreads out from the centre, then the medallion settles.</summary>
+        private void LightUp()
         {
-            ResetPulse();
-            if (!_facet.IsInsideTree())
+            if (!_medallion.IsInsideTree())
                 return;
 
-            _facet.SelfModulate = PulseColor;
-            _pulseTween = _facet.CreateTween();
-            _pulseTween.TweenProperty(_facet, "self_modulate", Colors.White, 0.22f)
-                .SetEase(Tween.EaseType.Out)
-                .SetTrans(Tween.TransitionType.Sine);
+            KillTween(ref _lightTween);
+            _litMaterial.SetShaderParameter("light_progress", 0f);
+            _litMaterial.SetShaderParameter("flash", 0f);
+            _lightTween = _medallion.CreateTween().SetParallel();
+            _lightTween.TweenMethod(Callable.From<float>(value => _litMaterial.SetShaderParameter("light_progress", value)),
+                    0f, 1f, LightUpDuration)
+                .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Sine);
+            _lightTween.TweenProperty(_medallion, "scale", Vector2.One * 1.12f, LightUpDuration * 0.4f)
+                .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Quad);
+            _lightTween.TweenProperty(_medallion, "scale", Vector2.One, LightUpDuration * 0.6f)
+                .SetDelay(LightUpDuration * 0.4f)
+                .SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
         }
 
-        private void ResetPulse()
+        private void ResetLight()
         {
-            if (_pulseTween is { } tween && tween.IsValid())
-                tween.Kill();
-            _pulseTween = null;
-            _facet.SelfModulate = Colors.White;
+            KillTween(ref _lightTween);
+            _litMaterial.SetShaderParameter("light_progress", 1f);
+            _litMaterial.SetShaderParameter("flash", 0f);
+            _medallion.Scale = Vector2.One;
         }
+    }
+
+    private static void KillTween(ref Tween? tween)
+    {
+        if (tween is { } current && current.IsValid())
+            current.Kill();
+        tween = null;
     }
 }
 

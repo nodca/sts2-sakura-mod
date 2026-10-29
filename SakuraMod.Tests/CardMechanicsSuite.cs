@@ -1773,19 +1773,17 @@ public sealed class CardMechanicsSuite
             && appear.CanonicalKeywords.Contains(SakuraKeywords.Wind)
             && appear.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
             && appear.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && upgradedAppear.Keywords.Contains(CardKeyword.Exhaust)
+            && !upgradedAppear.Keywords.Contains(CardKeyword.Exhaust)
             && TransparentCard.HasMagicChargeExtraEffect(appear)
             && SakuraTransparentCardCatalog.TransparentCardTypes.Count == 36
             && SakuraTransparentCardCatalog.TransparentCardTypes.Contains(typeof(Appear))
-            && appear.EnergyCost.Canonical == 0
-            && upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0
+            && appear.EnergyCost.Canonical == 1
+            && upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
             && appear.DynamicVars["ManifestCards"].IntValue == 1
             && upgradedAppear.DynamicVars["ManifestCards"].IntValue == 1
-            && appear.DynamicVars["ManifestChoices"].IntValue == 3
-            && upgradedAppear.DynamicVars["ManifestChoices"].IntValue == 5
             && !appear.IsUpgraded
             && upgradedAppear.IsUpgraded,
-            "Expected Appear to cost 0, Exhaust, Manifest 1 from 3 (5 upgraded) choices, and keep Extra Effect.");
+            "Expected Appear to cost 1, Manifest 1, remove Exhaust on upgrade, and keep Extra Effect.");
 
         RegressionTestHarness.Require(
             new SakuraDream().EnergyCost.Canonical == 0,
@@ -2244,8 +2242,11 @@ public sealed class CardMechanicsSuite
             && choiceSource.Contains("SetThisCombat", StringComparison.Ordinal)
             && appearSource.Contains("AddThisTurnOrUntilPlayed(-1, true)", StringComparison.Ordinal)
             && appearSource.Contains("stabilize: true", StringComparison.Ordinal)
+            && appearSource.Contains("if (activation.IsActive)", StringComparison.Ordinal)
+            && appearSource.Contains("SetToFreeThisTurn()", StringComparison.Ordinal)
+            && appearSource.Contains("copy.EnergyCost.CostsX", StringComparison.Ordinal)
             && !appearSource.Contains("upgraded: IsUpgraded", StringComparison.Ordinal),
-            "Expected Choice to offer Manifest or Remind (Remind only when Memory has cards, upgrading what it brings in when upgraded), execute both during Extra, and keep manifested cards at their combat cost reductions; Appear should keep its manifested cards and discount them this turn during Extra.");
+            "Expected Choice to offer Manifest or Remind (Remind only when Memory has cards, upgrading what it brings in when upgraded), execute both during Extra, and keep manifested cards at their combat cost reductions; Appear should keep its manifested cards, discount them this turn normally, and make them free during Extra while excluding X costs.");
     }
 
     [Fact]

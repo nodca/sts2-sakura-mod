@@ -1,240 +1,464 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=29 format=3]
 
-[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/wind_facet.png" id="1_wind"]
-[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/fire_facet.png" id="2_fire"]
-[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/earth_facet.png" id="3_earth"]
-[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/water_facet.png" id="4_water"]
-[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/element_outline.png" id="5_outline"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/board.png" id="1_board"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/board_sheen_mask.png" id="2_sheen"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/dial.png" id="3_dial"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/medallion_permanent_ring.png" id="4_ring"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/medallion_crack.png" id="5_crack"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/water_plate.png" id="6_water_plate"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/water_lit.png" id="7_water_lit"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/water_glow.png" id="8_water_glow"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/fire_plate.png" id="9_fire_plate"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/fire_lit.png" id="10_fire_lit"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/fire_glow.png" id="11_fire_glow"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/wind_plate.png" id="12_wind_plate"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/wind_lit.png" id="13_wind_lit"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/wind_glow.png" id="14_wind_glow"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/earth_plate.png" id="15_earth_plate"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/earth_lit.png" id="16_earth_lit"]
+[ext_resource type="Texture2D" path="res://SakuraMod/images/charui/element_state_hud/earth_glow.png" id="17_earth_glow"]
+
+[sub_resource type="Shader" id="Shader_medallion"]
+code = "shader_type canvas_item;\n\n// Lit medallion: the element's light drifting through the plate, a light-up reveal\n// from the centre, and a trigger flash. flow_strength is 0 with card VFX off.\nuniform sampler2D flow_noise : repeat_enable, filter_linear;\nuniform vec4 element_color : source_color = vec4(1.0);\nuniform float flow_strength : hint_range(0.0, 1.0) = 1.0;\nuniform float light_progress : hint_range(0.0, 1.0) = 1.0;\nuniform float flash : hint_range(0.0, 1.0) = 0.0;\n\nvoid fragment() {\n    vec4 base = COLOR;\n    float n = texture(flow_noise, UV * 0.8 + vec2(TIME * 0.04, -TIME * 0.07)).r;\n    float m = texture(flow_noise, UV * 1.6 + vec2(-TIME * 0.06, TIME * 0.03)).r;\n    float drift = smoothstep(0.5, 0.85, n * 0.6 + m * 0.4) * flow_strength;\n    vec3 colour = base.rgb + element_color.rgb * drift * 0.3;\n    // The disc ends at 0.45 UV, so reach stays below the front once light_progress is 1.\n    float reach = length(UV - vec2(0.5)) * 1.7 + (n - 0.5) * 0.3;\n    float front = light_progress * 1.15;\n    float shown = 1.0 - smoothstep(front - 0.04, front, reach);\n    float edge = shown * smoothstep(front - 0.16, front - 0.02, reach) * (1.0 - step(0.999, light_progress));\n    colour = mix(colour, vec3(1.0), clamp(edge * 0.8 + flash * 0.45, 0.0, 1.0));\n    COLOR = vec4(colour, base.a * shown);\n}\n"
+
+[sub_resource type="Shader" id="Shader_sheen"]
+code = "shader_type canvas_item;\n\n// A diagonal band sweeps the board's gold every few seconds, confined to the gold by\n// sheen_mask. sheen_strength is 0 with card VFX off.\nuniform sampler2D sheen_mask : filter_linear;\nuniform float sheen_strength : hint_range(0.0, 1.0) = 1.0;\nconst float PERIOD = 5.5;\n\nvoid fragment() {\n    vec4 base = COLOR;\n    float mask = texture(sheen_mask, UV).a;\n    float sweep = fract(TIME / PERIOD) * 2.2 - 0.6;\n    float band = 1.0 - smoothstep(0.0, 0.07, abs((UV.x + UV.y) * 0.5 - sweep));\n    base.rgb += vec3(1.0, 0.96, 0.78) * band * mask * sheen_strength * 0.6;\n    COLOR = base;\n}\n"
+
+[sub_resource type="Shader" id="Shader_glow"]
+code = "shader_type canvas_item;\nrender_mode blend_add;\n\n// Medallion glow, breathing slowly. breath is 0 with card VFX off, which holds it steady.\nuniform float breath : hint_range(0.0, 1.0) = 1.0;\n\nvoid fragment() {\n    float pulse = 0.72 + 0.28 * sin(TIME * 2.2);\n    COLOR.a *= mix(0.85, pulse, breath);\n}\n"
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_flow"]
+frequency = 0.035
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_flow"]
+width = 128
+height = 128
+seamless = true
+noise = SubResource("FastNoiseLite_flow")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_sheen"]
+shader = SubResource("Shader_sheen")
+shader_parameter/sheen_mask = ExtResource("2_sheen")
+shader_parameter/sheen_strength = 1.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_glow"]
+shader = SubResource("Shader_glow")
+shader_parameter/breath = 1.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_water"]
+shader = SubResource("Shader_medallion")
+shader_parameter/flow_noise = SubResource("NoiseTexture2D_flow")
+shader_parameter/element_color = Color(0.24, 0.41, 0.78, 1)
+shader_parameter/flow_strength = 1.0
+shader_parameter/light_progress = 1.0
+shader_parameter/flash = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fire"]
+shader = SubResource("Shader_medallion")
+shader_parameter/flow_noise = SubResource("NoiseTexture2D_flow")
+shader_parameter/element_color = Color(0.82, 0.23, 0.21, 1)
+shader_parameter/flow_strength = 1.0
+shader_parameter/light_progress = 1.0
+shader_parameter/flash = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wind"]
+shader = SubResource("Shader_medallion")
+shader_parameter/flow_noise = SubResource("NoiseTexture2D_flow")
+shader_parameter/element_color = Color(0.18, 0.54, 0.25, 1)
+shader_parameter/flow_strength = 1.0
+shader_parameter/light_progress = 1.0
+shader_parameter/flash = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_earth"]
+shader = SubResource("Shader_medallion")
+shader_parameter/flow_noise = SubResource("NoiseTexture2D_flow")
+shader_parameter/element_color = Color(0.69, 0.53, 0.16, 1)
+shader_parameter/flow_strength = 1.0
+shader_parameter/light_progress = 1.0
+shader_parameter/flash = 0.0
 
 [node name="SakuraElementStateHud" type="Control"]
 layout_mode = 3
 anchors_preset = 0
-offset_right = 128.0
-offset_bottom = 128.0
+offset_right = 208.0
+offset_bottom = 208.0
 mouse_filter = 0
 mouse_default_cursor_shape = 2
 
-[node name="WindFacet" type="TextureRect" parent="."]
+[node name="Board" type="TextureRect" parent="."]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 192.0
+offset_bottom = 192.0
 mouse_filter = 2
-texture = ExtResource("1_wind")
+material = SubResource("ShaderMaterial_sheen")
+texture = ExtResource("1_board")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="FireFacet" type="TextureRect" parent="."]
+[node name="Dial" type="TextureRect" parent="."]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 0
+offset_left = 68.0
+offset_top = 68.0
+offset_right = 140.0
+offset_bottom = 140.0
 mouse_filter = 2
-texture = ExtResource("2_fire")
+pivot_offset = Vector2(36, 36)
+texture = ExtResource("3_dial")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="EarthFacet" type="TextureRect" parent="."]
+[node name="WaterMedallion" type="Control" parent="."]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("3_earth")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="WaterFacet" type="TextureRect" parent="."]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("4_water")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="WindLock" type="Control" parent="."]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="LinkA" type="ColorRect" parent="WindLock"]
 layout_mode = 0
 offset_left = 82.0
-offset_top = 49.0
-offset_right = 101.0
-offset_bottom = 54.0
-rotation = 0.42
-color = Color(0.72, 0.75, 0.78, 0.9)
+offset_top = 28.0
+offset_right = 126.0
+offset_bottom = 72.0
+pivot_offset = Vector2(22, 22)
 mouse_filter = 2
 
-[node name="LinkB" type="ColorRect" parent="WindLock"]
+[node name="Glow" type="TextureRect" parent="WaterMedallion"]
 layout_mode = 0
-offset_left = 83.0
-offset_top = 64.0
-offset_right = 102.0
-offset_bottom = 69.0
-rotation = -0.42
-color = Color(0.72, 0.75, 0.78, 0.9)
+offset_left = -8.0
+offset_top = -8.0
+offset_right = 52.0
+offset_bottom = 52.0
 mouse_filter = 2
-
-[node name="Clasp" type="ColorRect" parent="WindLock"]
-layout_mode = 0
-offset_left = 89.0
-offset_top = 56.0
-offset_right = 97.0
-offset_bottom = 64.0
-color = Color(0.88, 0.77, 0.43, 0.95)
-mouse_filter = 2
-
-[node name="FireLock" type="Control" parent="."]
-unique_name_in_owner = true
 visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="LinkA" type="ColorRect" parent="FireLock"]
-layout_mode = 0
-offset_left = 47.0
-offset_top = 26.0
-offset_right = 66.0
-offset_bottom = 31.0
-rotation = 0.42
-color = Color(0.72, 0.75, 0.78, 0.9)
-mouse_filter = 2
-
-[node name="LinkB" type="ColorRect" parent="FireLock"]
-layout_mode = 0
-offset_left = 62.0
-offset_top = 26.0
-offset_right = 81.0
-offset_bottom = 31.0
-rotation = -0.42
-color = Color(0.72, 0.75, 0.78, 0.9)
-mouse_filter = 2
-
-[node name="Clasp" type="ColorRect" parent="FireLock"]
-layout_mode = 0
-offset_left = 60.0
-offset_top = 31.0
-offset_right = 68.0
-offset_bottom = 39.0
-color = Color(0.88, 0.77, 0.43, 0.95)
-mouse_filter = 2
-
-[node name="EarthLock" type="Control" parent="."]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="LinkA" type="ColorRect" parent="EarthLock"]
-layout_mode = 0
-offset_left = 47.0
-offset_top = 96.0
-offset_right = 66.0
-offset_bottom = 101.0
-rotation = -0.42
-color = Color(0.72, 0.75, 0.78, 0.9)
-mouse_filter = 2
-
-[node name="LinkB" type="ColorRect" parent="EarthLock"]
-layout_mode = 0
-offset_left = 62.0
-offset_top = 96.0
-offset_right = 81.0
-offset_bottom = 101.0
-rotation = 0.42
-color = Color(0.72, 0.75, 0.78, 0.9)
-mouse_filter = 2
-
-[node name="Clasp" type="ColorRect" parent="EarthLock"]
-layout_mode = 0
-offset_left = 60.0
-offset_top = 89.0
-offset_right = 68.0
-offset_bottom = 97.0
-color = Color(0.88, 0.77, 0.43, 0.95)
-mouse_filter = 2
-
-[node name="WaterLock" type="Control" parent="."]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="LinkA" type="ColorRect" parent="WaterLock"]
-layout_mode = 0
-offset_left = 27.0
-offset_top = 49.0
-offset_right = 46.0
-offset_bottom = 54.0
-rotation = -0.42
-color = Color(0.72, 0.75, 0.78, 0.9)
-mouse_filter = 2
-
-[node name="LinkB" type="ColorRect" parent="WaterLock"]
-layout_mode = 0
-offset_left = 26.0
-offset_top = 64.0
-offset_right = 45.0
-offset_bottom = 69.0
-rotation = 0.42
-color = Color(0.72, 0.75, 0.78, 0.9)
-mouse_filter = 2
-
-[node name="Clasp" type="ColorRect" parent="WaterLock"]
-layout_mode = 0
-offset_left = 31.0
-offset_top = 56.0
-offset_right = 39.0
-offset_bottom = 64.0
-color = Color(0.88, 0.77, 0.43, 0.95)
-mouse_filter = 2
-
-[node name="Outline" type="TextureRect" parent="."]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("5_outline")
+material = SubResource("ShaderMaterial_glow")
+texture = ExtResource("8_water_glow")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="Plate" type="TextureRect" parent="WaterMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+texture = ExtResource("6_water_plate")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Lit" type="TextureRect" parent="WaterMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+material = SubResource("ShaderMaterial_water")
+texture = ExtResource("7_water_lit")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PermanentRing" type="TextureRect" parent="WaterMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+texture = ExtResource("4_ring")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Crack" type="TextureRect" parent="WaterMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+pivot_offset = Vector2(22, 22)
+texture = ExtResource("5_crack")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Turns" type="Label" parent="WaterMedallion"]
+visible = false
+layout_mode = 0
+offset_left = 24.0
+offset_top = 22.0
+offset_right = 52.0
+offset_bottom = 48.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.101961, 0.0784314, 0.0784314, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 18
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="FireMedallion" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 136.0
+offset_top = 82.0
+offset_right = 180.0
+offset_bottom = 126.0
+pivot_offset = Vector2(22, 22)
+mouse_filter = 2
+
+[node name="Glow" type="TextureRect" parent="FireMedallion"]
+layout_mode = 0
+offset_left = -8.0
+offset_top = -8.0
+offset_right = 52.0
+offset_bottom = 52.0
+mouse_filter = 2
+visible = false
+material = SubResource("ShaderMaterial_glow")
+texture = ExtResource("11_fire_glow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Plate" type="TextureRect" parent="FireMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+texture = ExtResource("9_fire_plate")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Lit" type="TextureRect" parent="FireMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+material = SubResource("ShaderMaterial_fire")
+texture = ExtResource("10_fire_lit")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PermanentRing" type="TextureRect" parent="FireMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+texture = ExtResource("4_ring")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Crack" type="TextureRect" parent="FireMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+pivot_offset = Vector2(22, 22)
+texture = ExtResource("5_crack")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Turns" type="Label" parent="FireMedallion"]
+visible = false
+layout_mode = 0
+offset_left = 24.0
+offset_top = 22.0
+offset_right = 52.0
+offset_bottom = 48.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.101961, 0.0784314, 0.0784314, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 18
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="WindMedallion" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 82.0
+offset_top = 136.0
+offset_right = 126.0
+offset_bottom = 180.0
+pivot_offset = Vector2(22, 22)
+mouse_filter = 2
+
+[node name="Glow" type="TextureRect" parent="WindMedallion"]
+layout_mode = 0
+offset_left = -8.0
+offset_top = -8.0
+offset_right = 52.0
+offset_bottom = 52.0
+mouse_filter = 2
+visible = false
+material = SubResource("ShaderMaterial_glow")
+texture = ExtResource("14_wind_glow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Plate" type="TextureRect" parent="WindMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+texture = ExtResource("12_wind_plate")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Lit" type="TextureRect" parent="WindMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+material = SubResource("ShaderMaterial_wind")
+texture = ExtResource("13_wind_lit")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PermanentRing" type="TextureRect" parent="WindMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+texture = ExtResource("4_ring")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Crack" type="TextureRect" parent="WindMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+pivot_offset = Vector2(22, 22)
+texture = ExtResource("5_crack")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Turns" type="Label" parent="WindMedallion"]
+visible = false
+layout_mode = 0
+offset_left = 24.0
+offset_top = 22.0
+offset_right = 52.0
+offset_bottom = 48.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.101961, 0.0784314, 0.0784314, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 18
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EarthMedallion" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 28.0
+offset_top = 82.0
+offset_right = 72.0
+offset_bottom = 126.0
+pivot_offset = Vector2(22, 22)
+mouse_filter = 2
+
+[node name="Glow" type="TextureRect" parent="EarthMedallion"]
+layout_mode = 0
+offset_left = -8.0
+offset_top = -8.0
+offset_right = 52.0
+offset_bottom = 52.0
+mouse_filter = 2
+visible = false
+material = SubResource("ShaderMaterial_glow")
+texture = ExtResource("17_earth_glow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Plate" type="TextureRect" parent="EarthMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+texture = ExtResource("15_earth_plate")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Lit" type="TextureRect" parent="EarthMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+material = SubResource("ShaderMaterial_earth")
+texture = ExtResource("16_earth_lit")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PermanentRing" type="TextureRect" parent="EarthMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+texture = ExtResource("4_ring")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Crack" type="TextureRect" parent="EarthMedallion"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 44.0
+offset_bottom = 44.0
+mouse_filter = 2
+visible = false
+pivot_offset = Vector2(22, 22)
+texture = ExtResource("5_crack")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Turns" type="Label" parent="EarthMedallion"]
+visible = false
+layout_mode = 0
+offset_left = 24.0
+offset_top = 22.0
+offset_right = 52.0
+offset_bottom = 48.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.101961, 0.0784314, 0.0784314, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 18
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1

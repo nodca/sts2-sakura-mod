@@ -18,7 +18,7 @@
   "SAKURA_MOD_CARD_ACTION.title": "行动",
   "SAKURA_MOD_CARD_ACTION.description": "[gold]风[/gold]\n消耗 1 张手牌。若其为[gold]风[/gold]元素牌，抽 {WindDraw:diff()} 张牌。\n[gold]显现[/gold] {Cards:diff()}，其本回合耗能减 1。\n[gold]额外效果：[/gold]抽 {ExtraDraw:diff()} 张牌。",
   "SAKURA_MOD_CARD_APPEAR.title": "显现",
-  "SAKURA_MOD_CARD_APPEAR.description": "[gold]风[/gold]\n[gold]显现[/gold] {ManifestCards:diff()}，其不获得[red]遗忘[/red]。{IfUpgraded:show:\n改为从 {ManifestChoices:diff()} 张牌中选择。|}\n[gold]额外效果：[/gold]所显现的牌本回合耗能减少 1。",
+  "SAKURA_MOD_CARD_APPEAR.description": "[gold]风[/gold]\n[gold]显现[/gold] {ManifestCards:diff()}，其不获得[red]遗忘[/red]，本回合耗能减少 1。\n[gold]额外效果：[/gold]改为使其本回合耗能变为 0。",
   "SAKURA_MOD_CARD_AQUA.title": "水源",
   "SAKURA_MOD_CARD_AQUA.description": "[gold]水[/gold]\n对所有敌人造成 {Damage:diff()} 点伤害。\n每有 1 名敌人拥有[gold]冻伤[/gold]，抽 1 张牌。\n[gold]额外效果：[/gold]每有 1 名这样的敌人，再获得 {Energy:diff()} 点[gold]能量[/gold]。",
   "SAKURA_MOD_CARD_BLADE.title": "双剑",

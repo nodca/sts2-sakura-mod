@@ -22,9 +22,9 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Synchronize() : TransparentCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
+public class Synchronize() : TransparentCard(0, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, CardKeyword.Exhaust];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
@@ -43,6 +43,6 @@ public class Synchronize() : TransparentCard(1, CardType.Skill, CardRarity.Uncom
     internal static bool CanSynchronize(CardModel source, CardModel candidate) =>
         candidate != source && !candidate.Keywords.Contains(CardKeyword.Unplayable);
 
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+    protected override void OnUpgrade() => RemoveKeyword(CardKeyword.Exhaust);
 }
 

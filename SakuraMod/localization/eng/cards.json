@@ -18,7 +18,7 @@
   "SAKURA_MOD_CARD_ACTION.title": "Action",
   "SAKURA_MOD_CARD_ACTION.description": "[gold]Windy[/gold]\nExhaust 1 card in your [gold]Hand[/gold]. If it is [gold]Windy[/gold], draw {WindDraw:diff()} {WindDraw:plural:card|cards}.\n[gold]Manifest[/gold] {Cards:diff()}. {Cards:plural:It costs|They cost} 1 less this turn.\n[gold]Extra:[/gold] Draw {ExtraDraw:diff()} {ExtraDraw:plural:card|cards}.",
   "SAKURA_MOD_CARD_APPEAR.title": "Appear",
-  "SAKURA_MOD_CARD_APPEAR.description": "[gold]Windy[/gold]\n[gold]Manifest[/gold] {ManifestCards:diff()}. They are not [red]Forgotten[/red].{IfUpgraded:show:\nChoose from {ManifestChoices:diff()} cards instead.|}\n[gold]Extra:[/gold] Manifested cards cost 1 less this turn.",
+  "SAKURA_MOD_CARD_APPEAR.description": "[gold]Windy[/gold]\n[gold]Manifest[/gold] {ManifestCards:diff()}. They are not [red]Forgotten[/red] and cost 1 less this turn.\n[gold]Extra:[/gold] They cost 0 this turn instead.",
   "SAKURA_MOD_CARD_AQUA.title": "Aqua",
   "SAKURA_MOD_CARD_AQUA.description": "[gold]Watery[/gold]\nDeal {Damage:diff()} damage to ALL enemies.\nDraw 1 card for each enemy with [gold]Frostbite[/gold].\n[gold]Extra:[/gold] Also gain {Energy:diff()} [gold]Energy[/gold] for each.",
   "SAKURA_MOD_CARD_BLADE.title": "Blade",

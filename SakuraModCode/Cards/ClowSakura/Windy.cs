@@ -35,7 +35,6 @@ public class ClowWindy() : ClowCard(1, CardType.Skill, CardRarity.Uncommon, Targ
         var spellCount = ReleasedMagic()
             + (SakuraElementState.Has(Owner, SakuraElement.Wind) ? ReleasedValue("BonusSpells") : 0);
         await EnterElementState<ClassicWindyPower>(choiceContext);
-        SakuraElementStateVisuals.NotifyIconicWindyPlayed(Owner.Creature);
         await AddGeneratedSpells<SpellFengHua>(choiceContext, spellCount);
     }
 
@@ -50,7 +49,6 @@ public class SakuraWindy() : SakuraFormCard(1, CardType.Power, TargetType.None)
     {
         await ApplyPower<ClassicWindyPermanentPower>(choiceContext, Owner.Creature, 1);
         await EnterElementState<ClassicWindyPower>(choiceContext);
-        SakuraElementStateVisuals.NotifyIconicWindyPlayed(Owner.Creature);
     }
 }
 

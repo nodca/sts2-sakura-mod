@@ -35,7 +35,6 @@ public class ClowEarthy() : ClowCard(1, CardType.Skill, CardRarity.Uncommon, Tar
         var spellCount = ReleasedMagic()
             + (SakuraElementState.Has(Owner, SakuraElement.Earth) ? ReleasedValue("BonusSpells") : 0);
         await EnterElementState<ClassicEarthyPower>(choiceContext);
-        SakuraElementStateVisuals.NotifyIconicEarthyPlayed(Owner.Creature);
         await AddGeneratedSpells<SpellLeiDi>(choiceContext, spellCount);
     }
 
@@ -50,7 +49,6 @@ public class SakuraEarthy() : SakuraFormCard(1, CardType.Power, TargetType.None)
     {
         await ApplyPower<ClassicEarthyPermanentPower>(choiceContext, Owner.Creature, 1);
         await EnterElementState<ClassicEarthyPower>(choiceContext);
-        SakuraElementStateVisuals.NotifyIconicEarthyPlayed(Owner.Creature);
     }
 }
 

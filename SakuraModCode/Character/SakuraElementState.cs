@@ -123,6 +123,19 @@ internal static class SakuraElementState
             or ClassicWateryPower
             or ClassicWindyPower;
 
+    /// <summary>Turns the element state has left; it ends at the turn end that takes it to 0.</summary>
+    public static int ReadTurns(Player player, SakuraElement element) => TriggerAmount(player, element);
+
+    /// <summary>A permanent element power keeps the state from counting down.</summary>
+    public static bool IsPermanent(Player player, SakuraElement element) => element switch
+    {
+        SakuraElement.Earth => player.Creature.HasPower<ClassicEarthyPermanentPower>(),
+        SakuraElement.Fire => player.Creature.HasPower<ClassicFireyPermanentPower>(),
+        SakuraElement.Water => player.Creature.HasPower<ClassicWateryPermanentPower>(),
+        SakuraElement.Wind => player.Creature.HasPower<ClassicWindyPermanentPower>(),
+        _ => false
+    };
+
     private static async Task<bool> ApplyMissing(
         PlayerChoiceContext choiceContext,
         Player owner,

@@ -35,7 +35,6 @@ public class ClowWatery() : ClowCard(1, CardType.Skill, CardRarity.Uncommon, Tar
         var spellCount = ReleasedMagic()
             + (SakuraElementState.Has(Owner, SakuraElement.Water) ? ReleasedValue("BonusSpells") : 0);
         await EnterElementState<ClassicWateryPower>(choiceContext);
-        SakuraElementStateVisuals.NotifyIconicWateryPlayed(Owner.Creature);
         await AddGeneratedSpells<SpellShuiLong>(choiceContext, spellCount);
     }
 
@@ -50,7 +49,6 @@ public class SakuraWatery() : SakuraFormCard(1, CardType.Power, TargetType.None)
     {
         await ApplyPower<ClassicWateryPermanentPower>(choiceContext, Owner.Creature, 1);
         await EnterElementState<ClassicWateryPower>(choiceContext);
-        SakuraElementStateVisuals.NotifyIconicWateryPlayed(Owner.Creature);
     }
 }
 

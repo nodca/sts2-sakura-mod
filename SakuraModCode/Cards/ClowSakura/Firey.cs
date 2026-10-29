@@ -35,7 +35,6 @@ public class ClowFirey() : ClowCard(1, CardType.Skill, CardRarity.Uncommon, Targ
         var spellCount = ReleasedMagic()
             + (SakuraElementState.Has(Owner, SakuraElement.Fire) ? ReleasedValue("BonusSpells") : 0);
         await EnterElementState<ClassicFireyPower>(choiceContext);
-        SakuraElementStateVisuals.NotifyIconicFireyPlayed(Owner.Creature);
         await AddGeneratedSpells<SpellHuoShen>(choiceContext, spellCount);
     }
 
@@ -50,6 +49,5 @@ public class SakuraFirey() : SakuraFormCard(1, CardType.Power, TargetType.None)
     {
         await ApplyPower<ClassicFireyPermanentPower>(choiceContext, Owner.Creature, 1);
         await EnterElementState<ClassicFireyPower>(choiceContext);
-        SakuraElementStateVisuals.NotifyIconicFireyPlayed(Owner.Creature);
     }
 }
