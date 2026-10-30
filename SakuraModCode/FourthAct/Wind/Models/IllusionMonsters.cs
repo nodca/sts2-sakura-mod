@@ -13,8 +13,8 @@ namespace SakuraMod.SakuraModCode.FourthAct.Wind.Models;
 
 public sealed class IllusionMonster : WindMonsterTemplate
 {
-    public const int BaseHp = 210;
-    public const int ToughHp = 225;
+    public const int BaseHp = 295;
+    public const int ToughHp = 315;
     public const int BaseBeguilingDamage = 18;
     public const int DeadlyBeguilingDamage = 21;
     public const int VulnerableAmount = 2;

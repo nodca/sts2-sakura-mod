@@ -13,8 +13,8 @@ namespace SakuraMod.SakuraModCode.FourthAct.Wind.Models;
 
 public sealed class FlyMonster : WindMonsterTemplate
 {
-    public const int BaseHp = 220;
-    public const int ToughHp = 235;
+    public const int BaseHp = 300;
+    public const int ToughHp = 320;
     public const int BaseHighAttackDamage = 8;
     public const int DeadlyHighAttackDamage = 9;
     public const int HighAttackHits = 3;

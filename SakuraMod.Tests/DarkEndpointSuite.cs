@@ -36,7 +36,7 @@ public sealed class DarkEndpointSuite
     [Fact]
     public void DarknessRulesMatchFinalValues()
     {
-        Assert.Equal((520, 545, 2, 5, 3, 0.2m, 5, 12),
+        Assert.Equal((640, 675, 2, 5, 3, 0.2m, 5, 12),
             (DarkEnemyRules.BaseHp, DarkEnemyRules.ToughHp, DarkEnemyRules.MicroLightsPerDraw,
              DarkEnemyRules.DarknessMaximum, DarkEnemyRules.DarknessReset,
              DarkEnemyRules.DarknessDamageReductionPerLayer,

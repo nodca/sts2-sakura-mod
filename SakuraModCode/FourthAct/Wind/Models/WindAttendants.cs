@@ -23,8 +23,8 @@ public abstract class WindAttendantMonster : WindMonsterTemplate
 
 public sealed class DashMonster : WindAttendantMonster
 {
-    public const int BaseHp = 65;
-    public const int ToughHp = 70;
+    public const int BaseHp = 90;
+    public const int ToughHp = 95;
     public const int BaseDamage = 8;
     public const int DeadlyDamage = 10;
     public const int BaseGrowth = 3;
@@ -55,8 +55,8 @@ public sealed class DashMonster : WindAttendantMonster
 
 public sealed class FloatMonster : WindAttendantMonster
 {
-    public const int BaseHp = 60;
-    public const int ToughHp = 65;
+    public const int BaseHp = 85;
+    public const int ToughHp = 90;
     public const int BlockPerDraw = 2;
 
     protected override string StandeePath => WindEnemyAssets.Float;
@@ -95,8 +95,8 @@ public sealed class FloatMonster : WindAttendantMonster
 
 public sealed class SleepMonster : WindAttendantMonster
 {
-    public const int BaseHp = 55;
-    public const int ToughHp = 60;
+    public const int BaseHp = 75;
+    public const int ToughHp = 80;
 
     protected override string StandeePath => WindEnemyAssets.Sleep;
     protected override string StandeeLabel => "Sleep";

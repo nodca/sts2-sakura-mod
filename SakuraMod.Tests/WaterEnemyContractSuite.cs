@@ -32,16 +32,16 @@ public sealed class WaterEnemyContractSuite
     [Fact]
     public void UsesApprovedA9Values()
     {
-        Assert.Equal((250, 265, 7, 8, 4, 14, 16, 8, 18, 20),
+        Assert.Equal((350, 370, 7, 8, 4, 14, 16, 8, 18, 20),
             (FreezeMonster.BaseHp, FreezeMonster.ToughHp, FreezeMonster.HeavyDamage,
              FreezeMonster.DeadlyHeavyDamage, FreezeMonster.HeavyHits, FreezeMonster.ColdDamage,
              FreezeMonster.DeadlyColdDamage, FreezeMonster.ColdBlock, FreezeMonster.IceBlock,
              FreezeMonster.DeadlyIceBlock));
-        Assert.Equal((265, 280, 22, 25, 34, 40, 14, 16),
+        Assert.Equal((370, 390, 22, 25, 34, 40, 14, 16),
             (RainMonster.BaseHp, RainMonster.ToughHp, RainMonster.DownpourDamage,
              RainMonster.DeadlyDownpourDamage, RainMonster.FloodDamage, RainMonster.DeadlyFloodDamage,
              RainMonster.CoverBlock, RainMonster.DeadlyCoverBlock));
-        Assert.Equal((440, 465, 14, 18, 16, 20, 27, 30, 14, 17),
+        Assert.Equal((620, 655, 14, 18, 16, 20, 27, 30, 14, 17),
             (WateryMonster.BaseHp, WateryMonster.ToughHp, WateryMonster.TidalMinimum,
              WateryMonster.TidalMaximum, WateryMonster.DeadlyTidalMinimum, WateryMonster.DeadlyTidalMaximum,
              WateryMonster.DragonDamage,

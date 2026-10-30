@@ -41,23 +41,23 @@ public sealed class WindEnemyContractSuite
     [Fact]
     public void AcceptedBaseAndAscensionValuesRemainStable()
     {
-        Assert.Equal((220, 235, 8, 9, 3, 36, 42),
+        Assert.Equal((300, 320, 8, 9, 3, 36, 42),
             (FlyMonster.BaseHp, FlyMonster.ToughHp, FlyMonster.BaseHighAttackDamage,
              FlyMonster.DeadlyHighAttackDamage, FlyMonster.HighAttackHits,
              FlyMonster.BaseDiveDamage, FlyMonster.DeadlyDiveDamage));
-        Assert.Equal((210, 225, 18, 21, 2, 30, 36),
+        Assert.Equal((295, 315, 18, 21, 2, 30, 36),
             (IllusionMonster.BaseHp, IllusionMonster.ToughHp, IllusionMonster.BaseBeguilingDamage,
              IllusionMonster.DeadlyBeguilingDamage, IllusionMonster.VulnerableAmount,
              IllusionMonster.BaseLuredFallDamage, IllusionMonster.DeadlyLuredFallDamage));
-        Assert.Equal((420, 440, 5, 6, 5, 20, 24, 30, 36),
+        Assert.Equal((600, 635, 5, 6, 5, 20, 24, 30, 36),
             (WindyMonster.BaseHp, WindyMonster.ToughHp, WindyMonster.BaseMultiDamage,
              WindyMonster.DeadlyMultiDamage, WindyMonster.MultiHits, WindyMonster.BaseSingleDamage,
              WindyMonster.DeadlySingleDamage, WindyMonster.BaseHeavyDamage, WindyMonster.DeadlyHeavyDamage));
-        Assert.Equal((65, 70, 8, 10, 3, 4),
+        Assert.Equal((90, 95, 8, 10, 3, 4),
             (DashMonster.BaseHp, DashMonster.ToughHp, DashMonster.BaseDamage,
              DashMonster.DeadlyDamage, DashMonster.BaseGrowth, DashMonster.DeadlyGrowth));
-        Assert.Equal((60, 65, 2), (FloatMonster.BaseHp, FloatMonster.ToughHp, FloatMonster.BlockPerDraw));
-        Assert.Equal((55, 60), (SleepMonster.BaseHp, SleepMonster.ToughHp));
+        Assert.Equal((85, 90, 2), (FloatMonster.BaseHp, FloatMonster.ToughHp, FloatMonster.BlockPerDraw));
+        Assert.Equal((75, 80), (SleepMonster.BaseHp, SleepMonster.ToughHp));
         Assert.Equal((1, 1),
             (new IllusionProjectionMonster().MinInitialHp, new IllusionProjectionMonster().MaxInitialHp));
     }

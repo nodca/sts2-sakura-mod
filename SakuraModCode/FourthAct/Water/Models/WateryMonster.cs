@@ -22,7 +22,7 @@ namespace SakuraMod.SakuraModCode.FourthAct.Water.Models;
 
 public sealed class WateryMonster : FourthActMonsterTemplate
 {
-    public const int BaseHp = 440, ToughHp = 465;
+    public const int BaseHp = 620, ToughHp = 655;
     public const int TidalMinimum = 14, TidalMaximum = 18, DeadlyTidalMinimum = 16, DeadlyTidalMaximum = 20;
     public const int DragonDamage = 27, DeadlyDragonDamage = 30, FloodDamage = 14, DeadlyFloodDamage = 17;
     public override int MinInitialHp => AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, ToughHp, BaseHp);

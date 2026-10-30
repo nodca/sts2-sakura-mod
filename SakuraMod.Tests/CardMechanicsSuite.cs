@@ -1786,8 +1786,8 @@ public sealed class CardMechanicsSuite
             "Expected Appear to cost 1, Manifest 1, remove Exhaust on upgrade, and keep Extra Effect.");
 
         RegressionTestHarness.Require(
-            new SakuraDream().EnergyCost.Canonical == 0,
-            "Expected Sakura Dream to cost 0.");
+            new SakuraDream().EnergyCost.Canonical == 1,
+            "Expected Sakura Dream to cost 1.");
 
         var promise = new Promise();
         var upgradedPromise = RegressionTestHarness.MutableForCostTest(new Promise());

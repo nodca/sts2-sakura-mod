@@ -234,7 +234,7 @@ internal static class SakuraSourceCardRules
 
     public static CardModel CreateRandomDreamClowCard(Player owner)
     {
-        var templates = AllClowTemplates(owner)
+        var templates = RewardableClowTemplates(owner)
             .Where(static card => card is not ClowCreate)
             .ToList();
         return CreateRandomClowCard(owner, templates, "Dream Clow pool");

@@ -55,8 +55,8 @@ public sealed class FourthActEarthEnemiesSuite
     public void EarthEnemyCalibratedValuesMatchPRD()
     {
         // Shadow values
-        Assert.Equal(255, EarthEnemyRules.ShadowHp);
-        Assert.Equal(270, EarthEnemyRules.ShadowToughHp);
+        Assert.Equal(355, EarthEnemyRules.ShadowHp);
+        Assert.Equal(375, EarthEnemyRules.ShadowToughHp);
         Assert.Equal(7, EarthEnemyRules.ShadowClawsDamage);
         Assert.Equal(8, EarthEnemyRules.ShadowClawsA9Damage);
         Assert.Equal(3, EarthEnemyRules.ShadowClawsHits);
@@ -72,8 +72,8 @@ public sealed class FourthActEarthEnemiesSuite
         Assert.Equal(32, EarthEnemyRules.ShadowBiteA9Damage);
 
         // Wood values
-        Assert.Equal(245, EarthEnemyRules.WoodHp);
-        Assert.Equal(260, EarthEnemyRules.WoodToughHp);
+        Assert.Equal(345, EarthEnemyRules.WoodHp);
+        Assert.Equal(365, EarthEnemyRules.WoodToughHp);
         Assert.Equal(14, EarthEnemyRules.WoodStrikeBase);
         Assert.Equal(16, EarthEnemyRules.WoodStrikeA9Base);
         Assert.Equal(2, EarthEnemyRules.WoodStrikePerRoot);
@@ -83,8 +83,8 @@ public sealed class FourthActEarthEnemiesSuite
         Assert.Equal(2, EarthEnemyRules.WoodSproutA9Strength);
 
         // Earthy values
-        Assert.Equal(440, EarthEnemyRules.EarthyHp);
-        Assert.Equal(465, EarthEnemyRules.EarthyToughHp);
+        Assert.Equal(620, EarthEnemyRules.EarthyHp);
+        Assert.Equal(655, EarthEnemyRules.EarthyToughHp);
         Assert.Equal(18, EarthEnemyRules.EarthyTremorBase);
         Assert.Equal(20, EarthEnemyRules.EarthyTremorA9Base);
         Assert.Equal(8, EarthEnemyRules.EarthyRockfallDamage);

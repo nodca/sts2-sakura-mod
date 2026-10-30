@@ -67,6 +67,31 @@ public sealed class SwordBlockFeedingPower : SakuraPowerModel
     internal void Reset() { _bonuses.Clear(); InvokeDisplayAmountChanged(); }
 }
 
+// 火势: every Burn a player owns burns at the current level, including Burns generated later.
+public sealed class FireyBlazePower : SakuraPowerModel
+{
+    protected override string IconFileName => "fourth_act/firey_blaze.png";
+    public override PowerType Type => PowerType.Buff;
+    public override PowerStackType StackType => PowerStackType.Counter;
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("BurnDamage", FireEnemyRules.BlazeBurnDamage)];
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [HoverTipFactory.FromCard<MegaCrit.Sts2.Core.Models.Cards.Burn>()];
+    public override Task AfterApplied(Creature? applier, CardModel? cardSource) => KindleAll();
+    public override Task AfterPowerAmountChanged(PlayerChoiceContext choiceContext, PowerModel power, decimal amount, Creature? applier, CardModel? cardSource) =>
+        power == this ? KindleAll() : Task.CompletedTask;
+    public override Task AfterCardGeneratedForCombat(CardModel card, Player? creator) { Kindle(card); return Task.CompletedTask; }
+    private Task KindleAll()
+    {
+        foreach (var player in Owner.CombatState?.Players ?? [])
+            foreach (var card in player.PlayerCombatState?.AllCards ?? [])
+                Kindle(card);
+        return Task.CompletedTask;
+    }
+    private void Kindle(CardModel card)
+    {
+        if (card is MegaCrit.Sts2.Core.Models.Cards.Burn burn) burn.DynamicVars.Damage.BaseValue = FireEnemyRules.BurnDamage(Amount);
+    }
+}
+
 public sealed class FireSovereigntyPower : SakuraPowerModel
 {
     protected override string IconFileName => "fourth_act/fire_sovereignty.png";

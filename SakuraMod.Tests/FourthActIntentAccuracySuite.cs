@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Models;
 using SakuraMod.SakuraModCode.FourthAct.Earth.Models;
 using SakuraMod.SakuraModCode.FourthAct.Fire;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Intents;
 using SakuraMod.SakuraModCode.FourthAct.Fire.Models;
 using SakuraMod.SakuraModCode.FourthAct.Water.Models;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Models;
@@ -14,7 +15,7 @@ public sealed class FourthActIntentAccuracySuite
 {
     public static TheoryData<MonsterModel, string, Type[]> MoveIntents => new()
     {
-        { new FireyMonster(), "FLAME_BREATH", [typeof(MultiAttackIntent), typeof(StatusIntent), typeof(BuffIntent)] },
+        { new FireyMonster(), "FLAME_BREATH", [typeof(MultiAttackIntent), typeof(GrowingStatusIntent), typeof(BuffIntent)] },
         { new FireyMonster(), "ARSON", [typeof(SingleAttackIntent), typeof(StatusIntent)] },
         { new FireyMonster(), "FIREBALL", [typeof(SingleAttackIntent)] },
         { new LightMonster(), "RADIANCE", [typeof(SingleAttackIntent), typeof(StatusIntent)] },
@@ -73,10 +74,34 @@ public sealed class FourthActIntentAccuracySuite
 
     [Theory]
     [InlineData(0, 18)]
-    [InlineData(3, 30)]
+    [InlineData(12, 30)]
     [InlineData(-1, 18)]
-    public void FireballDamageGrowsPerBurn(int burns, int expected) =>
-        Assert.Equal(expected, FireEnemyRules.FireballDamage(burns));
+    public void FireballDamageAddsTotalBurnDamage(int burnDamage, int expected) =>
+        Assert.Equal(expected, FireEnemyRules.FireballDamage(burnDamage));
+
+    [Theory]
+    [InlineData(0, 2)]
+    [InlineData(1, 4)]
+    [InlineData(3, 8)]
+    [InlineData(-1, 2)]
+    public void BlazeRaisesEveryBurnByTwoPerLevel(int blaze, int expected) =>
+        Assert.Equal(expected, FireEnemyRules.BurnDamage(blaze));
+
+    [Fact]
+    public void FlameBreathIntentsFollowItsGrowingHitCount()
+    {
+        var firey = new FireyMonster();
+        var move = Assert.IsType<MoveState>(GenerateMoves(firey).States["FLAME_BREATH"]);
+        Assert.Equal(2, Assert.Single(move.Intents.OfType<MultiAttackIntent>()).Repeats);
+
+        typeof(FireyMonster).GetField("_breathHits", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(firey, 4);
+        Assert.Equal(4, Assert.Single(move.Intents.OfType<MultiAttackIntent>()).Repeats);
+
+        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/FourthAct/Fire/Models/FireMonsters.cs"));
+        Assert.Contains("new GrowingStatusIntent(() => _breathHits)", source, StringComparison.Ordinal);
+        Assert.Contains(".WithHitCount(_breathHits)));\n        _breathHits++;", source, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void DynamicPreviewsShareTheResolutionFormula()
@@ -85,7 +110,7 @@ public sealed class FourthActIntentAccuracySuite
             "SakuraModCode/FourthAct/Fire/Models/FireMonsters.cs"));
 
         Assert.Equal(2, Count(source, "FireEnemyRules.FireballDamage("));
-        Assert.Equal(2, Count(source, "CountBurns(player)"));
+        Assert.Equal(2, Count(source, "BurnDamageTotal(player)"));
         Assert.Equal(2, Count(source, "FireEnemyRules.JudgmentDamage("));
         Assert.DoesNotContain("new SingleAttackIntent(FireEnemyRules.Fireball)", source);
         Assert.DoesNotContain("new SingleAttackIntent(FireEnemyRules.JudgmentBase)", source);

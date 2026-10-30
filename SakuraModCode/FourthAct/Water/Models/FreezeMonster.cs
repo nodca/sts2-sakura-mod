@@ -23,7 +23,7 @@ public sealed class FreezeMonster : FourthActMonsterTemplate
 {
     private bool _isHeavyStriking;
 
-    public const int BaseHp = 250, ToughHp = 265, HeavyDamage = 7, DeadlyHeavyDamage = 8, HeavyHits = 4;
+    public const int BaseHp = 350, ToughHp = 370, HeavyDamage = 7, DeadlyHeavyDamage = 8, HeavyHits = 4;
     public const int ColdDamage = 14, DeadlyColdDamage = 16, ColdBlock = 8, IceBlock = 18, DeadlyIceBlock = 20;
     public override int MinInitialHp => AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, ToughHp, BaseHp);
     public override int MaxInitialHp => MinInitialHp;

@@ -265,7 +265,7 @@ public sealed class ResourceContractSuite
                 .Select(static power => power.GetType().Name));
 
         var visiblePowers = fourthActPowers.Where(static power => power.IsVisible).ToList();
-        Assert.Equal(26, visiblePowers.Count);
+        Assert.Equal(27, visiblePowers.Count);
 
         var svg = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "tools/fourth-act-power-icons/fourth_act_power_icons.svg"));

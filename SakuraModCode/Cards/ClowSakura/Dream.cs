@@ -53,7 +53,7 @@ public class ClowDream() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
     }
 }
 
-public class SakuraDream() : SakuraFormCard(0, CardType.Skill, TargetType.None)
+public class SakuraDream() : SakuraFormCard(1, CardType.Skill, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];

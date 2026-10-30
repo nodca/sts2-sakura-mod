@@ -3,8 +3,8 @@ namespace SakuraMod.SakuraModCode.FourthAct.Earth;
 public static class EarthEnemyRules
 {
     // Shadow
-    public const int ShadowHp = 255;
-    public const int ShadowToughHp = 270;
+    public const int ShadowHp = 355;
+    public const int ShadowToughHp = 375;
     public const int ShadowClawsDamage = 7;
     public const int ShadowClawsA9Damage = 8;
     public const int ShadowClawsHits = 3;
@@ -20,8 +20,8 @@ public static class EarthEnemyRules
     public const int ShadowBiteA9Damage = 32;
 
     // Wood
-    public const int WoodHp = 245;
-    public const int WoodToughHp = 260;
+    public const int WoodHp = 345;
+    public const int WoodToughHp = 365;
     public const int WoodStrikeBase = 14;
     public const int WoodStrikeA9Base = 16;
     public const int WoodStrikePerRoot = 2;
@@ -37,8 +37,8 @@ public static class EarthEnemyRules
         (tough ? WoodSproutA8BaseBlock : WoodSproutBaseBlock) + Math.Max(0, rootedCount);
 
     // Earthy
-    public const int EarthyHp = 440;
-    public const int EarthyToughHp = 465;
+    public const int EarthyHp = 620;
+    public const int EarthyToughHp = 655;
     public const int EarthyTremorBase = 18;
     public const int EarthyTremorA9Base = 20;
     public const int EarthyRockfallDamage = 8;

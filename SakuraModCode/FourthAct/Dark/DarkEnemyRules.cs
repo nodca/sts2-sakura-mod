@@ -4,8 +4,8 @@ public enum DarkRegularAction { Confinement, NonConfinement }
 
 public static class DarkEnemyRules
 {
-    public const int BaseHp = 520;
-    public const int ToughHp = 545;
+    public const int BaseHp = 640;
+    public const int ToughHp = 675;
     public const int BaseConfinementDamage = 16;
     public const int DeadlyConfinementDamage = 18;
     public const int BaseNonConfinementDamage = 24;

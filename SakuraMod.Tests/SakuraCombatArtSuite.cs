@@ -94,6 +94,7 @@ public sealed class SakuraCombatArtSuite
             SakuraCharacterSelectOptionsPatch.ChibiKey,
             SakuraCharacterSelectOptionsPatch.CardBgmLabelKey,
             SakuraCharacterSelectOptionsPatch.CardVfxLabelKey,
+            SakuraCharacterSelectOptionsPatch.FourthActLabelKey,
             SakuraCharacterSelectOptionsPatch.VoiceOnKey,
             SakuraCharacterSelectOptionsPatch.VoiceOffKey
         ];
@@ -108,7 +109,7 @@ public sealed class SakuraCombatArtSuite
     }
 
     [Fact]
-    public void CharacterSelectOptionsUseStableTwoRowGeometryAndInteractionStates()
+    public void CharacterSelectOptionsUseStableGeometryAndInteractionStates()
     {
         var options = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Character/SakuraCharacterSelectOptions.cs"));
@@ -116,7 +117,7 @@ public sealed class SakuraCombatArtSuite
         RegressionTestHarness.Require(
             options.Contains("GroupOffset", StringComparison.Ordinal)
             && options.Contains("CustomMinimumSize", StringComparison.Ordinal),
-            "Expected the two-row group geometry to keep its stable offset and minimum sizes.");
+            "Expected the option group geometry to keep its stable offset and minimum sizes.");
         RegressionTestHarness.Require(
             options.Contains("PresentationChoices", StringComparison.Ordinal)
             && options.Contains("AddThemeConstantOverride", StringComparison.Ordinal)
@@ -124,7 +125,7 @@ public sealed class SakuraCombatArtSuite
             && options.Contains("PanelContainer", StringComparison.Ordinal)
             && options.Contains("AddThemeStyleboxOverride", StringComparison.Ordinal)
             && options.Contains("SetAnchorsAndOffsetsPreset", StringComparison.Ordinal),
-            "Expected one styled panel group hosting the compact presentation toggles.");
+            "Expected one styled panel group hosting the compact option toggles.");
         RegressionTestHarness.Require(
             options.Contains("Focused", StringComparison.Ordinal)
             && options.Contains("MousePressed", StringComparison.Ordinal)
@@ -134,7 +135,7 @@ public sealed class SakuraCombatArtSuite
     }
 
     [Fact]
-    public void PresentationChoicesUseExistingLocalBindingsAndThreeColumnFocusGraph()
+    public void CharacterSelectChoicesReuseLocalBindingsAndNativeFocusNeighbors()
     {
         var options = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Character/SakuraCharacterSelectOptions.cs"));
@@ -146,12 +147,13 @@ public sealed class SakuraCombatArtSuite
             && options.Contains("EnableSakuraVoiceBinding", StringComparison.Ordinal)
             && options.Contains("EnableCardBgmBinding", StringComparison.Ordinal)
             && options.Contains("EnableCardVfxBinding", StringComparison.Ordinal)
+            && options.Contains("EnableFourthActBinding", StringComparison.Ordinal)
             && !options.Contains("RunSavedData", StringComparison.Ordinal)
             && !options.Contains("RegisterPerPlayer", StringComparison.Ordinal)
             && options.Contains("SetFocusNeighbors", StringComparison.Ordinal)
             && options.Contains("FocusNeighborTop", StringComparison.Ordinal)
             && options.Contains("RestoreFocusNeighbors", StringComparison.Ordinal),
-            "Expected one patch to reuse all three local presentation bindings and connect the two-row option grid to native focus neighbors.");
+            "Expected one patch to reuse all four local toggle bindings and connect the option grid to native focus neighbors.");
     }
 
     [Fact]

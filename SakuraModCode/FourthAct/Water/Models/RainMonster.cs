@@ -18,7 +18,7 @@ namespace SakuraMod.SakuraModCode.FourthAct.Water.Models;
 
 public sealed class RainMonster : FourthActMonsterTemplate
 {
-    public const int BaseHp = 265, ToughHp = 280, DownpourDamage = 22, DeadlyDownpourDamage = 25, FloodDamage = 34, DeadlyFloodDamage = 40;
+    public const int BaseHp = 370, ToughHp = 390, DownpourDamage = 22, DeadlyDownpourDamage = 25, FloodDamage = 34, DeadlyFloodDamage = 40;
     public const int CoverBlock = 14, DeadlyCoverBlock = 16;
     public override int MinInitialHp => AscensionHelper.GetValueIfAscension(AscensionLevel.ToughEnemies, ToughHp, BaseHp);
     public override int MaxInitialHp => MinInitialHp;

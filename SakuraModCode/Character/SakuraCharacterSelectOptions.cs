@@ -19,6 +19,7 @@ internal static class SakuraCharacterSelectOptionsPatch
     internal const string ChibiKey = "SAKURAMOD-COMBAT_ART.chibi";
     internal const string CardBgmLabelKey = "SAKURAMOD-CARD_BGM.label";
     internal const string CardVfxLabelKey = "SAKURAMOD-CARD_VFX.label";
+    internal const string FourthActLabelKey = "SAKURAMOD-ENABLE_FOURTH_ACT.label";
     internal const string VoiceOnKey = "SAKURAMOD-ENABLE_SAKURA_VOICE.on";
     internal const string VoiceOffKey = "SAKURAMOD-ENABLE_SAKURA_VOICE.off";
 
@@ -73,6 +74,7 @@ internal static class SakuraCharacterSelectOptionsPatch
         private readonly OptionSegment _voiceToggle;
         private readonly OptionSegment _cardBgmToggle;
         private readonly OptionSegment _cardVfxToggle;
+        private readonly OptionSegment _fourthActToggle;
         private readonly Control _confirmButton;
         private readonly StartRunLobby _lobby;
 
@@ -90,7 +92,7 @@ internal static class SakuraCharacterSelectOptionsPatch
             _root = new Control
             {
                 Name = RootName,
-                CustomMinimumSize = new Vector2(0f, 96f),
+                CustomMinimumSize = new Vector2(0f, 140f),
                 SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
                 Visible = false,
                 MouseFilter = Control.MouseFilterEnum.Ignore
@@ -111,7 +113,7 @@ internal static class SakuraCharacterSelectOptionsPatch
             var surface = new PanelContainer
             {
                 Name = "Surface",
-                CustomMinimumSize = new Vector2(370f, 94f),
+                CustomMinimumSize = new Vector2(370f, 138f),
                 MouseFilter = Control.MouseFilterEnum.Pass
             };
             surface.AddThemeStyleboxOverride("panel", CreateGroupStyle());
@@ -143,12 +145,14 @@ internal static class SakuraCharacterSelectOptionsPatch
             combatArtChoices.AddChild(_chibi.Button);
 
             var presentationChoices = CreatePresentationRow(rows);
-            _voiceToggle = CreateSegment("VoiceToggle", string.Empty, ToggleVoice, fontSize: 16);
-            _cardBgmToggle = CreateSegment("CardBgmToggle", string.Empty, ToggleCardBgm, fontSize: 16);
-            _cardVfxToggle = CreateSegment("CardVfxToggle", string.Empty, ToggleCardVfx, fontSize: 16);
+            _voiceToggle = CreateSegment("VoiceToggle", string.Empty, ToggleVoice, width: 170f, fontSize: 16);
+            _cardBgmToggle = CreateSegment("CardBgmToggle", string.Empty, ToggleCardBgm, width: 170f, fontSize: 16);
+            _cardVfxToggle = CreateSegment("CardVfxToggle", string.Empty, ToggleCardVfx, width: 170f, fontSize: 16);
+            _fourthActToggle = CreateSegment("FourthActToggle", string.Empty, ToggleFourthAct, width: 170f, fontSize: 16);
             presentationChoices.AddChild(_voiceToggle.Button);
             presentationChoices.AddChild(_cardBgmToggle.Button);
             presentationChoices.AddChild(_cardVfxToggle.Button);
+            presentationChoices.AddChild(_fourthActToggle.Button);
 
             container.AddChild(_root);
             container.MoveChild(_root, hpGoldSpacer.GetIndex());
@@ -191,6 +195,12 @@ internal static class SakuraCharacterSelectOptionsPatch
             Refresh();
         }
 
+        private void ToggleFourthAct()
+        {
+            ToggleAndPersist(SakuraModConfig.EnableFourthActBinding);
+            Refresh();
+        }
+
         // RitsuLib only flushes dirty bindings while the mod settings page is
         // open, so these controls must persist their own writes; otherwise the
         // in-memory value is lost on the next launch.
@@ -209,16 +219,20 @@ internal static class SakuraCharacterSelectOptionsPatch
             var voiceEnabled = SakuraModConfig.EnableSakuraVoiceBinding.Read();
             var cardBgmEnabled = SakuraModConfig.EnableCardBgmBinding.Read();
             var cardVfxEnabled = SakuraModConfig.EnableCardVfxBinding.Read();
+            var fourthActEnabled = SakuraModConfig.EnableFourthActBinding.Read();
             _standard.Selected = !useChibi;
             _chibi.Selected = useChibi;
             UpdateToggle(_voiceToggle, SakuraModConfig.VoiceTitleKey, voiceEnabled);
             UpdateToggle(_cardBgmToggle, CardBgmLabelKey, cardBgmEnabled);
             UpdateToggle(_cardVfxToggle, CardVfxLabelKey, cardVfxEnabled);
+            UpdateToggle(_fourthActToggle, FourthActLabelKey, fourthActEnabled);
+            _fourthActToggle.Button.TooltipText += $"\n{Localized(SakuraModConfig.FourthActTitleKey)}\n{Localized(SakuraModConfig.FourthActDescriptionKey)}";
             ApplySegmentStyle(_standard);
             ApplySegmentStyle(_chibi);
             ApplySegmentStyle(_voiceToggle);
             ApplySegmentStyle(_cardBgmToggle);
             ApplySegmentStyle(_cardVfxToggle);
+            ApplySegmentStyle(_fourthActToggle);
             RefreshFocusNeighbors(useChibi);
         }
 
@@ -235,16 +249,17 @@ internal static class SakuraCharacterSelectOptionsPatch
             var voiceTogglePath = _voiceToggle.Button.GetPath();
             var cardBgmTogglePath = _cardBgmToggle.Button.GetPath();
             var cardVfxTogglePath = _cardVfxToggle.Button.GetPath();
-            var selectedCombatArtPath = selectedCombatArt.GetPath();
+            var fourthActTogglePath = _fourthActToggle.Button.GetPath();
 
-            _characterButton.FocusNeighborBottom = selectedCombatArtPath;
-            _confirmButton.FocusNeighborTop = cardVfxTogglePath;
+            _characterButton.FocusNeighborBottom = selectedCombatArt.GetPath();
+            _confirmButton.FocusNeighborTop = fourthActTogglePath;
 
             SetFocusNeighbors(_standard.Button, chibiPath, chibiPath, characterPath, voiceTogglePath);
-            SetFocusNeighbors(_chibi.Button, standardPath, standardPath, characterPath, cardVfxTogglePath);
-            SetFocusNeighbors(_voiceToggle.Button, cardVfxTogglePath, cardBgmTogglePath, standardPath, confirmPath);
-            SetFocusNeighbors(_cardBgmToggle.Button, voiceTogglePath, cardVfxTogglePath, selectedCombatArtPath, confirmPath);
-            SetFocusNeighbors(_cardVfxToggle.Button, cardBgmTogglePath, voiceTogglePath, chibiPath, confirmPath);
+            SetFocusNeighbors(_chibi.Button, standardPath, standardPath, characterPath, cardBgmTogglePath);
+            SetFocusNeighbors(_voiceToggle.Button, cardBgmTogglePath, cardBgmTogglePath, standardPath, cardVfxTogglePath);
+            SetFocusNeighbors(_cardBgmToggle.Button, voiceTogglePath, voiceTogglePath, chibiPath, fourthActTogglePath);
+            SetFocusNeighbors(_cardVfxToggle.Button, fourthActTogglePath, fourthActTogglePath, voiceTogglePath, confirmPath);
+            SetFocusNeighbors(_fourthActToggle.Button, cardVfxTogglePath, cardVfxTogglePath, cardBgmTogglePath, confirmPath);
         }
 
         private void RestoreFocusNeighbors()
@@ -290,15 +305,16 @@ internal static class SakuraCharacterSelectOptionsPatch
             return choices;
         }
 
-        private static HBoxContainer CreatePresentationRow(VBoxContainer rows)
+        private static GridContainer CreatePresentationRow(VBoxContainer rows)
         {
-            var row = new HBoxContainer
+            var row = new GridContainer
             {
                 Name = "PresentationChoices",
-                CustomMinimumSize = new Vector2(0f, 38f),
+                Columns = 2,
                 MouseFilter = Control.MouseFilterEnum.Pass
             };
-            row.AddThemeConstantOverride("separation", 5);
+            row.AddThemeConstantOverride("h_separation", 6);
+            row.AddThemeConstantOverride("v_separation", 6);
             rows.AddChild(row);
             return row;
         }

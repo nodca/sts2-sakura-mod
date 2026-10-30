@@ -16,8 +16,8 @@ namespace SakuraMod.SakuraModCode.FourthAct.Wind.Models;
 
 public sealed class WindyMonster : WindMonsterTemplate
 {
-    public const int BaseHp = 420;
-    public const int ToughHp = 440;
+    public const int BaseHp = 600;
+    public const int ToughHp = 635;
     public const int BaseMultiDamage = 5;
     public const int DeadlyMultiDamage = 6;
     public const int MultiHits = 5;
