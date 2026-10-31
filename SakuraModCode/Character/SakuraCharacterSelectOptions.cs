@@ -66,7 +66,11 @@ internal static class SakuraCharacterSelectOptionsPatch
         private static readonly Color SegmentSurfaceColor = new("312a2dcc");
         private static readonly Color SelectedSurfaceColor = new("edaec1f2");
         private static readonly Color FocusBorderColor = new("f5db88");
-        private static readonly Vector2 GroupOffset = new(70f, -24f);
+        // Floats in the screen's top-right corner, below the version label, so the
+        // vanilla InfoPanel keeps its original height for the starting relic.
+        private static readonly Vector2 PanelSize = new(370f, 138f);
+        private const float PanelMarginRight = 48f;
+        private const float PanelMarginTop = 96f;
 
         private readonly Control _root;
         private readonly OptionSegment _standard;
@@ -85,39 +89,29 @@ internal static class SakuraCharacterSelectOptionsPatch
         internal OptionsState(NCharacterSelectScreen screen)
         {
             _lobby = screen.Lobby;
-            var container = screen.GetNode<VBoxContainer>("InfoPanel/VBoxContainer");
-            var hpGoldSpacer = container.GetNode<Control>("HpGoldSpacer");
             _confirmButton = screen.GetNode<Control>("ConfirmButton");
 
             _root = new Control
             {
                 Name = RootName,
-                CustomMinimumSize = new Vector2(0f, 140f),
-                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
                 Visible = false,
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
-
-            var center = new CenterContainer
-            {
-                Name = "Center",
-                MouseFilter = Control.MouseFilterEnum.Pass
-            };
-            center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-            center.OffsetLeft = GroupOffset.X;
-            center.OffsetTop = GroupOffset.Y;
-            center.OffsetRight = GroupOffset.X;
-            center.OffsetBottom = GroupOffset.Y;
-            _root.AddChild(center);
+            _root.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+            _root.OffsetLeft = -PanelMarginRight - PanelSize.X;
+            _root.OffsetTop = PanelMarginTop;
+            _root.OffsetRight = -PanelMarginRight;
+            _root.OffsetBottom = PanelMarginTop + PanelSize.Y;
 
             var surface = new PanelContainer
             {
                 Name = "Surface",
-                CustomMinimumSize = new Vector2(370f, 138f),
+                CustomMinimumSize = PanelSize,
                 MouseFilter = Control.MouseFilterEnum.Pass
             };
+            surface.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
             surface.AddThemeStyleboxOverride("panel", CreateGroupStyle());
-            center.AddChild(surface);
+            _root.AddChild(surface);
 
             var inset = new MarginContainer
             {
@@ -154,8 +148,8 @@ internal static class SakuraCharacterSelectOptionsPatch
             presentationChoices.AddChild(_cardVfxToggle.Button);
             presentationChoices.AddChild(_fourthActToggle.Button);
 
-            container.AddChild(_root);
-            container.MoveChild(_root, hpGoldSpacer.GetIndex());
+            screen.AddChild(_root);
+            screen.MoveChild(_root, screen.GetNode<Control>("InfoPanel").GetIndex() + 1);
         }
 
         internal void SetVisibleFor(NCharacterSelectButton? characterButton)

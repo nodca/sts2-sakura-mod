@@ -23,7 +23,7 @@ internal static class SakuraCardVfxAssets
     private static readonly IReadOnlyList<string> ShadePaths =
         [.. ShadeGroundDragonVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> GalePaths =
-        [.. GaleWindBladeVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+        [.. GaleGustVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> CloudRainPaths =
         [.. CloudRainWeatherVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> SnowPaths =

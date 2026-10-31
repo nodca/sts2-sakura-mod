@@ -1236,99 +1236,46 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
-    public void GaleWindBladeConsumesSharedCelLayerAsForwardFacingCrescent()
+    public void GaleGustKeepsCardVfxEngineeringContracts()
     {
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/combat/card_vfx/gale_wind_blade_vfx.tscn"));
+            "SakuraMod/scenes/combat/card_vfx/gale_gust_vfx.tscn"));
         var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/shaders/card_vfx/gale_wind_blade.gdshader"));
+            "SakuraMod/shaders/card_vfx/gale_gust_stroke.gdshader"));
         var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Visuals/Transparent/GaleWindBladeVfx.cs"));
+            "SakuraModCode/Cards/Visuals/Transparent/GaleGustVfx.cs"));
         var gale = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Gale.cs"));
 
-        var wakeIndex = scene.IndexOf(
-            "[node name=\"Wake\" type=\"Line2D\" parent=\".\"]", StringComparison.Ordinal);
-        var carrierIndex = scene.IndexOf(
-            "[node name=\"BladeCarrier\" type=\"Node2D\" parent=\".\"]", StringComparison.Ordinal);
+        // Look (ribbon count, widths, timing, smooth cadence) is art direction
+        // and deliberately unpinned; only runtime contracts are checked here.
         RegressionTestHarness.Require(
-            wakeIndex >= 0
-            && carrierIndex > wakeIndex
-            && scene.Split("[node name=\"CrescentBody\"", StringSplitOptions.None).Length == 2
+            scene.Contains("gale_gust_stroke.gdshader", StringComparison.Ordinal)
             && scene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
-            && scene.Contains("width = 12.0", StringComparison.Ordinal)
             && scene.Contains("mouse_filter = 2", StringComparison.Ordinal)
             && !scene.Contains("BackBufferCopy", StringComparison.Ordinal),
-            "Expected one crescent carrier above one independent wake, with a local material, ignored input, and no screen capture.");
-
-        foreach (var uniform in new[]
-                 {
-                     "elapsed", "held", "held_at", "seed", "formation", "impact", "dissolve", "opacity"
-                 })
-        {
-            Assert.Contains($"uniform float {uniform}", shader, StringComparison.Ordinal);
-        }
-        Assert.Contains("uniform vec2 region_size", shader, StringComparison.Ordinal);
-
-        var shaderCode = shader
-            .Split('\n')
-            .Select(static line => line.Trim())
-            .Where(static line => !line.StartsWith("//", StringComparison.Ordinal))
-            .ToList();
-
-        // The subtractive ellipse is shifted toward local -X. The surviving
-        // crescent therefore lies on +X, so its convex face meets the enemy while
-        // its concave opening receives the wake from Sakura.
+            "Expected Gale's scene to own a local stroke material, ignore input, and capture no screen.");
         RegressionTestHarness.Require(
-            shader.Contains("INNER_OFFSET", StringComparison.Ordinal)
-            && shader.Contains("float outer = cel_ellipse(p, OUTER_RADII);", StringComparison.Ordinal)
-            && shader.Contains("float inner = cel_ellipse(p - INNER_OFFSET, INNER_RADII);", StringComparison.Ordinal)
-            && shader.Contains("float crescent = max(outer, -inner)", StringComparison.Ordinal),
-            "Expected Gale's sole silhouette to be a subtractive crescent whose convex side faces local +X.");
-        RegressionTestHarness.Require(
-            !shaderCode.Any(static line =>
-                line.Contains("cel_bipointed_stroke(", StringComparison.Ordinal)
-                || line.Contains("cel_smin(", StringComparison.Ordinal)
-                || line.Contains("cel_fbm(", StringComparison.Ordinal)),
-            "Expected Gale to remain a clean ellipse-subtraction crescent rather than a spearhead, fluid union, or turbulent mass.");
-
-        // Gale's near-white air edge is the approved local exception to dark ink.
-        // Its light remains a bounded field band, not a scene read or global bloom.
-        RegressionTestHarness.Require(
-            shader.Contains("cel_step_clock_held(elapsed, held, held_at)", StringComparison.Ordinal)
-            && shader.Contains("float aa = max(fwidth(d), 0.0001);", StringComparison.Ordinal)
-            && !shader.Contains("cel_ink(", StringComparison.Ordinal)
-            && !shader.Contains("ink_color", StringComparison.OrdinalIgnoreCase)
-            && !shader.Contains("SCREEN_TEXTURE", StringComparison.Ordinal)
+            !shader.Contains("SCREEN_TEXTURE", StringComparison.Ordinal)
             && !shader.Contains("hint_screen_texture", StringComparison.Ordinal)
-            && !shader.Contains("TIME", StringComparison.Ordinal),
-            "Expected a held stepped crescent with a bounded local halo, no dark shell, screen sampling, or shader-owned clock.");
-
+            && !shader.Contains("TIME", StringComparison.Ordinal)
+            && shader.Contains("uniform float elapsed", StringComparison.Ordinal),
+            "Expected Gale's stroke shader to read the session clock, never shader TIME or the screen.");
         RegressionTestHarness.Require(
             session.Contains(": CelVfxSession", StringComparison.Ordinal)
-            && session.Contains("BladeRegion", StringComparison.Ordinal)
-            && session.Contains("root.Scale = Vector2.One;", StringComparison.Ordinal)
             && session.Contains("session.StartClock();", StringComparison.Ordinal)
             && session.Contains("PlayCelPrelude(card, caster)", StringComparison.Ordinal)
-            && session.Contains("BeginHold();", StringComparison.Ordinal)
-            && session.Contains("FlightDuration", StringComparison.Ordinal)
-            && session.Contains("FormationDuration", StringComparison.Ordinal)
-            && session.Contains("SetDelay(HoldDuration)", StringComparison.Ordinal),
-            "Expected Gale to retain the shared session, fixed region, three-step flight, explicit formation, hold, and delayed pass-through.");
+            && session.Contains("Track(Root.CreateTween())", StringComparison.Ordinal)
+            && session.Contains("PreloadManager.Cache.GetScene(ScenePath)", StringComparison.Ordinal)
+            && session.Contains("AssetPaths { get; } = [ScenePath, ShaderPath]", StringComparison.Ordinal),
+            "Expected Gale to stay a shared cel session with preloaded, run-registered assets and tracked tweens.");
         RegressionTestHarness.Require(
-            session.Contains("private readonly Line2D _wake;", StringComparison.Ordinal)
-            && session.Contains("ConfigureWake();", StringComparison.Ordinal)
-            && session.Contains("UpdateWakePath(position, wakeOpacity);", StringComparison.Ordinal)
-            && session.Contains("_flightEnd = target.Center - _direction * CrescentCenterOffsetPx;", StringComparison.Ordinal)
-            && session.Contains("_carrier.Rotation = _direction.Angle();", StringComparison.Ordinal)
-            && !session.Contains("TweenProperty(_carrier, \"rotation\"", StringComparison.Ordinal)
-            && !session.Contains("TipOffsetPx", StringComparison.Ordinal)
-            && !session.Contains("DebrisCount", StringComparison.Ordinal)
-            && !session.Contains("AddBallisticDebris", StringComparison.Ordinal),
-            "Expected one fixed-attitude crescent aligned by its visible centre, with an independent wake and no spear-tip or burst debris path.");
+            !File.Exists(Path.Combine(Path.GetDirectoryName(RegressionTestHarness.FindRepoFile(
+                "SakuraMod/shaders/card_vfx/gale_gust_stroke.gdshader"))!, "gale_wind_blade.gdshader")),
+            "Expected the retired crescent shader to be removed rather than left reachable.");
 
         Assert.Contains(
-            "GaleWindBladeVfx.PlayOrResolveAsync(this, Owner.Creature, target",
+            "GaleGustVfx.PlayOrResolveAsync(this, Owner.Creature, target",
             gale,
             StringComparison.Ordinal);
         var impactIndex = gale.IndexOf("cues.Impact()", StringComparison.Ordinal);
@@ -1416,7 +1363,7 @@ public sealed class ResourceContractSuite
                 || line.Contains("cel_scalloped_mass(", StringComparison.Ordinal)
                 || line.Contains("cel_facet(", StringComparison.Ordinal)
                 || line.Contains("= max(outer, -inner)", StringComparison.Ordinal)),
-            "Expected Arrow to stay a tapered projectile rather than a slash, a fluid mass, a turbulent column, a weather canopy, a crystal, or Gale's crescent.");
+            "Expected Arrow to stay a tapered projectile rather than a slash, a fluid mass, a turbulent column, a weather canopy, or a crystal.");
         RegressionTestHarness.Require(
             !shader.Contains("TIME", StringComparison.Ordinal)
             && !shader.Contains("hint_screen_texture", StringComparison.Ordinal)

@@ -39,7 +39,7 @@ public class ClassicSealedWandRelic : SakuraRelicModel
     private const int DefaultTriggerIncrease = 20;
     private const int DefaultBaseChargeGain = 3;
     private const int DefaultEliteBossExtraGain = 2;
-    private const int DefaultSealExtraGain = 2;
+    internal const int DefaultSealExtraGain = 2;
 
     private static readonly SavedAttachedState<ClassicSealedWandRelic, int> Charge =
         new("SakuraMod_ClassicSealedWandCharge", () => 0);

@@ -119,10 +119,10 @@ public sealed class MagicChargeStateSuite
     }
 
     [Fact]
-    public void AfterPlayGainCoversTransparentAndSealedBookClassicCards()
+    public void AfterPlayGainRequiresSealedBookForTransparentAndClassicCards()
     {
         RegressionTestHarness.Require(
-            SakuraMagicCharge.GainsMagicAfterPlay(new Gale(), hasSealedBook: false)
+            !SakuraMagicCharge.GainsMagicAfterPlay(new Gale(), hasSealedBook: false)
             && SakuraMagicCharge.GainsMagicAfterPlay(new Gale(), hasSealedBook: true)
             && !SakuraMagicCharge.GainsMagicAfterPlay(new ClowSword(), hasSealedBook: false)
             && SakuraMagicCharge.GainsMagicAfterPlay(new ClowSword(), hasSealedBook: true)
@@ -130,7 +130,7 @@ public sealed class MagicChargeStateSuite
             && SakuraMagicCharge.GainsMagicAfterPlay(new SakuraSword(), hasSealedBook: true)
             && !SakuraMagicCharge.GainsMagicAfterPlay(new SpellSeal(), hasSealedBook: true)
             && !SakuraMagicCharge.GainsMagicAfterPlay(new AnotherMe(), hasSealedBook: true),
-            "Expected Transparent cards to gain Magic Charge after play, classic source cards to need Sealed Book, and Spell/Ancient cards not to grant.");
+            "Expected Sealed Book to own after-play Magic Charge for Transparent and classic source cards, and Spell/Ancient cards not to grant.");
     }
 
     [Fact]

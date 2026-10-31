@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
@@ -31,9 +32,11 @@ public class ClassicSealedBookRelic : SakuraRelicModel
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DynamicVar("ChargeGain", SakuraMagicCharge.NormalMagicChargeGain),
-        new DynamicVar("PowerChargeGain", SakuraMagicCharge.PowerMagicChargeGain),
-        new DynamicVar("ExtraEffectCost", SakuraMagicCharge.ExtraEffectCost)
+        new DynamicVar("PowerChargeGain", SakuraMagicCharge.PowerMagicChargeGain)
     ];
+
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips =>
+        [HoverTipFactory.FromPower<ClassicMagicChargePower>()];
 
     protected override string IconFileName => "sealed_book.png";
     public override RelicRarity Rarity => RelicRarity.Starter;

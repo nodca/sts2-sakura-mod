@@ -115,9 +115,11 @@ public sealed class SakuraCombatArtSuite
             "SakuraModCode/Character/SakuraCharacterSelectOptions.cs"));
 
         RegressionTestHarness.Require(
-            options.Contains("GroupOffset", StringComparison.Ordinal)
-            && options.Contains("CustomMinimumSize", StringComparison.Ordinal),
-            "Expected the option group geometry to keep its stable offset and minimum sizes.");
+            options.Contains("LayoutPreset.TopRight", StringComparison.Ordinal)
+            && options.Contains("PanelSize", StringComparison.Ordinal)
+            && options.Contains("screen.AddChild(_root)", StringComparison.Ordinal)
+            && !options.Contains("InfoPanel/VBoxContainer", StringComparison.Ordinal),
+            "Expected the option group to float top-right outside the vanilla InfoPanel so the starting relic keeps its room.");
         RegressionTestHarness.Require(
             options.Contains("PresentationChoices", StringComparison.Ordinal)
             && options.Contains("AddThemeConstantOverride", StringComparison.Ordinal)

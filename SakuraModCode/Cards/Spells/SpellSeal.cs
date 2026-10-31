@@ -27,7 +27,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class SpellSeal() : SpellCard(2, CardType.Attack, CardRarity.Basic, TargetType.AnyEnemy)
 {
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(14, ValueProp.Move), new DynamicVar("Magic", 2)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(14, ValueProp.Move), new DynamicVar("WandChargeGain", ClassicSealedWandRelic.DefaultSealExtraGain)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {

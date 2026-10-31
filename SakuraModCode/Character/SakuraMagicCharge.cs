@@ -66,9 +66,11 @@ internal static class SakuraMagicCharge
             TryConsumeOpportunity(card.Owner, captured);
     }
 
+    // Sealed Book owns every after-play Charge grant; without it no card charges.
     internal static bool GainsMagicAfterPlay(CardModel card, bool hasSealedBook) =>
-        SakuraTransparentCardCatalog.IsTransparentCard(card)
-        || card is SakuraSourceCard { GrantsMagicCharge: true } && hasSealedBook;
+        hasSealedBook
+        && (SakuraTransparentCardCatalog.IsTransparentCard(card)
+            || card is SakuraSourceCard { GrantsMagicCharge: true });
 
     internal static async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardModel card)
     {

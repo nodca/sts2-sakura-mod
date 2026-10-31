@@ -28,7 +28,7 @@ public class Gale() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var target = RequiredTarget(play);
-        await GaleWindBladeVfx.PlayOrResolveAsync(this, Owner.Creature, target, async cues =>
+        await GaleGustVfx.PlayOrResolveAsync(this, Owner.Creature, target, async cues =>
         {
             cues.Impact();
             await DealDamage(

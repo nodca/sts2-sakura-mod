@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
+using SakuraMod.SakuraModCode.Relics;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -21,7 +22,8 @@ public class GrowingMagic() :
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new SakuraSourceDamageVar(18, ValueProp.Move),
-        new DynamicVar("Magic", MagicChargeOnKill)
+        new DynamicVar("Magic", MagicChargeOnKill),
+        new DynamicVar("WandChargeGain", ClassicSealedWandRelic.DefaultSealExtraGain)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
