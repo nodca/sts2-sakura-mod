@@ -48,19 +48,6 @@ public static class SakuraActions
         }
     }
 
-    // Native temporary stats grant the stat on apply and only take it back from their own
-    // turn-end hook, so removing a positive one early keeps the granted Strength/Dexterity.
-    internal static bool IsPermanentizableTemporaryStat(PowerModel power) =>
-        power is TemporaryStrengthPower or TemporaryDexterityPower
-        && power.Type == PowerType.Buff
-        && power.Amount > 0;
-
-    internal static async Task MakeTemporaryStatsPermanent(Creature creature)
-    {
-        foreach (var power in creature.Powers.Where(IsPermanentizableTemporaryStat).ToList())
-            await PowerCmd.Remove(power);
-    }
-
     internal static async Task RemovePowerWithCardCleanup(PowerModel power)
     {
         var owner = power.Owner;
@@ -302,23 +289,6 @@ public static class SakuraActions
 
         var index = previews.IndexOf(selected);
         return index >= 0 ? cards[index] : null;
-    }
-
-    public static async Task<CardModel?> ChooseAndMoveDrawPileCardToTop(
-        Player owner,
-        PlayerChoiceContext context)
-    {
-        var drawPile = CardPile.Get(PileType.Draw, owner);
-        if (drawPile is null || drawPile.IsEmpty)
-            return null;
-
-        var selected = await SelectFromCardPreviews(owner, context, drawPile.Cards, cancelable: false);
-        if (selected is null)
-            return null;
-
-        drawPile.MoveToTopInternal(selected);
-        drawPile.InvokeContentsChanged();
-        return selected;
     }
 
     public static async Task<IReadOnlyList<CardModel>> SelectUpToFromCards(

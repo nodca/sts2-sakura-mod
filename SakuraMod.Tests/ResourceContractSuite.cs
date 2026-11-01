@@ -3090,7 +3090,8 @@ public sealed class ResourceContractSuite
             && session.Contains("scope.InvokeAsync(\"deliver\"", StringComparison.Ordinal)
             && !session.Contains("ResourceLoader.Load", StringComparison.Ordinal)
             && !session.Contains("TIME", StringComparison.Ordinal)
-            && card.Contains("var targets = PlayTargets(play)", StringComparison.Ordinal)
+            && card.Contains(": PlayTargets(play)", StringComparison.Ordinal)
+            && card.Contains("CombatState!.HittableEnemies.ToList()", StringComparison.Ordinal)
             && card.Contains("TransferVfx.PlayOrResolveAsync", StringComparison.Ordinal)
             && cueIndex >= 0
             && powerIndex > cueIndex

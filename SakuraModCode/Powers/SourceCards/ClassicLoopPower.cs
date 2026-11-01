@@ -1,31 +1,34 @@
+using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
-using MegaCrit.Sts2.Core.Localization.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
-// A shuffle is one full cycle of the deck; swapping piles takes two swaps to
-// come back around, so Loop draws on every shuffle and on every second swap.
+// Loop draws on every shuffle and on the first pile swap each turn; swaps that
+// move no cards do not count.
 public class ClassicLoopPower : SakuraPowerModel
 {
-    internal const int ExchangesPerDraw = 2;
-
-    private int _exchanges;
+    private bool _exchangedThisTurn;
 
     protected override string IconFileName => "loop_power.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    // The label keeps the draw amount; swap progress lives in the hover text.
-    protected override IEnumerable<DynamicVar> CanonicalVars =>
-        [new DynamicVar("Exchanges", 0), new DynamicVar("ExchangesPerDraw", ExchangesPerDraw)];
-
     public override async Task AfterShuffle(PlayerChoiceContext choiceContext, Player shuffler)
     {
         if (shuffler == Owner.Player)
             await DrawCards(choiceContext);
+    }
+
+    public override Task BeforeSideTurnStart(PlayerChoiceContext choiceContext, CombatSide side,
+        IReadOnlyList<Creature> participants, ICombatState combatState)
+    {
+        if (side == Owner.Side && participants.Contains(Owner))
+            _exchangedThisTurn = false;
+        return Task.CompletedTask;
     }
 
     internal static async Task AfterPileExchange(PlayerChoiceContext choiceContext, Player player, int movedCards)
@@ -34,16 +37,17 @@ public class ClassicLoopPower : SakuraPowerModel
             return;
 
         foreach (var power in player.Creature.Powers.OfType<ClassicLoopPower>().ToArray())
-            await power.CountExchange(choiceContext);
+            await power.OnExchange(choiceContext);
     }
 
-    private async Task CountExchange(PlayerChoiceContext choiceContext)
+    private async Task OnExchange(PlayerChoiceContext choiceContext)
     {
-        _exchanges = (_exchanges + 1) % ExchangesPerDraw;
-        DynamicVars["Exchanges"].BaseValue = _exchanges;
+        if (_exchangedThisTurn)
+            return;
+
+        _exchangedThisTurn = true;
         Flash();
-        if (_exchanges == 0)
-            await DrawCards(choiceContext);
+        await DrawCards(choiceContext);
     }
 
     private async Task DrawCards(PlayerChoiceContext choiceContext)

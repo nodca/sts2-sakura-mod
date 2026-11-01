@@ -37,12 +37,45 @@ public class DreamingPower : SakuraPowerModel
 
         for (var i = 0; i < Amount; i++)
         {
-            var card = await SakuraActions.ChooseAndMoveDrawPileCardToTop(player, choiceContext);
+            var drawPile = CardPile.Get(PileType.Draw, player);
+            var memory = SakuraMemoryPile.Get(player);
+            var hasDraw = drawPile is { IsEmpty: false };
+            var hasMemory = memory is { IsEmpty: false };
+            if (!hasDraw && !hasMemory)
+                return;
+
+            var fromMemory = hasMemory
+                && (!hasDraw || await ChooseMemory(player, choiceContext, combatState, drawPile!, memory!));
+            if (fromMemory)
+            {
+                var recalled = await SakuraActions.SelectFromCardPreviews(player, choiceContext, memory!.Cards, cancelable: false);
+                if (recalled is not null)
+                    await SakuraMemoryPile.RecallToHand(player, [recalled], freeThisTurn: false);
+                continue;
+            }
+
+            var card = await SakuraActions.SelectFromCardPreviews(player, choiceContext, drawPile!.Cards, cancelable: false);
             if (card is null)
                 return;
 
+            await CardPileCmd.Add(card, PileType.Hand);
             await SakuraForgotten.GrantTemporary(choiceContext, card);
             card.SetToFreeThisTurn();
         }
+    }
+
+    // Draw Pile comes first, so index 0 still picks it like the old single-pile prompt.
+    private static async Task<bool> ChooseMemory(
+        Player player,
+        PlayerChoiceContext choiceContext,
+        ICombatState combatState,
+        CardPile drawPile,
+        CardPile memory)
+    {
+        var draw = combatState.CreateCard<ExchangeDrawChoice>(player);
+        var recall = combatState.CreateCard<ExchangeMemoryChoice>(player);
+        draw.SetDisplayedCount(drawPile.Cards.Count);
+        recall.SetDisplayedCount(memory.Cards.Count);
+        return await SakuraActions.SelectFromCards(player, choiceContext, [draw, recall], cancelable: false) is ExchangeMemoryChoice;
     }
 }

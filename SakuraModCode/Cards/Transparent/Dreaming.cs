@@ -18,14 +18,14 @@ using STS2RitsuLib.Cards.DynamicVars;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Dreaming() : TransparentCard(2, CardType.Power, CardRarity.Rare, TargetType.Self)
+public class Dreaming() : TransparentCard(3, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
-        [SakuraCardHoverTips.TemporaryTipKey];
+        [SakuraCardHoverTips.TemporaryTipKey, SakuraMemoryPile.PileId];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
         => await PowerCmd.Apply<DreamingPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
 
-    protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Innate);
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }

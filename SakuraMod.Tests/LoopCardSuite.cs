@@ -26,6 +26,14 @@ public sealed class LoopCardSuite
     }
 
     [Fact]
-    public void PileSwapsDrawEverySecondSwap() =>
-        Assert.Equal(2, ClassicLoopPower.ExchangesPerDraw);
+    public void PileSwapsDrawOnFirstSwapEachTurn()
+    {
+        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/SourceCards/ClassicLoopPower.cs"));
+
+        Assert.Contains("if (_exchangedThisTurn)", source);
+        Assert.Contains("_exchangedThisTurn = false;", source);
+        Assert.True(RegressionTestHarness.DeclaresMethod<ClassicLoopPower>("BeforeSideTurnStart"));
+        Assert.DoesNotContain("ExchangesPerDraw", source);
+    }
 }

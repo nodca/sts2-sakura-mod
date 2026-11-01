@@ -33,7 +33,7 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
         new SpiralDamageVar(8, ValueProp.Move),
         new DynamicVar("MemoryScale", 1),
         new CardsVar("NextTurnCopies", 1),
-        new CardsVar("ExtraCopies", 3)
+        new CardsVar("ExtraCopies", 2)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
@@ -52,13 +52,14 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
         if (copies <= 0)
             return;
 
-        await PowerCmd.Apply<SpiralNextTurnPower>(
+        var power = await PowerCmd.Apply<SpiralNextTurnPower>(
             choiceContext,
             Owner.Creature,
             copies,
             Owner.Creature,
             this,
             false);
+        power?.CarryUpgradeFrom(this);
     }
 
     private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
@@ -68,7 +69,8 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
             DynamicVars["ExtraCopies"].IntValue,
             freeThisTurn: true,
             choiceContext,
-            refreshGeneratedTransparentHandVisual: false);
+            refreshGeneratedTransparentHandVisual: false,
+            upgradeLevel: CurrentUpgradeLevel);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);

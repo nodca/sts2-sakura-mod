@@ -104,9 +104,13 @@ internal static class ExchangePileScenario
         }
         await AwaitUiFramesAsync();
 
-        assertions.True("memory_received_draw_identity", memory.Cards.SequenceEqual(drawBefore));
+        // The base effect draws 1 before the swap, so that card stays in hand instead of entering Memory.
+        var drawnByExchange = drawBefore.Where(playerCombat.Hand.Cards.Contains).ToArray();
+        var drawAfterDraw = drawBefore.Except(drawnByExchange).ToArray();
+        assertions.Equal("base_effect_drew_one", 1, drawnByExchange.Length);
+        assertions.True("memory_received_draw_identity", memory.Cards.SequenceEqual(drawAfterDraw));
         assertions.True("draw_received_memory_identity", playerCombat.DrawPile.Cards.SequenceEqual(memoryBefore));
-        assertions.Equal("memory_count_swapped", drawBefore.Length, memory.Cards.Count);
+        assertions.Equal("memory_count_swapped", drawAfterDraw.Length, memory.Cards.Count);
         assertions.Equal("draw_count_swapped", memoryBefore.Length, playerCombat.DrawPile.Cards.Count);
         assertions.True("draw_marker_entered_memory", memory.Cards.Contains(drawMarker));
         assertions.True("forgotten_card_left_memory", playerCombat.DrawPile.Cards.Contains(forgottenInMemory));
@@ -297,24 +301,14 @@ internal static class ExchangePileScenario
         var memoryBefore = memory.Cards.ToArray();
         var exhaustBefore = piles.ExhaustPile.Cards.ToArray();
         await ActAsync(async choice => await exchange.ExchangePiles(choice, ExchangePileKind.Memory, ExchangePileKind.Exhaust));
-        assertions.Equal("first_counted_swap_only_advances_loop", 1, piles.Hand.Cards.Count);
+        assertions.Equal("first_swap_each_turn_triggers_each_loop_once", 4, piles.Hand.Cards.Count);
         assertions.True("loop_reward_waits_for_complete_memory_swap", memory.Cards.SequenceEqual(exhaustBefore));
         assertions.True("loop_reward_waits_for_complete_exhaust_swap", piles.ExhaustPile.Cards.SequenceEqual(memoryBefore));
 
         await ResetPilesAsync(6, 6, 0, 0);
         var reversal = await CombatScenarioContext.AddGeneratedCardToHandAsync<Reversal>(combat, player);
-        var swappedTopCards = piles.DiscardPile.Cards.Take(3).ToArray();
         await CombatScenarioContext.PlayCardAsync(reversal, combat.HittableEnemies.First());
-        assertions.Equal("second_counted_swap_triggers_each_loop_once", 3, piles.Hand.Cards.Count);
-        assertions.True("reversal_loop_draws_from_completed_swap", piles.Hand.Cards.SequenceEqual(swappedTopCards));
-
-        await ResetPilesAsync(1, 5, 1, 1);
-        exchange = await CombatScenarioContext.AddGeneratedCardToHandAsync<Exchange>(combat, player);
-        await ActAsync(async choice => await exchange.ExchangePiles(choice, ExchangePileKind.Memory, ExchangePileKind.Exhaust));
-        assertions.Equal("odd_counted_swap_draws_nothing", 1, piles.Hand.Cards.Count);
-        await ActAsync(async choice => await exchange.ExchangePiles(choice, ExchangePileKind.Memory, ExchangePileKind.Exhaust));
-        assertions.Equal("swap_reward_can_trigger_one_additional_shuffle_reward", 7, piles.Hand.Cards.Count);
-        assertions.Equal("small_pile_cycle_finishes_without_phantom_cards", 0, piles.DrawPile.Cards.Count + piles.DiscardPile.Cards.Count);
+        assertions.Equal("later_swap_same_turn_draws_nothing", 0, piles.Hand.Cards.Count);
 
         await ResetPilesAsync(12, 1, 0, 0);
         await ActAsync(async choice => { await CardPileCmd.Draw(choice, CardPile.MaxCardsInHand, player); });

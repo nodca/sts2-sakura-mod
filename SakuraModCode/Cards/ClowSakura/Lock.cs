@@ -27,7 +27,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class ClowLock() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Common, TargetType.None)
 {
-    internal const int ChargePerSelectedCard = 1;
+    internal const int ChargePerSelectedCard = 2;
 
     private static LocString Prompt => CardLoc<ClowLock>("selectionPrompt");
 

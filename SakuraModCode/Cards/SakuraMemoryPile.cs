@@ -82,7 +82,8 @@ internal static class SakuraMemoryPile
     internal static async Task<IReadOnlyList<CardModel>> RecallToHand(
         Player player,
         IReadOnlyList<CardModel> selected,
-        bool upgrade = false)
+        bool upgrade = false,
+        bool freeThisTurn = true)
     {
         if (selected.Count == 0)
             return [];
@@ -97,7 +98,8 @@ internal static class SakuraMemoryPile
                 card.RemoveTemporaryForExchange();
             if (upgrade && card.IsUpgradable)
                 CardCmd.Upgrade(card);
-            card.EnergyCost.SetThisTurnOrUntilPlayed(0, reduceOnly: true);
+            if (freeThisTurn)
+                card.EnergyCost.SetThisTurnOrUntilPlayed(0, reduceOnly: true);
             SakuraMemoryRecallVisual.Mark(card);
         }
 

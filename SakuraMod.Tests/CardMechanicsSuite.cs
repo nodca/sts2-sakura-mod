@@ -140,17 +140,13 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void TransferExtraOnlyMakesPositiveTemporaryStatsPermanent()
+    public void TransferExtraHitsAllEnemiesButGainsOnce()
     {
-        var amountField = typeof(PowerModel).GetField("_amount",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
-        var permanentizable = new PowerModel[] { new ClassicTemporaryStrengthPower(), new SakuraTemporaryDexterityPower(), new FlexPotionPower() };
-        var protectedPowers = new PowerModel[] { new PiercingWailPower(), new DarkShacklesPower(), new StrengthPower() };
-        foreach (var power in permanentizable.Concat(protectedPowers))
-            amountField.SetValue(power, 2);
-
-        Assert.All(permanentizable, power => Assert.True(SakuraActions.IsPermanentizableTemporaryStat(power)));
-        Assert.All(protectedPowers, power => Assert.False(SakuraActions.IsPermanentizableTemporaryStat(power)));
+        var transferSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Transfer.cs"));
+        Assert.Contains("activation.IsActive\n            ? CombatState!.HittableEnemies.ToList()", transferSource.ReplaceLineEndings("\n"));
+        Assert.Contains("if (gained)", transferSource);
+        Assert.DoesNotContain("MakeTemporaryStatsPermanent", transferSource);
         Assert.Contains(CardKeyword.Exhaust, new Transfer().CanonicalKeywords);
         Assert.Contains(CardKeyword.Exhaust, new Lucid().CanonicalKeywords);
     }
@@ -1227,13 +1223,15 @@ public sealed class CardMechanicsSuite
         upgradedExchange.UpgradeInternal();
         RegressionTestHarness.Require(
             exchange.EnergyCost.Canonical == 1
-            && upgradedExchange.EnergyCost.GetWithModifiers(CostModifiers.None) == 0
+            && upgradedExchange.EnergyCost.GetWithModifiers(CostModifiers.None) == 1
+            && exchange.DynamicVars.Cards.IntValue == 1
+            && upgradedExchange.DynamicVars.Cards.IntValue == 2
             && !exchange.CanonicalKeywords.Contains(CardKeyword.Exhaust)
             && exchange.DynamicVars["Remind"].IntValue == 1
             && SakuraCardHoverTips.StaticTipKeys(exchange).Contains(SakuraCardHoverTips.RemindTipKey)
             && new ExchangeRecallPower().StackType == PowerStackType.Counter
             && RegressionTestHarness.DeclaresMethod<ExchangeRecallPower>("AfterPlayerTurnStart"),
-            "Expected Exchange to cost 1 (0 upgraded) without Exhaust and schedule a stacking next-turn Remind 1.");
+            "Expected Exchange to cost 1, draw 1 (2 upgraded) without Exhaust, and schedule a stacking next-turn Remind 1.");
 
         RegressionTestHarness.Require(
             Synchronize.CanSynchronize(new Synchronize(), new Gale())
@@ -1320,13 +1318,13 @@ public sealed class CardMechanicsSuite
             && spiral.DynamicVars.Damage is SpiralDamageVar
             && spiral.DynamicVars["MemoryScale"].IntValue == 1
             && spiral.DynamicVars["NextTurnCopies"].IntValue == 1
-            && spiral.DynamicVars["ExtraCopies"].IntValue == 3
+            && spiral.DynamicVars["ExtraCopies"].IntValue == 2
             && SpiralRules.OutputWithMemory(8, 0) == 8
             && SpiralRules.OutputWithMemory(8, 4) == 12
             && upgradedSpiral.DynamicVars.Damage.IntValue == 11
             && upgradedSpiral.DynamicVars["NextTurnCopies"].IntValue == 1
             && SpiralRules.OutputWithMemory(upgradedSpiral.DynamicVars.Damage.IntValue, 4) == 15
-            && !spiralSource.Contains("IsUpgraded", StringComparison.Ordinal)
+            && spiralSource.Contains("power?.CarryUpgradeFrom(this)", StringComparison.Ordinal)
             && new SpiralNextTurnPower().InstanceType == PowerInstanceType.Instanced
             && new SpiralNextTurnPower().StackType == PowerStackType.Counter
             && !new SpiralNextTurnPower().IsVisible
@@ -1336,15 +1334,17 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             spiralSource.Contains("AddTemporaryGeneratedCardsToHand<Spiral>", StringComparison.Ordinal)
             && spiralSource.Contains("freeThisTurn: true", StringComparison.Ordinal)
+            && spiralSource.Contains("upgradeLevel: CurrentUpgradeLevel", StringComparison.Ordinal)
             && !spiralSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("combatState.CreateCard<Spiral>(player)", StringComparison.Ordinal)
-            && !spiralNextTurnPowerSource.Contains("UpgradeInternal();", StringComparison.Ordinal)
+            && spiralNextTurnPowerSource.Contains("card.CurrentUpgradeLevel < CopyUpgradeLevel[this]", StringComparison.Ordinal)
+            && spiralNextTurnPowerSource.Contains("FreeThisTurn = true", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("Pile = PileType.Draw", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("Position = CardPilePosition.Top", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("AddTemporary = true", StringComparison.Ordinal)
             && !spiralNextTurnPowerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal)
             && !spiralNextTurnPowerSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal),
-            "Expected Spiral to put a base Forgotten Spiral on top before next turn's draw, while Extra generates three base Forgotten Spirals that cost 0 this turn.");
+            "Expected Spiral to put a Forgotten Spiral at its own upgrade level on top before next turn's draw, costing 0 that turn, while Extra generates two Forgotten Spirals at its upgrade level that cost 0 this turn.");
 
         var blockedHit = new DamageResult(null!, ValueProp.Move) { UnblockedDamage = 0 };
         var unblockedHit = new DamageResult(null!, ValueProp.Move) { UnblockedDamage = 1 };
@@ -1539,8 +1539,8 @@ public sealed class CardMechanicsSuite
             && upgradedClowLock.DynamicVars.Cards.IntValue == 2
             && !clowLock.Keywords.Contains(CardKeyword.Retain)
             && !upgradedClowLock.Keywords.Contains(CardKeyword.Retain)
-            && ClowLock.ChargePerSelectedCard == 1,
-            "Expected Clow Lock to cost 0, choose 1 card (2 upgraded), and gain 1 Magic Charge per chosen card.");
+            && ClowLock.ChargePerSelectedCard == 2,
+            "Expected Clow Lock to cost 0, choose 1 card (2 upgraded), and gain 2 Magic Charge per chosen card.");
 
         var change = new ClowChange();
         var upgradedChange = RegressionTestHarness.MutableForCostTest(new ClowChange());
@@ -1812,23 +1812,23 @@ public sealed class CardMechanicsSuite
         upgradedDreaming.UpgradeInternal();
         var dreamingPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Powers/Transparent/DreamingPower.cs"));
-        var sakuraActionsSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraActions.cs"));
         RegressionTestHarness.Require(
             dreaming.Type == CardType.Power
             && dreaming.Rarity == CardRarity.Rare
             && dreaming.CanonicalKeywords.Contains(SakuraKeywords.Water)
             && !dreaming.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
             && !TransparentCard.HasMagicChargeExtraEffect(dreaming)
-            && dreaming.EnergyCost.Canonical == 2
+            && dreaming.EnergyCost.Canonical == 3
             && upgradedDreaming.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
-            && upgradedDreaming.Keywords.Contains(CardKeyword.Innate)
+            && !dreaming.CanonicalKeywords.Contains(CardKeyword.Innate)
+            && !upgradedDreaming.Keywords.Contains(CardKeyword.Innate)
             && RegressionTestHarness.DeclaresMethod<DreamingPower>("BeforeHandDrawLate")
             && !RegressionTestHarness.DeclaresMethod<DreamingPower>("BeforeHandDraw")
-            && dreamingPowerSource.Contains("ChooseAndMoveDrawPileCardToTop", StringComparison.Ordinal)
-            && sakuraActionsSource.Contains("SelectFromCardPreviews(owner, context, drawPile.Cards", StringComparison.Ordinal)
-            && !dreamingPowerSource.Contains("lookCount: 5", StringComparison.Ordinal),
-            "Expected Dreaming to choose from the full draw pile after ordinary pre-draw hooks, stay at 2 cost, and gain Innate on upgrade.");
+            && SakuraCardHoverTips.StaticTipKeys(dreaming).Contains(SakuraMemoryPile.PileId)
+            && dreamingPowerSource.Contains("drawPile!.Cards", StringComparison.Ordinal)
+            && dreamingPowerSource.Contains("CardPileCmd.Add(card, PileType.Hand)", StringComparison.Ordinal)
+            && dreamingPowerSource.Contains("RecallToHand(player, [recalled], freeThisTurn: false)", StringComparison.Ordinal),
+            "Expected Dreaming to put a Draw Pile or Memory card into Hand after ordinary pre-draw hooks, cost 3 (2 upgraded), and have no Innate.");
 
         var upgradedClowFreeze = RegressionTestHarness.MutableForCostTest(new ClowFreeze());
         upgradedClowFreeze.UpgradeInternal();

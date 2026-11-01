@@ -145,6 +145,8 @@ internal static class GeneratedPileMemoryScenario
                 silent: true));
         await CombatScenarioContext.EnqueueAndWaitAsync(dreamingSetupAction);
         var dreamingSelector = new TestCardSelector();
+        // Pile choice only appears once Memory has cards; Draw Pile is index 0 either way.
+        dreamingSelector.PrepareToSelect([0]);
         dreamingSelector.PrepareToSelect([0]);
         using (CardSelectCmd.UseSelector(dreamingSelector))
         {
@@ -183,16 +185,17 @@ internal static class GeneratedPileMemoryScenario
         assertions.True("exhausted_temporary_remains_in_combat_scope", combat.ContainsCard(temporaryExhausted));
         assertions.True("ordinary_remains_in_combat_scope", combat.ContainsCard(ordinary));
         assertions.True("ordinary_owner_after_turn_end", ReferenceEquals(ordinary.Owner, player));
+        // Dreaming puts its pick straight into hand before the draw, so it adds one card on top.
         assertions.Equal(
             "upgraded_spiral_uses_a_normal_draw_slot",
-            CombatManager.baseHandDrawCount,
+            CombatManager.baseHandDrawCount + 1,
             playerCombat.Hand.Cards.Count);
         var continuedSpiral = playerCombat.Hand.Cards
             .OfType<Spiral>()
             .Single(card => card.IsTemporary());
         assertions.True(
-            "upgraded_spiral_self_continues_as_fresh_base_card",
-            continuedSpiral.CurrentUpgradeLevel == 0
+            "upgraded_spiral_self_continues_as_fresh_upgraded_card",
+            continuedSpiral.CurrentUpgradeLevel == 1
             && continuedSpiral.Enchantment is null
             && continuedSpiral.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0);
 
@@ -267,11 +270,11 @@ internal static class GeneratedPileMemoryScenario
             .OfType<Spiral>()
             .Where(card => card.IsTemporary() && card.ReturnsToMemoryAfterTemporary())
             .ToList();
-        assertions.Equal("spiral_extra_generates_three_copies", 3, extraSpirals.Count);
+        assertions.Equal("spiral_extra_generates_two_copies", 2, extraSpirals.Count);
         assertions.True(
-            "spiral_extra_copies_are_free",
+            "spiral_extra_copies_are_free_and_upgraded",
             extraSpirals.All(card =>
-                card.CurrentUpgradeLevel == 0
+                card.CurrentUpgradeLevel == 1
                 && card.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0));
 
         await CombatScenarioContext.PlayCardAsync(extraSpirals[0], combat.HittableEnemies.First());

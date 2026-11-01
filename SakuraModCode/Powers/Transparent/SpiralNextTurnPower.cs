@@ -17,11 +17,16 @@ using SakuraMod.SakuraModCode.Extensions;
 using STS2RitsuLib.Combat.HandSize;
 using STS2RitsuLib.Scaffolding.Content;
 using STS2RitsuLib.Scaffolding.Content.Patches;
+using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
 public class SpiralNextTurnPower : SakuraPowerModel
 {
+    // Instanced, so each Spiral play keeps its own upgrade level for the copies it schedules.
+    private static readonly SavedAttachedState<SpiralNextTurnPower, int> CopyUpgradeLevel =
+        new("SakuraMod_SpiralNextTurnCopyUpgradeLevel", () => 0);
+
     public override PowerType Type => PowerType.Buff;
     public override PowerInstanceType InstanceType => PowerInstanceType.Instanced;
     public override PowerStackType StackType => PowerStackType.Counter;
@@ -38,17 +43,23 @@ public class SpiralNextTurnPower : SakuraPowerModel
         for (var i = 0; i < Amount; i++)
         {
             var card = combatState.CreateCard<Spiral>(player);
+            while (card.CurrentUpgradeLevel < CopyUpgradeLevel[this] && card.IsUpgradable)
+                card.UpgradeInternal();
             await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
                 card,
                 new GeneratedCardOptions
                 {
                     Pile = PileType.Draw,
                     Position = CardPilePosition.Top,
-                    AddTemporary = true
+                    AddTemporary = true,
+                    FreeThisTurn = true
                 },
                 choiceContext);
         }
 
         await PowerCmd.Remove(this);
     }
+
+    internal void CarryUpgradeFrom(CardModel source) =>
+        CopyUpgradeLevel[this] = source.CurrentUpgradeLevel;
 }

@@ -34,21 +34,25 @@ public class Transfer() : TransparentExtraEffectCard(2, CardType.Skill, CardRari
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var targets = PlayTargets(play);
+        var targets = activation.IsActive
+            ? CombatState!.HittableEnemies.ToList()
+            : PlayTargets(play);
         await TransferVfx.PlayOrResolveAsync(this, Owner.Creature, targets, activation.IsActive, async cues =>
         {
+            var gained = false;
             foreach (var target in targets)
             {
                 await cues.PullOutAsync(target);
                 await PowerCmd.Apply<StrengthPower>(choiceContext, target, -DynamicVars["EnemyStrengthLoss"].IntValue, Owner.Creature, this, false);
                 await cues.DeliverAsync(target);
+                // The steal hits every enemy, but Sakura only gains once, on the first delivery.
+                if (gained)
+                    continue;
+                gained = true;
                 await PowerCmd.Apply<StrengthPower>(choiceContext, Owner.Creature, DynamicVars["StrengthGain"].IntValue, Owner.Creature, this, false);
                 await PowerCmd.Apply<DexterityPower>(choiceContext, Owner.Creature, DynamicVars["DexterityGain"].IntValue, Owner.Creature, this, false);
             }
         });
-
-        if (activation.IsActive)
-            await SakuraActions.MakeTemporaryStatsPermanent(Owner.Creature);
     }
 
     protected override void OnUpgrade()

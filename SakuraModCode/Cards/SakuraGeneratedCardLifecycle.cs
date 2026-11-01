@@ -59,7 +59,8 @@ internal static class SakuraGeneratedCardLifecycle
         int count,
         bool freeThisTurn,
         PlayerChoiceContext context,
-        bool refreshGeneratedTransparentHandVisual = true) where T : CardModel
+        bool refreshGeneratedTransparentHandVisual = true,
+        int upgradeLevel = 0) where T : CardModel
     {
         if (count <= 0)
             return [];
@@ -68,7 +69,12 @@ internal static class SakuraGeneratedCardLifecycle
             ?? throw new InvalidOperationException($"Generated {typeof(T).Name} requires an active combat.");
         var cards = new List<CardModel>(count);
         for (var i = 0; i < count; i++)
-            cards.Add(combatState.CreateCard<T>(owner));
+        {
+            var card = combatState.CreateCard<T>(owner);
+            while (card.CurrentUpgradeLevel < upgradeLevel && card.IsUpgradable)
+                card.UpgradeInternal();
+            cards.Add(card);
+        }
 
         await AddGeneratedCardsToCombat(
             cards,

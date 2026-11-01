@@ -29,10 +29,12 @@ public class Exchange() : TransparentExtraEffectCard(1, CardType.Skill, CardRari
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
         [SakuraCardHoverTips.TemporaryTipKey, SakuraMemoryPile.PileId, SakuraCardHoverTips.RemindTipKey];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Remind", 1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new DynamicVar("Remind", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
+        // Draw first so the Forgotten pick can include the new cards.
+        await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
         var card = await SakuraActions.SelectHandCard(this, choiceContext, CanBecomeForgotten, cancelable: false);
         if (card is not null)
             await SakuraForgotten.GrantTemporary(choiceContext, card);
@@ -129,7 +131,7 @@ public class Exchange() : TransparentExtraEffectCard(1, CardType.Skill, CardRari
     private bool CanBecomeForgotten(CardModel card) =>
         card != this && !card.IsTemporary() && card is not ISakuraForgottenImmune;
 
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
 }
 
 internal static class ExchangeRules
