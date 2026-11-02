@@ -64,6 +64,7 @@ public class GravitationHoldPower : SakuraPowerModel
         if (!_pendingReturns.Remove(card) || pileType != PileType.Hand)
             return Task.CompletedTask;
 
+        PreservePlayedLocalCost(card);
         _returnCounts[card] = _returnCounts.GetValueOrDefault(card) + 1;
         card.InvokeEnergyCostChanged();
         GravitationHoldVisual.NotifyReturned(Owner, card);
@@ -75,6 +76,15 @@ public class GravitationHoldPower : SakuraPowerModel
         decimal currentCost,
         out decimal newCost) =>
         TryIncreaseReturnedCardCost(card, _returnCounts.GetValueOrDefault(card), currentCost, out newCost);
+
+    // Native play cleanup drops "this turn or until played" discounts after the card
+    // lands in Hand, so pin the local cost it was played at for the rest of the turn.
+    internal static void PreservePlayedLocalCost(CardModel card)
+    {
+        var playedCost = card.EnergyCost.GetWithModifiers(CostModifiers.Local);
+        if (playedCost >= 0)
+            card.EnergyCost.SetThisTurn(playedCost, reduceOnly: true);
+    }
 
     internal static bool TryIncreaseReturnedCardCost(
         CardModel card,

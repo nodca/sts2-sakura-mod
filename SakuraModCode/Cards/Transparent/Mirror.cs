@@ -24,26 +24,33 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class Mirror() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
-    internal override IEnumerable<CardKeyword> ReferencedKeywords => [CardKeyword.Ethereal];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new RepeatVar(1), new RepeatVar("ExtraRepeat", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var card = await SakuraActions.SelectHandCard(
-            this,
-            choiceContext,
-            card => card != this && SakuraSourceCardRules.CanBeTargetedByClearCardEffects(card));
-        if (card is not null)
-        {
-            var amount = DynamicVars["Repeat"].IntValue;
-            if (activation.IsActive)
-                amount += DynamicVars["ExtraRepeat"].IntValue;
-            card.BaseReplayCount += amount;
-            if (!card.Keywords.Contains(CardKeyword.Ethereal))
-                card.AddKeyword(CardKeyword.Ethereal);
-        }
+        var candidates = CardPile.GetCards(Owner, PileType.Hand).Where(CanGainReplay).ToList();
+        if (candidates.Count == 0)
+            return;
+
+        var card = Owner.RunState.Rng.CombatCardSelection.NextItem(candidates);
+        if (card is null)
+            return;
+
+        var amount = DynamicVars["Repeat"].IntValue;
+        if (activation.IsActive)
+            amount += DynamicVars["ExtraRepeat"].IntValue;
+        card.BaseReplayCount += amount;
+        CardCmd.Preview(card);
     }
 
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+    // Mirrors native Hidden Gem's pool, but from Hand; energy is deliberately not checked.
+    internal bool CanGainReplay(CardModel card) =>
+        card != this
+        && card.Type is not (CardType.Status or CardType.Curse)
+        && !card.Keywords.Contains(CardKeyword.Unplayable)
+        && card.GetEnchantedReplayCount() < 1
+        && SakuraSourceCardRules.CanBeTargetedByClearCardEffects(card);
+
+    protected override void OnUpgrade() => DynamicVars["Repeat"].UpgradeValueBy(1);
 }

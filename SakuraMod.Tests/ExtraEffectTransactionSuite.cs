@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
@@ -43,10 +44,17 @@ public sealed class ExtraEffectTransactionSuite
     public void ActivationAndPostPlayPoliciesRemainStable()
     {
         var mirror = new Mirror();
+        var upgradedMirror = RegressionTestHarness.MutableForCostTest(new Mirror());
+        upgradedMirror.UpgradeInternal();
         RegressionTestHarness.Require(
             mirror.DynamicVars["Repeat"].IntValue == 1
-            && mirror.DynamicVars["ExtraRepeat"].IntValue == 1,
-            "Expected Mirror to grant 1 Replay this combat and 1 additional Replay with Extra.");
+            && upgradedMirror.DynamicVars["Repeat"].IntValue == 2
+            && mirror.DynamicVars["ExtraRepeat"].IntValue == 1
+            && mirror.EnergyCost.Canonical == 1
+            && !mirror.CanonicalKeywords.Contains(CardKeyword.Exhaust)
+            && !mirror.CanGainReplay(new MegaCrit.Sts2.Core.Models.Cards.Dazed())
+            && mirror.CanGainReplay(new Gale()),
+            "Expected Mirror to stay at 1 cost without Exhaust, grant 1 (2 upgraded) Replay to a random playable non-Status Hand card, and 1 more with Extra.");
 
         RegressionTestHarness.Require(
             !SakuraExtraEffectTransaction.CanActivate(9, isLocked: false)

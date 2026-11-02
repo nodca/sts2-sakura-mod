@@ -1006,6 +1006,30 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void GravitationReturnsKeepThePlayedLocalCostUntilEndOfTurn()
+    {
+        var discounted = RegressionTestHarness.MutableForCostTest(new Transfer());
+        discounted.EnergyCost.SetThisTurnOrUntilPlayed(0, true);
+        GravitationHoldPower.PreservePlayedLocalCost(discounted);
+        discounted.EnergyCost.AfterCardPlayedCleanup();
+        var localCost = discounted.EnergyCost.GetWithModifiers(CostModifiers.Local);
+
+        Assert.Equal(2, discounted.EnergyCost.Canonical);
+        Assert.Equal(0, localCost);
+        Assert.True(GravitationHoldPower.TryIncreaseReturnedCardCost(discounted, 1, localCost, out var returnedCost));
+        Assert.Equal(1, returnedCost);
+        discounted.EnergyCost.EndOfTurnCleanup();
+        Assert.Equal(discounted.EnergyCost.Canonical, discounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
+
+        var undiscounted = RegressionTestHarness.MutableForCostTest(new Transfer());
+        GravitationHoldPower.PreservePlayedLocalCost(undiscounted);
+        undiscounted.EnergyCost.AfterCardPlayedCleanup();
+        Assert.Equal(undiscounted.EnergyCost.Canonical, undiscounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
+        undiscounted.EnergyCost.UpgradeBy(-1);
+        Assert.Equal(undiscounted.EnergyCost.Canonical - 1, undiscounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
+    }
+
+    [Fact]
     public void ReleaseTracksIndividualCardsAndCopiesWithoutStacking()
     {
         var first = RegressionTestHarness.MutableForCostTest(new Gale());
