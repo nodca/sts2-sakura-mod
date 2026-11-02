@@ -24,7 +24,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class Gravitation() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {

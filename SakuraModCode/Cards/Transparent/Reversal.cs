@@ -23,7 +23,7 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Reversal() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+public class Reversal() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
 

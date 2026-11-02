@@ -1,5 +1,6 @@
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
@@ -27,14 +28,24 @@ using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
+// The type keeps its old name so saved combats still resolve it. Like native
+// Normality, it caps hand plays at MaxCardsPerTurn and leaves auto-plays alone.
 public class ClassicSilentNoAttackPower : SakuraPowerModel
 {
+    internal const int MaxCardsPerTurn = 3;
+
     protected override string IconFileName => "silent_power.png";
     public override PowerType Type => PowerType.Debuff;
     public override PowerStackType StackType => PowerStackType.Single;
 
     public override bool ShouldPlay(CardModel card, AutoPlayType autoPlayType) =>
-        card.Owner.Creature != Owner || card.Type != CardType.Attack;
+        card.Owner.Creature != Owner
+        || card.Pile?.Type != PileType.Hand
+        || CardsPlayedThisTurn() < MaxCardsPerTurn;
+
+    private int CardsPlayedThisTurn() =>
+        CombatManager.Instance.History.CardPlaysStarted.Count(entry =>
+            entry.HappenedThisTurn(Owner.CombatState) && entry.CardPlay.Card.Owner.Creature == Owner);
 
     public override async Task BeforeSideTurnStart(
         PlayerChoiceContext choiceContext,

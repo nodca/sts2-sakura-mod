@@ -140,6 +140,19 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void ClowSilentCapsNextTurnHandPlaysAtThree()
+    {
+        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/SourceCards/ClassicSilentNoAttackPower.cs"));
+
+        Assert.Equal(3, ClassicSilentNoAttackPower.MaxCardsPerTurn);
+        Assert.Equal(PowerStackType.Single, new ClassicSilentNoAttackPower().StackType);
+        Assert.Contains("card.Pile?.Type != PileType.Hand", source);
+        Assert.Contains("CardPlaysStarted", source);
+        Assert.DoesNotContain("CardType.Attack", source);
+    }
+
+    [Fact]
     public void TransferExtraHitsAllEnemiesButGainsOnce()
     {
         var transferSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -1219,7 +1232,7 @@ public sealed class CardMechanicsSuite
             && gravitation.Rarity == CardRarity.Rare
             && gravitation.Type == CardType.Skill
             && gravitation.TargetType == TargetType.Self
-            && gravitation.CanonicalKeywords.SequenceEqual([SakuraKeywords.Earth])
+            && gravitation.CanonicalKeywords.SequenceEqual([SakuraKeywords.Wind])
             && TransparentCard.HasMagicChargeExtraEffect(gravitation)
             && upgradedGravitation.Keywords.Contains(CardKeyword.Retain)
             && new GravitationHoldPower().StackType == PowerStackType.Single
@@ -1233,13 +1246,13 @@ public sealed class CardMechanicsSuite
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterSideTurnEnd")
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterApplied")
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterRemoved"),
-            "Expected Gravitation to be a 0-cost rare Earth replay engine whose returned cards cost 1 more each time and which gains Retain on upgrade.");
+            "Expected Gravitation to be a 0-cost rare Wind replay engine whose returned cards cost 1 more each time and which gains Retain on upgrade.");
 
         RegressionTestHarness.Require(
             SakuraActions.ElementSetOf(new Gale()) == SakuraElementSet.Wind
             && SakuraActions.ElementSetOf(new Reflect()) == SakuraElementSet.Water
             && SakuraActions.ElementSetOf(new Blaze()) == SakuraElementSet.Fire
-            && SakuraActions.ElementSetOf(new Gravitation()) == SakuraElementSet.Earth,
+            && SakuraActions.ElementSetOf(new Gravitation()) == SakuraElementSet.Wind,
             "Expected Transparent Card elements to map into Classic element identities.");
 
         var exchange = new Exchange();
@@ -1465,7 +1478,7 @@ public sealed class CardMechanicsSuite
             && SiegeRules.ExtraDamage(-1) == 0
             && SiegeRules.ExtraDamage(9) == 9
             && upgradedSiege.DynamicVars.Block.IntValue == 4
-            && upgradedSiege.DynamicVars.Weak.IntValue == 1
+            && upgradedSiege.DynamicVars.Weak.IntValue == 2
             && new SiegePendingPower().StackType == PowerStackType.Counter
             && new SiegePendingPower().IsVisible
             && RegressionTestHarness.DeclaresMethod<SiegePendingPower>("BeforeSideTurnEnd")
@@ -1480,7 +1493,7 @@ public sealed class CardMechanicsSuite
             && shade.Type == CardType.Skill
             && shade.Rarity == CardRarity.Uncommon
             && shade.TargetType == TargetType.AllEnemies
-            && shade.CanonicalKeywords.SequenceEqual([SakuraKeywords.Water])
+            && shade.CanonicalKeywords.SequenceEqual([SakuraKeywords.Earth])
             && TransparentCard.HasMagicChargeExtraEffect(shade)
             && shade.DynamicVars.Block.IntValue == 11
             && shade.DynamicVars.Weak.IntValue == 1
@@ -1526,10 +1539,10 @@ public sealed class CardMechanicsSuite
             breakCard.DynamicVars.Damage.IntValue == 8
             && breakCard.DynamicVars.Vulnerable.IntValue == 1
             && breakCard.DynamicVars["ExtraVulnerable"].IntValue == 2
-            && upgradedBreak.DynamicVars.Damage.IntValue == 12
-            && upgradedBreak.DynamicVars.Vulnerable.IntValue == 1
+            && upgradedBreak.DynamicVars.Damage.IntValue == 10
+            && upgradedBreak.DynamicVars.Vulnerable.IntValue == 2
             && upgradedBreak.DynamicVars["ExtraVulnerable"].IntValue == 2,
-            "Expected Break to deal 8 damage and apply 1 Vulnerable (2 more with Extra), upgrading only damage to 12.");
+            "Expected Break to deal 8 damage and apply 1 Vulnerable (2 more with Extra), upgrading to 10 damage and 2 Vulnerable.");
 
         var upgradedHail = RegressionTestHarness.MutableForCostTest(new Hail());
         upgradedHail.UpgradeInternal();
@@ -1702,7 +1715,7 @@ public sealed class CardMechanicsSuite
             && RegressionTestHarness.DeclaresMethod<LabyrinthLostPower>("AfterModifyingDamageAmount")
             && !RegressionTestHarness.DeclaresMethod<LabyrinthPower>("ShouldAllowHitting")
             && !typeof(MainFile).Assembly.GetTypes().Any(type => type.Name is "LabyrinthIntent" or "SakuraLabyrinthMove"),
-            "Expected Labyrinth to protect against the first non-Earthy attack, discount the first Earthy card, and gain Innate on upgrade.");
+            "Expected Labyrinth to halve every creature's first attack hit, make the first Earthy card free, and gain Innate on upgrade.");
     }
 
     [Fact]
@@ -1752,7 +1765,7 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             rewind.EnergyCost.Canonical == 1
             && rewind.Rarity == CardRarity.Rare
-            && rewind.CanonicalKeywords.SequenceEqual([SakuraKeywords.Earth, CardKeyword.Exhaust])
+            && rewind.CanonicalKeywords.SequenceEqual([SakuraKeywords.Water, CardKeyword.Exhaust])
             && rewind.DynamicVars.Cards.IntValue == 1
             && upgradedRewind.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
             && upgradedRewind.DynamicVars.Cards.IntValue == 2,

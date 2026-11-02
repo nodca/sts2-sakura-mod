@@ -85,7 +85,7 @@ public class ClowBubbles() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.
 public class SakuraBubbles() : SakuraFormCard(0, CardType.Attack, TargetType.AllEnemies)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Water;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust, CardKeyword.Retain];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(5, ValueProp.Move)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)

@@ -125,7 +125,7 @@ internal static class TurnEndDamageSyncMultiplayerScenario
             context.ClientPlayer.Creature,
             null)
             ?? throw new InvalidOperationException("Siege pending Power was not applied.");
-        pending.QueueEffect(extraEffect: true);
+        pending.QueueEffect(extraEffect: true, weakAmount: SiegeRules.WeakAmount);
         var survivorHpBeforeSiege = survivor.CurrentHp;
         assertions.Equal("siege_fixture_target_hp", 1, siegeEnemy.CurrentHp);
         assertions.Equal("siege_fixture_block", SiegeBlock, context.ClientPlayer.Creature.Block);

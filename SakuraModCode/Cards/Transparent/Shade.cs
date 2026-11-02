@@ -21,7 +21,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class Shade() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity.Uncommon, TargetType.AllEnemies)
 {
     public override bool GainsBlock => true;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [new BlockVar(11, ValueProp.Move), new PowerVar<WeakPower>(1)];
 

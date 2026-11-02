@@ -43,11 +43,12 @@ public class LabyrinthPower : SakuraPowerModel
         if (Amount <= 0 || EarthCardPlayed[this] || !IsOwnedEarthCard(card) || card.EnergyCost.CostsX || currentCost <= 0)
             return false;
 
-        newCost = Math.Max(0, currentCost - 1);
+        newCost = 0;
         return true;
     }
 
-    // Resources have already been paid here. Commit before resolution so nested plays cannot reuse the discount.
+    // Resources have already been paid here. Commit before resolution so nested plays cannot reuse the free play.
+    // A 0-cost Earth card still spends it, like any native "first card each turn" effect.
     public override Task BeforeCardPlayed(CardPlay play)
     {
         if (Amount > 0 && !EarthCardPlayed[this] && IsOwnedEarthCard(play.Card))

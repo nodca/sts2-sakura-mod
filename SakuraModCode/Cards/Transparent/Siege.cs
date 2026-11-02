@@ -36,10 +36,14 @@ public class Siege() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.
             Owner.Creature,
             this,
             false);
-        pending?.QueueEffect(activation.IsActive);
+        pending?.QueueEffect(activation.IsActive, DynamicVars.Weak.IntValue);
     }
 
-    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(1);
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Block.UpgradeValueBy(1);
+        DynamicVars.Weak.UpgradeValueBy(1);
+    }
 }
 
 internal static class SiegeRules

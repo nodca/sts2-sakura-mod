@@ -7,7 +7,7 @@
   "SAKURAMOD-REFLECTION.title": "Reflection",
   "SAKURAMOD-REFLECTION.description": "When you are attacked, the attacker takes 50% of that damage per stack, then you lose 1 stack.\nAt the end of the enemy turn, lose 1 stack.",
   "SAKURAMOD-ENTER_LABYRINTH.title": "Lost",
-  "SAKURAMOD-ENTER_LABYRINTH.description": "Take half damage from the first attack hit each turn. Damage from [gold]Earthy[/gold] cards is unaffected and does not consume this reduction.",
+  "SAKURAMOD-ENTER_LABYRINTH.description": "Take half damage from the first attack hit each turn.",
   "SAKURAMOD-REMIND.title": "Remind",
   "SAKURAMOD-REMIND.description": "Put N cards from [gold]Memory[/gold] into your [gold]Hand[/gold]. They cost 0 this turn.",
   "SAKURAMOD-SPELL_CARD.title": "Spell",

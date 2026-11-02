@@ -36,7 +36,7 @@ public class ClowArrow() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Co
             ? TargetType.AnyEnemy
             : base.TargetType;
     protected override bool HasEnergyCostX => true;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(5, ValueProp.Move)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new SakuraSourceDamageVar(7, ValueProp.Move)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {

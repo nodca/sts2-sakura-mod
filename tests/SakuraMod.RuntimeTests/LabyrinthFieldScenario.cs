@@ -61,11 +61,8 @@ internal static class LabyrinthFieldScenario
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
         {
             var earthSource = combat.CreateCard<ClowMaze>(player);
-            var earthHp = target.CurrentHp;
-            await DamageCmd.Attack(4).FromCard(earthSource).Targeting(target).WithHitCount(2).Execute(choice);
-            assertions.Equal("earth_multi_hit_damage_unaffected", earthHp - 8, target.CurrentHp);
-            assertions.Equal("earth_hits_do_not_consume_protection", 0.5m,
-                lost.ModifyDamageMultiplicative(target, 10, ValueProp.Move, player.Creature, null));
+            assertions.Equal("earth_hits_are_also_halved", 0.5m,
+                lost.ModifyDamageMultiplicative(target, 10, ValueProp.Move, player.Creature, earthSource));
             await CreatureCmd.Damage(choice, other, 2, ValueProp.Unpowered, player.Creature, null);
             assertions.Equal("unpowered_damage_does_not_spend_protection", 0.5m,
                 other.GetPower<LabyrinthLostPower>()!.ModifyDamageMultiplicative(other, 10, ValueProp.Move, player.Creature, null));
@@ -89,7 +86,7 @@ internal static class LabyrinthFieldScenario
 
         var firstEarth = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowMaze>(combat, player);
         var secondEarth = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowMaze>(combat, player);
-        assertions.Equal("first_earth_discount_preview", 1, firstEarth.EnergyCost.GetWithModifiers(CostModifiers.All));
+        assertions.Equal("first_earth_free_preview", 0, firstEarth.EnergyCost.GetWithModifiers(CostModifiers.All));
         var energyBeforeEarth = player.PlayerCombatState.Energy;
         var discard = CardPile.Get(PileType.Discard, player)
             ?? throw new InvalidOperationException("Combat discard pile is missing.");
@@ -97,13 +94,13 @@ internal static class LabyrinthFieldScenario
         await CombatScenarioContext.PlayCardAsync(firstEarth);
         assertions.Equal("maze_adds_one_dazed_to_discard", dazedBeforeEarth + 1,
             discard.Cards.OfType<Dazed>().Count());
-        assertions.Equal("first_earth_discount_paid", energyBeforeEarth - 1, player.PlayerCombatState.Energy);
+        assertions.Equal("first_earth_free_paid", energyBeforeEarth, player.PlayerCombatState.Energy);
         assertions.True("played_card_normally_enters_discard", firstEarth.Pile?.Type == PileType.Discard);
         assertions.Equal("second_earth_full_cost", 2, secondEarth.EnergyCost.GetWithModifiers(CostModifiers.All));
 
         await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
         var nextEarth = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowMaze>(combat, player);
-        assertions.Equal("next_turn_discount_reset", 1, nextEarth.EnergyCost.GetWithModifiers(CostModifiers.All));
+        assertions.Equal("next_turn_free_reset", 0, nextEarth.EnergyCost.GetWithModifiers(CostModifiers.All));
         assertions.Equal("next_turn_damage_reset", 0.5m,
             lost.ModifyDamageMultiplicative(target, 10, ValueProp.Move, player.Creature, null));
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>

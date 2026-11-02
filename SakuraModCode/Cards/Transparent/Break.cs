@@ -36,5 +36,9 @@ public class Break() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity
         }
     }
 
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(4);
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Damage.UpgradeValueBy(2);
+        DynamicVars.Vulnerable.UpgradeValueBy(1);
+    }
 }

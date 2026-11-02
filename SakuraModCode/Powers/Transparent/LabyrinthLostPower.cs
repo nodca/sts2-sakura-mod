@@ -22,7 +22,6 @@ public sealed class LabyrinthLostPower : SakuraPowerModel
     public override decimal ModifyDamageMultiplicative(Creature? target, decimal amount, ValueProp props,
         Creature? dealer, CardModel? cardSource) =>
         Amount > 0 && target == Owner && amount > 0 && props.IsPoweredAttack() && !FirstAttackReceived[this]
-            && !SakuraActions.HasElement(cardSource, SakuraElement.Earth)
             ? 0.5m
             : 1m;
 
