@@ -28,7 +28,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class ClowShot() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Common, TargetType.AnyEnemy)
 {
     private const int Hits = 2;
-    private const int ExtraVulnerable = 3;
+    private const int ExtraVigor = 8;
 
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
     protected override IEnumerable<DynamicVar> CanonicalVars =>
@@ -47,12 +47,13 @@ public class ClowShot() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Com
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await PlayCard(choiceContext, play);
-        await ApplyPower<VulnerablePower>(choiceContext, RequiredTarget(play), ExtraVulnerable);
+        await ApplyPower<VigorPower>(choiceContext, Owner.Creature, ExtraVigor);
     }
 
     protected override void OnUpgrade()
     {
         DynamicVars.Damage.UpgradeValueBy(1);
+        DynamicVars["VigorPower"].UpgradeValueBy(1);
     }
 }
 

@@ -234,7 +234,7 @@
   "SAKURA_MOD_CARD_SAKURA_SAND.description": "[gold]Sakura Card[/gold] [gold]Earthy[/gold]\nTrigger [gold]Poison[/gold] on ALL enemies {Triggers:diff()} times.\nThen apply {PoisonPower:diff()} [gold]Poison[/gold] to ALL enemies {Applications:diff()} times.",
   "SAKURA_MOD_CARD_CLOW_SHOT.title": "Shot",
   "SAKURA_MOD_CARD_CLOW_SHOT.description": "[gold]Fiery[/gold]\nDeal {Damage:diff()} damage {Hits:diff()} times.\nGain {VigorPower:diff()} [gold]Vigor[/gold].",
-  "SAKURA_MOD_CARD_CLOW_SHOT.extraDescription": "[gold]Extra:[/gold] Apply extra 3 [gold]Vulnerable[/gold].",
+  "SAKURA_MOD_CARD_CLOW_SHOT.extraDescription": "[gold]Extra:[/gold] Gain 8 more [gold]Vigor[/gold].",
   "SAKURA_MOD_CARD_SAKURA_SHOT.title": "Shot",
   "SAKURA_MOD_CARD_SAKURA_SHOT.description": "[gold]Sakura Card[/gold] [gold]Fiery[/gold]\nDeal {Damage:diff()} damage {Magic:diff()} times.",
   "SAKURA_MOD_CARD_CLOW_SHADOW.title": "Shadow",

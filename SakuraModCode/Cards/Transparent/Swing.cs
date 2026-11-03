@@ -21,7 +21,7 @@ public class Swing() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new SwingDamageVar(12, ValueProp.Move)
+        new SwingDamageVar(14, ValueProp.Move)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)

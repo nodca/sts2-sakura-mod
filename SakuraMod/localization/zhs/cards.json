@@ -234,7 +234,7 @@
   "SAKURA_MOD_CARD_SAKURA_SAND.description": "[gold]小樱牌[/gold] [gold]地[/gold]\n触发所有敌人的[gold]中毒[/gold]{Triggers:diff()}次。\n然后给予所有敌人{PoisonPower:diff()}层[gold]中毒[/gold]{Applications:diff()}次。",
   "SAKURA_MOD_CARD_CLOW_SHOT.title": "击",
   "SAKURA_MOD_CARD_CLOW_SHOT.description": "[gold]火[/gold]\n造成{Damage:diff()}点伤害{Hits:diff()}次。\n获得{VigorPower:diff()}点[gold]活力[/gold]。",
-  "SAKURA_MOD_CARD_CLOW_SHOT.extraDescription": "[gold]额外效果：[/gold]额外给予3层[gold]易伤[/gold]。",
+  "SAKURA_MOD_CARD_CLOW_SHOT.extraDescription": "[gold]额外效果：[/gold]额外获得8点[gold]活力[/gold]。",
   "SAKURA_MOD_CARD_SAKURA_SHOT.title": "击",
   "SAKURA_MOD_CARD_SAKURA_SHOT.description": "[gold]小樱牌[/gold] [gold]火[/gold]\n造成{Damage:diff()}点伤害{Magic:diff()}次。",
   "SAKURA_MOD_CARD_CLOW_SHADOW.title": "影",

@@ -913,8 +913,8 @@ public sealed class CardMechanicsSuite
             && !baseCard.DynamicVars.ContainsKey("PoisonPower")
             && upgradedCard.DynamicVars.Damage.IntValue == 5
             && upgradedCard.DynamicVars["Hits"].IntValue == 2
-            && upgradedCard.DynamicVars["VigorPower"].IntValue == 2,
-            "Expected Clow Shot to deal 4 (5) damage twice, gain 2 Vigor, and no longer apply Poison.");
+            && upgradedCard.DynamicVars["VigorPower"].IntValue == 3,
+            "Expected Clow Shot to deal 4 (5) damage twice, gain 2 (3) Vigor, and no longer apply Poison.");
     }
 
     [Fact]
@@ -1538,11 +1538,11 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             breakCard.DynamicVars.Damage.IntValue == 8
             && breakCard.DynamicVars.Vulnerable.IntValue == 1
-            && breakCard.DynamicVars["ExtraVulnerable"].IntValue == 2
+            && breakCard.DynamicVars["ExtraVulnerable"].IntValue == 3
             && upgradedBreak.DynamicVars.Damage.IntValue == 10
             && upgradedBreak.DynamicVars.Vulnerable.IntValue == 2
-            && upgradedBreak.DynamicVars["ExtraVulnerable"].IntValue == 2,
-            "Expected Break to deal 8 damage and apply 1 Vulnerable (2 more with Extra), upgrading to 10 damage and 2 Vulnerable.");
+            && upgradedBreak.DynamicVars["ExtraVulnerable"].IntValue == 3,
+            "Expected Break to deal 8 damage and apply 1 Vulnerable (3 more with Extra), upgrading to 10 damage and 2 Vulnerable.");
 
         var upgradedHail = RegressionTestHarness.MutableForCostTest(new Hail());
         upgradedHail.UpgradeInternal();
@@ -1602,8 +1602,8 @@ public sealed class CardMechanicsSuite
         var swingPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Powers/Transparent/SwingDamageWindowPower.cs"));
         RegressionTestHarness.Require(
-            swing.DynamicVars.Damage.IntValue == 12
-            && upgradedSwing.DynamicVars.Damage.IntValue == 16
+            swing.DynamicVars.Damage.IntValue == 14
+            && upgradedSwing.DynamicVars.Damage.IntValue == 18
             && SwingDamageWindowPower.RequestedMultiplier(extraEffect: false) == 2
             && SwingDamageWindowPower.RequestedMultiplier(extraEffect: true) == 3
             && SwingDamageWindowPower.HighestMultiplier(0, 2) == 2
@@ -1616,7 +1616,7 @@ public sealed class CardMechanicsSuite
             && swingPowerSource.Contains("cardSource is { Type: CardType.Attack }", StringComparison.Ordinal)
             && swingPowerSource.Contains("cardSource.Owner?.Creature == owner", StringComparison.Ordinal)
             && swingPowerSource.Contains("GetScaledAmountForMultiplayer", StringComparison.Ordinal),
-            "Expected Swing to deal 12/16 damage and open a 2x/3x owner-scoped Weak damage window for Powered Attacks.");
+            "Expected Swing to deal 14/18 damage and open a 2x/3x owner-scoped Weak damage window for Powered Attacks.");
 
         var struggle = new Struggle();
         var upgradedStruggle = RegressionTestHarness.MutableForCostTest(new Struggle());
