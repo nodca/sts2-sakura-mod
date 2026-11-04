@@ -805,7 +805,7 @@ public sealed class CardVisualContractSuite
         RegressionTestHarness.Require(
             overlay.Contains("_transitModel", StringComparison.Ordinal)
             && overlay.Contains("public static void ResetForReuse(NCard card)", StringComparison.Ordinal)
-            && memoryPileSource.Contains("SakuraMemoryRecallVisual.Mark(card);", StringComparison.Ordinal)
+            && memoryPileSource.Contains("SakuraMemoryRecallVisual.Mark(card, index, selected.Count);", StringComparison.Ordinal)
             && memoryPileSource.Contains("SakuraMemoryRecallVisual.Unmark(card);", StringComparison.Ordinal),
             "Expected the recall develop to be bound to its model and every pooled node to be reset before reuse.");
     }

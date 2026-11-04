@@ -11,6 +11,10 @@ internal static class SakuraCardVfxAssets
         [.. AquaPhoenixVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> HailPaths =
         [.. HailStormVfx.AssetPaths, .. FreezeShellVisual.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+    private static readonly IReadOnlyList<string> RemindPaths =
+        [.. RemindVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+    private static readonly IReadOnlyList<string> RewindPaths =
+        [.. RewindVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> TimePaths =
         [.. TimeStopVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     // Stasis's sand plays on later turn ends; declared on the card (Siege precedent).
@@ -50,6 +54,8 @@ internal static class SakuraCardVfxAssets
         Siege => SiegeEnclosureVfx.AssetPaths,
         Blaze => BlazePaths,
         Time => TimePaths,
+        Remind => RemindPaths,
+        Rewind => RewindPaths,
         Gale => GalePaths,
         Shade => ShadePaths,
         ClowCloud or SakuraCloud or ClowRain or SakuraRain => CloudRainPaths,
