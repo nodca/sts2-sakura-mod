@@ -45,4 +45,3 @@ public class Synchronize() : TransparentCard(0, CardType.Skill, CardRarity.Uncom
 
     protected override void OnUpgrade() => RemoveKeyword(CardKeyword.Exhaust);
 }
-

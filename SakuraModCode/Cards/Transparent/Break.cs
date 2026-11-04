@@ -28,9 +28,9 @@ public class Break() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity
         foreach (var target in PlayTargets(play))
         {
             if (target.Block > 0)
-                await CreatureCmd.LoseBlock(target, target.Block);
+                await CreatureCmd.LoseBlock(choiceContext, target, target.Block, Owner.Creature);
 
-            await DealDamage(choiceContext, target, DynamicVars.Damage.IntValue, hitVfx: SakuraNativeHitFx.RockShatter, hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx);
+            await DealDamage(choiceContext, play, target, DynamicVars.Damage.IntValue, hitVfx: SakuraNativeHitFx.RockShatter, hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx);
             var vulnerable = DynamicVars.Vulnerable.IntValue + (activation.IsActive ? DynamicVars["ExtraVulnerable"].IntValue : 0);
             await PowerCmd.Apply<VulnerablePower>(choiceContext, target, vulnerable, Owner.Creature, this, false);
         }

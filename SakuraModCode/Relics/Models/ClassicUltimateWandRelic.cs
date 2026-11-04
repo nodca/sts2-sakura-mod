@@ -109,4 +109,3 @@ public class ClassicUltimateWandRelic : ClassicSealedWandRelic
             DynamicVars[ElementMagicChargeVar].IntValue);
     }
 }
-

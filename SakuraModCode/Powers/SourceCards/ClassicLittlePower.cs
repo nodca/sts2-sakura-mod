@@ -35,9 +35,8 @@ public class ClassicLittlePower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
-    public override decimal ModifyDamageMultiplicative(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource) =>
+    public override decimal ModifyDamageMultiplicative(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource, CardPlay? cardPlay) =>
         Amount > 0 && target == Owner && dealer?.Side != Owner.Side && props.IsPoweredAttack()
             ? DamageMultiplier
             : 1m;
 }
-

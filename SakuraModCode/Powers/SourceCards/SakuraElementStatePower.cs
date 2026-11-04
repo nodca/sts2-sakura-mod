@@ -88,4 +88,3 @@ public abstract class SakuraElementStatePower : SakuraPowerModel
 
     protected abstract Task TriggerElement(PlayerChoiceContext choiceContext, CardPlay play);
 }
-

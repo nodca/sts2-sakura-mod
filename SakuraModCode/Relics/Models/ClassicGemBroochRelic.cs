@@ -70,4 +70,3 @@ public class ClassicGemBroochRelic : SakuraRelicModel
             duplicates.Add(enumerator.Current);
     }
 }
-

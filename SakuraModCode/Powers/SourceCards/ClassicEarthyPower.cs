@@ -42,4 +42,3 @@ public class ClassicEarthyPower : SakuraElementStatePower
         await ClassicWoodPower.AfterEarthTriggered(choiceContext, Owner);
     }
 }
-

@@ -94,4 +94,3 @@ public class SakuraLock() : SakuraFormCard(1, CardType.Skill, TargetType.None)
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicLockSakuraPower>(choiceContext, Owner.Creature, 1);
 }
-

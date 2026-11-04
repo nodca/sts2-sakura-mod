@@ -45,4 +45,3 @@ public class ClassicWavePower : SakuraPowerModel
         await CreatureCmd.GainBlock(Owner, Amount * elementCount, SakuraPowerValueProps.Block, null, false);
     }
 }
-

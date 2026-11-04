@@ -65,4 +65,3 @@ public abstract class SakuraTrackedCostReductionPower : SakuraPowerModel
             await PowerCmd.Remove(this);
     }
 }
-

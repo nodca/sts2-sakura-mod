@@ -41,7 +41,7 @@ public class ReflectionPower : SakuraPowerModel
             return;
 
         var reflectionDamage = ReflectedDamage(damageResult.TotalDamage, (int)Amount);
-        await CreatureCmd.Damage(choiceContext, attacker, reflectionDamage, SakuraPowerValueProps.Damage, Owner, null);
+        await CreatureCmd.Damage(choiceContext, attacker, reflectionDamage, SakuraPowerValueProps.Damage, Owner, null, null);
         await PowerCmd.Decrement(this);
     }
 
@@ -51,4 +51,3 @@ public class ReflectionPower : SakuraPowerModel
             await PowerCmd.Decrement(this);
     }
 }
-

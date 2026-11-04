@@ -47,7 +47,7 @@ public class Hail() : TransparentCard(1, CardType.Attack, CardRarity.Uncommon, T
                     continue;
 
                 cues.Impact(target);
-                await DealDamage(choiceContext, target, damage);
+                await DealDamage(choiceContext, play, target, damage);
 
                 if (target.IsAlive && frostbite > 0)
                     await PowerCmd.Apply<SakuraFrostbitePower>(

@@ -1,5 +1,6 @@
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
@@ -20,7 +21,7 @@ public sealed class LabyrinthLostPower : SakuraPowerModel
     public override PowerStackType StackType => PowerStackType.Single;
 
     public override decimal ModifyDamageMultiplicative(Creature? target, decimal amount, ValueProp props,
-        Creature? dealer, CardModel? cardSource) =>
+        Creature? dealer, CardModel? cardSource, CardPlay? cardPlay) =>
         Amount > 0 && target == Owner && amount > 0 && props.IsPoweredAttack() && !FirstAttackReceived[this]
             ? 0.5m
             : 1m;

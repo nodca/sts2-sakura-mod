@@ -7,7 +7,8 @@ public static class RuntimeProfile
     public static async Task WriteStrictSettingsAsync(
         RuntimeWorkspace workspace,
         string selfCheckDirectory,
-        bool runSelfCheck = true)
+        bool runSelfCheck = true,
+        bool enableKitLibTestModules = false)
     {
         var gameAccountRoot = Path.Combine(workspace.UserDataDirectory, "default", "1");
         Directory.CreateDirectory(gameAccountRoot);
@@ -63,6 +64,42 @@ public static class RuntimeProfile
                 ["SakuraMod"] = DeniedConsent()
             }
         });
+
+        if (enableKitLibTestModules)
+        {
+            var kitLibRoot = Path.Combine(
+                workspace.UserDataDirectory,
+                "default",
+                "1",
+                "mod_data",
+                "KitLib");
+            Directory.CreateDirectory(kitLibRoot);
+            var settings = new
+            {
+                MultiplayerCheatOptIn = true,
+                SyncBotAutoEndTurn = true,
+                SatelliteModulesEnabled = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["KitLib.AI"] = true,
+                    ["KitLib.Cheat"] = true,
+                    ["KitLib.ModPanel"] = true,
+                    ["KitLib.Panel"] = true,
+                    ["KitLib.User"] = true
+                }
+            };
+            await using var stream = new FileStream(
+                Path.Combine(kitLibRoot, "settings.json"),
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.Read,
+                bufferSize: 16 * 1024,
+                useAsync: true);
+            await System.Text.Json.JsonSerializer.SerializeAsync(
+                stream,
+                settings,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            await stream.FlushAsync();
+        }
     }
 
     public static IReadOnlyDictionary<string, string?> CreateEnvironment(

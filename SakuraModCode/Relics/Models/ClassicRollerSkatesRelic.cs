@@ -49,4 +49,3 @@ public class ClassicRollerSkatesRelic : SakuraRelicModel
         await PowerCmd.Apply<DexterityPower>(choiceContext, Owner.Creature, DynamicVars["DexterityGain"].IntValue, Owner.Creature, null, false);
     }
 }
-

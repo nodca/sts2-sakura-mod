@@ -11,7 +11,7 @@ internal static class FourthActMultiplayerScalingCompatibility
     internal const int FourthActIndex = 3;
     internal const decimal NonBossScale = 1.2m;
     internal const decimal BossScale = 1.3m;
-    internal const string SupportedGameCommitPrefix = "0.1.0+59260271";
+    internal const string SupportedGameCommitPrefix = "0.1.0+41cef1ea";
 
     internal static bool TryResolve(EncounterModel? encounter, int actIndex, out decimal scale)
     {

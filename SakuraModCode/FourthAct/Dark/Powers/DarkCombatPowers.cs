@@ -36,7 +36,13 @@ public sealed class DarknessPower : SakuraPowerModel
         new DynamicVar("Maximum", DarkEnemyRules.DarknessMaximum)
     ];
 
-    public override decimal ModifyDamageMultiplicative(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource)
+    public override decimal ModifyDamageMultiplicative(
+        Creature? target,
+        decimal amount,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource,
+        CardPlay? cardPlay)
     {
         if (target != Owner || dealer?.IsPlayer != true && cardSource?.Owner?.Creature.IsPlayer != true)
             return 1m;

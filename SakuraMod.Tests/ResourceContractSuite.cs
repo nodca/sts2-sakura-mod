@@ -441,7 +441,7 @@ public sealed class ResourceContractSuite
         RegressionTestHarness.Require(
             aqua.Contains("var targets = CombatState!.HittableEnemies.ToList();", StringComparison.Ordinal)
             && aqua.Contains(
-                "AttackCommand.CreateContextAsync(CombatState!, choiceContext, this)",
+                "AttackCommand.CreateContextAsync(CombatState!, choiceContext, play)",
                 StringComparison.Ordinal)
             && aqua.Split("attack.AddHit(await CreatureCmd.Damage(").Length - 1 == 1
             && !aqua.Contains("DealDamage(", StringComparison.Ordinal),
@@ -1125,11 +1125,11 @@ public sealed class ResourceContractSuite
         RegressionTestHarness.Require(
             blaze.Contains("var target = RequiredTarget(play);", StringComparison.Ordinal)
             && blaze.Contains(
-                "DealDamage(choiceContext, target, DynamicVars.CalculatedDamage)",
+                "DealDamage(choiceContext, play, target, DynamicVars.CalculatedDamage)",
                 StringComparison.Ordinal)
             && blaze.Contains("skipVisuals: false", StringComparison.Ordinal)
             && blaze.Contains("BlazeRules.ExhaustedCardMultiplier", StringComparison.Ordinal),
-            "Expected Blaze's gameplay path to remain behind the presentation wrapper.");
+            "Expected Blaze's beta gameplay path to stay intact behind the visual rebuild.");
     }
 
     [Fact]
@@ -2002,7 +2002,7 @@ public sealed class ResourceContractSuite
             && blade.Contains("hitVfx: SakuraNativeHitFx.Slash", StringComparison.Ordinal),
             "Expected both Swords and Blade to use the vanilla Strike slash on their Move hits.");
         RegressionTestHarness.Require(
-            sword.Contains("await DealDamage(choiceContext, target, ExtraHpLoss, ValueProp.Unblockable)", StringComparison.Ordinal)
+            sword.Contains("await DealDamage(choiceContext, play, target, ExtraHpLoss, ValueProp.Unblockable)", StringComparison.Ordinal)
             && sword.Split("PlayTargets(play)", StringSplitOptions.None).Length - 1 == 1
             && sword.Contains("foreach (var target in targets)", StringComparison.Ordinal)
             && blade.Split("BladeRules.HitCount(this)", StringSplitOptions.None).Length - 1 == 1,

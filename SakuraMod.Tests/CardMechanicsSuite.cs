@@ -140,6 +140,38 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void DarkSelectionTeardownCompatibilityStaysDarkScoped()
+    {
+        var clowSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/SourceCards/ClassicDarkPower.cs"));
+        var sakuraSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/SourceCards/ClassicDarkSakuraPower.cs"));
+        var lifecycleSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/SourceCards/ClassicDarkSelectionLifecycle.cs"));
+
+        RegressionTestHarness.Require(
+            clowSource.Contains("ClassicDarkSelectionLifecycle.SelectFromHand", StringComparison.Ordinal)
+            && sakuraSource.Contains("ClassicDarkSelectionLifecycle.SelectFromHand", StringComparison.Ordinal)
+            && !clowSource.Contains("CardSelectCmd.FromHand", StringComparison.Ordinal)
+            && !sakuraSource.Contains("CardSelectCmd.FromHand", StringComparison.Ordinal),
+            "Expected both Dark Power forms to share the guarded native hand-selection lifecycle.");
+        RegressionTestHarness.Require(
+            lifecycleSource.Contains("[HarmonyPatch(typeof(RunManager), \"ExitCurrentRoom\")]", StringComparison.Ordinal)
+            && lifecycleSource.Contains(
+                "[HarmonyPatch(typeof(RunManager), nameof(RunManager.CleanUp), [typeof(bool)])]",
+                StringComparison.Ordinal)
+            && lifecycleSource.Contains("IsActive", StringComparison.Ordinal)
+            && lifecycleSource.Contains("LocalContext.IsMe(player)", StringComparison.Ordinal)
+            && lifecycleSource.Contains("NetGameType.Replay", StringComparison.Ordinal)
+            && lifecycleSource.Contains("hand.IsInCardSelection", StringComparison.Ordinal)
+            && lifecycleSource.Contains("NPlayerHand.Mode.SimpleSelect", StringComparison.Ordinal)
+            && lifecycleSource.Contains("_selectionCompletionSource", StringComparison.Ordinal)
+            && lifecycleSource.Contains("TrySetResult(Array.Empty<CardModel>())", StringComparison.Ordinal)
+            && !lifecycleSource.Contains("SetCanceled", StringComparison.Ordinal),
+            "Expected beta room exit and run cleanup to complete only an active Dark SimpleSelect normally.");
+    }
+
+    [Fact]
     public void ClowSilentCapsNextTurnHandPlaysAtThree()
     {
         var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -1182,6 +1214,28 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void CardDamageHelpersRequireCardPlayContext()
+    {
+        var sourceAttackMethods = typeof(SakuraCardModel)
+            .GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly)
+            .Where(static method => method.Name is "DealDamage" or "DealDamageToEnemies" or "DealDamageToRandomEnemies" or "DealDamageHit")
+            .ToList();
+        static bool DeclaresResultPileMethod(Type type) => type.GetMethod(
+            "GetResultLocationForCardPlay",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly) is not null;
+
+        RegressionTestHarness.Require(
+            sourceAttackMethods.Count == 5
+            && sourceAttackMethods.All(static method => method.GetParameters().Any(static parameter => parameter.ParameterType == typeof(CardPlay)))
+            && !DeclaresResultPileMethod(typeof(Transfer))
+            && DeclaresResultPileMethod(typeof(ClowRain))
+            && !DeclaresResultPileMethod(typeof(ClowTime))
+            && DeclaresResultPileMethod(typeof(ClowFlower))
+            && DeclaresResultPileMethod(typeof(SakuraFlower)),
+            "Expected shared card-damage helpers to require CardPlay and result-location overrides to belong to the intended cards.");
+    }
+
+    [Fact]
     public void SharedKeywordElementExchangeAndDrawRulesRemainStable()
     {
         RegressionTestHarness.Require(
@@ -1240,8 +1294,8 @@ public sealed class CardMechanicsSuite
             && firstReturnCost == 1
             && GravitationHoldPower.TryIncreaseReturnedCardCost(gravitation, 2, 1, out var repeatedReturnCost)
             && repeatedReturnCost == 3
-            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("ModifyCardPlayResultPileTypeAndPosition")
-            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterModifyingCardPlayResultPileOrPosition")
+            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("ModifyCardPlayResultLocation")
+            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterModifyingCardPlayResultLocation")
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("TryModifyEnergyCostInCombat")
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterSideTurnEnd")
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterApplied")
@@ -1369,7 +1423,8 @@ public sealed class CardMechanicsSuite
             && !RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("AfterPlayerTurnStart"),
             "Expected Spiral to deal 8 (11 upgraded) damage plus Memory and always schedule a one-shot next-hand-draw Spiral.");
         RegressionTestHarness.Require(
-            spiralSource.Contains("AddTemporaryGeneratedCardsToHand<Spiral>", StringComparison.Ordinal)
+            spiralSource.Contains("PowerCmd.Apply<SpiralNextTurnPower>", StringComparison.Ordinal)
+            && spiralSource.Contains("AddTemporaryGeneratedCardsToHand<Spiral>", StringComparison.Ordinal)
             && spiralSource.Contains("freeThisTurn: true", StringComparison.Ordinal)
             && spiralSource.Contains("upgradeLevel: CurrentUpgradeLevel", StringComparison.Ordinal)
             && !spiralSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal)
@@ -1380,7 +1435,8 @@ public sealed class CardMechanicsSuite
             && spiralNextTurnPowerSource.Contains("Position = CardPilePosition.Top", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("AddTemporary = true", StringComparison.Ordinal)
             && !spiralNextTurnPowerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal)
-            && !spiralNextTurnPowerSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal),
+            && !spiralNextTurnPowerSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal)
+            && !RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("SetSourceCard"),
             "Expected Spiral to put a Forgotten Spiral at its own upgrade level on top before next turn's draw, costing 0 that turn, while Extra generates two Forgotten Spirals at its upgrade level that cost 0 this turn.");
 
         var blockedHit = new DamageResult(null!, ValueProp.Move) { UnblockedDamage = 0 };
@@ -1442,6 +1498,12 @@ public sealed class CardMechanicsSuite
                 sakuraFlower,
                 true,
                 new HashSet<CardKeyword> { CardKeyword.Exhaust })
+            && typeof(ClowFlower).GetMethod(
+                "GetResultLocationForCardPlay",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly) is not null
+            && typeof(SakuraFlower).GetMethod(
+                "GetResultLocationForCardPlay",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly) is not null
             && FlowerRules.ResultPileForPlay(true, PileType.Exhaust) == PileType.Discard
             && FlowerRules.ResultPileForPlay(false, PileType.Exhaust) == PileType.Exhaust
             && FlowerRules.ResultPileForPlay(true, PileType.None) == PileType.None
@@ -2227,7 +2289,7 @@ public sealed class CardMechanicsSuite
             && ClassicLightSakuraPower.IsStatusOrCurse(CardType.Curse)
             && !ClassicLightSakuraPower.IsStatusOrCurse(CardType.Skill)
             && RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("TryModifyKeywordsInCombat")
-            && RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("ModifyCardPlayResultPileTypeAndPosition")
+            && RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("ModifyCardPlayResultLocation")
             && RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("AfterCardPlayed")
             && !RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("TryModifyEnergyCostInCombat"),
             "Expected Sakura Light to be a 1-cost Power that makes Status and Curse cards playable and Exhausting, then draws and heals without changing their costs.");

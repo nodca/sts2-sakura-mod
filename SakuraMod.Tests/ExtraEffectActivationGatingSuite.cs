@@ -105,7 +105,7 @@ public sealed class ExtraEffectActivationGatingSuite
     }
 
     private static PileType ResultPileForCardPlay(CardModel card) =>
-        (PileType)typeof(CardModel)
-            .GetMethod("GetResultPileTypeForCardPlay", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(card, null)!;
+        ((CardLocation)typeof(CardModel)
+            .GetMethod("GetResultLocationForCardPlay", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(card, null)!).pileType;
 }

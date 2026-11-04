@@ -109,27 +109,25 @@ internal static class KindnessExhaustReturnMultiplayerScenario
         await context.SignalAndWaitAsync("kindness-released-applied");
 
         var releaseChecksumBaseline = context.ChecksumCount;
-        await context.SignalAndWaitAsync("releaseChecksumBaseline-ready");
-        if (context.LocalPlayer.NetId == owner.NetId)
+        var releaseSelector = new TestCardSelector();
+        releaseSelector.PrepareToSelect([0]);
+        using (CardSelectCmd.UseSelector(releaseSelector))
         {
-            var releaseSelector = new TestCardSelector();
-            releaseSelector.PrepareToSelect([0]);
-            using (CardSelectCmd.UseSelector(releaseSelector))
-            {
+            await context.SignalAndWaitAsync("releaseChecksumBaseline-ready");
+            if (context.LocalPlayer.NetId == owner.NetId)
                 await context.PlayOwnedCardAsync(spellRelease);
-            }
+            await MultiplayerScenarioContext.WaitForStateAsync(
+                () => SakuraReleaseState.IsReleased(blade)
+                    && !blade.Keywords.Contains(CardKeyword.Exhaust)
+                    && !blade.Keywords.Contains(CardKeyword.Ethereal)
+                    && blade.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0,
+                "SpellRelease to release Blade from hand");
+            await context.WaitForActionsAsync();
+            await context.WaitForActionChecksumsAsync(
+                releaseChecksumBaseline,
+                "client-owned SpellRelease on Blade",
+                nameof(PlayCardAction));
         }
-        await MultiplayerScenarioContext.WaitForStateAsync(
-            () => SakuraReleaseState.IsReleased(blade)
-                && !blade.Keywords.Contains(CardKeyword.Exhaust)
-                && !blade.Keywords.Contains(CardKeyword.Ethereal)
-                && blade.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0,
-            "SpellRelease to release Blade from hand");
-        await context.WaitForActionsAsync();
-        await context.WaitForActionChecksumsAsync(
-            releaseChecksumBaseline,
-            "client-owned SpellRelease on Blade",
-            nameof(PlayCardAction));
         await context.SignalAndWaitAsync("kindness-released-blade-prepared");
 
         var bladeChecksumBaseline = context.ChecksumCount;

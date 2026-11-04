@@ -33,4 +33,3 @@ public class ClassicLockSakuraPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 }
-

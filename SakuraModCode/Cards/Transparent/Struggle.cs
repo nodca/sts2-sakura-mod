@@ -33,7 +33,7 @@ public class Struggle() : TransparentExtraEffectCard(2, CardType.Attack, CardRar
         if (activation.IsActive)
             damage += DynamicVars.ExtraDamage.IntValue;
 
-        await DealDamage(choiceContext, RequiredTarget(play), damage, hitVfx: SakuraNativeHitFx.HeavyBlunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx);
+        await DealDamage(choiceContext, play, RequiredTarget(play), damage, hitVfx: SakuraNativeHitFx.HeavyBlunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx);
     }
 
     public override decimal ModifyDamageAdditive(
@@ -41,7 +41,8 @@ public class Struggle() : TransparentExtraEffectCard(2, CardType.Attack, CardRar
         decimal amount,
         ValueProp props,
         Creature? dealer,
-        CardModel? cardSource) =>
+        CardModel? cardSource,
+        CardPlay? cardPlay) =>
         cardSource == this && dealer == Owner.Creature && props.IsPoweredAttack()
             ? Owner.Creature.GetPower<StrengthPower>()?.Amount ?? 0
             : 0;
@@ -77,4 +78,3 @@ internal static class StruggleRules
     public static bool IsOtherAttack(Struggle source, CardModel playedCard) =>
         playedCard != source && playedCard.Type == CardType.Attack;
 }
-

@@ -62,6 +62,7 @@ public class SiegePendingPower : SakuraPowerModel
                             damage,
                             SakuraPowerValueProps.Damage,
                             Owner,
+                            null,
                             null);
                     }
                 }

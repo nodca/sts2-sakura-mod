@@ -92,7 +92,7 @@ internal static class KindnessDreamAppearMultiplayerScenario
         {
             var kindness = host.Creature.GetPower<KindnessPower>()
                 ?? throw new InvalidOperationException("Host KindnessPower is unavailable for preview query.");
-            var preview = kindness.ModifyCardPlayResultPileTypeAndPosition(
+            var preview = kindness.ModifyCardPlayResultLocation(
                 hostSword,
                 isAutoPlay: false,
                 new ResourceInfo
@@ -102,9 +102,8 @@ internal static class KindnessDreamAppearMultiplayerScenario
                     StarsSpent = 0,
                     StarValue = 0
                 },
-                PileType.Exhaust,
-                CardPilePosition.Bottom);
-            if (preview != (PileType.Exhaust, CardPilePosition.Bottom))
+                new CardLocation(host, PileType.Exhaust, CardPilePosition.Bottom));
+            if (preview != new CardLocation(host, PileType.Exhaust, CardPilePosition.Bottom))
                 throw new InvalidOperationException("Kindness preview unexpectedly changed the native Exhaust destination.");
         }
 

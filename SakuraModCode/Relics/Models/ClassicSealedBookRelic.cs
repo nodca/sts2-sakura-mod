@@ -41,4 +41,3 @@ public class ClassicSealedBookRelic : SakuraRelicModel
     protected override string IconFileName => "sealed_book.png";
     public override RelicRarity Rarity => RelicRarity.Starter;
 }
-

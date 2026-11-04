@@ -56,4 +56,3 @@ public class PromiseManifestPower : SakuraPowerModel
         await PowerCmd.Remove(this);
     }
 }
-

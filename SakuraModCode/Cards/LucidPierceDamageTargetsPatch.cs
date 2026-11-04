@@ -9,7 +9,7 @@ using SakuraMod.SakuraModCode.Powers;
 namespace SakuraMod.SakuraModCode.Cards;
 
 [HarmonyPatch(typeof(CreatureCmd), nameof(CreatureCmd.Damage),
-    [typeof(MegaCrit.Sts2.Core.GameActions.Multiplayer.PlayerChoiceContext), typeof(IEnumerable<Creature>), typeof(decimal), typeof(ValueProp), typeof(Creature), typeof(CardModel)])]
+    [typeof(MegaCrit.Sts2.Core.GameActions.Multiplayer.PlayerChoiceContext), typeof(IEnumerable<Creature>), typeof(decimal), typeof(ValueProp), typeof(Creature), typeof(CardModel), typeof(CardPlay)])]
 internal static class LucidPierceDamageTargetsPatch
 {
     private static void Prefix(ref IEnumerable<Creature> targets, ValueProp props, Creature? dealer, CardModel? cardSource)

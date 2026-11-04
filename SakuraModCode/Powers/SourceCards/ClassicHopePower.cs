@@ -40,7 +40,8 @@ public class ClassicHopePower : SakuraPowerModel
         decimal amount,
         ValueProp props,
         Creature? dealer,
-        CardModel? cardSource) =>
+        CardModel? cardSource,
+        CardPlay? cardPlay) =>
         Amount > 0 && dealer == Owner && props.IsPoweredAttack()
             ? Multiplier
             : 1m;
@@ -50,4 +51,3 @@ public class ClassicHopePower : SakuraPowerModel
             ? Multiplier
             : 1m;
 }
-

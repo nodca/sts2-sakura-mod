@@ -55,4 +55,3 @@ public class ClassicWateryPower : SakuraElementStatePower
         await PlayerCmd.GainEnergy(1, Owner.Player!);
     }
 }
-

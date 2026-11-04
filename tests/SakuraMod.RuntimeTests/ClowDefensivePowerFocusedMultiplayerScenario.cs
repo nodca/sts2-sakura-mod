@@ -71,6 +71,11 @@ internal static class ClowDefensivePowerFocusedMultiplayerScenario
                 && owner.Creature.GetPower<BufferPower>()?.Amount == 1,
             $"completed Silent and BufferPower(1) for player {ownerNetId}");
         assertions.Equal("silent_buffer_applied", 1, owner.Creature.GetPower<BufferPower>()?.Amount ?? 0);
+        await context.WaitForActionChecksumsAsync(
+            checksumBaseline,
+            $"player {ownerNetId} Silent",
+            nameof(PlayCardAction));
+        await context.SignalAndWaitAsync("silent-action-checksummed");
 
         var hpBefore = owner.Creature.CurrentHp;
         var enemy = combat.Enemies.First(static enemy => enemy.IsAlive);
@@ -80,6 +85,7 @@ internal static class ClowDefensivePowerFocusedMultiplayerScenario
             OrdinaryDamage,
             ValueProp.Unpowered,
             enemy,
+            null,
             null);
         assertions.Equal("silent_prevents_hp_loss", hpBefore, owner.Creature.CurrentHp);
         assertions.Equal("silent_consumes_one_buffer", 0, owner.Creature.GetPower<BufferPower>()?.Amount ?? 0);
@@ -88,10 +94,6 @@ internal static class ClowDefensivePowerFocusedMultiplayerScenario
             "silent_behavior_observed",
             $"Player {ownerNetId} received Buffer and prevented {OrdinaryDamage} damage before checksum validation.");
 
-        await context.WaitForActionChecksumsAsync(
-            checksumBaseline,
-            $"player {ownerNetId} Silent",
-            nameof(PlayCardAction));
         await context.SignalAndWaitAsync("comparison-ready");
 
         return CreateCardResult(environment, context, owner, card, "silent", hpBefore);

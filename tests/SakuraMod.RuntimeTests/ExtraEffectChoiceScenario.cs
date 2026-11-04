@@ -88,6 +88,10 @@ internal static class ExtraEffectChoiceScenario
         assertions.Equal("choice_energy_spent", energyBefore - 1, playerCombat.Energy);
         assertions.True("choice_result_pile", playerCombat.DiscardPile.Cards.Contains(choice));
         assertions.Equal("choice_selector_released", null, CardSelectCmd.Selector);
+
+        var energyAfterPlay = playerCombat.Energy;
+        var resultPileAfterPlay = choice.Pile?.Type;
+
         RuntimeTestHost.WriteCheckpoint(
             request,
             "extra_effect_choice_verified",
@@ -117,10 +121,10 @@ internal static class ExtraEffectChoiceScenario
             ["after"] = new
             {
                 magic_charge = magicAfter,
-                energy = playerCombat.Energy,
+                energy = energyAfterPlay,
                 draw_count = drawAfter,
                 trigger_count = triggerAfter,
-                result_pile = choice.Pile?.Type,
+                result_pile = resultPileAfterPlay,
                 manifested_count = manifestedCards.Length,
                 play_choice_context = playAction.PlayerChoiceContext?.GetType().FullName
             }

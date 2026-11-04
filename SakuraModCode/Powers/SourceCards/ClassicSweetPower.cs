@@ -46,4 +46,3 @@ public class ClassicSweetPower : SakuraPowerModel
             await CreatureCmd.Heal(Owner, heal);
     }
 }
-

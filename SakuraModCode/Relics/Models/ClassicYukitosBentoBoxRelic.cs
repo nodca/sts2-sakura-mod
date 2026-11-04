@@ -54,4 +54,3 @@ public class ClassicYukitosBentoBoxRelic : SakuraRelicModel
         await PlayerCmd.GainEnergy(DynamicVars.Energy.IntValue, Owner);
     }
 }
-

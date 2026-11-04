@@ -135,6 +135,7 @@ internal static class ClowFlyAirborneScenario
                 FixtureDamage,
                 props,
                 enemy,
+                null,
                 null)));
         return before - (player.Creature.CurrentHp + player.Creature.Block);
     }

@@ -17,7 +17,8 @@ public static class RuntimeWorkspaceBuilder
         string runRoot,
         string packageDirectory,
         string runtimeTestAssembly,
-        string runtimeTestManifest)
+        string runtimeTestManifest,
+        IReadOnlyDictionary<string, string>? extraMods = null)
     {
         var root = Path.Combine(runRoot, "runtime-root");
         if (Directory.Exists(root))
@@ -61,12 +62,16 @@ public static class RuntimeWorkspaceBuilder
         Directory.CreateDirectory(runtimeModDirectory);
         File.Copy(runtimeTestAssembly, Path.Combine(runtimeModDirectory, "SakuraMod.RuntimeTests.dll"));
         File.Copy(runtimeTestManifest, Path.Combine(runtimeModDirectory, "SakuraMod.RuntimeTests.json"));
+        foreach (var extraMod in extraMods ?? new Dictionary<string, string>())
+            CopyDirectory(extraMod.Value, Path.Combine(mods, extraMod.Key));
 
         var modDirectories = Directory.EnumerateDirectories(mods)
             .Select(Path.GetFileName)
             .Order(StringComparer.Ordinal)
             .ToArray();
-        var expected = new[] { "STS2-RitsuLib", "SakuraMod", "SakuraMod.RuntimeTests" }.Order(StringComparer.Ordinal);
+        var expected = new[] { "STS2-RitsuLib", "SakuraMod", "SakuraMod.RuntimeTests" }
+            .Concat(extraMods?.Keys ?? [])
+            .Order(StringComparer.Ordinal);
         if (!modDirectories.SequenceEqual(expected, StringComparer.Ordinal))
         {
             throw new InvalidOperationException(

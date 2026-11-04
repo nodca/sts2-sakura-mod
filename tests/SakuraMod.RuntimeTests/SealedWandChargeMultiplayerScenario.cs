@@ -79,6 +79,7 @@ internal static class SealedWandChargeMultiplayerScenario
             Math.Max(0, ordinaryEnemy.CurrentHp - 1),
             ValueProp.Unblockable | ValueProp.Unpowered,
             context.ClientPlayer.Creature,
+            null,
             null);
         await CreatureCmd.Damage(
             new ThrowingPlayerChoiceContext(),
@@ -86,6 +87,7 @@ internal static class SealedWandChargeMultiplayerScenario
             Math.Max(0, sealEnemy.CurrentHp - 14),
             ValueProp.Unblockable | ValueProp.Unpowered,
             context.ClientPlayer.Creature,
+            null,
             null);
         await CreatureCmd.Damage(
             new ThrowingPlayerChoiceContext(),
@@ -93,6 +95,7 @@ internal static class SealedWandChargeMultiplayerScenario
             Math.Max(0, finalEnemy.CurrentHp - 1),
             ValueProp.Unblockable | ValueProp.Unpowered,
             context.ClientPlayer.Creature,
+            null,
             null);
         await context.SignalAndWaitAsync("sealed-wand-enemy-prepared");
         var ordinaryChecksumBaseline = context.ChecksumCount;

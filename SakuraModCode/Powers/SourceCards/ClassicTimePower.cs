@@ -72,4 +72,3 @@ public class ClassicTimePower : SakuraPowerModel
             await CreatureCmd.Stun(Owner);
     }
 }
-

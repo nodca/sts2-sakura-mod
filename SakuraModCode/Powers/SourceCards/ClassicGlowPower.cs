@@ -39,4 +39,3 @@ public class ClassicGlowPower : SakuraPowerModel
             await SakuraMagicCharge.GainMagic(choiceContext, player, Amount);
     }
 }
-

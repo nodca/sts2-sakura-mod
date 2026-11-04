@@ -35,13 +35,15 @@ public class ClowFlower() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Un
 
     private int? _keptOnTurn;
 
-    protected override PileType GetResultPileTypeForCardPlay()
+    protected override CardLocation GetResultLocationForCardPlay()
     {
-        var ordinaryResultPile = base.GetResultPileTypeForCardPlay();
+        var baseResult = base.GetResultLocationForCardPlay();
         var keepsPlay = FlowerRules.KeepsThisTurn(this, _keptOnTurn);
         if (keepsPlay)
             _keptOnTurn = FlowerRules.CurrentTurn(this);
-        return FlowerRules.ResultPileForPlay(keepsPlay, ordinaryResultPile);
+        return FlowerRules.ResultPileForPlay(keepsPlay, baseResult.pileType) == PileType.Discard
+            ? baseResult with { pileType = PileType.Discard }
+            : baseResult;
     }
 
     public override bool TryModifyKeywordsInCombat(CardModel card, ISet<CardKeyword> keywords) =>
@@ -67,13 +69,15 @@ public class SakuraFlower() : SakuraFormCard(0, CardType.Skill, TargetType.None)
 
     private int? _keptOnTurn;
 
-    protected override PileType GetResultPileTypeForCardPlay()
+    protected override CardLocation GetResultLocationForCardPlay()
     {
-        var ordinaryResultPile = base.GetResultPileTypeForCardPlay();
+        var baseResult = base.GetResultLocationForCardPlay();
         var keepsPlay = FlowerRules.KeepsThisTurn(this, _keptOnTurn);
         if (keepsPlay)
             _keptOnTurn = FlowerRules.CurrentTurn(this);
-        return FlowerRules.ResultPileForPlay(keepsPlay, ordinaryResultPile);
+        return FlowerRules.ResultPileForPlay(keepsPlay, baseResult.pileType) == PileType.Discard
+            ? baseResult with { pileType = PileType.Discard }
+            : baseResult;
     }
 
     public override bool TryModifyKeywordsInCombat(CardModel card, ISet<CardKeyword> keywords) =>

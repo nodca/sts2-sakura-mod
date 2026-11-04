@@ -1,5 +1,7 @@
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Models;
+using System.Reflection;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
@@ -175,6 +177,22 @@ internal static class MagicChargeThresholdScenario
             choiceContext => SakuraMagicCharge.GainMagic(choiceContext, player, 1));
         await CombatScenarioContext.EnqueueAndWaitAsync(chargeForLock);
         assertions.Equal("lock_sakura_charge_before_trigger", 10, postFlowerCharge.Amount);
+
+        // Resolve real overrides: equivalent C# syntax must not affect this contract.
+        foreach (var card in new CardModel[]
+                 { combat.CreateCard<ClowRain>(player), combat.CreateCard<ClowFlower>(player), combat.CreateCard<SakuraFlower>(player) })
+        {
+            var method = typeof(CardModel).GetMethod("GetResultLocationForCardPlay", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            var location = (CardLocation)method.Invoke(card, null)!;
+            assertions.True($"{card.GetType().Name}_keeps_result_context",
+                location == new CardLocation(player, PileType.Discard, CardPilePosition.Bottom));
+            if (card is ClowFlower or SakuraFlower)
+            {
+                location = (CardLocation)method.Invoke(card, null)!;
+                assertions.True($"{card.GetType().Name}_second_play_exhausts_with_context",
+                    location == new CardLocation(player, PileType.Exhaust, CardPilePosition.Bottom));
+            }
+        }
 
         var freeFlower = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowFlower>(combat, player);
         await CombatScenarioContext.PlayCardAsync(freeFlower);

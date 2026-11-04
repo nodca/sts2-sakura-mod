@@ -30,7 +30,7 @@ public class Aqua() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
         IReadOnlyList<Creature> frostbitten = [];
         await AquaPhoenixVfx.PlayOrResolveAsync(this, Owner.Creature, targets, activation.IsActive, async cues =>
         {
-            await using (var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, this))
+            await using (var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, play))
             {
                 foreach (var enemy in targets)
                 {
@@ -39,7 +39,7 @@ public class Aqua() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
                         continue;
 
                     attack.AddHit(await CreatureCmd.Damage(
-                        choiceContext, enemy, DynamicVars.Damage.IntValue, ValueProp.Move, Owner.Creature, this));
+                        choiceContext, enemy, DynamicVars.Damage.IntValue, ValueProp.Move, Owner.Creature, this, play));
                 }
             }
 

@@ -55,7 +55,7 @@ public class SakuraMist() : SakuraFormCard(1, CardType.Power, TargetType.None)
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         foreach (var enemy in CombatState!.HittableEnemies)
-            await CreatureCmd.LoseBlock(enemy, enemy.Block);
+            await CreatureCmd.LoseBlock(choiceContext, enemy, enemy.Block, Owner.Creature);
 
         await ApplyPower<NoxiousFumesPower>(choiceContext, Owner.Creature, ReleasedValue("NoxiousFumesPower"));
     }

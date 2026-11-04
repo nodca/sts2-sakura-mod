@@ -50,4 +50,3 @@ public class SakuraMove() : SakuraFormCard(0, CardType.Skill, TargetType.None)
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicMovePower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
-

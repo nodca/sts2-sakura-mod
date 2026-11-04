@@ -28,4 +28,3 @@ public class SakuraLove() : SakuraEventCard(-2, CardType.Skill, TargetType.None)
             await PlayerCmd.GainEnergy(DynamicVars["Energy"].IntValue, Owner);
     }
 }
-

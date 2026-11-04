@@ -65,4 +65,3 @@ public class ClassicSleepPower : SakuraPowerModel
         return Task.CompletedTask;
     }
 }
-

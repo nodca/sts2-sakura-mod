@@ -85,4 +85,3 @@ public abstract class ElementSpellCard(int cost, CardType type, TargetType targe
     public override SakuraElementSet Elements => element;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Ethereal, CardKeyword.Exhaust];
 }
-

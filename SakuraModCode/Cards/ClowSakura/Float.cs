@@ -54,4 +54,3 @@ internal static class SakuraFreezeRules
     public static int DoubledApplicationAmount(int existingFrostbite, int appliedFrostbite) =>
         Math.Max(0, existingFrostbite) + 2 * Math.Max(0, appliedFrostbite);
 }
-

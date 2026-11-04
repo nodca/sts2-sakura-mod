@@ -39,4 +39,3 @@ public class ClassicFlyPower : SakuraPowerModel
             await CardPileCmd.Draw(choiceContext, Amount, player, false);
     }
 }
-

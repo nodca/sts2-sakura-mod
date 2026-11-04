@@ -32,7 +32,8 @@ public class SakuraErasePower : SakuraPowerModel
             Owner,
             hpLoss,
             SakuraPowerValueProps.HpLoss,
-            dealer: null,
-            cardSource: null);
+            null,
+            null,
+            null);
     }
 }

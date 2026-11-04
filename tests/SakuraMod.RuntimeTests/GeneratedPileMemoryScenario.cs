@@ -187,7 +187,7 @@ internal static class GeneratedPileMemoryScenario
         assertions.True("ordinary_owner_after_turn_end", ReferenceEquals(ordinary.Owner, player));
         // Dreaming puts its pick straight into hand before the draw, so it adds one card on top.
         assertions.Equal(
-            "upgraded_spiral_uses_a_normal_draw_slot",
+            "dreaming_adds_a_card_before_normal_draw",
             CombatManager.baseHandDrawCount + 1,
             playerCombat.Hand.Cards.Count);
         var continuedSpiral = playerCombat.Hand.Cards
@@ -203,8 +203,10 @@ internal static class GeneratedPileMemoryScenario
         remind.UpgradeInternal();
         var handBeforeRemind = playerCombat.Hand.Cards.ToList();
         await CombatScenarioContext.PlayCardAsync(remind);
+        // Recalled copies return as ordinary combat cards with stale Temporary
+        // stripped, so they are not reachable through IsTemporary(); diff the hand.
         var recalled = playerCombat.Hand.Cards
-            .Where(card => !handBeforeRemind.Contains(card))
+            .Where(card => !handBeforeRemind.Any(existing => ReferenceEquals(existing, card)))
             .ToList();
         assertions.Equal("temporary_memory_consumed", 0, SakuraMemoryPile.Count(player));
         assertions.True("remind_enters_discard", playerCombat.DiscardPile.Cards.Contains(remind));
@@ -265,19 +267,31 @@ internal static class GeneratedPileMemoryScenario
         await CombatScenarioContext.EnqueueAndWaitAsync(extraSetupAction);
         assertions.Equal("spiral_extra_memory_count", 2, SakuraMemoryPile.Count(player));
 
-        await CombatScenarioContext.PlayCardAsync(spiralWithExtra, combat.HittableEnemies.First());
+        var spiralTarget = combat.HittableEnemies.First();
+        var hpBeforeSpiral = spiralTarget.CurrentHp;
+        var blockBeforeSpiral = player.Creature.Block;
+        await CombatScenarioContext.PlayCardAsync(spiralWithExtra, spiralTarget);
+        assertions.Equal("spiral_scales_from_memory", 13, hpBeforeSpiral - spiralTarget.CurrentHp);
+        assertions.Equal("spiral_does_not_gain_block", blockBeforeSpiral, player.Creature.Block);
         var extraSpirals = playerCombat.Hand.Cards
             .OfType<Spiral>()
             .Where(card => card.IsTemporary() && card.ReturnsToMemoryAfterTemporary())
             .ToList();
         assertions.Equal("spiral_extra_generates_two_copies", 2, extraSpirals.Count);
         assertions.True(
-            "spiral_extra_copies_are_free_and_upgraded",
+            "spiral_extra_copies_are_upgraded_and_free",
             extraSpirals.All(card =>
                 card.CurrentUpgradeLevel == 1
                 && card.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0));
 
-        await CombatScenarioContext.PlayCardAsync(extraSpirals[0], combat.HittableEnemies.First());
+        var hpBeforeExtraSpiral = spiralTarget.CurrentHp;
+        var blockBeforeExtraSpiral = player.Creature.Block;
+        await CombatScenarioContext.PlayCardAsync(extraSpirals[0], spiralTarget);
+        assertions.Equal(
+            "temporary_spiral_copy_scales_from_memory",
+            13,
+            hpBeforeExtraSpiral - spiralTarget.CurrentHp);
+        assertions.Equal("temporary_spiral_does_not_gain_block", blockBeforeExtraSpiral, player.Creature.Block);
         assertions.Equal("pile_memory_selector_released", null, CardSelectCmd.Selector);
         RuntimeTestHost.WriteCheckpoint(
             request,

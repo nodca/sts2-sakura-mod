@@ -35,7 +35,7 @@ public class SpellFengHua() : ElementSpellCard(0, CardType.Attack, TargetType.An
         await SpellTalismanVfx.PlayOrResolveAsync(this, async cues =>
         {
             await cues.Release();
-            await DealDamage(choiceContext, target, ReleasedDamage(), hitCount: ReleasedMagic(), hitVfx: SakuraNativeHitFx.FlyingSlash);
+            await DealDamage(choiceContext, play, target, ReleasedDamage(), hitCount: ReleasedMagic(), hitVfx: SakuraNativeHitFx.FlyingSlash);
             var cardCount = DynamicVars.Cards.IntValue;
             await CardPileCmd.Draw(choiceContext, cardCount, Owner);
             await CardCmd.Discard(choiceContext, await CardSelectCmd.FromHandForDiscard(
@@ -43,4 +43,3 @@ public class SpellFengHua() : ElementSpellCard(0, CardType.Attack, TargetType.An
         });
     }
 }
-

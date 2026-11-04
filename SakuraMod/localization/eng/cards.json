@@ -168,7 +168,7 @@
   "SAKURA_MOD_CARD_CLOW_WAVE.title": "Wave",
   "SAKURA_MOD_CARD_CLOW_WAVE.description": "[gold]Watery[/gold]\nWhenever you play an Element card, gain {Magic:diff()} [gold]Block[/gold] for each Element State you are in.",
   "SAKURA_MOD_CARD_SAKURA_WAVE.title": "Wave",
-  "SAKURA_MOD_CARD_SAKURA_WAVE.description": "[gold]Sakura Card[/gold] [gold]Watery[/gold]\nAdd {Cards:diff()} each of the Clow Cards [gold]Windy[/gold], [gold]Watery[/gold], [gold]Fiery[/gold], and [gold]Earthy[/gold] to your hand.\nThey cost [blue]0[/blue] this turn.",
+  "SAKURA_MOD_CARD_SAKURA_WAVE.description": "[gold]Sakura Card[/gold] [gold]Watery[/gold]\nAdd {Cards:diff()} each of the Clow Cards [gold]Windy[/gold], [gold]Watery[/gold], [gold]Fiery[/gold], and [gold]Earthy[/gold] into your [gold]Hand[/gold].\nThey cost [blue]0[/blue] this turn.",
   "SAKURA_MOD_CARD_CLOW_BIG.title": "Big",
   "SAKURA_MOD_CARD_CLOW_BIG.description": "[gold]Fiery[/gold]\nGain {StrengthPower:diff()} [gold]Strength[/gold].{IfUpgraded:show:\n[gold]Strength[/gold] affects your Attacks with an original cost of 2 or more {ExtraTimes} additional {ExtraTimes:plural:time|times}.|}",
   "SAKURA_MOD_CARD_SAKURA_BIG.title": "Big",

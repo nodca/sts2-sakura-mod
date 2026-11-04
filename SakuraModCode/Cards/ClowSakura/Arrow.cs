@@ -57,7 +57,7 @@ public class ClowArrow() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Co
             this,
             Owner.Creature,
             ArrowWeight.Light,
-            cues => FireArrows(choiceContext, null, count, cues));
+            cues => FireArrows(choiceContext, play, null, count, cues));
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -82,7 +82,7 @@ public class ClowArrow() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Co
             this,
             Owner.Creature,
             ArrowWeight.Medium,
-            cues => FireArrows(choiceContext, target, count, cues));
+            cues => FireArrows(choiceContext, play, target, count, cues));
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(2);
@@ -112,6 +112,7 @@ public class ClowArrow() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Co
 
     private async Task FireArrows(
         PlayerChoiceContext choiceContext,
+        CardPlay play,
         Creature? fixedTarget,
         int count,
         ArrowBowProjectileVfx.Cues cues)
@@ -120,11 +121,11 @@ public class ClowArrow() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Co
 
         if (fixedTarget is not null)
         {
-            await DealDamage(choiceContext, fixedTarget, ReleasedDamage(), hitCount: count, onHit: volley.Loose);
+            await DealDamage(choiceContext, play, fixedTarget, ReleasedDamage(), hitCount: count, onHit: volley.Loose);
             return;
         }
 
-        await DealDamageToRandomEnemies(choiceContext, ReleasedDamage(), count, onHit: volley.Loose);
+        await DealDamageToRandomEnemies(choiceContext, play, ReleasedDamage(), count, onHit: volley.Loose);
     }
 
     private List<CardModel> HandWithoutSelf() =>
@@ -169,11 +170,10 @@ public class SakuraArrow() : SakuraFormCard(1, CardType.Attack, TargetType.None)
             async cues =>
             {
                 var volley = new ArrowVolley(cues);
-                await DealDamageToRandomEnemies(choiceContext, ReleasedDamage(), count, onHit: volley.Loose);
+                await DealDamageToRandomEnemies(choiceContext, play, ReleasedDamage(), count, onHit: volley.Loose);
             });
     }
 
     internal static int CountDistinctCardTypes(IEnumerable<CardModel> cards) =>
         cards.Select(static card => card.GetType()).Distinct().Count();
 }
-

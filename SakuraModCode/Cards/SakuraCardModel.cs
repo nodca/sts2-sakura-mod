@@ -78,6 +78,7 @@ public abstract class SakuraCardModel : ModCardTemplate
 
     protected async Task<AttackCommand?> DealDamage(
         PlayerChoiceContext choiceContext,
+        CardPlay play,
         Creature target,
         int amount,
         ValueProp props = ValueProp.Move,
@@ -95,7 +96,7 @@ public abstract class SakuraCardModel : ModCardTemplate
 
         var attack = DamageCmd.Attack(amount)
             .WithHitCount(hitCount)
-            .FromCard(this)
+            .FromCard(this, play)
             .WithValueProp(props)
             .Targeting(target);
         if (!keepAttackerAnim)
@@ -110,6 +111,7 @@ public abstract class SakuraCardModel : ModCardTemplate
     /// </summary>
     protected async Task<AttackCommand?> DealDamage(
         PlayerChoiceContext choiceContext,
+        CardPlay play,
         Creature target,
         CalculatedDamageVar damage,
         int hitCount = 1,
@@ -121,7 +123,7 @@ public abstract class SakuraCardModel : ModCardTemplate
 
         var attack = DamageCmd.Attack(damage)
             .WithHitCount(hitCount)
-            .FromCard(this)
+            .FromCard(this, play)
             .WithValueProp(damage.Props)
             .WithNoAttackerAnim()
             .Targeting(target);
@@ -131,6 +133,7 @@ public abstract class SakuraCardModel : ModCardTemplate
 
     protected async Task<AttackCommand?> DealDamageToEnemies(
         PlayerChoiceContext choiceContext,
+        CardPlay play,
         IEnumerable<Creature> targets,
         int amount,
         ValueProp props = ValueProp.Move,
@@ -144,7 +147,7 @@ public abstract class SakuraCardModel : ModCardTemplate
 
         var attack = DamageCmd.Attack(amount)
             .WithHitCount(hitCount)
-            .FromCard(this)
+            .FromCard(this, play)
             .WithValueProp(props)
             .WithNoAttackerAnim()
             .TargetingFiltered(targets.Where(static target => target.IsAlive).ToList());
@@ -174,6 +177,7 @@ public abstract class SakuraCardModel : ModCardTemplate
 
     protected async Task<AttackCommand?> DealDamageToRandomEnemies(
         PlayerChoiceContext choiceContext,
+        CardPlay play,
         int amount,
         int hitCount,
         ValueProp props = ValueProp.Move,
@@ -187,7 +191,7 @@ public abstract class SakuraCardModel : ModCardTemplate
 
         var attack = DamageCmd.Attack(amount)
             .WithHitCount(hitCount)
-            .FromCard(this)
+            .FromCard(this, play)
             .WithValueProp(props)
             .WithNoAttackerAnim()
             .TargetingRandomOpponents(CombatState!)
@@ -264,6 +268,7 @@ public abstract class SakuraCardModel : ModCardTemplate
 
     protected async Task TriggerCurrentPoison(
         PlayerChoiceContext choiceContext,
+        CardPlay play,
         IEnumerable<Creature> targets,
         int triggerCount)
     {
@@ -278,14 +283,14 @@ public abstract class SakuraCardModel : ModCardTemplate
                 if (target.GetPower<PoisonPower>() is not { Amount: > 0 } poison)
                     break;
 
-                await DealDamage(choiceContext, target, poison.Amount, ValueProp.Unblockable);
+                await DealDamage(choiceContext, play, target, poison.Amount, ValueProp.Unblockable);
                 if (target.IsAlive)
                     await PowerCmd.Decrement(poison);
             }
         }
     }
 
-    protected async Task DealDamageHit(AttackContext attackContext, PlayerChoiceContext choiceContext, Creature target, int amount, ValueProp props = ValueProp.Move, string? hitVfx = null)
+    protected async Task DealDamageHit(AttackContext attackContext, PlayerChoiceContext choiceContext, CardPlay play, Creature target, int amount, ValueProp props = ValueProp.Move, string? hitVfx = null)
     {
         if (!target.IsAlive)
             return;
@@ -293,7 +298,7 @@ public abstract class SakuraCardModel : ModCardTemplate
         // This hit bypasses AttackCommand, so it plays the hit VFX the way AttackCommand does.
         if (hitVfx != null)
             VfxCmd.PlayOnCreatureCenter(target, hitVfx);
-        attackContext.AddHit(await CreatureCmd.Damage(choiceContext, target, amount, props, Owner.Creature, this));
+        attackContext.AddHit(await CreatureCmd.Damage(choiceContext, target, amount, props, Owner.Creature, this, play));
     }
 
     protected async Task GainBlock(CardPlay play, int amount) =>

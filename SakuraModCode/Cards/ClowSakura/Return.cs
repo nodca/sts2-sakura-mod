@@ -75,4 +75,3 @@ public class SakuraReturn() : SakuraFormCard(0, CardType.Power, TargetType.None)
         await CardPileCmd.RemoveFromDeck(deckCard, showPreview: false);
     }
 }
-

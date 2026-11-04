@@ -9,6 +9,7 @@ public static class MultiplayerCommand
 {
     private const int DefaultTimeoutSeconds = 120;
     private const ulong ScenarioSeed = 0x53414B555241UL;
+    private const ulong HostNetId = 1;
     private static readonly TimeSpan HostCheckpointTimeout = TimeSpan.FromSeconds(30);
 
     public static void PrintHelp(TextWriter writer)
@@ -17,7 +18,7 @@ public static class MultiplayerCommand
         writer.WriteLine();
         writer.WriteLine("Available scenarios:");
         foreach (var scenarioId in SakuraMultiplayerScenarios.All)
-            writer.WriteLine($"  {scenarioId} ({SakuraMultiplayerScenarios.PeerCountFor(scenarioId)} peers)");
+            writer.WriteLine($"  {scenarioId} ({SakuraMultiplayerScenarios.ExpectedPlayerCount(scenarioId)} peers)");
     }
 
     public static async Task<int> RunAsync(string repoRoot, string[] args)
@@ -26,23 +27,22 @@ public static class MultiplayerCommand
         if (scenarioId is null)
             return 2;
 
-        var peerCount = SakuraMultiplayerScenarios.PeerCountFor(scenarioId);
-        var seats = SakuraMultiplayerRoles.SeatsFor(peerCount);
         var startedAt = DateTimeOffset.UtcNow;
         var runId = $"{startedAt:yyyyMMddTHHmmssZ}-multiplayer-{scenarioId}-{Guid.NewGuid():N}";
         var runRoot = Path.Combine(repoRoot, "artifacts", "tests", runId);
         var coordinationRoot = Path.Combine(runRoot, "coordination");
         var runnerResultPath = Path.Combine(runRoot, "runner-result.json");
+        var expectedPlayerCount = SakuraMultiplayerScenarios.ExpectedPlayerCount(scenarioId);
         Directory.CreateDirectory(coordinationRoot);
         Console.WriteLine($"[multiplayer] run: {runId}");
-        Console.WriteLine($"[multiplayer] peers: {peerCount} ({string.Join(", ", seats)})");
         Console.WriteLine($"[multiplayer] artifacts: {runRoot}");
+        Console.WriteLine($"[multiplayer] peers: {expectedPlayerCount}");
 
         var before = new List<ProtectedDirectoryFingerprint>();
         var after = new List<ProtectedDirectoryFingerprint>();
         RuntimeBuildArtifacts? build = null;
-        var peers = CreatePeerPaths(runRoot, seats, attempt: 1);
-        var outcomes = new Dictionary<string, RuntimeProcessOutcome>(StringComparer.Ordinal);
+        var peers = CreatePeerPaths(runRoot, expectedPlayerCount, attempt: 1);
+        var outcomes = new Dictionary<ulong, RuntimeProcessOutcome>();
         Exception? failure = null;
 
         try
@@ -55,81 +55,83 @@ public static class MultiplayerCommand
 
             for (var attempt = 1; attempt <= 3; attempt++)
             {
-                var workspacePeers = CreatePeerPaths(runRoot, seats, attempt);
-                var workspaces = new Dictionary<string, RuntimeWorkspace>(StringComparer.Ordinal);
-                foreach (var peer in workspacePeers)
-                {
-                    workspaces.Add(peer.Role, await CreateWorkspaceAsync(repoRoot, build, peer));
-                }
+                peers = CreatePeerPaths(runRoot, expectedPlayerCount, attempt);
+                var attemptCoordinationRoot = attempt == 1
+                    ? coordinationRoot
+                    : Path.Combine(coordinationRoot, $"attempt-{attempt}");
+                Directory.CreateDirectory(attemptCoordinationRoot);
+                var workspaces = new Dictionary<ulong, RuntimeWorkspace>();
+                foreach (var peer in peers)
+                    workspaces.Add(peer.LocalNetId, await CreateWorkspaceAsync(repoRoot, build, peer, scenarioId));
                 try
                 {
                     if (SakuraMultiplayerScenarios.IsSaveLoad(scenarioId))
                     {
-                        var writePeers = CreatePeerPaths(runRoot, seats, attempt, "write");
-                        peers = writePeers;
-                        var writeSessions = CreateSessions(
+                        var writePeers = CreatePeerPaths(runRoot, expectedPlayerCount, attempt, phase: "write");
+                        var writePreparedPeers = CreatePreparedPeers(
                             build.Prerequisites,
                             runId,
                             scenarioId,
                             runRoot,
-                            PhaseCoordinationRoot(runRoot, attempt, "write"),
+                            Path.Combine(attemptCoordinationRoot, "write"),
                             writePeers,
                             workspaces,
-                            port: AllocateLoopbackPort(),
-                            peerCount,
+                            AllocateLoopbackPort(),
+                            expectedPlayerCount,
                             phase: "write");
-                        ValidatePeerRequests(writeSessions.Select(static session => session.Request).ToList());
-                        var writeOutcomes = await RunPeerGroupAsync(writeSessions);
+                        Directory.CreateDirectory(Path.Combine(attemptCoordinationRoot, "write"));
+                        ValidatePeerRequests(writePreparedPeers.Select(static peer => peer.Request).ToArray());
+                        var writeOutcomes = await RunPeerGroupAsync(writePreparedPeers);
                         RequireMatchingSnapshot(
-                            writeOutcomes.Values.Select(static outcome => outcome.Result).ToList(),
+                            writePeers.Select(peer => writeOutcomes[peer.LocalNetId].Result).ToArray(),
                             "comparison");
 
-                        var readPeers = CreatePeerPaths(runRoot, seats, attempt, "read");
-                        peers = readPeers;
-                        var readSessions = CreateSessions(
+                        peers = CreatePeerPaths(runRoot, expectedPlayerCount, attempt, phase: "read");
+                        var readCoordinationRoot = Path.Combine(attemptCoordinationRoot, "read");
+                        Directory.CreateDirectory(readCoordinationRoot);
+                        var readPreparedPeers = CreatePreparedPeers(
                             build.Prerequisites,
                             runId,
                             scenarioId,
                             runRoot,
-                            PhaseCoordinationRoot(runRoot, attempt, "read"),
-                            readPeers,
+                            readCoordinationRoot,
+                            peers,
                             workspaces,
-                            port: AllocateLoopbackPort(),
-                            peerCount,
+                            AllocateLoopbackPort(),
+                            expectedPlayerCount,
                             phase: "read");
-                        ValidatePeerRequests(readSessions.Select(static session => session.Request).ToList());
-                        outcomes = await RunPeerGroupAsync(readSessions);
+                        ValidatePeerRequests(readPreparedPeers.Select(static peer => peer.Request).ToArray());
+                        outcomes = await RunPeerGroupAsync(readPreparedPeers);
                     }
                     else
                     {
-                        peers = workspacePeers;
-                        var sessions = CreateSessions(
+                        var preparedPeers = CreatePreparedPeers(
                             build.Prerequisites,
                             runId,
                             scenarioId,
                             runRoot,
-                            coordinationRoot,
+                            attemptCoordinationRoot,
                             peers,
                             workspaces,
-                            port: AllocateLoopbackPort(),
-                            peerCount,
+                            AllocateLoopbackPort(),
+                            expectedPlayerCount,
                             phase: null);
-                        ValidatePeerRequests(sessions.Select(static session => session.Request).ToList());
-                        outcomes = await RunPeerGroupAsync(sessions);
+                        ValidatePeerRequests(preparedPeers.Select(static peer => peer.Request).ToArray());
+                        outcomes = await RunPeerGroupAsync(preparedPeers);
                     }
                     RequireMatchingSnapshot(
-                        outcomes.Values.Select(static outcome => outcome.Result).ToList(),
+                        peers.Select(peer => outcomes[peer.LocalNetId].Result).ToArray(),
                         "comparison");
                     break;
                 }
                 catch (PeerProcessFailureException exception)
                 {
-                    outcomes[exception.Role] = exception.Outcome;
+                    outcomes[exception.LocalNetId] = exception.Outcome;
                     if (attempt >= 3 || !IsRetryableStartupFailure(peers))
                         throw;
                     Console.Error.WriteLine(
                         $"[multiplayer] startup attempt {attempt} failed ({exception.GetBaseException().Message}); retrying with a fresh endpoint.");
-                    outcomes = new Dictionary<string, RuntimeProcessOutcome>(StringComparer.Ordinal);
+                    outcomes.Clear();
                 }
             }
         }
@@ -169,8 +171,11 @@ public static class MultiplayerCommand
             runId,
             scenarioId,
             failure is null ? "PASS" : "FAIL",
-            peerCount,
-            peers.Select(peer => ProjectPeer(peer, outcomes.GetValueOrDefault(peer.Role), failure)).ToArray(),
+            expectedPlayerCount,
+            peers.Select(peer => ProjectPeer(
+                peer,
+                outcomes.GetValueOrDefault(peer.LocalNetId),
+                failure)).ToArray(),
             before.Select(ProjectFingerprint).ToArray(),
             after.Select(ProjectFingerprint).ToArray(),
             failure?.ToString());
@@ -183,7 +188,7 @@ public static class MultiplayerCommand
             return 1;
         }
 
-        Console.WriteLine($"[multiplayer] PASS: all {peerCount} peers converged on the {scenarioId} snapshot");
+        Console.WriteLine($"[multiplayer] PASS: all {expectedPlayerCount} peers converged on the {scenarioId} snapshot");
         return 0;
     }
 
@@ -203,110 +208,109 @@ public static class MultiplayerCommand
         return args[1];
     }
 
-    public static void ValidatePeerRequests(SakuraTestRequest host, SakuraTestRequest client) =>
-        ValidatePeerRequests([host, client]);
-
     public static void ValidatePeerRequests(IReadOnlyList<SakuraTestRequest> requests)
     {
+        if (requests.Count < 2)
+            throw new InvalidDataException("A multiplayer peer group requires at least two requests.");
         foreach (var request in requests)
             SakuraTestProtocol.ValidateRequest(request);
 
-        var expectedSeats = SakuraMultiplayerRoles.SeatsFor(requests.Count);
         var first = requests[0];
-        var firstMultiplayer = first.Multiplayer!;
-        var isSaveLoad = SakuraMultiplayerScenarios.IsSaveLoad(first.ScenarioId);
-        var scenarioPeerCount = SakuraMultiplayerScenarios.PeerCountFor(first.ScenarioId);
-        if (firstMultiplayer.PeerCount != requests.Count || firstMultiplayer.PeerCount != scenarioPeerCount)
+        var expectedPlayerCount = first.Multiplayer!.ExpectedPlayerCount;
+        var expectedNetIds = Enumerable.Range(1, expectedPlayerCount)
+            .Select(static value => (ulong)value)
+            .ToArray();
+        var actualNetIds = requests.Select(static request => request.Multiplayer!.LocalNetId)
+            .Order()
+            .ToArray();
+        if (requests.Count != expectedPlayerCount
+            || requests.Count(static request => request.Multiplayer!.Role == SakuraMultiplayerRoles.Host) != 1
+            || requests.Count(static request => request.Multiplayer!.Role == SakuraMultiplayerRoles.Client)
+                != expectedPlayerCount - 1
+            || first.Multiplayer.Role != SakuraMultiplayerRoles.Host
+            || first.Multiplayer.LocalNetId != HostNetId
+            || !actualNetIds.SequenceEqual(expectedNetIds)
+            || requests.Any(request => request.RunId != first.RunId
+                || request.ScenarioId != first.ScenarioId
+                || request.Multiplayer!.ExpectedPlayerCount != expectedPlayerCount
+                || request.Multiplayer.HostAddress != first.Multiplayer.HostAddress
+                || request.Multiplayer.Port != first.Multiplayer.Port
+                || request.Multiplayer.CoordinationRoot != first.Multiplayer.CoordinationRoot)
+            || (SakuraMultiplayerScenarios.IsSaveLoad(first.ScenarioId)
+                ? requests.Any(request => request.Phase != first.Phase)
+                    || first.Phase is not ("write" or "read")
+                : requests.Select(static request => request.Phase).Distinct(StringComparer.Ordinal).Count() != requests.Count))
         {
             throw new InvalidDataException(
-                $"Declared peer count {firstMultiplayer.PeerCount} does not match the {requests.Count} launched peers "
-                + $"or scenario peer count {scenarioPeerCount}.");
+                "Multiplayer requests do not form one complete, uniquely identified peer group.");
         }
-
-        for (var index = 0; index < requests.Count; index++)
-        {
-            var multiplayer = requests[index].Multiplayer!;
-            var expectedPhase = isSaveLoad ? first.Phase : expectedSeats[index].ToLowerInvariant();
-            if (requests[index].RunId != first.RunId
-                || requests[index].ScenarioId != first.ScenarioId
-                || requests[index].Phase != expectedPhase
-                || multiplayer.Role != expectedSeats[index]
-                || multiplayer.PeerCount != firstMultiplayer.PeerCount
-                || multiplayer.HostAddress != firstMultiplayer.HostAddress
-                || multiplayer.Port != firstMultiplayer.Port
-                || multiplayer.CoordinationRoot != firstMultiplayer.CoordinationRoot
-                || multiplayer.LocalNetId != SakuraMultiplayerRoles.NetIdFor(expectedSeats[index]))
-                throw new InvalidDataException("Multiplayer request identities do not form a valid peer group.");
-        }
-
-        var netIds = requests.Select(static request => request.Multiplayer!.LocalNetId).ToList();
-        if (netIds.Distinct().Count() != netIds.Count)
-            throw new InvalidDataException("Multiplayer peers must use distinct local net ids.");
     }
-
-    public static void RequireMatchingSnapshot(
-        SakuraTestResult host,
-        SakuraTestResult client,
-        string snapshotName) =>
-        RequireMatchingSnapshot([host, client], snapshotName);
 
     public static void RequireMatchingSnapshot(
         IReadOnlyList<SakuraTestResult> results,
         string snapshotName)
     {
-        string? reference = null;
-        foreach (var result in results)
+        if (results.Count < 2)
+            throw new InvalidDataException("Snapshot comparison requires at least two peer results.");
+        if (!results[0].SemanticSnapshots.TryGetValue(snapshotName, out var baselineSnapshot))
+            throw new InvalidDataException($"Every peer must emit the '{snapshotName}' semantic snapshot.");
+        var baselineJson = JsonSerializer.Serialize(baselineSnapshot, SakuraTestProtocol.JsonOptions);
+        foreach (var result in results.Skip(1))
         {
             if (!result.SemanticSnapshots.TryGetValue(snapshotName, out var snapshot))
                 throw new InvalidDataException($"Every peer must emit the '{snapshotName}' semantic snapshot.");
             var json = JsonSerializer.Serialize(snapshot, SakuraTestProtocol.JsonOptions);
-            if (reference is null)
+            if (!string.Equals(baselineJson, json, StringComparison.Ordinal))
             {
-                reference = json;
-                continue;
+                throw new InvalidDataException(
+                    $"Peer '{result.Phase}' '{snapshotName}' semantic snapshot diverged from the host.");
             }
-            if (!string.Equals(reference, json, StringComparison.Ordinal))
-                throw new InvalidDataException($"Peer '{snapshotName}' semantic snapshots diverged.");
         }
     }
 
-    /// <summary>
-    /// The host owns the loopback endpoint, so every client seat starts only after the
-    /// host's typed `host_listening` checkpoint. Client seats then start together: the
-    /// lobby fills in join order and each seat asserts its own net id.
-    /// </summary>
-    private static async Task<Dictionary<string, RuntimeProcessOutcome>> RunPeerGroupAsync(
-        IReadOnlyList<PeerSession> sessions)
+    private static async Task<Dictionary<ulong, RuntimeProcessOutcome>> RunPeerGroupAsync(
+        IReadOnlyList<PreparedPeer> peers)
     {
-        var hostSession = sessions.Single(
-            static session => session.Peer.Role == SakuraMultiplayerRoles.Host);
+        var host = peers.Single(static peer => peer.Paths.Role == SakuraMultiplayerRoles.Host);
         using var cancellation = new CancellationTokenSource();
-        var running = new List<(string Role, Task<RuntimeProcessOutcome> Task)>();
+        var hostTask = RuntimeProcessSession.RunAsync(
+            host.Workspace,
+            host.Request,
+            host.Paths.RequestPath,
+            host.Paths.GameLogPath,
+            cancellation.Token);
+        var tasks = new Dictionary<ulong, Task<RuntimeProcessOutcome>>
+        {
+            [host.Paths.LocalNetId] = hostTask
+        };
         try
         {
-            var hostTask = StartPeerAsync(hostSession, cancellation.Token);
-            running.Add((hostSession.Peer.Role, hostTask));
             await WaitForCheckpointAsync(
-                hostSession.Peer.CheckpointPath,
-                hostSession.Request,
+                host.Paths.CheckpointPath,
+                host.Request,
                 "host_listening",
                 hostTask,
                 HostCheckpointTimeout,
                 cancellation.Token);
+            foreach (var client in peers.Where(static peer => peer.Paths.Role == SakuraMultiplayerRoles.Client))
+            {
+                tasks[client.Paths.LocalNetId] = RuntimeProcessSession.RunAsync(
+                    client.Workspace,
+                    client.Request,
+                    client.Paths.RequestPath,
+                    client.Paths.GameLogPath,
+                    cancellation.Token);
+            }
 
-            foreach (var session in sessions.Where(
-                         static session => session.Peer.Role != SakuraMultiplayerRoles.Host))
-                running.Add((session.Peer.Role, StartPeerAsync(session, cancellation.Token)));
-
-            var outcomes = new Dictionary<string, RuntimeProcessOutcome>(StringComparer.Ordinal);
-            var remaining = running.ToList();
+            var remaining = peers.ToList();
+            var outcomes = new Dictionary<ulong, RuntimeProcessOutcome>();
             while (remaining.Count > 0)
             {
-                var completed = await Task.WhenAny(remaining.Select(static peer => peer.Task));
-                var peer = remaining.Single(value => ReferenceEquals(value.Task, completed));
-                var outcome = await peer.Task;
-                RequirePassingPeer(outcome, peer.Role);
-                outcomes[peer.Role] = outcome;
+                var completed = await Task.WhenAny(remaining.Select(peer => tasks[peer.Paths.LocalNetId]));
+                var peer = remaining.Single(value => ReferenceEquals(tasks[value.Paths.LocalNetId], completed));
+                var outcome = await completed;
+                RequirePassingPeer(outcome, peer.Paths);
+                outcomes[peer.Paths.LocalNetId] = outcome;
                 remaining.Remove(peer);
             }
             return outcomes;
@@ -314,58 +318,11 @@ public static class MultiplayerCommand
         catch
         {
             cancellation.Cancel();
-            foreach (var peer in running)
-                await ObserveAsync(peer.Task);
+            foreach (var task in tasks.Values)
+                await ObserveAsync(task);
             throw;
         }
     }
-
-    private static Task<RuntimeProcessOutcome> StartPeerAsync(
-        PeerSession session,
-        CancellationToken cancellationToken) =>
-        RuntimeProcessSession.RunAsync(
-            session.Workspace,
-            session.Request,
-            session.Peer.RequestPath,
-            session.Peer.GameLogPath,
-            cancellationToken);
-
-    private static IReadOnlyList<PeerPaths> CreatePeerPaths(
-        string runRoot,
-        IReadOnlyList<string> seats,
-        int attempt,
-        string? phase = null) =>
-        seats
-            .Select(role => PeerPaths.Create(runRoot, role, SakuraMultiplayerRoles.NetIdFor(role), attempt, phase))
-            .ToList();
-
-    private static IReadOnlyList<PeerSession> CreateSessions(
-        RuntimePrerequisites prerequisites,
-        string runId,
-        string scenarioId,
-        string runRoot,
-        string coordinationRoot,
-        IReadOnlyList<PeerPaths> peers,
-        IReadOnlyDictionary<string, RuntimeWorkspace> workspaces,
-        ushort port,
-        int peerCount,
-        string? phase) =>
-        peers.Select(peer => new PeerSession(
-            peer,
-            workspaces[peer.Role],
-            CreateRequest(
-                prerequisites,
-                runId,
-                scenarioId,
-                phase ?? peer.Role.ToLowerInvariant(),
-                runRoot,
-                coordinationRoot,
-                peer,
-                port,
-                peerCount))).ToList();
-
-    private static string PhaseCoordinationRoot(string runRoot, int attempt, string phase) =>
-        Path.Combine(attempt == 1 ? runRoot : Path.Combine(runRoot, $"attempt-{attempt}"), $"coordination-{phase}");
 
     public static async Task WaitForCheckpointAsync(
         string checkpointPath,
@@ -427,7 +384,8 @@ public static class MultiplayerCommand
     private static async Task<RuntimeWorkspace> CreateWorkspaceAsync(
         string repoRoot,
         RuntimeBuildArtifacts build,
-        PeerPaths peer)
+        PeerPaths peer,
+        string scenarioId)
     {
         Directory.CreateDirectory(peer.Root);
         var workspace = RuntimeWorkspaceBuilder.Create(
@@ -435,11 +393,58 @@ public static class MultiplayerCommand
             peer.Root,
             build.Package.PackageDirectory,
             build.RuntimeTestAssembly,
-            Path.Combine(repoRoot, "tests", "SakuraMod.RuntimeTests", "SakuraMod.RuntimeTests.json"));
+            Path.Combine(repoRoot, "tests", "SakuraMod.RuntimeTests", "SakuraMod.RuntimeTests.json"),
+            ExtraModsFor(scenarioId));
         var selfCheck = Path.Combine(peer.Root, "self-check");
         Directory.CreateDirectory(selfCheck);
-        await RuntimeProfile.WriteStrictSettingsAsync(workspace, selfCheck, runSelfCheck: false);
+        await RuntimeProfile.WriteStrictSettingsAsync(
+            workspace,
+            selfCheck,
+            runSelfCheck: false,
+            enableKitLibTestModules: SakuraMultiplayerScenarios.RequiresKitLib(scenarioId));
         return workspace;
+    }
+
+    private static IReadOnlyDictionary<string, string>? ExtraModsFor(string scenarioId)
+    {
+        var extraMods = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (SakuraMultiplayerScenarios.RequiresKitLib(scenarioId))
+        {
+            var configured = Environment.GetEnvironmentVariable("SAKURAMOD_KITLIB_ROOT");
+            var root = string.IsNullOrWhiteSpace(configured)
+                ? Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    ".local", "share", "Steam", "steamapps", "workshop", "content", "2868840", "3747619669")
+                : Path.GetFullPath(configured);
+            if (!File.Exists(Path.Combine(root, "mod_manifest.json"))
+                || !File.Exists(Path.Combine(root, "KitLib.dll")))
+            {
+                throw new DirectoryNotFoundException(
+                    $"KitLib Workshop package is incomplete or unavailable: {root}");
+            }
+
+            extraMods["KitLib"] = root;
+        }
+
+        if (SakuraMultiplayerScenarios.RequiresRandomForeseer(scenarioId))
+        {
+            var configured = Environment.GetEnvironmentVariable("SAKURAMOD_RANDOM_FORESEER_ROOT");
+            var root = string.IsNullOrWhiteSpace(configured)
+                ? Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    ".local", "share", "Steam", "steamapps", "workshop", "content", "2868840", "3747531952")
+                : Path.GetFullPath(configured);
+            if (!File.Exists(Path.Combine(root, "RandomForeseer.json"))
+                || !File.Exists(Path.Combine(root, "RandomForeseer.dll")))
+            {
+                throw new DirectoryNotFoundException(
+                    $"RandomForeseer Workshop package is incomplete or unavailable: {root}");
+            }
+
+            extraMods["RandomForeseer"] = root;
+        }
+
+        return extraMods.Count == 0 ? null : extraMods;
     }
 
     private static SakuraTestRequest CreateRequest(
@@ -451,7 +456,7 @@ public static class MultiplayerCommand
         string coordinationRoot,
         PeerPaths peer,
         ushort port,
-        int peerCount) => new(
+        int expectedPlayerCount) => new(
         SakuraTestProtocol.CurrentSchemaVersion,
         runId,
         "multiplayer",
@@ -471,8 +476,32 @@ public static class MultiplayerCommand
             IPAddress.Loopback.ToString(),
             port,
             peer.LocalNetId,
-            coordinationRoot,
-            peerCount));
+            expectedPlayerCount,
+            coordinationRoot));
+
+    private static IReadOnlyList<PreparedPeer> CreatePreparedPeers(
+        RuntimePrerequisites prerequisites,
+        string runId,
+        string scenarioId,
+        string runRoot,
+        string coordinationRoot,
+        IReadOnlyList<PeerPaths> peers,
+        IReadOnlyDictionary<ulong, RuntimeWorkspace> workspaces,
+        ushort port,
+        int expectedPlayerCount,
+        string? phase) => peers.Select(peer => new PreparedPeer(
+            peer,
+            workspaces[peer.LocalNetId],
+            CreateRequest(
+                prerequisites,
+                runId,
+                scenarioId,
+                phase ?? peer.Name,
+                runRoot,
+                coordinationRoot,
+                peer,
+                port,
+                expectedPlayerCount))).ToArray();
 
     private static ushort AllocateLoopbackPort()
     {
@@ -481,14 +510,11 @@ public static class MultiplayerCommand
         return checked((ushort)((IPEndPoint)socket.LocalEndPoint!).Port);
     }
 
-    private static void RequirePassingPeer(RuntimeProcessOutcome outcome, string role)
+    private static void RequirePassingPeer(RuntimeProcessOutcome outcome, PeerPaths peer)
     {
         if (outcome.Process.ExitCode != 0 || outcome.Result.Status != "PASS")
-            throw new PeerProcessFailureException(role, outcome);
+            throw new PeerProcessFailureException(peer.Role, peer.LocalNetId, outcome);
     }
-
-    private static bool IsRetryableStartupFailure(PeerPaths host, PeerPaths client) =>
-        IsRetryableStartupFailure([host, client]);
 
     private static bool IsRetryableStartupFailure(IReadOnlyList<PeerPaths> peers)
     {
@@ -535,7 +561,7 @@ public static class MultiplayerCommand
                 runId,
                 "multiplayer",
                 scenarioId,
-                peer.Phase,
+                peer.Name,
                 "FAIL",
                 startedAt,
                 DateTimeOffset.UtcNow,
@@ -568,6 +594,7 @@ public static class MultiplayerCommand
         value.Sha256);
 
     private sealed record PeerPaths(
+        string Name,
         string Role,
         ulong LocalNetId,
         string Phase,
@@ -579,18 +606,22 @@ public static class MultiplayerCommand
     {
         public static PeerPaths Create(
             string runRoot,
-            string role,
             ulong localNetId,
             int attempt,
             string? phase = null)
         {
+            var role = localNetId == HostNetId
+                ? SakuraMultiplayerRoles.Host
+                : SakuraMultiplayerRoles.Client;
+            var name = role == SakuraMultiplayerRoles.Host ? "host" : $"client-{localNetId}";
             var attemptRoot = attempt == 1 ? runRoot : Path.Combine(runRoot, $"attempt-{attempt}");
-            var root = Path.Combine(attemptRoot, role.ToLowerInvariant());
+            var root = Path.Combine(attemptRoot, name);
             var artifactRoot = phase is null ? root : Path.Combine(root, phase);
             return new PeerPaths(
+                name,
                 role,
                 localNetId,
-                phase ?? role.ToLowerInvariant(),
+                phase ?? name,
                 root,
                 Path.Combine(artifactRoot, "request.json"),
                 Path.Combine(artifactRoot, "result.json"),
@@ -599,21 +630,32 @@ public static class MultiplayerCommand
         }
     }
 
-    private sealed record PeerSession(
-        PeerPaths Peer,
-        RuntimeWorkspace Workspace,
-        SakuraTestRequest Request);
-
     private sealed class PeerProcessFailureException : Exception
     {
-        public PeerProcessFailureException(string role, RuntimeProcessOutcome outcome)
-            : base($"{role} failed: game exit={outcome.Process.ExitCode}, result={outcome.Result.Status}.")
+        public PeerProcessFailureException(string role, ulong localNetId, RuntimeProcessOutcome outcome)
+            : base($"{role} {localNetId} failed: game exit={outcome.Process.ExitCode}, result={outcome.Result.Status}.")
         {
             Role = role;
+            LocalNetId = localNetId;
             Outcome = outcome;
         }
 
         public string Role { get; }
+        public ulong LocalNetId { get; }
         public RuntimeProcessOutcome Outcome { get; }
     }
+
+    private sealed record PreparedPeer(
+        PeerPaths Paths,
+        RuntimeWorkspace Workspace,
+        SakuraTestRequest Request);
+
+    private static IReadOnlyList<PeerPaths> CreatePeerPaths(
+        string runRoot,
+        int expectedPlayerCount,
+        int attempt,
+        string? phase = null) =>
+        Enumerable.Range(1, expectedPlayerCount)
+            .Select(value => PeerPaths.Create(runRoot, (ulong)value, attempt, phase))
+            .ToArray();
 }

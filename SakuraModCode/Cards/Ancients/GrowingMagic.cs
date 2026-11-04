@@ -29,9 +29,8 @@ public class GrowingMagic() :
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         SakuraVoicePlayback.TryPlay(this);
-        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage(), hitVfx: SakuraNativeHitFx.HeavyBlunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx);
+        await DealDamage(choiceContext, play, RequiredTarget(play), ReleasedDamage(), hitVfx: SakuraNativeHitFx.HeavyBlunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(6);
 }
-

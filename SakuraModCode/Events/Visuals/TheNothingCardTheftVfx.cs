@@ -53,8 +53,8 @@ internal sealed partial class TheNothingCardTheftVfx : Node2D
     private const float Sway = 0.2f;
     private const float EndScale = 0.55f;
 
-    private static readonly StringName CenterParam = "sphere_center";
-    private static readonly StringName RadiusParam = "sphere_radius";
+    private readonly StringName CenterParam = "sphere_center";
+    private readonly StringName RadiusParam = "sphere_radius";
 
     private readonly Creature _nothing;
     private readonly List<Flight> _flights = [];

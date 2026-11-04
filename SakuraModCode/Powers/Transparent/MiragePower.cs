@@ -32,7 +32,8 @@ public class MiragePower : SakuraPowerModel
         decimal amount,
         ValueProp props,
         Creature? dealer,
-        CardModel? cardSource) =>
+        CardModel? cardSource,
+        CardPlay? cardPlay) =>
         Amount > 0 && dealer == Owner && props.IsPoweredAttack()
             ? 0m
             : 1m;
@@ -46,4 +47,3 @@ public class MiragePower : SakuraPowerModel
             await PowerCmd.Remove(this);
     }
 }
-

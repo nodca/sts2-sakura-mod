@@ -102,10 +102,15 @@ public sealed class IllusionProjectionPower : SakuraPowerModel
     public override PowerStackType StackType => PowerStackType.Single;
     protected override bool IsVisibleInternal => false;
 
-    public override decimal ModifyDamageCap(Creature? target, ValueProp props, Creature? dealer, CardModel? cardSource) =>
+    public override decimal ModifyDamageCap(
+        Creature? target,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource,
+        CardPlay? cardPlay) =>
         target == Owner && (dealer?.IsPlayer == true || cardSource?.Owner.Creature.IsPlayer == true)
             ? 0m
-            : base.ModifyDamageCap(target, props, dealer, cardSource);
+            : base.ModifyDamageCap(target, props, dealer, cardSource, cardPlay);
 
     public override bool TryModifyPowerAmountReceived(PowerModel canonicalPower, Creature target, decimal amount, Creature? applier, out decimal modifiedAmount)
     {
@@ -199,10 +204,15 @@ public sealed class WindWallPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override decimal ModifyDamageCap(Creature? target, ValueProp props, Creature? dealer, CardModel? cardSource) =>
+    public override decimal ModifyDamageCap(
+        Creature? target,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource,
+        CardPlay? cardPlay) =>
         Amount > 0 && target == Owner && dealer?.IsPlayer == true && props.IsPoweredAttack()
             ? 0m
-            : base.ModifyDamageCap(target, props, dealer, cardSource);
+            : base.ModifyDamageCap(target, props, dealer, cardSource, cardPlay);
 
     public override async Task AfterModifyingDamageAmount(CardModel? cardSource)
     {
@@ -221,7 +231,13 @@ public sealed class WindyNextActionDamagePower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override decimal ModifyDamageAdditive(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource) =>
+    public override decimal ModifyDamageAdditive(
+        Creature? target,
+        decimal amount,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource,
+        CardPlay? cardPlay) =>
         Amount > 0 && dealer == Owner && target?.IsPlayer == true && props.IsPoweredAttack()
             ? Amount
             : 0;

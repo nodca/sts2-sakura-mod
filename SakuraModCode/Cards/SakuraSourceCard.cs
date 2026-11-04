@@ -420,7 +420,7 @@ internal sealed class SakuraSourceDamageVar : DamageVar, ISakuraSourceEffectiveV
         }
 
         if (runGlobalHooks)
-            preview = Hook.ModifyDamage(card.Owner.RunState, card.CombatState, target, card.Owner.Creature, baseValue, Props, card, ModifyDamageHookType.All, previewMode, out _);
+            preview = Hook.ModifyDamage(card.Owner.RunState, card.CombatState, target, card.Owner.Creature, baseValue, Props, card, null, ModifyDamageHookType.All, previewMode, out _);
 
         PreviewValue = preview;
     }
@@ -463,7 +463,7 @@ internal sealed class SakuraCombatHistoryDamageVar(
         }
 
         if (runGlobalHooks)
-            preview = Hook.ModifyDamage(card.Owner.RunState, card.CombatState, target, card.Owner.Creature, baseValue, Props, card, ModifyDamageHookType.All, previewMode, out _);
+            preview = Hook.ModifyDamage(card.Owner.RunState, card.CombatState, target, card.Owner.Creature, baseValue, Props, card, null, ModifyDamageHookType.All, previewMode, out _);
 
         PreviewValue = preview * count;
     }

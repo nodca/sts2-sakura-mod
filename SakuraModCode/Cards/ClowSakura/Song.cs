@@ -36,7 +36,7 @@ public class ClowSong() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Unc
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var hits = await ExhaustSongCards(choiceContext);
-        await Sing(choiceContext, SongBeatSchedule.EchoBeats(hits ?? []));
+        await Sing(choiceContext, play, SongBeatSchedule.EchoBeats(hits ?? []));
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -45,7 +45,7 @@ public class ClowSong() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Unc
         if (hits is null)
             return;
 
-        await Sing(choiceContext, SongBeatSchedule.EchoBeats(hits, ExtraHits));
+        await Sing(choiceContext, play, SongBeatSchedule.EchoBeats(hits, ExtraHits));
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(2);
@@ -82,7 +82,7 @@ public class ClowSong() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Unc
     internal static int SongCount(CardModel card) =>
         SakuraActions.HasElement(card, SakuraElement.Wind) ? 2 : 1;
 
-    private Task Sing(PlayerChoiceContext choiceContext, bool[] echoes)
+    private Task Sing(PlayerChoiceContext choiceContext, CardPlay play, bool[] echoes)
     {
         var count = echoes.Length;
         if (count <= 0)
@@ -101,7 +101,7 @@ public class ClowSong() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Unc
                 {
                     var enemies = CombatState!.HittableEnemies.ToList();
                     await cues.Beat(i, enemies);
-                    await DealDamageToEnemies(choiceContext, enemies, ReleasedDamage(), hitVfxNode: SongHitFallback(cues));
+                    await DealDamageToEnemies(choiceContext, play, enemies, ReleasedDamage(), hitVfxNode: SongHitFallback(cues));
                 }
                 cues.Finale();
             });
@@ -136,7 +136,7 @@ public class SakuraSong() : SakuraFormCard(1, CardType.Attack, TargetType.AllEne
                 {
                     var enemies = CombatState!.HittableEnemies.ToList();
                     await cues.Beat(i, enemies);
-                    await DealDamageToEnemies(choiceContext, enemies, ReleasedDamage(), hitVfxNode: ClowSong.SongHitFallback(cues));
+                    await DealDamageToEnemies(choiceContext, play, enemies, ReleasedDamage(), hitVfxNode: ClowSong.SongHitFallback(cues));
                     await GainBlock(play, ReleasedBlock());
                 }
                 cues.Finale();

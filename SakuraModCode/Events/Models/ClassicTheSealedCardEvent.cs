@@ -142,4 +142,3 @@ public class ClassicTheSealedCardEvent() : SakuraModEventTemplate
             .Offer();
     }
 }
-

@@ -35,6 +35,7 @@ public class Blade() : TransparentExtraEffectCard(2, CardType.Attack, CardRarity
         var target = RequiredTarget(play);
         await DealDamage(
             choiceContext,
+            play,
             target,
             DynamicVars.CalculatedDamage,
             hitCount: BladeRules.HitCount(this),

@@ -44,4 +44,3 @@ public class SakuraDark() : SakuraFormCard(1, CardType.Power, TargetType.None)
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicDarkSakuraPower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
-

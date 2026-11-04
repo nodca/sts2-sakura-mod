@@ -375,6 +375,8 @@ internal static class RuntimeSmokeScenario
         var map = runState.Act.CreateMap(runState, replaceTreasureWithElites: false);
         assertions.True("fourth_act_create_map_returns_custom_map", map is SakuraFourthActMap);
         var fourthActMap = (SakuraFourthActMap)map;
+        // Wind/Water end at the dark endpoint; Fire/Earth end at the light endpoint,
+        // so the map emits all four routes.
         assertions.Equal("fourth_act_complete_route_count", 4, fourthActMap.Routes.Count);
 
         var waterEliteCoord = fourthActMap.MerchantMapPoint.Children

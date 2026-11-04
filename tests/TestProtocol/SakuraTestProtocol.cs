@@ -5,7 +5,7 @@ namespace SakuraMod.TestProtocol;
 
 public static class SakuraTestProtocol
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
     public const string RequestEnvironmentVariable = "SAKURAMOD_TEST_REQUEST";
     // A batch runs several ordinary requests in one game process, in order.
     public const string BatchEnvironmentVariable = "SAKURAMOD_TEST_BATCH";
@@ -168,17 +168,10 @@ public static class SakuraTestProtocol
             throw new InvalidDataException("The multiplayer host address must be a loopback IP address.");
         if (multiplayer.Port == 0 || multiplayer.LocalNetId == 0)
             throw new InvalidDataException("The multiplayer port and local net id must be non-zero.");
-        if (multiplayer.PeerCount < SakuraMultiplayerRoles.MinPeerCount
-            || multiplayer.PeerCount > SakuraMultiplayerRoles.MaxPeerCount)
-            throw new InvalidDataException(
-                $"The multiplayer peer count must be between {SakuraMultiplayerRoles.MinPeerCount} "
-                + $"and {SakuraMultiplayerRoles.MaxPeerCount}; found {multiplayer.PeerCount}.");
-        if (SakuraMultiplayerRoles.SeatIndex(multiplayer.Role) >= multiplayer.PeerCount)
-            throw new InvalidDataException(
-                $"Role '{multiplayer.Role}' has no seat in a {multiplayer.PeerCount}-peer session.");
-        if (multiplayer.LocalNetId > (ulong)multiplayer.PeerCount)
-            throw new InvalidDataException(
-                $"Local net id {multiplayer.LocalNetId} is outside a {multiplayer.PeerCount}-peer session.");
+        if (multiplayer.ExpectedPlayerCount is < 2 or > 4)
+            throw new InvalidDataException("The multiplayer player count must be between two and four.");
+        if (multiplayer.LocalNetId > (ulong)multiplayer.ExpectedPlayerCount)
+            throw new InvalidDataException("The local net id is outside the expected multiplayer player range.");
         if (!IsWithin(request.ArtifactRoot, multiplayer.CoordinationRoot))
             throw new InvalidDataException("The multiplayer coordination root is outside the artifact root.");
     }
@@ -264,6 +257,15 @@ public static class SakuraMultiplayerScenarios
     public const string KindnessDreamAppearSync = "kindness-dream-appear-sync";
     public const string SealedWandCharge = "sealed-wand-charge";
     public const string TurnEndDamageSync = "turn-end-damage-sync";
+    public const string RepairJumpMirror = "repair-jump-mirror";
+    public const string RepairJumpMirrorForeseer = "repair-jump-mirror-foreseer";
+    public const string RepairJumpMirrorThreePlayer = "repair-jump-mirror-three-player";
+    public const string RepairJumpMirrorThreePlayerForeseer = "repair-jump-mirror-three-player-foreseer";
+    public const string RepairJumpMirrorThreePlayerKitLib = "repair-jump-mirror-three-player-kitlib";
+    public const string RepairJumpMirrorThreePlayerForeseerKitLib = "repair-jump-mirror-three-player-foreseer-kitlib";
+    public const string RepairJumpMirrorThreePlayerRace = "repair-jump-mirror-three-player-race";
+    public const string RepairJumpMirrorThreePlayerForeseerRace = "repair-jump-mirror-three-player-foreseer-race";
+    public const string RepairJumpMirrorThreePlayerChoiceRace = "repair-jump-mirror-three-player-choice-race";
     public const string ThreePlayerDefensivePowers = "three-player-defensive-powers";
     public const string ThreePlayerRepairJump = "three-player-repair-jump";
     public const string ThreePlayerRepairJumpLoad = "three-player-repair-jump-load";
@@ -283,29 +285,43 @@ public static class SakuraMultiplayerScenarios
         KindnessDreamAppearSync,
         SealedWandCharge,
         TurnEndDamageSync,
+        RepairJumpMirror,
+        RepairJumpMirrorForeseer,
+        RepairJumpMirrorThreePlayer,
+        RepairJumpMirrorThreePlayerForeseer,
+        RepairJumpMirrorThreePlayerKitLib,
+        RepairJumpMirrorThreePlayerForeseerKitLib,
+        RepairJumpMirrorThreePlayerRace,
+        RepairJumpMirrorThreePlayerForeseerRace,
+        RepairJumpMirrorThreePlayerChoiceRace,
         ThreePlayerDefensivePowers,
         ThreePlayerRepairJump,
         ThreePlayerRepairJumpLoad,
         ThreePlayerMirrorCopy
     ];
 
-    private static readonly HashSet<string> ThreePlayerScenarios = new(StringComparer.Ordinal)
-    {
-        ThreePlayerDefensivePowers,
-        ThreePlayerRepairJump,
-        ThreePlayerRepairJumpLoad,
-        ThreePlayerMirrorCopy
-    };
+    public static int ExpectedPlayerCount(string scenarioId) =>
+        scenarioId is RepairJumpMirrorThreePlayer
+            or RepairJumpMirrorThreePlayerForeseer
+            or RepairJumpMirrorThreePlayerKitLib
+            or RepairJumpMirrorThreePlayerForeseerKitLib
+            or RepairJumpMirrorThreePlayerRace
+            or RepairJumpMirrorThreePlayerForeseerRace
+            or RepairJumpMirrorThreePlayerChoiceRace
+            or ThreePlayerDefensivePowers
+            or ThreePlayerRepairJump
+            or ThreePlayerRepairJumpLoad
+            or ThreePlayerMirrorCopy ? 3 : 2;
 
-    /// <summary>
-    /// Peer count is a property of the scenario, not a runner flag: the native
-    /// power-scaling and side-turn-end paths differ between two and three players,
-    /// so each scenario must pin the seat count it asserts against.
-    /// </summary>
-    public static int PeerCountFor(string scenarioId) =>
-        ThreePlayerScenarios.Contains(scenarioId)
-            ? 3
-            : SakuraMultiplayerRoles.MinPeerCount;
+    public static bool RequiresRandomForeseer(string scenarioId) =>
+        scenarioId is RepairJumpMirrorForeseer
+            or RepairJumpMirrorThreePlayerForeseer
+            or RepairJumpMirrorThreePlayerForeseerKitLib
+            or RepairJumpMirrorThreePlayerForeseerRace;
+
+    public static bool RequiresKitLib(string scenarioId) =>
+        scenarioId is RepairJumpMirrorThreePlayerKitLib
+            or RepairJumpMirrorThreePlayerForeseerKitLib;
 
     public static bool IsSaveLoad(string scenarioId) =>
         string.Equals(scenarioId, ThreePlayerRepairJumpLoad, StringComparison.Ordinal);
@@ -316,8 +332,8 @@ public sealed record SakuraMultiplayerRequest(
     string HostAddress,
     ushort Port,
     ulong LocalNetId,
-    string CoordinationRoot,
-    int PeerCount = SakuraMultiplayerRoles.MinPeerCount);
+    int ExpectedPlayerCount,
+    string CoordinationRoot);
 
 public sealed record SakuraTestCheckpoint(
     int SchemaVersion,
@@ -387,7 +403,7 @@ public sealed record SakuraMultiplayerRunnerResult(
     string RunId,
     string ScenarioId,
     string Status,
-    int PeerCount,
+    int ExpectedPlayerCount,
     IReadOnlyList<SakuraMultiplayerPeerResult> Peers,
     IReadOnlyList<ProtectedRootSnapshot> ProtectedRootsBefore,
     IReadOnlyList<ProtectedRootSnapshot> ProtectedRootsAfter,

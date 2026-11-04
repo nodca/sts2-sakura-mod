@@ -46,18 +46,19 @@ internal static class SiegeEndTurnScenario
         {
             assertions.Equal(
                 $"siege_weak_{enemy.CombatId}",
-                SiegeRules.WeakAmount,
+                enemy.IsAlive ? SiegeRules.WeakAmount : 0,
                 enemy.GetPower<WeakPower>()?.Amount ?? 0);
             assertions.Equal(
                 $"siege_extra_damage_{enemy.CombatId}",
-                blockAtEnemyTurnEnd,
+                Math.Min(blockAtEnemyTurnEnd, hpBeforeResolution[enemy]),
                 hpBeforeResolution[enemy] - enemy.CurrentHp);
         }
 
         var secondSiege = await CombatScenarioContext.AddGeneratedCardToHandAsync<Siege>(combat, player);
         var blockBeforeSecondPlay = player.Creature.Block;
+        var secondEnemyCount = combat.HittableEnemies.Count();
         await CombatScenarioContext.PlayCardAsync(secondSiege);
-        var expectedSecondGain = SiegeRules.BlockAmount(SiegeRules.BlockPerEnemy, enemyCount);
+        var expectedSecondGain = SiegeRules.BlockAmount(SiegeRules.BlockPerEnemy, secondEnemyCount);
         assertions.Equal(
             "siege_second_copy_has_unchanged_block",
             expectedSecondGain,

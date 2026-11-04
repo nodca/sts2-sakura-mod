@@ -42,4 +42,3 @@ public class ClassicSilentPendingPower : SakuraPowerModel
         await PowerCmd.Remove(this);
     }
 }
-

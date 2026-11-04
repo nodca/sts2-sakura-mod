@@ -35,4 +35,3 @@ public class ClassicTemporaryStrengthPower : TemporaryStrengthPower, IModPowerAs
     public override AbstractModel OriginModel => ModelDb.Card<ClowFight>();
     protected override bool IsVisibleInternal => false;
 }
-

@@ -50,4 +50,3 @@ public class SakuraGlow() : SakuraFormCard(1, CardType.Power, TargetType.None)
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicGlowPower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
-

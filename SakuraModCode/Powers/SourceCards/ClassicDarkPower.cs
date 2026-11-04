@@ -43,12 +43,11 @@ public class ClassicDarkPower : SakuraPowerModel
         // Keep later turn-end effects waiting until this network-synchronized choice resolves.
         choiceContext = new BlockingPlayerChoiceContext();
 
-        var selected = (await CardSelectCmd.FromHand(
+        var selected = await ClassicDarkSelectionLifecycle.SelectFromHand(
             choiceContext,
             player,
-            new CardSelectorPrefs(SelectionPrompt, 0, Amount),
-            null,
-            this)).ToList();
+            Amount,
+            this);
 
         if (selected.Count == 0)
             return;
@@ -58,4 +57,3 @@ public class ClassicDarkPower : SakuraPowerModel
         await PowerCmd.Apply<EnergyNextTurnPower>(choiceContext, Owner, 1, Owner, null, false);
     }
 }
-

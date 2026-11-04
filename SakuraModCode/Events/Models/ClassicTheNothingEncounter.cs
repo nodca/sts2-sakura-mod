@@ -56,4 +56,3 @@ public class ClassicTheNothingEncounter() : ModEncounterTemplate
         (ModelDb.Monster<ClassicTheNothingMonster>().ToMutable(), null)
     ];
 }
-

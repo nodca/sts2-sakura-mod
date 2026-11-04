@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Xml.Linq;
 
 namespace SakuraMod.TestRunner;
 
@@ -18,7 +19,8 @@ public sealed record RuntimePrerequisites(
 
 public static class RuntimePreflight
 {
-    public const string ExpectedGameVersion = "0.107.1";
+    public const string ExpectedGameVersion = "0.111.0";
+    public const string MinimumSupportedGameVersion = "0.110.0";
     public const string ExpectedRitsuVersion = "0.6.10";
 
     public static RuntimePrerequisites Inspect(string repoRoot)
@@ -29,9 +31,7 @@ public static class RuntimePreflight
         }
 
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var gameRoot = Environment.GetEnvironmentVariable("STS2_PATH")
-            ?? Path.Combine(home, ".local", "share", "Steam", "steamapps", "common", "Slay the Spire 2");
-        gameRoot = Path.GetFullPath(gameRoot);
+        var gameRoot = FindGameRoot(repoRoot);
         var gameExecutable = RequireFile(Path.Combine(gameRoot, "SlayTheSpire2"), "STS2 executable");
         var gameDataDirectory = RequireDirectory(
             Path.Combine(gameRoot, "data_sts2_linuxbsd_x86_64"),
@@ -73,7 +73,7 @@ public static class RuntimePreflight
             throw new InvalidDataException($"Unexpected SakuraMod id '{sakuraManifest.Id}'.");
         }
 
-        RequireVersion("SakuraMod minimum game", NormalizeVersion(sakuraManifest.MinimumGameVersion), ExpectedGameVersion);
+        RequireVersion("SakuraMod minimum game", NormalizeVersion(sakuraManifest.MinimumGameVersion), MinimumSupportedGameVersion);
         var godotExecutable = RequireFile(GodotPckInspector.FindGodotPath(repoRoot), "Godot executable");
         var dataBase = Environment.GetEnvironmentVariable("XDG_DATA_HOME")
             ?? Path.Combine(home, ".local", "share");
@@ -89,6 +89,30 @@ public static class RuntimePreflight
             godotExecutable,
             Path.Combine(gameRoot, "mods"),
             Path.Combine(dataBase, "SlayTheSpire2"));
+    }
+
+    public static string FindGameRoot(string repoRoot)
+    {
+        var propsPath = Path.Combine(repoRoot, "Directory.Build.props");
+        if (!File.Exists(propsPath))
+        {
+            throw new FileNotFoundException(
+                "Directory.Build.props is required to select this beta worktree's STS2 installation.",
+                propsPath);
+        }
+
+        var configuredPath = XDocument.Load(propsPath)
+            .Descendants()
+            .FirstOrDefault(element => element.Name.LocalName == "Sts2Path")
+            ?.Value
+            .Trim();
+        if (string.IsNullOrWhiteSpace(configuredPath))
+        {
+            throw new InvalidDataException(
+                "Directory.Build.props must define Sts2Path for this beta worktree.");
+        }
+
+        return Path.GetFullPath(configuredPath);
     }
 
     private static string FindRitsuPackage(string home)

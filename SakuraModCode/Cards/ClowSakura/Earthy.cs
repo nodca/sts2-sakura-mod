@@ -51,4 +51,3 @@ public class SakuraEarthy() : SakuraFormCard(1, CardType.Power, TargetType.None)
         await EnterElementState<ClassicEarthyPower>(choiceContext);
     }
 }
-

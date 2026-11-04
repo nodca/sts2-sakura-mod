@@ -133,7 +133,6 @@ public class SakuraCreate() : SakuraFormCard(0, CardType.Power, TargetType.None)
         return true;
     }
 }
-
 public sealed class SakuraCreateRunState
 {
     public int RemainingRewards { get; set; }

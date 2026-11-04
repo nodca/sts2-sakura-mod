@@ -70,5 +70,3 @@ public class TimeStopPower : SakuraPowerModel
             await PowerCmd.Remove(this);
     }
 }
-
-

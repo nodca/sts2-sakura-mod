@@ -34,4 +34,3 @@ public class ClassicEarthyPermanentPower : SakuraPermanentElementPower
     protected override CardModel CreateSpell(ICombatState combatState, Player player) =>
         combatState.CreateCard<SpellLeiDi>(player);
 }
-

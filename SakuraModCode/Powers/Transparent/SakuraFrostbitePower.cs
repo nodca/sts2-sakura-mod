@@ -51,7 +51,7 @@ public class SakuraFrostbitePower : SakuraPowerModel
         return (stacks, remaining);
     }
 
-    public override decimal ModifyDamageMultiplicative(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource) =>
+    public override decimal ModifyDamageMultiplicative(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource, CardPlay? cardPlay) =>
         target == Owner && Amount > 0 && props.IsPoweredAttack()
             ? 1m + Amount / 10m
             : 1m;

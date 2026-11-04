@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Enchantments;
+using MegaCrit.Sts2.Core.Models.Powers;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Relics;
@@ -155,12 +156,28 @@ internal static class ExtraEffectPlayScenario
         await CombatScenarioContext.PlayCardAsync(normalTransfer, target);
         assertions.Equal("transfer_without_extra_exhausts", PileType.Exhaust, normalTransfer.Pile?.Type);
 
-        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player,
-            choiceContext => SakuraMagicCharge.GainMagic(choiceContext, player, FixtureMagicCharge)));
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choiceContext =>
+        {
+            await SakuraMagicCharge.GainMagic(choiceContext, player, FixtureMagicCharge);
+            await PowerCmd.Apply<ClassicTemporaryStrengthPower>(choiceContext, player.Creature, 3, player.Creature, null);
+            await PowerCmd.Apply<SakuraTemporaryDexterityPower>(choiceContext, player.Creature, 2, player.Creature, null);
+        }));
+        var strengthAfterTemporary = player.Creature.GetPowerAmount<StrengthPower>();
+        var dexterityAfterTemporary = player.Creature.GetPowerAmount<DexterityPower>();
         var extraTransfer = await CombatScenarioContext.AddGeneratedCardToHandAsync<Transfer>(combat, player);
         await CombatScenarioContext.PlayCardAsync(extraTransfer, target);
         assertions.Equal("transfer_extra_still_exhausts", PileType.Exhaust, extraTransfer.Pile?.Type);
         assertions.True("transfer_extra_preserves_exhaust_keyword", extraTransfer.Keywords.Contains(CardKeyword.Exhaust));
+        assertions.Equal("transfer_extra_preserves_temporary_strength", true,
+            player.Creature.HasPower<ClassicTemporaryStrengthPower>());
+        assertions.Equal("transfer_extra_preserves_temporary_dexterity", true,
+            player.Creature.HasPower<SakuraTemporaryDexterityPower>());
+        assertions.Equal("transfer_extra_gains_strength_once",
+            strengthAfterTemporary + extraTransfer.DynamicVars["StrengthGain"].IntValue,
+            player.Creature.GetPowerAmount<StrengthPower>());
+        assertions.Equal("transfer_extra_gains_dexterity_once",
+            dexterityAfterTemporary + extraTransfer.DynamicVars["DexterityGain"].IntValue,
+            player.Creature.GetPowerAmount<DexterityPower>());
         await SakuraActions.MoveExistingCardToHand(extraTransfer, extraTransfer);
         assertions.Equal("transfer_returned_to_hand", PileType.Hand, extraTransfer.Pile?.Type);
         var repeatedTransferPlay = await CombatScenarioContext.PlayCardAsync(extraTransfer, target);
@@ -205,8 +222,8 @@ internal static class ExtraEffectPlayScenario
                     $"RelicCmd.Obtain<{nameof(ClassicPinkTransformationCostumeRelic)}>",
                     $"Generated {nameof(SakuraShield)} -> hand after pink costume",
                     $"Generated {nameof(ClowReturn)} -> hand after pink costume",
-                    "Transfer fixture -> GainEnergy(20), SpendAllMagic, discard hand, then GainMagic(10) for Extra",
-                    "Transfer fixture -> return discarded instances to hand; CardCmd.Enchant<SoulsPower>"
+                    "Transfer fixture -> GainEnergy(20), SpendAllMagic, discard hand, then GainMagic(10) plus temporary Strength/Dexterity for Extra",
+                    "Transfer extra preserves temporary stats, returns to hand, and exhausts again; CardCmd.Enchant<SoulsPower>"
                 }
             },
             ["extra"] = new

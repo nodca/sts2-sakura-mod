@@ -44,4 +44,3 @@ public class SakuraLight() : SakuraFormCard(1, CardType.Power, TargetType.None)
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicLightSakuraPower>(choiceContext, Owner.Creature, 1);
 }
-

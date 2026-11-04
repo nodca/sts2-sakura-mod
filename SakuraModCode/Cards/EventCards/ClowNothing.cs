@@ -34,4 +34,3 @@ public class ClowNothing() : ClowCard(2, CardType.Power, CardRarity.Event, Targe
         DynamicVars["Block"].UpgradeValueBy(2);
     }
 }
-

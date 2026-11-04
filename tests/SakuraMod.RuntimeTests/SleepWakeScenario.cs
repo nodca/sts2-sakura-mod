@@ -34,17 +34,17 @@ internal static class SleepWakeScenario
         {
             var attack = combat.CreateCard<ClowSword>(player);
             await CreatureCmd.GainBlock(target, 5, ValueProp.Unpowered, null, false);
-            await DamageCmd.Attack(1).FromCard(attack).Targeting(target).Execute(choice);
+            await DamageCmd.Attack(1).FromCard(attack, null).Targeting(target).Execute(choice);
             assertions.Equal("fully_blocked_attack_does_not_wake", 1,
                 target.GetPower<ClassicSleepPower>()?.Amount ?? 0);
 
-            await CreatureCmd.LoseBlock(target, target.Block);
-            await CreatureCmd.Damage(choice, target, 1, ValueProp.Unpowered, player.Creature, null);
+            await CreatureCmd.LoseBlock(choice, target, target.Block, player.Creature);
+            await CreatureCmd.Damage(choice, target, 1, ValueProp.Unpowered, player.Creature, null, null);
             assertions.Equal("unpowered_damage_does_not_wake", 1,
                 target.GetPower<ClassicSleepPower>()?.Amount ?? 0);
 
             var hpBeforeAttack = target.CurrentHp;
-            await DamageCmd.Attack(1).FromCard(attack).Targeting(target).Execute(choice);
+            await DamageCmd.Attack(1).FromCard(attack, null).Targeting(target).Execute(choice);
             assertions.Equal("attack_deals_unblocked_damage", hpBeforeAttack - 1, target.CurrentHp);
             assertions.True("unblocked_attack_wakes", target.GetPower<ClassicSleepPower>() is null);
         }));

@@ -58,4 +58,3 @@ public class ClassicXiaoLangsFeelingsEvent() : SakuraModEventTemplate
         SetEventFinished(PageDescription("REJECT"));
     }
 }
-

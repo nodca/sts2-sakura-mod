@@ -33,6 +33,12 @@ public class SpellTurn() : SpellCard(-2, CardType.Skill, CardRarity.Token, Targe
     public override int MaxUpgradeLevel => 0;
     protected override bool IsPlayable => CardPile.GetCards(Owner, PileType.Hand).Any(SakuraSourceCardRules.IsEligibleClowForTurn);
 
+    protected override CardLocation GetResultLocationForCardPlay()
+    {
+        var baseResult = base.GetResultLocationForCardPlay();
+        return baseResult with { pileType = ResultPileFor(baseResult.pileType) };
+    }
+
     /// <summary>
     /// Grants one Turn as a deck body plus the hand copy linked to it, so an
     /// unplayed Turn stays available in later battles and playing it consumes
@@ -52,9 +58,6 @@ public class SpellTurn() : SpellCard(-2, CardType.Skill, CardRarity.Token, Targe
         handCard.DeckVersion = deckCard;
         await CardPileCmd.AddGeneratedCardToCombat(handCard, PileType.Hand, owner, CardPilePosition.Random);
     }
-
-    protected override PileType GetResultPileTypeForCardPlay() =>
-        ResultPileFor(base.GetResultPileTypeForCardPlay());
 
     internal static PileType ResultPileFor(PileType basePile) =>
         basePile == PileType.Discard ? PileType.None : basePile;
@@ -150,4 +153,3 @@ public class SpellTurn() : SpellCard(-2, CardType.Skill, CardRarity.Token, Targe
         return selected.Enchantment is not null ? selected : null;
     }
 }
-

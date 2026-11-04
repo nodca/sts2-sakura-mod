@@ -54,4 +54,3 @@ public class ClassicStarWandRelic : ClassicSealedWandRelic
         await SakuraUltimateWandRecipe.TryCreateUltimateWand(Owner);
     }
 }
-

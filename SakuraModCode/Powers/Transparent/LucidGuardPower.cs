@@ -27,10 +27,10 @@ public class LucidGuardPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public override decimal ModifyDamageCap(Creature? creature, ValueProp props, Creature? source, CardModel? card) =>
+    public override decimal ModifyDamageCap(Creature? creature, ValueProp props, Creature? source, CardModel? card, CardPlay? cardPlay) =>
         creature == Owner && Amount > 0 && props.IsPoweredAttack()
             ? Math.Max(0, Amount)
-            : base.ModifyDamageCap(creature, props, source, card);
+            : base.ModifyDamageCap(creature, props, source, card, cardPlay);
 
     public override async Task AfterDamageReceived(PlayerChoiceContext choiceContext, Creature creature, DamageResult damageResult, ValueProp damageProps, Creature? source, CardModel? card)
     {
@@ -44,4 +44,3 @@ public class LucidGuardPower : SakuraPowerModel
             await PowerCmd.Remove(this);
     }
 }
-

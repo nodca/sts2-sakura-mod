@@ -112,4 +112,3 @@ public class ClassicTwinSakuraPower : SakuraPowerModel
     private static bool IsClow(CardModel card) =>
         card is SakuraSourceCard { IsClowCard: true };
 }
-

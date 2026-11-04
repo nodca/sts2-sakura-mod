@@ -57,4 +57,3 @@ public class ClassicSilentNoAttackPower : SakuraPowerModel
             await PowerCmd.Remove(this);
     }
 }
-

@@ -42,6 +42,6 @@ public class ClassicFireyPower : SakuraElementStatePower
         var targets = combatState.HittableEnemies.ToList();
         SakuraElementStateVisuals.NotifyFireTriggered(Owner, targets);
         foreach (var enemy in targets)
-            await CreatureCmd.Damage(choiceContext, enemy, Damage, SakuraPowerValueProps.Damage, Owner, null);
+            await CreatureCmd.Damage(choiceContext, enemy, Damage, SakuraPowerValueProps.Damage, Owner, null, null);
     }
 }

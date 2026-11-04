@@ -72,7 +72,7 @@ public sealed class WateryMonster : FourthActMonsterTemplate
         foreach (var target in CombatState.Players.Select(static p => p.Creature).Where(static c => c.IsAlive))
         {
             var removed = target.Block;
-            await CreatureCmd.LoseBlock(target, removed);
+            await CreatureCmd.LoseBlock(new ThrowingPlayerChoiceContext(), target, removed, Creature);
             Reservoir.Add(target, removed);
         }
     }

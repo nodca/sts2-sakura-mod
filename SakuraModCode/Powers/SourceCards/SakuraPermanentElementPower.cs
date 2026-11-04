@@ -47,4 +47,3 @@ public abstract class SakuraPermanentElementPower : SakuraPowerModel
         await CardPileCmd.AddGeneratedCardsToCombat(spells, PileType.Hand, player);
     }
 }
-

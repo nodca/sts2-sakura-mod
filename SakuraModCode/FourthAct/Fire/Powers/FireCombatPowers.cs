@@ -62,7 +62,13 @@ public sealed class SwordBlockFeedingPower : SakuraPowerModel
         return Task.CompletedTask;
     }
     internal int LargestBonus => _bonuses.Count == 0 ? 0 : _bonuses.Values.Max();
-    public override decimal ModifyDamageAdditive(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource) =>
+    public override decimal ModifyDamageAdditive(
+        Creature? target,
+        decimal amount,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource,
+        CardPlay? cardPlay) =>
         dealer == Owner && target is not null ? _bonuses.GetValueOrDefault(target) : 0;
     internal void Reset() { _bonuses.Clear(); InvokeDisplayAmountChanged(); }
 }
@@ -231,7 +237,13 @@ public sealed class LibraPendulumPower : SakuraPowerModel
             await PowerCmd.Apply<LibraImbalancePower>(choiceContext, survivor, 1, Owner, null, true);
     }
 
-    public override decimal ModifyDamageAdditive(Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? cardSource) =>
+    public override decimal ModifyDamageAdditive(
+        Creature? target,
+        decimal amount,
+        ValueProp props,
+        Creature? dealer,
+        CardModel? cardSource,
+        CardPlay? cardPlay) =>
         dealer == Owner && Left == 4 && Right == 6 ? FireEnemyRules.LibraAttackBonus : 0;
 
     public static async Task Recenter(PlayerChoiceContext context, ICombatState? combatState)

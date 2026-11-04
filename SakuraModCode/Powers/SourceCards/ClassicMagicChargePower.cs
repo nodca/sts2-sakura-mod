@@ -67,4 +67,3 @@ public class ClassicMagicChargePower : SakuraPowerModel
 
     internal void NotifyProjectionChanged() => ProjectionChanged?.Invoke();
 }
-

@@ -75,4 +75,3 @@ public class ClassicTaoistSuitRelic : SakuraRelicModel
         InvokeDisplayAmountChanged();
     }
 }
-

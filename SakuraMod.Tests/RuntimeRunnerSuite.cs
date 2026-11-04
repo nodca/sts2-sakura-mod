@@ -4,6 +4,34 @@ using SakuraMod.TestRunner;
 public sealed class RuntimeRunnerSuite
 {
     [Fact]
+    public void RuntimePreflightUsesWorktreeBetaPath()
+    {
+        using var fixture = new GamePathFixture();
+
+        var gameRoot = RuntimePreflight.FindGameRoot(fixture.Root);
+
+        Assert.Equal(fixture.ConfiguredGamePath, gameRoot);
+    }
+
+    [Fact]
+    public void RuntimePreflightRequiresWorktreeBetaPath()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"sakuramod-game-path-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var exception = Assert.Throws<FileNotFoundException>(
+                () => RuntimePreflight.FindGameRoot(root));
+
+            Assert.Contains("Directory.Build.props", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task ValidRuntimeResultPassesProtocolValidation()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -113,22 +141,31 @@ public sealed class RuntimeRunnerSuite
         var host = fixture.CreateMultiplayerRequest("Host", 1, coordinationRoot);
         var client = fixture.CreateMultiplayerRequest("Client", 2, coordinationRoot);
 
-        MultiplayerCommand.ValidatePeerRequests(host, client);
+        MultiplayerCommand.ValidatePeerRequests([host, client]);
     }
 
     [Fact]
-    public void ValidThreePeerGroupPassesRequestValidation()
+    public void ValidThreePlayerPeerGroupPassesRequestValidation()
     {
         using var fixture = new RuntimeResultFixture();
         var coordinationRoot = Path.Combine(fixture.Root, "coordination");
-        var host = AsThreePlayerScenario(
-            fixture.CreateMultiplayerRequest("Host", 1, coordinationRoot, peerCount: 3));
-        var client = AsThreePlayerScenario(
-            fixture.CreateMultiplayerRequest("Client", 2, coordinationRoot, peerCount: 3));
-        var secondClient = AsThreePlayerScenario(
-            fixture.CreateMultiplayerRequest("SecondClient", 3, coordinationRoot, peerCount: 3));
+        var host = fixture.CreateMultiplayerRequest("Host", 1, coordinationRoot, expectedPlayerCount: 3);
+        var client2 = fixture.CreateMultiplayerRequest("Client", 2, coordinationRoot, expectedPlayerCount: 3);
+        var client3 = fixture.CreateMultiplayerRequest("Client", 3, coordinationRoot, expectedPlayerCount: 3);
 
-        MultiplayerCommand.ValidatePeerRequests([host, client, secondClient]);
+        MultiplayerCommand.ValidatePeerRequests([host, client2, client3]);
+    }
+
+    [Fact]
+    public void IncompleteThreePlayerPeerGroupFailsClosed()
+    {
+        using var fixture = new RuntimeResultFixture();
+        var coordinationRoot = Path.Combine(fixture.Root, "coordination");
+        var host = fixture.CreateMultiplayerRequest("Host", 1, coordinationRoot, expectedPlayerCount: 3);
+        var client2 = fixture.CreateMultiplayerRequest("Client", 2, coordinationRoot, expectedPlayerCount: 3);
+
+        Assert.Throws<InvalidDataException>(
+                () => MultiplayerCommand.ValidatePeerRequests([host, client2]));
     }
 
     [Fact]
@@ -136,42 +173,25 @@ public sealed class RuntimeRunnerSuite
     {
         using var fixture = new RuntimeResultFixture();
         var coordinationRoot = Path.Combine(fixture.Root, "coordination");
-        var host = fixture.CreateMultiplayerRequest("Host", 1, coordinationRoot, peerCount: 3) with
+        var host = fixture.CreateMultiplayerRequest("Host", 1, coordinationRoot, expectedPlayerCount: 3) with
         {
             ScenarioId = SakuraMultiplayerScenarios.ThreePlayerRepairJumpLoad,
             Phase = "write"
         };
-        var client = fixture.CreateMultiplayerRequest("Client", 2, coordinationRoot, peerCount: 3) with
+        var client2 = fixture.CreateMultiplayerRequest("Client", 2, coordinationRoot, expectedPlayerCount: 3) with
         {
             ScenarioId = SakuraMultiplayerScenarios.ThreePlayerRepairJumpLoad,
             Phase = "write"
         };
-        var secondClient = fixture.CreateMultiplayerRequest("SecondClient", 3, coordinationRoot, peerCount: 3) with
+        var client3 = fixture.CreateMultiplayerRequest("Client", 3, coordinationRoot, expectedPlayerCount: 3) with
         {
             ScenarioId = SakuraMultiplayerScenarios.ThreePlayerRepairJumpLoad,
             Phase = "write"
         };
 
-        MultiplayerCommand.ValidatePeerRequests([host, client, secondClient]);
+        MultiplayerCommand.ValidatePeerRequests([host, client2, client3]);
         Assert.Throws<InvalidDataException>(() => MultiplayerCommand.ValidatePeerRequests(
-            [host, client with { Phase = "read" }, secondClient]));
-    }
-
-    [Fact]
-    public void MissingOrOutOfOrderThreePeerSeatsFailClosed()
-    {
-        using var fixture = new RuntimeResultFixture();
-        var coordinationRoot = Path.Combine(fixture.Root, "coordination");
-        var host = AsThreePlayerScenario(
-            fixture.CreateMultiplayerRequest("Host", 1, coordinationRoot, peerCount: 3));
-        var client = AsThreePlayerScenario(
-            fixture.CreateMultiplayerRequest("Client", 2, coordinationRoot, peerCount: 3));
-        var secondClient = AsThreePlayerScenario(
-            fixture.CreateMultiplayerRequest("SecondClient", 3, coordinationRoot, peerCount: 3));
-
-        Assert.Throws<InvalidDataException>(() => MultiplayerCommand.ValidatePeerRequests([host, client]));
-        Assert.Throws<InvalidDataException>(
-            () => MultiplayerCommand.ValidatePeerRequests([host, secondClient, client]));
+            [host, client2 with { Phase = "read" }, client3]));
     }
 
     [Theory]
@@ -235,7 +255,7 @@ public sealed class RuntimeRunnerSuite
         var host = fixture.CreateMultiplayerRequest("Host", 1, coordinationRoot);
         var client = fixture.CreateMultiplayerRequest("Client", 1, coordinationRoot);
 
-        Assert.Throws<InvalidDataException>(() => MultiplayerCommand.ValidatePeerRequests(host, client));
+        Assert.Throws<InvalidDataException>(() => MultiplayerCommand.ValidatePeerRequests([host, client]));
     }
 
     [Fact]
@@ -252,38 +272,34 @@ public sealed class RuntimeRunnerSuite
         };
 
         Assert.Throws<InvalidDataException>(
-            () => MultiplayerCommand.RequireMatchingSnapshot(host, client, "comparison"));
+            () => MultiplayerCommand.RequireMatchingSnapshot([host, client], "comparison"));
         Assert.Throws<InvalidDataException>(
             () => MultiplayerCommand.RequireMatchingSnapshot(
-                host,
-                client with { SemanticSnapshots = new Dictionary<string, object?>() },
+                [host, client with { SemanticSnapshots = new Dictionary<string, object?>() }],
                 "comparison"));
     }
 
     [Fact]
-    public void ThreePeerSnapshotsMustAllMatch()
+    public void EveryThreePeerSnapshotMustMatch()
     {
         using var fixture = new RuntimeResultFixture();
-        var matching = Enumerable.Range(0, 3)
-            .Select(_ => fixture.CreateResult() with
+        var results = Enumerable.Range(0, 3).Select(_ => fixture.CreateResult() with
+        {
+            SemanticSnapshots = new Dictionary<string, object?>
             {
-                SemanticSnapshots = new Dictionary<string, object?>
-                {
-                    ["comparison"] = new { players = new[] { 1, 2, 3 } }
-                }
-            })
-            .ToArray();
+                ["comparison"] = new { players = new[] { 1, 2, 3 } }
+            }
+        }).ToArray();
 
-        MultiplayerCommand.RequireMatchingSnapshot(matching, "comparison");
-        matching[2] = matching[2] with
+        MultiplayerCommand.RequireMatchingSnapshot(results, "comparison");
+        results[2] = results[2] with
         {
             SemanticSnapshots = new Dictionary<string, object?>
             {
                 ["comparison"] = new { players = new[] { 1, 2 } }
             }
         };
-        Assert.Throws<InvalidDataException>(
-            () => MultiplayerCommand.RequireMatchingSnapshot(matching, "comparison"));
+        Assert.Throws<InvalidDataException>(() => MultiplayerCommand.RequireMatchingSnapshot(results, "comparison"));
     }
 
     [Fact]
@@ -302,9 +318,6 @@ public sealed class RuntimeRunnerSuite
             TestContext.Current.CancellationToken));
     }
 
-    private static SakuraTestRequest AsThreePlayerScenario(SakuraTestRequest request) =>
-        request with { ScenarioId = SakuraMultiplayerScenarios.ThreePlayerDefensivePowers };
-
     private sealed class RuntimeResultFixture : IDisposable
     {
         public RuntimeResultFixture()
@@ -318,8 +331,8 @@ public sealed class RuntimeRunnerSuite
                 "runtime",
                 "smoke",
                 "single",
-                "0.107.1",
-                "0.5.3",
+                "0.110.0",
+                "0.6.3",
                 "1.1.0",
                 1,
                 "eng",
@@ -364,20 +377,45 @@ public sealed class RuntimeRunnerSuite
             string coordinationRoot,
             string address = "127.0.0.1",
             ushort port = 12345,
-            int peerCount = SakuraMultiplayerRoles.MinPeerCount)
+            int expectedPlayerCount = 2)
         {
-            var peerRoot = Path.Combine(Root, role.ToLowerInvariant());
+            var phase = $"{role.ToLowerInvariant()}-{netId}";
+            var peerRoot = Path.Combine(Root, phase);
             return Request with
             {
                 Layer = "multiplayer",
                 ScenarioId = "clow-defensive-powers",
-                Phase = role.ToLowerInvariant(),
+                Phase = phase,
                 ArtifactRoot = Root,
                 ResultPath = Path.Combine(peerRoot, "result.json"),
                 CheckpointPath = Path.Combine(peerRoot, "checkpoints.jsonl"),
-                Multiplayer = new SakuraMultiplayerRequest(role, address, port, netId, coordinationRoot, peerCount)
+                Multiplayer = new SakuraMultiplayerRequest(
+                    role,
+                    address,
+                    port,
+                    netId,
+                    expectedPlayerCount,
+                    coordinationRoot)
             };
         }
+
+        public void Dispose() => Directory.Delete(Root, recursive: true);
+    }
+
+    private sealed class GamePathFixture : IDisposable
+    {
+        public GamePathFixture()
+        {
+            Root = Path.Combine(Path.GetTempPath(), $"sakuramod-game-path-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(Root);
+            ConfiguredGamePath = Path.Combine(Root, "sts2-beta");
+            File.WriteAllText(
+                Path.Combine(Root, "Directory.Build.props"),
+                $"<Project><PropertyGroup><Sts2Path>{ConfiguredGamePath}</Sts2Path></PropertyGroup></Project>");
+        }
+
+        public string Root { get; }
+        public string ConfiguredGamePath { get; }
 
         public void Dispose() => Directory.Delete(Root, recursive: true);
     }

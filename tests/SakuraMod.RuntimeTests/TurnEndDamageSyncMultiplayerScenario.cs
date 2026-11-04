@@ -111,7 +111,11 @@ internal static class TurnEndDamageSyncMultiplayerScenario
         foreach (var enemy in new[] { siegeEnemy, survivor })
             await CreatureCmd.Stun(enemy);
         if (context.ClientPlayer.Creature.Block > 0)
-            await CreatureCmd.LoseBlock(context.ClientPlayer.Creature, context.ClientPlayer.Creature.Block);
+            await CreatureCmd.LoseBlock(
+                new ThrowingPlayerChoiceContext(),
+                context.ClientPlayer.Creature,
+                context.ClientPlayer.Creature.Block,
+                null);
         await CreatureCmd.GainBlock(
             context.ClientPlayer.Creature,
             SiegeBlock,

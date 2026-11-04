@@ -41,4 +41,3 @@ public class ClassicLockPower : SakuraPowerModel
         await PowerCmd.Decrement(this);
     }
 }
-

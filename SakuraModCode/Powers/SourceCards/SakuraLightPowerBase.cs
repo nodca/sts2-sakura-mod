@@ -32,4 +32,3 @@ public abstract class SakuraLightPowerBase : SakuraPowerModel
     internal static bool IsActive(Creature? owner) =>
         owner?.Powers.Any(static power => power is SakuraLightPowerBase) == true;
 }
-

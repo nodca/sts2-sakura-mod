@@ -102,7 +102,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         .OrderBy(static player => player.NetId)
         .ToList();
     public bool IsHost => _multiplayer.Role == SakuraMultiplayerRoles.Host;
-    public int PeerCount => _multiplayer.PeerCount;
+    public int PeerCount => _multiplayer.ExpectedPlayerCount;
     public int ChecksumCount => _checksumObservations.Count;
     public IReadOnlyList<ChecksumObservation> ChecksumObservations => _checksumObservations;
 
@@ -124,13 +124,19 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         INetGameService netService;
         if (multiplayer.Role == SakuraMultiplayerRoles.Host)
         {
-            var host = new NetHostGameService();
-            var error = host.StartENetHost(multiplayer.Port, maxClients: multiplayer.PeerCount - 1);
+            var host = new NetHostGameService(PeerVersionInfo.LocalDefault());
+            var error = host.StartENetHost(
+                multiplayer.Port,
+                maxClients: multiplayer.ExpectedPlayerCount - 1);
             if (error.HasValue)
                 throw new InvalidOperationException($"Failed to start ENet multiplayer host: {error.Value}.");
             netService = host;
             LocalContext.NetId = host.NetId;
-            lobby = new StartRunLobby(GameMode.Standard, host, listener, maxPlayers: multiplayer.PeerCount);
+            lobby = new StartRunLobby(
+                GameMode.Standard,
+                host,
+                listener,
+                maxPlayers: multiplayer.ExpectedPlayerCount);
             lobby.AddLocalHostPlayer(
                 new UnlockState(SaveManager.Instance.Progress),
                 SaveManager.Instance.Progress.MaxMultiplayerAscension);
@@ -141,7 +147,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         }
         else
         {
-            var joinFlow = new JoinFlow();
+            var joinFlow = new JoinFlow(new NetClientGameService(PeerVersionInfo.LocalDefault()));
             IClientConnectionInitializer initializer = new ENetClientConnectionInitializer(
                 multiplayer.LocalNetId,
                 multiplayer.HostAddress,
@@ -169,9 +175,9 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
 
             await WaitUntilAsync(
                 game,
-                () => lobby.Players.Count == multiplayer.PeerCount
+                () => lobby.Players.Count == multiplayer.ExpectedPlayerCount
                     && lobby.Players.All(static player => player.character is ClassicSakura),
-                $"{multiplayer.PeerCount} synchronized Sakura lobby players");
+                $"{multiplayer.ExpectedPlayerCount} synchronized Sakura lobby players");
             lobby.SetReady(ready: true);
             var begin = await listener.Begin.Task.WaitAsync(StateTimeout);
             var run = await game.StartNewMultiplayerRun(
@@ -184,9 +190,8 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             lobby.CleanUp(disconnectSession: false);
             RunManager.Instance.CombatReplayWriter.IsEnabled = false;
             var ids = run.Players.Select(static player => player.NetId).Order().ToArray();
-            var expectedIds = SakuraMultiplayerRoles.SeatsFor(multiplayer.PeerCount)
-                .Select(SakuraMultiplayerRoles.NetIdFor)
-                .Order()
+            var expectedIds = Enumerable.Range(1, multiplayer.ExpectedPlayerCount)
+                .Select(static value => (ulong)value)
                 .ToArray();
             if (!ids.SequenceEqual(expectedIds))
             {
@@ -196,7 +201,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             RuntimeTestHost.WriteCheckpoint(
                 request,
                 "run_started",
-                $"{multiplayer.PeerCount}-player Sakura run started for local net id {LocalContext.NetId}.");
+                $"{multiplayer.ExpectedPlayerCount}-player Sakura run started for local net id {LocalContext.NetId}.");
             return new MultiplayerScenarioContext(
                 request,
                 netService,
@@ -231,20 +236,16 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         INetGameService netService;
         if (multiplayer.Role == SakuraMultiplayerRoles.Host)
         {
-            var host = new NetHostGameService();
-            var error = host.StartENetHost(multiplayer.Port, maxClients: multiplayer.PeerCount - 1);
+            var host = new NetHostGameService(PeerVersionInfo.LocalDefault());
+            var error = host.StartENetHost(multiplayer.Port, maxClients: multiplayer.ExpectedPlayerCount - 1);
             if (error.HasValue)
                 throw new InvalidOperationException($"Failed to start ENet multiplayer host: {error.Value}.");
             netService = host;
             LocalContext.NetId = host.NetId;
             var read = SaveManager.Instance.LoadAndCanonicalizeMultiplayerRunSave(host.NetId);
             if (!read.Success || read.SaveData is null)
-            {
-                throw new InvalidDataException(
-                    $"Host multiplayer save could not be loaded: {read.Status} {read.ErrorMessage}");
-            }
-            var save = read.SaveData;
-            lobby = new LoadRunLobby(host, listener, save);
+                throw new InvalidDataException($"Host multiplayer save could not be loaded: {read.Status} {read.ErrorMessage}");
+            lobby = new LoadRunLobby(host, listener, read.SaveData);
             lobby.AddLocalHostPlayer();
             RuntimeTestHost.WriteCheckpoint(
                 request,
@@ -253,7 +254,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         }
         else
         {
-            var joinFlow = new JoinFlow();
+            var joinFlow = new JoinFlow(new NetClientGameService(PeerVersionInfo.LocalDefault()));
             IClientConnectionInitializer initializer = new ENetClientConnectionInitializer(
                 multiplayer.LocalNetId,
                 multiplayer.HostAddress,
@@ -276,11 +277,11 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             game.ReactionContainer.InitializeNetworking(netService);
             await WaitUntilAsync(
                 game,
-                () => lobby.ConnectedPlayerIds.Count == multiplayer.PeerCount,
-                $"{multiplayer.PeerCount} connected load-run lobby players");
+                () => lobby.PlayerCount == multiplayer.ExpectedPlayerCount,
+                $"{multiplayer.ExpectedPlayerCount} connected load-run lobby players");
             game.RemoteCursorContainer.Initialize(
                 lobby.InputSynchronizer,
-                lobby.ConnectedPlayerIds.Order().ToArray());
+                lobby.PlayerIds.Order().ToArray());
             lobby.SetReady(ready: true);
             await listener.Begin.Task.WaitAsync(StateTimeout);
 
@@ -289,11 +290,15 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             await game.LoadRun(run, lobby.Run.PreFinishedRoom);
             lobby.CleanUp(disconnectSession: false);
             RunManager.Instance.CombatReplayWriter.IsEnabled = false;
-            ValidatePlayerIds(run, multiplayer.PeerCount);
+            var expectedIds = Enumerable.Range(1, multiplayer.ExpectedPlayerCount)
+                .Select(static id => (ulong)id)
+                .ToArray();
+            if (!run.Players.Select(static player => player.NetId).Order().SequenceEqual(expectedIds))
+                throw new InvalidOperationException("Loaded multiplayer player ids do not match the requested peer group.");
             RuntimeTestHost.WriteCheckpoint(
                 request,
                 "run_loaded",
-                $"{multiplayer.PeerCount}-player Sakura save loaded for local net id {LocalContext.NetId}.");
+                $"{multiplayer.ExpectedPlayerCount}-player Sakura save loaded for local net id {LocalContext.NetId}.");
             return new MultiplayerScenarioContext(
                 request,
                 netService,
@@ -312,22 +317,11 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         }
     }
 
-    private static void ValidatePlayerIds(RunState run, int peerCount)
-    {
-        var ids = run.Players.Select(static player => player.NetId).Order().ToArray();
-        var expectedIds = SakuraMultiplayerRoles.SeatsFor(peerCount)
-            .Select(SakuraMultiplayerRoles.NetIdFor)
-            .Order()
-            .ToArray();
-        if (!ids.SequenceEqual(expectedIds))
-        {
-            throw new InvalidOperationException(
-                $"Expected multiplayer player ids {string.Join(',', expectedIds)}; found {string.Join(',', ids)}.");
-        }
-    }
-
     public Player Player(ulong netId) => Run.GetPlayer(netId)
         ?? throw new InvalidOperationException($"Multiplayer run has no player {netId}.");
+
+    public Task WaitForActionsAsync() =>
+        RunManager.Instance.ActionExecutor.FinishedExecutingActions().WaitAsync(StateTimeout);
 
     public async Task<CombatState> EnterWeakCrawlerCombatAsync()
     {
@@ -343,12 +337,12 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             () => CombatManager.Instance.IsInProgress
                 && Run.Players.All(static player => player.PlayerCombatState?.Phase == PlayerTurnPhase.Play)
                 && CombatManager.Instance.DebugOnlyGetState() is not null,
-            $"{PeerCount}-player combat play phase");
+            $"{_multiplayer.ExpectedPlayerCount}-player combat play phase");
         await RunManager.Instance.ActionExecutor.FinishedExecutingActions().WaitAsync(StateTimeout);
         RuntimeTestHost.WriteCheckpoint(
             _request,
             "combat_ready",
-            $"{PeerCount}-player weak Crawler combat reached Play phase.");
+            $"{_multiplayer.ExpectedPlayerCount}-player weak Crawler combat reached Play phase.");
         return CombatManager.Instance.DebugOnlyGetState()
             ?? throw new InvalidOperationException("CombatManager has no multiplayer combat state.");
     }
@@ -365,12 +359,12 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             () => CombatManager.Instance.IsInProgress
                 && Run.Players.All(static player => player.PlayerCombatState?.Phase == PlayerTurnPhase.Play)
                 && CombatManager.Instance.DebugOnlyGetState() is not null,
-            $"{PeerCount}-player combat play phase");
+            $"{_multiplayer.ExpectedPlayerCount}-player combat play phase");
         await RunManager.Instance.ActionExecutor.FinishedExecutingActions().WaitAsync(StateTimeout);
         RuntimeTestHost.WriteCheckpoint(
             _request,
             "combat_ready",
-            $"{PeerCount}-player weak Slimes combat reached Play phase.");
+            $"{_multiplayer.ExpectedPlayerCount}-player weak Slimes combat reached Play phase.");
         return CombatManager.Instance.DebugOnlyGetState()
             ?? throw new InvalidOperationException("CombatManager has no multiplayer combat state.");
     }
@@ -379,13 +373,9 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
     {
         if (stage.Any(static character => !char.IsAsciiLetterOrDigit(character) && character is not '-' and not '_'))
             throw new ArgumentException("Coordination stage contains unsupported characters.", nameof(stage));
-        var own = Path.Combine(_multiplayer.CoordinationRoot, $"{stage}.{_multiplayer.Role.ToLowerInvariant()}.json");
-        // Every seat must publish before any seat proceeds, so the barrier waits on all
-        // other roles rather than a single opposite peer.
-        var others = SakuraMultiplayerRoles.SeatsFor(_multiplayer.PeerCount)
-            .Where(role => !string.Equals(role, _multiplayer.Role, StringComparison.Ordinal))
-            .Select(role => Path.Combine(_multiplayer.CoordinationRoot, $"{stage}.{role.ToLowerInvariant()}.json"))
-            .ToList();
+        var own = Path.Combine(
+            _multiplayer.CoordinationRoot,
+            $"{stage}.{_multiplayer.LocalNetId}.json");
         SakuraTestProtocol.WriteAtomic(own, new
         {
             schema_version = SakuraTestProtocol.CurrentSchemaVersion,
@@ -395,18 +385,32 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             stage,
             occurred_at_utc = DateTimeOffset.UtcNow
         });
+        var peerMarkers = Enumerable.Range(1, _multiplayer.ExpectedPlayerCount)
+            .Select(value => Path.Combine(_multiplayer.CoordinationRoot, $"{stage}.{value}.json"))
+            .ToArray();
         await WaitUntilAsync(
             NGame.Instance!,
-            () => others.All(File.Exists),
-            $"peer stage markers {stage} ({others.Count} remaining seats)");
+            () => peerMarkers.All(File.Exists),
+            $"all {_multiplayer.ExpectedPlayerCount} peer stage markers for {stage}");
     }
 
     public async Task PlayOwnedCardAsync(CardModel card, Creature? target = null)
+    {
+        var action = RequestOwnedCard(card, target);
+        await WaitForOwnedCardAsync(action, card);
+    }
+
+    public GameAction RequestOwnedCard(CardModel card, Creature? target = null)
     {
         if (!LocalContext.IsMine(card))
             throw new InvalidOperationException($"Local peer cannot request play for player {card.Owner.NetId}.");
         var action = new PlayCardAction(card, target);
         RunManager.Instance.ActionQueueSynchronizer.RequestEnqueue(action);
+        return action;
+    }
+
+    public async Task WaitForOwnedCardAsync(GameAction action, CardModel card)
+    {
         if (IsHost)
         {
             await WaitForOwnedHostActionAsync(action);
@@ -436,14 +440,10 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         {
             await WaitUntilAsync(
                 NGame.Instance!,
-                () => CombatManager.Instance.IsPlayerReadyToEndTurn(LocalPlayer)
-                    || LocalPlayer.PlayerCombatState?.Phase != PlayerTurnPhase.Play,
+                () => CombatManager.Instance.IsPlayerReadyToEndTurn(LocalPlayer),
                 "client-owned end-turn request to synchronize");
         }
     }
-
-    public Task WaitForActionsAsync() =>
-        RunManager.Instance.ActionExecutor.FinishedExecutingActions().WaitAsync(StateTimeout);
 
     public async Task WaitForActionChecksumsAsync(
         int baselineCount,
@@ -544,7 +544,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         _checksumObservations.Add(new ChecksumObservation(data.id, context, data.checksum));
     }
 
-    private void OnStateDiverged(NetFullCombatState _) =>
+    private void OnStateDiverged(ulong _, NetFullCombatState __) =>
         _networkFailure = "ChecksumTracker reported StateDiverged.";
 
     private void OnHostClientDisconnected(ulong _, NetErrorInfo info) =>
@@ -562,13 +562,13 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             Begin.TrySetResult(new BeginRunData(seed, acts, modifiers));
         public void LocalPlayerDisconnected(NetErrorInfo info) =>
             Begin.TrySetException(new InvalidOperationException($"Disconnected before run start: {info}."));
-        public void PlayerConnected(LobbyPlayer player) { }
-        public void PlayerChanged(LobbyPlayer player, bool isRandomCharacterResolution) { }
+        public void PlayerConnected(StartRunLobbyPlayer player) { }
+        public void PlayerChanged(StartRunLobbyPlayer player, bool isRandomCharacterResolution) { }
         public void AscensionChanged() { }
         public void SeedChanged() { }
         public void ModifiersChanged() { }
         public void MaxAscensionChanged() { }
-        public void RemotePlayerDisconnected(LobbyPlayer player) { }
+        public void RemotePlayerDisconnected(StartRunLobbyPlayer player) { }
     }
 
     private sealed class LoadRunListener : ILoadRunLobbyListener
@@ -580,7 +580,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         public Task<bool> ShouldAllowRunToBegin() => Task.FromResult(true);
         public void LocalPlayerDisconnected(NetErrorInfo info) =>
             Begin.TrySetException(new InvalidOperationException($"Disconnected before saved run loaded: {info}."));
-        public void PlayerConnected(ulong playerId) { }
+        public void PlayerConnected(LoadRunLobbyPlayer player) { }
         public void RemotePlayerDisconnected(ulong playerId) { }
         public void PlayerReadyChanged(ulong playerId) { }
     }

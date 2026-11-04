@@ -41,4 +41,3 @@ public class Repair() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
 
     protected override void OnUpgrade() => DynamicVars["RegenPower"].UpgradeValueBy(1);
 }
-

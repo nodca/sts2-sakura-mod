@@ -34,4 +34,3 @@ public class SakuraExtraEffectCountThisTurnPower : SakuraPowerModel
             await PowerCmd.Remove(this);
     }
 }
-

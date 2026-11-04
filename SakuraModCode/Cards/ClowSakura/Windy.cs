@@ -51,4 +51,3 @@ public class SakuraWindy() : SakuraFormCard(1, CardType.Power, TargetType.None)
         await EnterElementState<ClassicWindyPower>(choiceContext);
     }
 }
-

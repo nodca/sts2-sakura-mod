@@ -34,7 +34,7 @@ internal static class LucidAoeScenario
                 foreach (var enemy in enemies.Where(enemy => enemy.IsAlive))
                 {
                     await CreatureCmd.SetMaxAndCurrentHp(enemy, 1000);
-                    await CreatureCmd.LoseBlock(enemy, enemy.Block);
+                    await CreatureCmd.LoseBlock(choice, enemy, enemy.Block, player.Creature);
                     await CreatureCmd.Stun(enemy);
                 }
             }));

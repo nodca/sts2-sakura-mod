@@ -57,4 +57,3 @@ public class ClassicCerberusRelic : SakuraRelicModel
         await SakuraRelicCombatActions.MarkRandomEnemy(this, choiceContext, MarkAmount);
     }
 }
-

@@ -79,4 +79,3 @@ public class SakuraVoice() : SakuraFormCard(1, CardType.Power, TargetType.None)
         await ClassicVoicePower.AddVoicesToHand(Owner, ReleasedMagic());
     }
 }
-

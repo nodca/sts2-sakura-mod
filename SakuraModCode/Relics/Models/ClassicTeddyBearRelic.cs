@@ -44,4 +44,3 @@ public class ClassicTeddyBearRelic : SakuraRelicModel
         await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
     }
 }
-

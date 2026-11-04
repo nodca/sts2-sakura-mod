@@ -70,4 +70,3 @@ public class Gravitation() : TransparentExtraEffectCard(0, CardType.Skill, CardR
         }
     }
 }
-

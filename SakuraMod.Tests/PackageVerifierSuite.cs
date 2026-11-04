@@ -35,6 +35,15 @@ public sealed class PackageVerifierSuite
     }
 
     [Fact]
+    public async Task MissingVoiceCueFailsVerification()
+    {
+        using var fixture = new PackageFixture();
+        File.Delete(Path.Combine(fixture.PackageDirectory, "voices", "stabilize.ogg"));
+
+        await Assert.ThrowsAsync<FileNotFoundException>(fixture.VerifyAsync);
+    }
+
+    [Fact]
     public async Task MissingSpellTurnBgmFailsVerification()
     {
         using var fixture = new PackageFixture();
@@ -181,7 +190,7 @@ public sealed class PackageVerifierSuite
                 {
                   "id": "{{manifestModId}}",
                   "version": "v1.1.0",
-                  "min_game_version": "v0.107.1",
+                  "min_game_version": "v0.109.0",
                   "has_pck": true,
                   "has_dll": true,
                   "dependencies": [
@@ -220,7 +229,7 @@ public sealed class PackageVerifierSuite
                 _stageWasAbsent,
                 DateTimeOffset.UtcNow,
                 _expectedModId,
-                "v0.107.1",
+                "v0.109.0",
                 "STS2-RitsuLib",
                 Path.Combine(_root, "inventory.json"),
                 Path.Combine(_root, "inspector.log")));

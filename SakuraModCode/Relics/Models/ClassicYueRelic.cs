@@ -85,4 +85,3 @@ public class ClassicYueRelic : SakuraRelicModel
         InvokeDisplayAmountChanged();
     }
 }
-

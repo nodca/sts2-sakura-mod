@@ -69,4 +69,3 @@ public class SakuraDream() : SakuraFormCard(1, CardType.Skill, TargetType.None)
         await ApplyPower<ClassicDreamPower>(choiceContext, Owner.Creature, 1);
     }
 }
-

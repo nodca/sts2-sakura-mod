@@ -38,11 +38,10 @@ public class SpellLeiDi() : ElementSpellCard(0, CardType.Attack, TargetType.None
         await SpellTalismanVfx.PlayOrResolveAsync(this, async cues =>
         {
             await cues.Release();
-            await DealDamage(choiceContext, target, ReleasedDamage(), hitSfx: SakuraNativeHitFx.LightningSfx, hitVfx: SakuraNativeHitFx.Lightning, spawnHitVfxAtBase: true);
+            await DealDamage(choiceContext, play, target, ReleasedDamage(), hitSfx: SakuraNativeHitFx.LightningSfx, hitVfx: SakuraNativeHitFx.Lightning, spawnHitVfxAtBase: true);
             var card = await SakuraActions.SelectStabilizeCandidate(this, choiceContext, cancelable: false);
             if (card is not null)
                 await card.Stabilize(choiceContext);
         });
     }
 }
-

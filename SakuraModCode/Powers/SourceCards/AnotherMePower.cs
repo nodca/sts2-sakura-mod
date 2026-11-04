@@ -50,4 +50,3 @@ public class AnotherMePower : SakuraPowerModel
     internal static bool ShouldRefund(bool ownsCard, bool spentMagicCharge) =>
         ownsCard && spentMagicCharge;
 }
-

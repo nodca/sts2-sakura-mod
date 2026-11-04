@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -6,7 +7,6 @@ using MegaCrit.Sts2.Core.GameActions;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
-using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.TestProtocol;
@@ -15,7 +15,7 @@ namespace SakuraMod.RuntimeTests;
 
 internal static class ClowSweetPartyEffectMultiplayerScenario
 {
-    private const int FixtureDamage = 20;
+    private const int FixtureCurrentHp = 30;
     private const int FixtureEnergy = 10;
     private const int FixtureMagicCharge = 20;
 
@@ -28,7 +28,6 @@ internal static class ClowSweetPartyEffectMultiplayerScenario
         var combat = await context.EnterWeakCrawlerCombatAsync();
         var players = context.OrderedPlayers.ToArray();
         var owner = context.ClientPlayer;
-        var enemy = combat.Enemies.First(static enemy => enemy.IsAlive);
         var fixtureContext = new ThrowingPlayerChoiceContext();
         var normalSweet = combat.CreateCard<ClowSweet>(owner);
         var activatedSweet = combat.CreateCard<ClowSweet>(owner);
@@ -36,14 +35,9 @@ internal static class ClowSweetPartyEffectMultiplayerScenario
 
         assertions.Equal("fixture_player_count", 2, context.PeerCount);
         await PlayerCmd.GainEnergy(FixtureEnergy, owner);
+        await SetPartyHpBelowMaximumAsync(players);
         foreach (var player in players)
-            await CreatureCmd.Damage(
-                fixtureContext,
-                player.Creature,
-                FixtureDamage,
-                ValueProp.Unpowered,
-                enemy,
-                null);
+            assertions.Equal($"fixture_hp_{player.NetId}", FixtureCurrentHp, player.Creature.CurrentHp);
         await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
             normalSweet, PileType.Hand, owner, CardPilePosition.Random);
         await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
@@ -55,8 +49,10 @@ internal static class ClowSweetPartyEffectMultiplayerScenario
 
         var hpBeforeNormalSweet = CurrentHpByPlayer(players);
         var normalChecksumBaseline = context.ChecksumCount;
+        await context.SignalAndWaitAsync("normal-sweet-baseline-captured");
         if (context.LocalPlayer.NetId == owner.NetId)
             await context.PlayOwnedCardAsync(normalSweet);
+        await context.SignalAndWaitAsync("normal-sweet-played");
         await MultiplayerScenarioContext.WaitForStateAsync(
             () => normalSweet.Pile?.Type == PileType.Exhaust,
             "normal Clow Sweet to exhaust");
@@ -85,8 +81,10 @@ internal static class ClowSweetPartyEffectMultiplayerScenario
         await context.SignalAndWaitAsync("activated-sweet-ready");
         await context.WaitForActionsAsync();
         var activatedChecksumBaseline = context.ChecksumCount;
+        await context.SignalAndWaitAsync("activated-sweet-baseline-captured");
         if (context.LocalPlayer.NetId == owner.NetId)
             await context.PlayOwnedCardAsync(activatedSweet);
+        await context.SignalAndWaitAsync("activated-sweet-played");
         await MultiplayerScenarioContext.WaitForStateAsync(
             () => activatedSweet.Pile?.Type == PileType.Exhaust
                 && players.All(player => player.Creature.GetPower<RegenPower>()?.Amount == activatedSweet.DynamicVars.Heal.IntValue),
@@ -110,22 +108,16 @@ internal static class ClowSweetPartyEffectMultiplayerScenario
         await context.SignalAndWaitAsync("activated-sweet-settled");
 
         foreach (var player in players)
-        {
             if (player.Creature.GetPower<RegenPower>() is { } regeneration)
                 await PowerCmd.Remove(regeneration);
-            await CreatureCmd.Damage(
-                fixtureContext,
-                player.Creature,
-                FixtureDamage,
-                ValueProp.Unpowered,
-                enemy,
-                null);
-        }
+        await SetPartyHpBelowMaximumAsync(players);
         await context.SignalAndWaitAsync("sakura-sweet-ready");
         await context.WaitForActionsAsync();
         var sakuraChecksumBaseline = context.ChecksumCount;
+        await context.SignalAndWaitAsync("sakura-sweet-baseline-captured");
         if (context.LocalPlayer.NetId == owner.NetId)
             await context.PlayOwnedCardAsync(sakuraSweet);
+        await context.SignalAndWaitAsync("sakura-sweet-played");
         await MultiplayerScenarioContext.WaitForStateAsync(
             () => players.All(player => player.Creature.GetPower<ClassicSweetPower>()?.Amount == sakuraSweet.DynamicVars["Magic"].IntValue),
             "Sakura Sweet party powers");
@@ -181,7 +173,7 @@ internal static class ClowSweetPartyEffectMultiplayerScenario
             ["fixture"] = new
             {
                 owner_net_id = owner.NetId,
-                fixture_damage = FixtureDamage,
+                fixture_current_hp = FixtureCurrentHp,
                 fixture_energy = FixtureEnergy,
                 fixture_magic_charge = FixtureMagicCharge
             },
@@ -211,4 +203,11 @@ internal static class ClowSweetPartyEffectMultiplayerScenario
 
     private static Dictionary<ulong, int> CurrentHpByPlayer(IEnumerable<MegaCrit.Sts2.Core.Entities.Players.Player> players) =>
         players.ToDictionary(static player => player.NetId, static player => player.Creature.CurrentHp);
+
+    private static async Task SetPartyHpBelowMaximumAsync(
+        IEnumerable<MegaCrit.Sts2.Core.Entities.Players.Player> players)
+    {
+        foreach (var player in players)
+            await CreatureCmd.SetCurrentHp(player.Creature, FixtureCurrentHp);
+    }
 }

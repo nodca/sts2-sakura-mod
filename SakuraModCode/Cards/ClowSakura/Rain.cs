@@ -30,11 +30,12 @@ public class ClowRain() : ClowExtraEffectCard(2, CardType.Skill, CardRarity.Unco
     public override SakuraElementSet Elements => SakuraElementSet.Water;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
 
-    protected override PileType GetResultPileTypeForCardPlay()
+    protected override CardLocation GetResultLocationForCardPlay()
     {
+        var baseResult = base.GetResultLocationForCardPlay();
         return SakuraExtraEffectTransaction.ShouldShowAsActive(this)
-            ? PileType.Discard
-            : base.GetResultPileTypeForCardPlay();
+            ? baseResult with { pileType = PileType.Discard }
+            : baseResult;
     }
 
     protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -107,4 +108,3 @@ public class SakuraRain() : SakuraFormCard(0, CardType.Skill, TargetType.None)
                 await Task.CompletedTask;
             });
 }
-

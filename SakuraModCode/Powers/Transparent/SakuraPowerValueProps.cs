@@ -26,4 +26,3 @@ internal static class SakuraPowerValueProps
     public const ValueProp Damage = ValueProp.Unpowered;
     public const ValueProp HpLoss = ValueProp.Unblockable | ValueProp.Unpowered;
 }
-

@@ -41,4 +41,3 @@ public class ClassicShieldWardPower : SakuraPowerModel
         await CreatureCmd.GainBlock(Owner, Amount, SakuraPowerValueProps.Block, null, false);
     }
 }
-

@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Multiplayer;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.GameActions;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
@@ -67,6 +68,7 @@ internal static class ClowDefensivePowersMultiplayerScenario
         foreach (var player in players)
         {
             var card = cards[player.NetId].Silent;
+            var checksumBaseline = context.ChecksumCount;
             if (context.LocalPlayer.NetId == player.NetId)
                 await context.PlayOwnedCardAsync(card);
             await context.SignalAndWaitAsync($"silent-played-{player.NetId}");
@@ -78,6 +80,11 @@ internal static class ClowDefensivePowersMultiplayerScenario
                 $"silent_buffer_applied_{player.NetId}",
                 1,
                 player.Creature.GetPower<BufferPower>()?.Amount ?? 0);
+            await context.WaitForActionChecksumsAsync(
+                checksumBaseline,
+                $"player {player.NetId} Silent",
+                nameof(PlayCardAction));
+            await context.SignalAndWaitAsync($"silent-checksummed-{player.NetId}");
             await context.WaitForActionsAsync();
             await context.SignalAndWaitAsync($"silent-settled-{player.NetId}");
 
@@ -89,6 +96,7 @@ internal static class ClowDefensivePowersMultiplayerScenario
                 OrdinaryDamage,
                 ValueProp.Unpowered,
                 enemy,
+                null,
                 null);
             await context.SignalAndWaitAsync($"silent-damaged-{player.NetId}");
             assertions.Equal($"silent_prevents_hp_loss_{player.NetId}", hpBefore, player.Creature.CurrentHp);

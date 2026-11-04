@@ -59,7 +59,7 @@ public class Reversal() : TransparentExtraEffectCard(0, CardType.Attack, CardRar
             exchangedCards,
             DynamicVars["PileCardsPerDamage"].IntValue,
             DynamicVars["PileDamage"].IntValue);
-        await DealDamage(choiceContext, RequiredTarget(play), damage, hitVfx: SakuraNativeHitFx.Slash);
+        await DealDamage(choiceContext, play, RequiredTarget(play), damage, hitVfx: SakuraNativeHitFx.Slash);
         if (activation.IsActive)
             await ApplyExtraEffect(choiceContext, play);
     }
@@ -106,7 +106,7 @@ internal sealed class ReversalDamageVar(decimal damage, ValueProp props) : Damag
         }
 
         if (runGlobalHooks)
-            preview = Hook.ModifyDamage(card.Owner.RunState, card.CombatState, target, card.Owner.Creature, baseValue, Props, card, ModifyDamageHookType.All, previewMode, out _);
+            preview = Hook.ModifyDamage(card.Owner.RunState, card.CombatState, target, card.Owner.Creature, baseValue, Props, card, null, ModifyDamageHookType.All, previewMode, out _);
 
         PreviewValue = preview;
     }

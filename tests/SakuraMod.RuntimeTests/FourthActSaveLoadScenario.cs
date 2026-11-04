@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
+using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.FourthAct.Routing;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Encounters;
 using SakuraMod.TestProtocol;
@@ -58,7 +59,8 @@ internal static class FourthActSaveLoadScenario
             () => run.CurrentRoom?.RoomType == RoomType.Shop,
             "fourth-act merchant room");
 
-        var elite = map.MerchantMapPoint.Children.Single(static point => point.coord.col == 0);
+        var elite = map.MerchantMapPoint.Children
+            .Single(point => map.RouteAt(point.coord)?.Element == SakuraElement.Wind);
         await RunManager.Instance.EnterMapCoord(elite.coord);
         await CombatScenarioContext.WaitUntilAsync(
             () => CombatManager.Instance.IsInProgress

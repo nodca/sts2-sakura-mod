@@ -21,10 +21,14 @@
       <HintPath>$(Sts2DataDir)/sts2.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Steamworks.NET">
+      <HintPath>$(Sts2DataDir)/Steamworks.NET.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <CompilerVisibleProperty Include="GodotProjectDir" />
-    <PackageReference Include="STS2.RitsuLib.Compat.0.107.1" Version="0.6.10" PrivateAssets="All" />
+    <PackageReference Include="STS2.RitsuLib" Version="0.6.10" PrivateAssets="All" />
     <ProjectReference Include="../../SakuraMod.csproj" AdditionalProperties="SkipSakuraPackageCopy=true" />
     <Compile Include="../TestProtocol/SakuraTestProtocol.cs" Link="TestProtocol/SakuraTestProtocol.cs" />
   </ItemGroup>

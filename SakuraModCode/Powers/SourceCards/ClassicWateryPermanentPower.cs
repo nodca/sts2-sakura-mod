@@ -34,4 +34,3 @@ public class ClassicWateryPermanentPower : SakuraPermanentElementPower
     protected override CardModel CreateSpell(ICombatState combatState, Player player) =>
         combatState.CreateCard<SpellShuiLong>(player);
 }
-

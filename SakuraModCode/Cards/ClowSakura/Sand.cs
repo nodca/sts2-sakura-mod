@@ -38,7 +38,7 @@ public class ClowSand() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Comm
     {
         var target = RequiredTarget(play);
         await ApplyPower<PoisonPower>(choiceContext, target, ReleasedValue("PoisonPower"));
-        await TriggerCurrentPoison(choiceContext, [target], PoisonTriggerCount);
+        await TriggerCurrentPoison(choiceContext, play, [target], PoisonTriggerCount);
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
@@ -66,9 +66,8 @@ public class SakuraSand() : SakuraFormCard(1, CardType.Skill, TargetType.None)
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await TriggerCurrentPoison(choiceContext, CombatState!.HittableEnemies, DynamicVars["Triggers"].IntValue);
+        await TriggerCurrentPoison(choiceContext, play, CombatState!.HittableEnemies, DynamicVars["Triggers"].IntValue);
         for (var i = 0; i < DynamicVars["Applications"].IntValue; i++)
             await ApplyPowerToEnemies<PoisonPower>(choiceContext, DynamicVars["PoisonPower"].IntValue);
     }
 }
-

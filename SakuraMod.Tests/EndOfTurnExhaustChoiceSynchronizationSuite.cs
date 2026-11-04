@@ -8,6 +8,9 @@ public sealed class EndOfTurnExhaustChoiceSynchronizationSuite
     private const string DarkSakuraPowerPath =
         "SakuraModCode/Powers/SourceCards/ClassicDarkSakuraPower.cs";
 
+    private const string DarkSelectionLifecyclePath =
+        "SakuraModCode/Powers/SourceCards/ClassicDarkSelectionLifecycle.cs";
+
     private static string Read(string relativePath) =>
         File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath));
 
@@ -15,50 +18,54 @@ public sealed class EndOfTurnExhaustChoiceSynchronizationSuite
     public void DarkPowerUsesLiveHandSelectionWithAmountCapAndZeroGuard()
     {
         var source = Read(DarkPowerPath);
+        var lifecycle = Read(DarkSelectionLifecyclePath);
 
         RegressionTestHarness.Require(
-            source.Contains("CardSelectCmd.FromHand(", StringComparison.Ordinal),
-            "Expected ClassicDarkPower to select through CardSelectCmd.FromHand.");
+            lifecycle.Contains("CardSelectCmd.FromHand(", StringComparison.Ordinal),
+            "Expected the shared Dark selection owner to select through CardSelectCmd.FromHand.");
 
         RegressionTestHarness.Require(
-            source.Contains("new CardSelectorPrefs(SelectionPrompt, 0, Amount)", StringComparison.Ordinal),
-            "Expected ClassicDarkPower to keep the min-0 / max-Amount exhaust bounds.");
+            lifecycle.Contains(
+                "new CardSelectorPrefs(ClassicDarkPower.SelectionPrompt, 0, maxSelect)",
+                StringComparison.Ordinal),
+            "Expected the shared Dark selection owner to keep the min-0 / max-Amount exhaust bounds.");
 
         RegressionTestHarness.Require(
-            !source.Contains("Cancelable", StringComparison.Ordinal),
-            "Expected ClassicDarkPower to drop Cancelable, which NPlayerHand ignores for hand selections.");
+            !lifecycle.Contains("Cancelable", StringComparison.Ordinal),
+            "Expected the shared Dark selection owner to drop Cancelable, which NPlayerHand ignores for hand selections.");
 
         RegressionTestHarness.Require(
-            !source.Contains("hand.Contains", StringComparison.Ordinal),
-            "Expected ClassicDarkPower to pass a null filter instead of a captured hand.Contains delegate.");
+            !lifecycle.Contains("hand.Contains", StringComparison.Ordinal),
+            "Expected the shared Dark selection owner to pass a null filter instead of a captured hand.Contains delegate.");
 
         RegressionTestHarness.Require(
             source.Contains("Amount <= 0", StringComparison.Ordinal),
             "Expected ClassicDarkPower to skip the selection when Amount is not positive.");
+
+        RegressionTestHarness.Require(
+            source.Contains("ClassicDarkSelectionLifecycle.SelectFromHand(", StringComparison.Ordinal)
+            && source.Contains("Amount,", StringComparison.Ordinal),
+            "Expected ClassicDarkPower to cap its selection at Amount through the shared owner.");
     }
 
     [Fact]
     public void DarkSakuraPowerUsesLiveHandSelectionWithUnboundedCap()
     {
         var source = Read(DarkSakuraPowerPath);
+        var lifecycle = Read(DarkSelectionLifecyclePath);
 
         RegressionTestHarness.Require(
-            source.Contains("CardSelectCmd.FromHand(", StringComparison.Ordinal),
-            "Expected ClassicDarkSakuraPower to select through CardSelectCmd.FromHand.");
+            lifecycle.Contains("CardSelectCmd.FromHand(", StringComparison.Ordinal),
+            "Expected the shared Dark selection owner to select through CardSelectCmd.FromHand.");
 
         RegressionTestHarness.Require(
-            source.Contains(
-                "new CardSelectorPrefs(ClassicDarkPower.SelectionPrompt, 0, 999999999)",
-                StringComparison.Ordinal),
+            source.Contains("ClassicDarkSelectionLifecycle.SelectFromHand(", StringComparison.Ordinal)
+            && source.Contains("999999999", StringComparison.Ordinal),
             "Expected ClassicDarkSakuraPower to keep an unbounded \"any number\" exhaust selection.");
 
         RegressionTestHarness.Require(
-            !source.Contains("Cancelable", StringComparison.Ordinal),
-            "Expected ClassicDarkSakuraPower to drop Cancelable, which NPlayerHand ignores for hand selections.");
-
-        RegressionTestHarness.Require(
-            !source.Contains("hand.Contains", StringComparison.Ordinal),
-            "Expected ClassicDarkSakuraPower to pass a null filter instead of a captured hand.Contains delegate.");
+            !lifecycle.Contains("hand.Contains", StringComparison.Ordinal),
+            "Expected the shared Dark selection owner to pass a null filter instead of a captured hand.Contains delegate.");
     }
 
     [Fact]

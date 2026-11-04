@@ -28,19 +28,22 @@ public class Record() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [];
 
-    public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
+    public override CardLocation ModifyCardPlayResultLocation(
         CardModel card,
         bool isAutoPlay,
         ResourceInfo resources,
-        PileType pileType,
-        CardPilePosition position)
+        CardLocation cardLocation)
     {
         if (card == this
             && SakuraExtraEffectTransaction.ShouldShowAsActive(this)
-            && pileType == PileType.Exhaust)
-            return (PileType.Discard, CardPilePosition.Random);
+            && cardLocation.pileType == PileType.Exhaust)
+            return cardLocation with
+            {
+                pileType = PileType.Discard,
+                position = CardPilePosition.Random
+            };
 
-        return (pileType, position);
+        return cardLocation;
     }
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
@@ -56,6 +59,3 @@ public class Record() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
-
-
-

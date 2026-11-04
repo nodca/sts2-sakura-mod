@@ -51,4 +51,3 @@ public class SakuraWatery() : SakuraFormCard(1, CardType.Power, TargetType.None)
         await EnterElementState<ClassicWateryPower>(choiceContext);
     }
 }
-

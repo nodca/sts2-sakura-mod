@@ -55,8 +55,16 @@ internal static class ClowTimeStasisScenario
                     : -1f;
             return watching;
         });
-        await CombatScenarioContext.PlayCardAsync(card);
-        watching = false;
+        try
+        {
+            await CombatScenarioContext.PlayCardAsync(card);
+            // The action can finish after this frame's observer already ran.
+            await CombatScenarioContext.WaitUntilAsync(() => haltedWhenApplied is not null, "Stasis halt observed");
+        }
+        finally
+        {
+            watching = false;
+        }
 
         assertions.Equal("play_applies_stasis", 1, owner.GetPowerAmount<ClassicTimeStasisPower>());
         assertions.True("play_ran_the_hourglass", hourglass is not null);

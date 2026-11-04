@@ -16,13 +16,25 @@ internal static class RuntimeEnvironmentCapture
             .OrderBy(mod => mod.Id, StringComparer.Ordinal)
             .ToArray();
         var loadedIds = loadedMods.Select(mod => mod.Id).ToArray();
+        var expectedLoadedIds = string.Join(", ", new[]
+        {
+            SakuraMultiplayerScenarios.RequiresKitLib(request.ScenarioId) ? "KitLib" : null,
+            SakuraMultiplayerScenarios.RequiresRandomForeseer(request.ScenarioId) ? "RandomForeseer" : null,
+            "STS2-RitsuLib",
+            "SakuraMod",
+            "SakuraMod.RuntimeTests"
+        }.Where(static id => id is not null).Order(StringComparer.Ordinal));
         assertions.Equal(
             "loaded_mod_ids",
-            "STS2-RitsuLib, SakuraMod, SakuraMod.RuntimeTests",
+            expectedLoadedIds,
             string.Join(", ", loadedIds));
         RequireVersion(assertions, loadedMods, "STS2-RitsuLib", request.ExpectedRitsuVersion);
         RequireVersion(assertions, loadedMods, "SakuraMod", request.ExpectedSakuraVersion);
         RequireVersion(assertions, loadedMods, RuntimeTestMod.ModId, "1.0.0");
+        if (SakuraMultiplayerScenarios.RequiresRandomForeseer(request.ScenarioId))
+            RequireVersion(assertions, loadedMods, "RandomForeseer", "0.13.1");
+        if (SakuraMultiplayerScenarios.RequiresKitLib(request.ScenarioId))
+            RequireVersion(assertions, loadedMods, "KitLib", "0.33.0");
 
         var gameVersion = NormalizeVersion(ReleaseInfoManager.Instance.ReleaseInfo?.Version);
         assertions.Equal("game_version", NormalizeVersion(request.ExpectedGameVersion), gameVersion);

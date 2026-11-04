@@ -29,4 +29,3 @@ namespace SakuraMod.SakuraModCode.Relics;
 internal sealed record SakuraGemBroochDeckPlan(
     IReadOnlyList<CardModel> RetainedCards,
     IReadOnlyList<CardModel> Duplicates);
-

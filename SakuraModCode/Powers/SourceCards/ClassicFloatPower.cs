@@ -39,4 +39,3 @@ public class ClassicFloatPower : SakuraPowerModel
             await CreatureCmd.GainBlock(Owner, Amount, SakuraPowerValueProps.Block, null, false);
     }
 }
-

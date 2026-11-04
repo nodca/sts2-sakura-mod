@@ -33,7 +33,7 @@ internal static class SnowFrostbiteScenario
                     foreach (var power in enemy.Powers.ToArray())
                         await PowerCmd.Remove(power);
                     await CreatureCmd.SetMaxAndCurrentHp(enemy, 1000);
-                    await CreatureCmd.LoseBlock(enemy, enemy.Block);
+                    await CreatureCmd.LoseBlock(choiceContext, enemy, enemy.Block, player.Creature);
                     if (block > 0)
                         await CreatureCmd.GainBlock(enemy, block, ValueProp.Unpowered, null, true);
                 }

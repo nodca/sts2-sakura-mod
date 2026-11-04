@@ -41,4 +41,3 @@ public class Lucid() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.
 
     protected override void OnUpgrade() => DynamicVars["Look"].UpgradeValueBy(1);
 }
-

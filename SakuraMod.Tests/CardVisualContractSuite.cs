@@ -773,6 +773,13 @@ public sealed class CardVisualContractSuite
     }
 
     [Fact]
+    public void MemoryRecallPatchResolvesAgainstThePinnedGameApi()
+    {
+        var target = Assert.Single(SakuraMemoryRecallCardNodePatch.GetTargets());
+        Assert.NotNull(AccessTools.Method(target.TargetType, target.MethodName, target.ParameterTypes));
+    }
+
+    [Fact]
     public void MemoryVisualsNeverTakeOverCardNodesAndResetPooledOverlays()
     {
         var memoryPile = File.ReadAllText(

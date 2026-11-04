@@ -39,4 +39,3 @@ public class ClassicSwordJadeRelic : SakuraRelicModel
         new DynamicVar("ReleasePercent", (int)(ReleaseRate * 100))
     ];
 }
-

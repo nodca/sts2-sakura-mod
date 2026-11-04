@@ -34,4 +34,3 @@ public class ClassicWindyPermanentPower : SakuraPermanentElementPower
     protected override CardModel CreateSpell(ICombatState combatState, Player player) =>
         combatState.CreateCard<SpellFengHua>(player);
 }
-

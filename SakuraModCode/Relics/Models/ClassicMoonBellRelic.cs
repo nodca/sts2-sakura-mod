@@ -87,4 +87,3 @@ public class ClassicMoonBellRelic : SakuraRelicModel
         RelicIconChanged();
     }
 }
-

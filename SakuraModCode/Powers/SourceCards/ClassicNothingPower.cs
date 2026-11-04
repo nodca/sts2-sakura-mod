@@ -83,15 +83,14 @@ public class ClassicNothingPower : SakuraPowerModel
         return keywords.Add(CardKeyword.Exhaust);
     }
 
-    public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
+    public override CardLocation ModifyCardPlayResultLocation(
         CardModel card,
         bool isAutoPlay,
         ResourceInfo resources,
-        PileType pileType,
-        CardPilePosition position) =>
+        CardLocation cardLocation) =>
         IsOwnedClowOrSakura(card)
-            ? (PileType.Exhaust, position)
-            : (pileType, position);
+            ? cardLocation with { pileType = PileType.Exhaust }
+            : cardLocation;
 
     public override Task AfterCardDrawn(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
     {
@@ -117,7 +116,7 @@ public class ClassicNothingPower : SakuraPowerModel
         var combatState = Owner.CombatState
             ?? throw new InvalidOperationException("Sakura Nothing requires an active combat.");
         foreach (var enemy in combatState.HittableEnemies.ToList())
-            await CreatureCmd.Damage(choiceContext, enemy, _damage, SakuraPowerValueProps.HpLoss, Owner, null);
+            await CreatureCmd.Damage(choiceContext, enemy, _damage, SakuraPowerValueProps.HpLoss, Owner, null, null);
     }
 
     public override async Task AfterCombatEnd(CombatRoom room)
@@ -160,4 +159,3 @@ public class ClassicNothingPower : SakuraPowerModel
         card?.Owner?.Creature == Owner
         && card is SakuraSourceCard { IsClassicSourceCard: true };
 }
-

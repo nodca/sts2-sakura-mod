@@ -44,4 +44,3 @@ public class ClassicFloatSakuraPower : SakuraPowerModel
         CardPlay? cardPlay) =>
         ExtraBlock(target == Owner, block, Amount);
 }
-

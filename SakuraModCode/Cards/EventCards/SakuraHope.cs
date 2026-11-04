@@ -18,4 +18,3 @@ public class SakuraHope() : SakuraEventCard(4, CardType.Power, TargetType.None)
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<ClassicHopePower>(choiceContext, Owner.Creature, ReleasedMagic());
 }
-

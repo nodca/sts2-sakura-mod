@@ -38,7 +38,8 @@ public sealed class SwingDamageWindowPower : SakuraPowerModel
         decimal amount,
         ValueProp props,
         Creature? dealer,
-        CardModel? cardSource) =>
+        CardModel? cardSource,
+        CardPlay? cardPlay) =>
         IsEligible(target, props, dealer, cardSource, Owner, Amount)
             ? Amount
             : 1m;

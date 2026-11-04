@@ -34,14 +34,14 @@ public class ClowPower() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Co
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await DealDamage(choiceContext, RequiredTarget(play), ReleasedDamage(), hitVfx: SakuraNativeHitFx.HeavyBlunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx);
+        await DealDamage(choiceContext, play, RequiredTarget(play), ReleasedDamage(), hitVfx: SakuraNativeHitFx.HeavyBlunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx);
         await ApplyPower<StrengthPower>(choiceContext, Owner.Creature, -1);
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         await PlayCard(choiceContext, play);
-        await DealDamage(choiceContext, RequiredTarget(play), ExtraHpLoss, ValueProp.Unblockable);
+        await DealDamage(choiceContext, play, RequiredTarget(play), ExtraHpLoss, ValueProp.Unblockable);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(8);
@@ -55,4 +55,3 @@ public class SakuraPower() : SakuraFormCard(2, CardType.Power, TargetType.None)
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         await ApplyPower<StrengthPower>(choiceContext, Owner.Creature, ReleasedValue("StrengthPower"));
 }
-

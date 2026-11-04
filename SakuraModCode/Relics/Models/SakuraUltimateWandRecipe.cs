@@ -60,4 +60,3 @@ internal static class SakuraUltimateWandRecipe
             await RelicCmd.Remove(yue);
     }
 }
-

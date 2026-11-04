@@ -35,4 +35,3 @@ public abstract class SakuraRelicModel : ModRelicTemplate
     public override string CustomIconOutlinePath => IconOutlineFileName.RelicImagePath();
     public override string CustomBigIconPath => IconFileName.BigRelicImagePath();
 }
-

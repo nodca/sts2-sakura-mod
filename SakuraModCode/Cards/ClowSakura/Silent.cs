@@ -57,4 +57,3 @@ public class SakuraSilent() : SakuraFormCard(1, CardType.Skill, TargetType.None)
         SilentQuietVisual.NotifyVeilSummoned(Owner.Creature);
     }
 }
-

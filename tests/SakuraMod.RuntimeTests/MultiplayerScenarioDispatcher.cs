@@ -39,6 +39,16 @@ internal static class MultiplayerScenarioDispatcher
                 request, environment, assertions),
             SakuraMultiplayerScenarios.TurnEndDamageSync => await TurnEndDamageSyncMultiplayerScenario.ExecuteAsync(
                 request, environment, assertions),
+            SakuraMultiplayerScenarios.RepairJumpMirror
+                or SakuraMultiplayerScenarios.RepairJumpMirrorForeseer
+                or SakuraMultiplayerScenarios.RepairJumpMirrorThreePlayer
+                or SakuraMultiplayerScenarios.RepairJumpMirrorThreePlayerForeseer
+                or SakuraMultiplayerScenarios.RepairJumpMirrorThreePlayerKitLib
+                or SakuraMultiplayerScenarios.RepairJumpMirrorThreePlayerForeseerKitLib
+                or SakuraMultiplayerScenarios.RepairJumpMirrorThreePlayerRace
+                or SakuraMultiplayerScenarios.RepairJumpMirrorThreePlayerForeseerRace
+                or SakuraMultiplayerScenarios.RepairJumpMirrorThreePlayerChoiceRace =>
+                await RepairJumpMirrorMultiplayerScenario.ExecuteAsync(request, environment, assertions),
             SakuraMultiplayerScenarios.ThreePlayerDefensivePowers =>
                 await ClowDefensivePowersMultiplayerScenario.ExecuteAsync(request, environment, assertions),
             SakuraMultiplayerScenarios.ThreePlayerRepairJump =>
