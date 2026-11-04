@@ -34,19 +34,29 @@ public class Remind() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        await RecallIntoHand(Owner, choiceContext, 2 * ResolveEnergyXValue(), upgradeCopies: IsUpgraded);
+        await RemindVfx.PlayOrResolveAsync(this, Owner.Creature, async cues =>
+        {
+            await RecallIntoHand(
+                Owner,
+                choiceContext,
+                2 * ResolveEnergyXValue(),
+                upgradeCopies: IsUpgraded,
+                beforeRecall: cues.ReachMemoryAsync);
 
-        if (activation.IsActive)
-            await ApplyExtraEffect(choiceContext);
+            if (activation.IsActive)
+                await ApplyExtraEffect(choiceContext, cues);
+        });
     }
 
     // Shared Remind resolution: choose up to count Memory cards (all of them when
     // there are not more than count) and move those cards into the hand, free this turn.
+    // beforeRecall receives the chosen count after the choice and before the move.
     internal static async Task<int> RecallIntoHand(
         Player owner,
         PlayerChoiceContext choiceContext,
         int count,
-        bool upgradeCopies)
+        bool upgradeCopies,
+        Func<int, Task>? beforeRecall = null)
     {
         var choices = RecallChoices(SakuraMemoryPile.Get(owner)?.Cards ?? []);
         if (count <= 0 || choices.Count == 0)
@@ -60,13 +70,15 @@ public class Remind() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
                 owner,
                 new CardSelectorPrefs(SelectionPrompt, count, count) { Cancelable = false })).ToList();
 
+        if (beforeRecall is not null)
+            await beforeRecall(cards.Count);
         return (await SakuraMemoryPile.RecallToHand(owner, cards, upgradeCopies)).Count;
     }
 
     internal static bool HasRecallChoices(Player owner) =>
         RecallChoices(SakuraMemoryPile.Get(owner)?.Cards ?? []).Count > 0;
 
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext)
+    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, RemindVfx.Cues cues)
     {
         var combatState = CombatState
             ?? throw new InvalidOperationException("Remind extra effect requires combat.");
@@ -92,6 +104,7 @@ public class Remind() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
                 choiceContext,
                 refreshGeneratedTransparentHandVisual: false);
             selected.EnergyCost.AddThisCombat(-1);
+            cues.Split(selected);
         }
         finally
         {

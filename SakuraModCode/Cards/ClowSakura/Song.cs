@@ -101,7 +101,7 @@ public class ClowSong() : ClowExtraEffectCard(0, CardType.Attack, CardRarity.Unc
                 {
                     var enemies = CombatState!.HittableEnemies.ToList();
                     await cues.Beat(i, enemies);
-                    await DealDamageToEnemies(choiceContext, enemies, ReleasedDamage(), hitVfxNode: SongHitFallback(cues));
+                    await DealDamageToEnemies(choiceContext, enemies, ReleasedDamage(), hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx, hitVfxNode: SongHitFallback(cues));
                 }
                 cues.Finale();
             });
@@ -136,7 +136,7 @@ public class SakuraSong() : SakuraFormCard(1, CardType.Attack, TargetType.AllEne
                 {
                     var enemies = CombatState!.HittableEnemies.ToList();
                     await cues.Beat(i, enemies);
-                    await DealDamageToEnemies(choiceContext, enemies, ReleasedDamage(), hitVfxNode: ClowSong.SongHitFallback(cues));
+                    await DealDamageToEnemies(choiceContext, enemies, ReleasedDamage(), hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx, hitVfxNode: ClowSong.SongHitFallback(cues));
                     await GainBlock(play, ReleasedBlock());
                 }
                 cues.Finale();

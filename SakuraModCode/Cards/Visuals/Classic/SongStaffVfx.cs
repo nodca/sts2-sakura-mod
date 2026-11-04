@@ -7,7 +7,6 @@ using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using SakuraMod.SakuraModCode.Character;
-using STS2RitsuLib.Audio;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -176,16 +175,6 @@ internal enum SongGlyph
     Whole
 }
 
-/// <summary>The instrument a Song play sings with.</summary>
-internal enum SongTimbre
-{
-    /// <summary>Clow's Song: a plucked harp.</summary>
-    Harp,
-
-    /// <summary>Sakura's Song: a music box.</summary>
-    MusicBox
-}
-
 /// <summary>
 /// Song's staff: a treble clef lights behind Sakura, a five-line staff flows from
 /// it like the Song spirit's hair to the air above the enemies, and each hit
@@ -200,8 +189,8 @@ internal enum SongTimbre
 /// of that gap gaining Block.
 /// <para>
 /// <see cref="Cues.Beat"/> is awaited before each hit's damage, the same shape as
-/// Arrow's <c>Loose</c>: the landing bounce, the note's pitch, and the damage
-/// numbers happen on one frame. A session that is not running returns at once, so
+/// Arrow's <c>Loose</c>: the landing bounce, the hit's vanilla blunt sound, and the
+/// damage numbers happen on one frame. A session that is not running returns at once, so
 /// players with card VFX off never wait for a song nobody drew.
 /// </para>
 /// </remarks>
@@ -215,12 +204,10 @@ internal sealed class SongStaffVfx : CelVfxSession
         MainFile.ResPath + "/shaders/card_vfx/song_glyph.gdshader";
     internal const string GlyphAtlasPath =
         MainFile.ResPath + "/images/card_vfx/song/glyphs_sdf.png";
-    internal const string SfxRoot = MainFile.ResPath + "/sfx/song";
 
     /// <summary>
     /// The scene owns its shaders and the glyph atlas as ext resources, so the
-    /// scene is the only root to preload. The notes are played from their files
-    /// by the audio service rather than read from the resource cache.
+    /// scene is the only root to preload.
     /// </summary>
     internal static IReadOnlyList<string> AssetPaths { get; } = [ScenePath];
 
@@ -261,9 +248,8 @@ internal sealed class SongStaffVfx : CelVfxSession
     private const float FinaleScatterDuration = 0.6f;
     private const float FadeDuration = 0.2f;
 
-    /// <summary>How long after an echo beat's note its quieter repeat sounds.</summary>
+    /// <summary>How long after an echo beat's note its ghost lands.</summary>
     private const float EchoDelay = 0.09f;
-    private const float EchoGain = 0.45f;
     private const float EchoDuration = 0.36f;
 
     /// <summary>Clearance between the staff's bottom line and the tallest enemy.</summary>
@@ -301,14 +287,12 @@ internal sealed class SongStaffVfx : CelVfxSession
     private static readonly Color RippleColour = new(0.78f, 0.97f, 0.88f, 0.9f);
 
     private static bool _loadFailureLogged;
-    private static bool _audioFailureLogged;
 
     private readonly ColorRect _staff;
     private readonly ShaderMaterial _staffMaterial;
     private readonly Node2D _glyphs;
     private readonly Node2D _ripples;
     private readonly Sprite2D _template;
-    private readonly SongTimbre _timbre;
     private readonly Color _accent;
     private readonly int _beats;
     private readonly bool[] _echoes;
@@ -339,10 +323,6 @@ internal sealed class SongStaffVfx : CelVfxSession
         _beats = beats;
         _echoes = echoes;
 
-        _timbre = SakuraCardCatalog.TryGetMetadata(card, out var metadata)
-            && metadata.Era == SourceEraClass.Sakura
-                ? SongTimbre.MusicBox
-                : SongTimbre.Harp;
         _accent = MagicCircleInkColour(card) ?? new Color(0.97f, 0.83f, 0.45f);
 
         var layout = Layout.Resolve(room, caster, targets, beats);
@@ -389,7 +369,7 @@ internal sealed class SongStaffVfx : CelVfxSession
 
         /// <summary>
         /// Waits for beat <paramref name="index"/> on the song's grid, then lands
-        /// its note, sings its pitch, and rings through <paramref name="targets"/>.
+        /// its note and rings through <paramref name="targets"/>.
         /// Awaited before that beat's damage.
         /// </summary>
         internal Task Beat(int index, IReadOnlyList<Creature> targets)
@@ -399,16 +379,9 @@ internal sealed class SongStaffVfx : CelVfxSession
             return scope.InvokeAsync("beat", session => session.BeatAsync(index, targets));
         }
 
-        /// <summary>The closing chord: the staff flashes the era colour and the notes scatter.</summary>
+        /// <summary>The closing flourish: the staff flashes the era colour and the notes scatter.</summary>
         internal void Finale() => scope.Invoke("finale", session => session.Finale());
     }
-
-    internal static string NotePath(SongTimbre timbre, int pitch) =>
-        $"{SfxRoot}/{TimbreFolder(timbre)}/note_{Math.Clamp(pitch, 0, SongBeatSchedule.PitchCount - 1):00}.ogg";
-
-    internal static string ChordPath(SongTimbre timbre) => $"{SfxRoot}/{TimbreFolder(timbre)}/chord.ogg";
-
-    private static string TimbreFolder(SongTimbre timbre) => timbre == SongTimbre.MusicBox ? "musicbox" : "harp";
 
     private static SongStaffVfx? TryCreate(
         CardModel card,
@@ -527,16 +500,6 @@ internal sealed class SongStaffVfx : CelVfxSession
             if (echo)
                 SpawnEchoGhost(index);
         }
-
-        var path = NotePath(_timbre, SongBeatSchedule.PitchIndex(index));
-        var gain = SongBeatSchedule.IsFast(index) ? 0.78f : 0.92f;
-        PlaySound(path, gain);
-        if (echo)
-        {
-            var repeat = Track(Root.CreateTween());
-            repeat.TweenInterval(EchoDelay);
-            repeat.TweenCallback(Callable.From(() => PlaySound(path, gain * EchoGain)));
-        }
     }
 
     /// <summary>
@@ -556,7 +519,6 @@ internal sealed class SongStaffVfx : CelVfxSession
         if (!IsActive())
             return;
 
-        PlaySound(ChordPath(_timbre), 0.9f);
         BeginHold();
 
         var flash = Track(Root.CreateTween());
@@ -676,33 +638,6 @@ internal sealed class SongStaffVfx : CelVfxSession
         material.SetShaderParameter("accent", 0f);
         material.SetShaderParameter("opacity", 0f);
         return new NoteVisual(sprite, material, GlyphScale * size);
-    }
-
-    private void PlaySound(string path, float gain)
-    {
-        try
-        {
-            var result = GameAudioService.Shared.PlayOneShot(
-                new ResourceSoundFileSource(path),
-                new AudioPlaybackOptions
-                {
-                    Volume = gain * SakuraGameVolumeFollower.VoiceFactor(),
-                    Scope = AudioLifecycleScope.Combat,
-                    DebugName = "Song.note"
-                });
-            if (!result.Succeeded && !_audioFailureLogged)
-            {
-                _audioFailureLogged = true;
-                MainFile.Logger.Warn($"Song note {path} failed: {result.Status} {result.Message}");
-            }
-        }
-        catch (Exception exception)
-        {
-            if (_audioFailureLogged)
-                return;
-            _audioFailureLogged = true;
-            MainFile.Logger.Warn($"Song note {path} failed: {exception}");
-        }
     }
 
     private static float SecondsSince(ulong micros) => (Godot.Time.GetTicksUsec() - micros) / 1_000_000f;

@@ -92,15 +92,16 @@ internal static class SakuraMemoryPile
             ?? throw new InvalidOperationException("Cannot recall from Memory outside combat.");
         ValidateSelection(pile.Cards, selected);
 
-        foreach (var card in selected)
+        for (var index = 0; index < selected.Count; index++)
         {
+            var card = selected[index];
             if (card.IsTemporary())
                 card.RemoveTemporaryForExchange();
             if (upgrade && card.IsUpgradable)
                 CardCmd.Upgrade(card);
             if (freeThisTurn)
                 card.EnergyCost.SetThisTurnOrUntilPlayed(0, reduceOnly: true);
-            SakuraMemoryRecallVisual.Mark(card);
+            SakuraMemoryRecallVisual.Mark(card, index, selected.Count);
         }
 
         try

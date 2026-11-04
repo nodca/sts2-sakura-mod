@@ -172,7 +172,7 @@ internal sealed class SakuraCardReturnedFromPoolPatch : IPatchMethod
 internal sealed class SakuraMemoryRecallCardNodePatch : IPatchMethod
 {
     public static string PatchId => "sakura_card_visual_memory_recall_card_node";
-    public static string Description => "Start recalled Memory copies at the Memory button";
+    public static string Description => "Hand recalled Memory cards and Rewind returns to their in-place reveals";
     public static bool IsCritical => true;
 
     public static ModPatchTarget[] GetTargets() =>
@@ -185,9 +185,10 @@ internal sealed class SakuraMemoryRecallCardNodePatch : IPatchMethod
             typeof(bool))
     ];
 
-    public static void Postfix(CardModel card, bool owningPlayerIsLocal, NCard? __result)
+    public static void Postfix(CardModel card, PileType targetPileType, bool owningPlayerIsLocal, NCard? __result)
     {
-        SakuraMemoryRecallVisual.AfterNativeCardNodeCreated(card, __result, owningPlayerIsLocal);
+        SakuraMemoryRecallVisual.AfterNativeCardNodeCreated(card, __result, targetPileType, owningPlayerIsLocal);
+        RewindVfx.AfterNativeCardNodeCreated(card, __result, targetPileType, owningPlayerIsLocal);
     }
 }
 

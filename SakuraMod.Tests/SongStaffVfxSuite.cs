@@ -184,26 +184,6 @@ public sealed class SongStaffVfxSuite
     }
 
     [Fact]
-    public void EveryBeatAndChordHasASynthesizedNoteFile()
-    {
-        foreach (var timbre in Enum.GetValues<SongTimbre>())
-        {
-            var paths = Enumerable.Range(0, 20)
-                .Select(i => SongStaffVfx.NotePath(timbre, SongBeatSchedule.PitchIndex(i)))
-                .Append(SongStaffVfx.ChordPath(timbre))
-                .Distinct();
-            foreach (var path in paths)
-            {
-                var relative = path.Replace("res://", string.Empty, StringComparison.Ordinal);
-                RegressionTestHarness.Require(
-                    File.Exists(RegressionTestHarness.FindRepoFile(relative))
-                    && File.Exists(RegressionTestHarness.FindRepoFile(relative + ".import")),
-                    $"Expected {path} and its import to exist.");
-            }
-        }
-    }
-
-    [Fact]
     public void SongWaitsOnEachBeatAndFallsBackToTheLineBurst()
     {
         var song = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/ClowSakura/Song.cs"));
@@ -216,8 +196,8 @@ public sealed class SongStaffVfxSuite
             && song.Split("cues.Finale();").Length - 1 == 2,
             "Expected both Song cards to open the staff, wait on each beat, and close with the finale.");
 
-        // The beat is awaited before that beat's damage, so the note, its pitch,
-        // and the damage numbers land together.
+        // The beat is awaited before that beat's damage, so the note, the hit's
+        // sound, and the damage numbers land together.
         foreach (var block in song.Split("await cues.Beat(i, enemies);").Skip(1))
         {
             var damage = block.IndexOf("DealDamageToEnemies", StringComparison.Ordinal);
@@ -232,11 +212,14 @@ public sealed class SongStaffVfxSuite
             && song.Split("hitVfxNode: ").Length - 1 == 2,
             "Expected Song to keep the vanilla line burst whenever the staff is not drawn.");
         RegressionTestHarness.Require(
+            song.Split("hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx").Length - 1 == 2
+            && !vfx.Contains("PlayOneShot", StringComparison.Ordinal),
+            "Expected every Song hit to sound vanilla's blunt attack instead of a custom note.");
+        RegressionTestHarness.Require(
             vfx.Contains("CelVfxSession.PlayOrResolveAsync", StringComparison.Ordinal)
             && vfx.Contains("PreloadManager.Cache.GetScene", StringComparison.Ordinal)
-            && !vfx.Contains("ResourceLoader.Load", StringComparison.Ordinal)
-            && vfx.Contains("SakuraGameVolumeFollower.VoiceFactor()", StringComparison.Ordinal),
-            "Expected the staff to honour the card-VFX preference, read its scene from the run cache, and follow the game volume.");
+            && !vfx.Contains("ResourceLoader.Load", StringComparison.Ordinal),
+            "Expected the staff to honour the card-VFX preference and read its scene from the run cache.");
     }
 
     [Fact]
