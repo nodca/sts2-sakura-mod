@@ -88,15 +88,13 @@ internal static class ExchangePileScenario
         var triggerBefore = SakuraActions.ExtraEffectTriggerCountThisTurn(player);
 
         var exchange = await CombatScenarioContext.AddGeneratedCardToHandAsync<Exchange>(combat, player);
-        var handChoices = playerCombat.Hand.Cards
-            .Where(card => card != exchange && !card.IsTemporary())
-            .ToList();
-        var forgetIndex = handChoices.IndexOf(secondHandCard);
-        if (forgetIndex < 0 || handChoices.Contains(firstHandCard))
-            throw new InvalidOperationException("Exchange fixture cards were not filtered correctly for the hand selector.");
+        var handBefore = playerCombat.Hand.Cards.Where(card => card != exchange).ToArray();
+        var forgetCandidates = handBefore.Where(card => !card.IsTemporary()).ToArray();
+        if (!forgetCandidates.Contains(secondHandCard) || forgetCandidates.Contains(firstHandCard))
+            throw new InvalidOperationException("Exchange fixture cards were not filtered correctly for the random Forgotten pick.");
 
         var selector = new TestCardSelector();
-        selector.PrepareToSelect([forgetIndex]);
+        selector.PrepareToSelect([0]);
         selector.PrepareToSelect([0, 2]);
         using (CardSelectCmd.UseSelector(selector))
         {
@@ -104,13 +102,14 @@ internal static class ExchangePileScenario
         }
         await AwaitUiFramesAsync();
 
-        // The base effect draws 1 before the swap, so that card stays in hand instead of entering Memory.
-        var drawnByExchange = drawBefore.Where(playerCombat.Hand.Cards.Contains).ToArray();
-        var drawAfterDraw = drawBefore.Except(drawnByExchange).ToArray();
-        assertions.Equal("base_effect_drew_one", 1, drawnByExchange.Length);
-        assertions.True("memory_received_draw_identity", memory.Cards.SequenceEqual(drawAfterDraw));
+        // The base effect Manifests instead of drawing, so the whole Draw Pile enters Memory.
+        var manifested = playerCombat.Hand.Cards.Where(card => !handBefore.Contains(card)).ToArray();
+        assertions.Equal("base_effect_manifested_one", 1, manifested.Length);
+        assertions.True("manifested_copy_forgotten", manifested.All(card => card.IsTemporary()));
+        assertions.Equal("base_effect_did_not_draw", 0, drawBefore.Count(playerCombat.Hand.Cards.Contains));
+        assertions.True("memory_received_draw_identity", memory.Cards.SequenceEqual(drawBefore));
         assertions.True("draw_received_memory_identity", playerCombat.DrawPile.Cards.SequenceEqual(memoryBefore));
-        assertions.Equal("memory_count_swapped", drawAfterDraw.Length, memory.Cards.Count);
+        assertions.Equal("memory_count_swapped", drawBefore.Length, memory.Cards.Count);
         assertions.Equal("draw_count_swapped", memoryBefore.Length, playerCombat.DrawPile.Cards.Count);
         assertions.True("draw_marker_entered_memory", memory.Cards.Contains(drawMarker));
         assertions.True("forgotten_card_left_memory", playerCombat.DrawPile.Cards.Contains(forgottenInMemory));
@@ -123,7 +122,10 @@ internal static class ExchangePileScenario
             "all_exchanged_card_identities_remain_in_combat",
             temporaryBefore.Keys.All(combat.ContainsCard));
         assertions.True("base_effect_already_forgotten_card_unchanged", firstHandCard.IsTemporary());
-        assertions.True("base_effect_selected_card_forgotten", secondHandCard.IsTemporary());
+        assertions.Equal(
+            "base_effect_random_card_forgotten",
+            1,
+            forgetCandidates.Count(card => card.IsTemporary()));
         assertions.Equal(
             "base_effect_next_turn_remind_scheduled",
             1,
@@ -219,7 +221,7 @@ internal static class ExchangePileScenario
         RuntimeTestHost.WriteCheckpoint(
             request,
             "exchange_four_pile_selection_verified",
-            "Exchange resolved its base hand swap, then exchanged Memory and Draw with stable identity, order, and card state.");
+            "Exchange Manifested 1 and gave a random hand card Forgotten, then exchanged Memory and Draw with stable identity, order, and card state.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -239,7 +241,7 @@ internal static class ExchangePileScenario
                 memory_count = memory.Cards.Count,
                 draw_count = playerCombat.DrawPile.Cards.Count,
                 forgotten_state = forgottenInMemory.IsTemporary(),
-                selected_hand_card_forgotten = secondHandCard.IsTemporary(),
+                random_forgotten_count = forgetCandidates.Count(card => card.IsTemporary()),
                 result_pile = exchange.Pile?.Type
             }
         };

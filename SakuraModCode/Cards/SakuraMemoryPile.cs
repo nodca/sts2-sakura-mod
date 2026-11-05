@@ -73,7 +73,6 @@ internal static class SakuraMemoryPile
             throw new InvalidOperationException($"Failed to move {card.Id.Entry} into its owner's Memory pile.");
 
         card.RemoveTemporaryForExchange();
-        card.Owner.GetRelic<ClassicFrogRaincoatRelic>()?.RecordMemoryEntries(1);
     }
 
     // Recall moves the real Memory records back, mirroring how they entered: per-card

@@ -1314,15 +1314,16 @@ public sealed class CardMechanicsSuite
         upgradedExchange.UpgradeInternal();
         RegressionTestHarness.Require(
             exchange.EnergyCost.Canonical == 1
-            && upgradedExchange.EnergyCost.GetWithModifiers(CostModifiers.None) == 1
+            && upgradedExchange.EnergyCost.GetWithModifiers(CostModifiers.None) == 0
             && exchange.DynamicVars.Cards.IntValue == 1
-            && upgradedExchange.DynamicVars.Cards.IntValue == 2
+            && upgradedExchange.DynamicVars.Cards.IntValue == 1
             && !exchange.CanonicalKeywords.Contains(CardKeyword.Exhaust)
+            && exchange.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
             && exchange.DynamicVars["Remind"].IntValue == 1
             && SakuraCardHoverTips.StaticTipKeys(exchange).Contains(SakuraCardHoverTips.RemindTipKey)
             && new ExchangeRecallPower().StackType == PowerStackType.Counter
             && RegressionTestHarness.DeclaresMethod<ExchangeRecallPower>("AfterPlayerTurnStart"),
-            "Expected Exchange to cost 1, draw 1 (2 upgraded) without Exhaust, and schedule a stacking next-turn Remind 1.");
+            "Expected Exchange to cost 1 (0 upgraded), Manifest 1 without Exhaust, and schedule a stacking next-turn Remind 1.");
 
         RegressionTestHarness.Require(
             Synchronize.CanSynchronize(new Synchronize(), new Gale())

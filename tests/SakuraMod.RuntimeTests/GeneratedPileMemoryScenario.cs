@@ -202,7 +202,13 @@ internal static class GeneratedPileMemoryScenario
         var remind = await CombatScenarioContext.AddGeneratedCardToHandAsync<Remind>(combat, player);
         remind.UpgradeInternal();
         var handBeforeRemind = playerCombat.Hand.Cards.ToList();
-        await CombatScenarioContext.PlayCardAsync(remind);
+        var remindSelector = new TestCardSelector();
+        remindSelector.PrepareToSelect([0, 1]);
+        using (CardSelectCmd.UseSelector(remindSelector))
+        {
+            await CombatScenarioContext.PlayCardAsync(remind);
+        }
+        assertions.Equal("remind_selector_released", null, CardSelectCmd.Selector);
         // Recalled copies return as ordinary combat cards with stale Temporary
         // stripped, so they are not reachable through IsTemporary(); diff the hand.
         var recalled = playerCombat.Hand.Cards

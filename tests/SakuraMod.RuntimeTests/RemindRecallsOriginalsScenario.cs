@@ -1,6 +1,8 @@
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.TestSupport;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.TestProtocol;
 
@@ -32,8 +34,14 @@ internal static class RemindRecallsOriginalsScenario
         assertions.Equal("memory_seeded", 2, SakuraMemoryPile.Count(player));
 
         var recalledCount = 0;
-        await ActAsync(async choiceContext =>
-            recalledCount = await Remind.RecallIntoHand(player, choiceContext, 2, upgradeCopies: false));
+        // Remind is "up to", so even a Memory pile no larger than the count is a choice.
+        var recallSelector = new TestCardSelector();
+        recallSelector.PrepareToSelect([0, 1]);
+        using (CardSelectCmd.UseSelector(recallSelector))
+        {
+            await ActAsync(async choiceContext =>
+                recalledCount = await Remind.RecallIntoHand(player, choiceContext, 2, upgradeCopies: false));
+        }
         assertions.Equal("remind_recalls_two", 2, recalledCount);
         assertions.Equal("memory_emptied", 0, SakuraMemoryPile.Count(player));
         assertions.True(
@@ -60,8 +68,14 @@ internal static class RemindRecallsOriginalsScenario
             SakuraActions.MoveExistingCardToPileWithoutVisuals(null, overflow, memory.Type, CardPilePosition.Bottom));
         await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowSword>(combat, player);
         assertions.Equal("hand_full_before_overflow_recall", CardPile.MaxCardsInHand, playerCombat.Hand.Cards.Count);
-        await ActAsync(async choiceContext =>
-            await Remind.RecallIntoHand(player, choiceContext, 1, upgradeCopies: false));
+        var overflowSelector = new TestCardSelector();
+        overflowSelector.PrepareToSelect([0]);
+        using (CardSelectCmd.UseSelector(overflowSelector))
+        {
+            await ActAsync(async choiceContext =>
+                await Remind.RecallIntoHand(player, choiceContext, 1, upgradeCopies: false));
+        }
+        assertions.Equal("remind_selector_released", null, CardSelectCmd.Selector);
         assertions.True("full_hand_recall_goes_to_discard", playerCombat.DiscardPile.Cards.Contains(overflow));
         assertions.Equal("full_hand_recall_leaves_memory", 0, SakuraMemoryPile.Count(player));
 
