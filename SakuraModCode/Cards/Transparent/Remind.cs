@@ -48,8 +48,8 @@ public class Remind() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
         });
     }
 
-    // Shared Remind resolution: choose up to count Memory cards (all of them when
-    // there are not more than count) and move those cards into the hand, free this turn.
+    // Shared Remind resolution: choose up to count Memory cards (possibly none)
+    // and move those cards into the hand, free this turn.
     // beforeRecall receives the chosen count after the choice and before the move.
     internal static async Task<int> RecallIntoHand(
         Player owner,
@@ -62,13 +62,11 @@ public class Remind() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity
         if (count <= 0 || choices.Count == 0)
             return 0;
 
-        var cards = choices.Count <= count
-            ? choices.ToList()
-            : (await CardSelectCmd.FromSimpleGrid(
-                choiceContext,
-                choices,
-                owner,
-                new CardSelectorPrefs(SelectionPrompt, count, count) { Cancelable = false })).ToList();
+        var cards = (await CardSelectCmd.FromSimpleGrid(
+            choiceContext,
+            choices,
+            owner,
+            new CardSelectorPrefs(SelectionPrompt, 0, Math.Min(count, choices.Count)) { Cancelable = false })).ToList();
 
         if (beforeRecall is not null)
             await beforeRecall(cards.Count);

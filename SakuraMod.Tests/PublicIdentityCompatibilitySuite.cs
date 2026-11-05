@@ -76,8 +76,7 @@ public sealed class PublicIdentityCompatibilitySuite
                      "SakuraMod_ClassicTwinCardsDoubledThisTurn",
                      "SakuraMod_ClowCreateCostReductions",
                      "SakuraMod_RedCapeActivatedThisCombat",
-                     "SakuraMod_FrogRaincoatMemoryRemainder",
-                     "SakuraMod_FrogRaincoatPendingReminds"
+                     "SakuraMod_FrogRaincoatManifestedThisTurn"
                  })
         {
             RegressionTestHarness.Require(

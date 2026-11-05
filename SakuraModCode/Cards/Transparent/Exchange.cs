@@ -26,18 +26,18 @@ public class Exchange() : TransparentExtraEffectCard(1, CardType.Skill, CardRari
 {
     private static LocString PileSelectionPrompt => CardLoc<Exchange>("selectionPrompt");
 
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, SakuraKeywords.Manifest];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
         [SakuraCardHoverTips.TemporaryTipKey, SakuraMemoryPile.PileId, SakuraCardHoverTips.RemindTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new DynamicVar("Remind", 1)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        // Draw first so the Forgotten pick can include the new cards.
-        await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
-        var card = await SakuraActions.SelectHandCard(this, choiceContext, CanBecomeForgotten, cancelable: false);
-        if (card is not null)
-            await SakuraForgotten.GrantTemporary(choiceContext, card);
+        // The Manifested copy is already Forgotten, so the random pick skips it.
+        await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
+        var candidates = Owner.PlayerCombatState!.Hand.Cards.Where(CanBecomeForgotten).ToList();
+        if (candidates.Count > 0)
+            await SakuraForgotten.GrantTemporary(choiceContext, Owner.RunState.Rng.CombatCardSelection.NextItem(candidates)!);
 
         await PowerCmd.Apply<ExchangeRecallPower>(
             choiceContext,
@@ -131,7 +131,7 @@ public class Exchange() : TransparentExtraEffectCard(1, CardType.Skill, CardRari
     private bool CanBecomeForgotten(CardModel card) =>
         card != this && !card.IsTemporary() && card is not ISakuraForgottenImmune;
 
-    protected override void OnUpgrade() => DynamicVars.Cards.UpgradeValueBy(1);
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
 
 internal static class ExchangeRules

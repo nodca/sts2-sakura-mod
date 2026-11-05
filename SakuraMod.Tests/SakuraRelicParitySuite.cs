@@ -75,26 +75,21 @@ public sealed class SakuraRelicParitySuite
             && !SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: false, hasPinkTransformationCostume: false)
             && !SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: false, hasPinkTransformationCostume: true),
             "Expected Pink Transformation Costume to suppress only normal Sakura-card Void generation.");
-
-        var six = ClassicFrogRaincoatRelic.Accumulate(0, 6, 3);
-        var seven = ClassicFrogRaincoatRelic.Accumulate(0, 7, 3);
-        var carried = ClassicFrogRaincoatRelic.Accumulate(2, 2, 3);
-        RegressionTestHarness.Require(
-            six == (0, 2)
-            && seven == (1, 2)
-            && carried == (1, 1),
-            "Expected Frog Raincoat to queue one Remind per three Memory entries and preserve its remainder.");
     }
 
     [Fact]
-    public void FrogRaincoatReferencesTheRemindKeywordHoverTip()
+    public void FrogRaincoatManifestsOnTheFirstClearCardEachTurn()
     {
         var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Relics/Models/ClassicFrogRaincoatRelic.cs"));
 
         RegressionTestHarness.Require(
-            source.Contains("SakuraCardHoverTips.StaticTip(SakuraCardHoverTips.RemindTipKey)", StringComparison.Ordinal),
-            "Expected Frog Raincoat to expose its registered Remind static hover tip.");
+            new ClassicFrogRaincoatRelic().DynamicVars.Cards.IntValue == 1
+            && source.Contains("SakuraTransparentCardCatalog.IsTransparentCard(play.Card)", StringComparison.Ordinal)
+            && source.Contains("SakuraManifestLoop.Manifest(Owner, choiceContext", StringComparison.Ordinal)
+            && source.Contains("BeforeSideTurnStart", StringComparison.Ordinal)
+            && source.Contains("HoverTipFactory.FromKeyword(SakuraKeywords.Manifest)", StringComparison.Ordinal),
+            "Expected Frog Raincoat to Manifest 1 on the first Clear Card played each turn and expose the Manifest tip.");
     }
 
     [Fact]

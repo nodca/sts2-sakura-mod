@@ -61,6 +61,7 @@ internal static class ExtraEffectChoiceScenario
         var triggerBefore = SakuraActions.ExtraEffectTriggerCountThisTurn(player);
         var selector = new TestCardSelector();
         selector.PrepareToSelect([0]);
+        selector.PrepareToSelect([0]);
         PlayCardAction playAction;
         using (CardSelectCmd.UseSelector(selector))
         {
@@ -104,7 +105,8 @@ internal static class ExtraEffectChoiceScenario
                     $"RuntimeFixtureAction -> PowerCmd.Apply<{nameof(ClassicMagicChargePower)}>({FixtureMagicCharge})",
                     $"Generated {nameof(Snooze)} -> Memory pile",
                     $"Generated {nameof(Choice)} -> hand",
-                    "TestCardSelector index 0 -> first Manifest atlas option"
+                    "TestCardSelector index 0 -> first Manifest atlas option",
+                    "TestCardSelector index 0 -> Remind the Snooze from Memory"
                 }
             },
             ["before"] = new
