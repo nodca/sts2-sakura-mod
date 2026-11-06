@@ -27,7 +27,7 @@
   "SAKURA_MOD_RELIC_CLASSIC_FROG_RAINCOAT_RELIC.description": "每回合你首次打出透明牌时，[gold]显现[/gold]{Cards}。",
   "SAKURA_MOD_RELIC_CLASSIC_FROG_RAINCOAT_RELIC.flavor": "知世为雨天的库洛牌捕捉准备了最合适的服装。",
   "SAKURA_MOD_RELIC_CLASSIC_SWORD_JADE_RELIC.title": "剑之玉",
-  "SAKURA_MOD_RELIC_CLASSIC_SWORD_JADE_RELIC.description": "解封使一张牌的非伤害、非格挡数值提高 {ReleasePercent}%，而不是 {BaseReleasePercent}%。",
+  "SAKURA_MOD_RELIC_CLASSIC_SWORD_JADE_RELIC.description": "[gold]解封[/gold]改为使数值提高{ReleasePercent}%。",
   "SAKURA_MOD_RELIC_CLASSIC_SWORD_JADE_RELIC.flavor": "玉坠中寄宿着李家的剑意。",
   "SAKURA_MOD_RELIC_CLASSIC_TEDDY_BEAR_RELIC.title": "泰迪熊",
   "SAKURA_MOD_RELIC_CLASSIC_TEDDY_BEAR_RELIC.description": "每当你打出非空法术的法术牌，获得 {Block} 点格挡。",

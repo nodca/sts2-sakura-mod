@@ -29,6 +29,8 @@ public class Siege() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.
             DynamicVars.Block.IntValue,
             enemyCount);
         await CreatureCmd.GainBlock(Owner.Creature, block, ValueProp.Move, play, false);
+        if (activation.IsActive)
+            await ApplyExtraWeak(choiceContext);
         var pending = await PowerCmd.Apply<SiegePendingPower>(
             choiceContext,
             Owner.Creature,
@@ -36,7 +38,22 @@ public class Siege() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.
             Owner.Creature,
             this,
             false);
-        pending?.QueueEffect(activation.IsActive, DynamicVars.Weak.IntValue);
+        pending?.QueueEffect(DynamicVars.Weak.IntValue);
+    }
+
+    private async Task ApplyExtraWeak(PlayerChoiceContext choiceContext)
+    {
+        var enemies = CombatState!.HittableEnemies.ToList();
+        if (enemies.Count == 0)
+            return;
+
+        await PowerCmd.Apply<WeakPower>(
+            choiceContext,
+            enemies,
+            SiegeRules.ExtraWeak,
+            Owner.Creature,
+            this,
+            false);
     }
 
     protected override void OnUpgrade()
@@ -50,11 +67,10 @@ internal static class SiegeRules
 {
     internal const int BlockPerEnemy = 3;
     internal const int WeakAmount = 1;
+    internal const int ExtraWeak = 2;
 
     internal static int BlockAmount(int blockPerEnemy, int enemyCount) =>
         Math.Max(0, blockPerEnemy) * Math.Max(0, enemyCount);
 
     internal static bool ShouldTrigger(int block) => block > 0;
-
-    internal static int ExtraDamage(int block) => Math.Max(0, block);
 }

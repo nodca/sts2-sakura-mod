@@ -27,7 +27,7 @@
   "SAKURA_MOD_RELIC_CLASSIC_FROG_RAINCOAT_RELIC.description": "The first time you play a Clear Card each turn, [gold]Manifest[/gold] {Cards}.",
   "SAKURA_MOD_RELIC_CLASSIC_FROG_RAINCOAT_RELIC.flavor": "Tomoyo prepared the perfect costume for a rainy-day card capture.",
   "SAKURA_MOD_RELIC_CLASSIC_SWORD_JADE_RELIC.title": "Sword Jade",
-  "SAKURA_MOD_RELIC_CLASSIC_SWORD_JADE_RELIC.description": "Release increases a card's non-damage, non-block numbers by {ReleasePercent}% instead of {BaseReleasePercent}%.",
+  "SAKURA_MOD_RELIC_CLASSIC_SWORD_JADE_RELIC.description": "[gold]Release[/gold] increases numbers by {ReleasePercent}% instead.",
   "SAKURA_MOD_RELIC_CLASSIC_SWORD_JADE_RELIC.flavor": "A jade pendant that carries the Li family's sword spirit.",
   "SAKURA_MOD_RELIC_CLASSIC_TEDDY_BEAR_RELIC.title": "Teddy Bear",
   "SAKURA_MOD_RELIC_CLASSIC_TEDDY_BEAR_RELIC.description": "Whenever you play a Spell other than Empty Spell, gain {Block} Block.",

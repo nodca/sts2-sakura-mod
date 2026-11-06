@@ -43,11 +43,11 @@ internal static class CleansingStatsScenario
         }
         assertions.Equal("tender_three_plays_strength", -3, creature.GetPowerAmount<StrengthPower>());
         assertions.Equal("tender_three_plays_dexterity", -3, creature.GetPowerAmount<DexterityPower>());
-        var blank = await CombatScenarioContext.AddGeneratedCardToHandAsync<Blank>(combat, player);
-        await CombatScenarioContext.PlayCardAsync(blank);
-        assertions.True("blank_preserves_tender", creature.HasPower<TenderPower>());
-        assertions.Equal("blank_clears_then_tender_reapplies_strength", -1, creature.GetPowerAmount<StrengthPower>());
-        assertions.Equal("blank_clears_then_tender_reapplies_dexterity", -1, creature.GetPowerAmount<DexterityPower>());
+        var cleansingJump = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowJump>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(cleansingJump);
+        assertions.True("jump_preserves_tender", creature.HasPower<TenderPower>());
+        assertions.Equal("jump_clears_then_tender_reapplies_strength", -1, creature.GetPowerAmount<StrengthPower>());
+        assertions.Equal("jump_clears_then_tender_reapplies_dexterity", -1, creature.GetPowerAmount<DexterityPower>());
         await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
         assertions.Equal("tender_native_refund_strength", 3, creature.GetPowerAmount<StrengthPower>());
         assertions.Equal("tender_native_refund_dexterity", 3, creature.GetPowerAmount<DexterityPower>());
@@ -71,6 +71,6 @@ internal static class CleansingStatsScenario
         }));
         await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
         assertions.Equal("temporary_gain_expires_after_cleanse", -3, creature.GetPowerAmount<StrengthPower>());
-        return new() { ["fixture"] = "Native permanent +1/-2 Strength; three native Defends under Tender; activated Blank; native turn boundaries." };
+        return new() { ["fixture"] = "Native permanent +1/-2 Strength; three native Defends under Tender; activated Jump; native turn boundaries." };
     }
 }

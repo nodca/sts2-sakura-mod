@@ -231,7 +231,8 @@ public sealed class ResourceContractSuite
                  {
                      (new KindnessPower(), "kindness.png"),
                      (new GravitationHoldPower(), "gravitation_hold.png"),
-                     (new AppearPower(), "appear.png")
+                     (new AppearPower(), "appear.png"),
+                     (new RepairPower(), "repair.png")
                  })
         {
             Assert.True(power.IsVisible);
@@ -456,19 +457,19 @@ public sealed class ResourceContractSuite
         var frostbiteIndex = aqua.IndexOf("AquaRules.FrostbiteEnemies(targets)", StringComparison.Ordinal);
         var returnIndex = aqua.IndexOf("cues.Return(frostbitten);", StringComparison.Ordinal);
         var scopeEndIndex = aqua.IndexOf("});", returnIndex, StringComparison.Ordinal);
-        var drawIndex = aqua.IndexOf("CardPileCmd.Draw", StringComparison.Ordinal);
+        var bonusIndex = aqua.IndexOf("AquaRules.DamageAgainst(", StringComparison.Ordinal);
         var energyIndex = aqua.IndexOf("PlayerCmd.GainEnergy", StringComparison.Ordinal);
         RegressionTestHarness.Require(
             loopIndex >= 0
             && reachIndex > loopIndex
-            && attackIndex > reachIndex
+            && bonusIndex > reachIndex
+            && attackIndex > bonusIndex
             && frostbiteIndex > attackIndex
             && returnIndex > frostbiteIndex
             && scopeEndIndex > returnIndex
-            && drawIndex > scopeEndIndex
-            && energyIndex > drawIndex
-            && aqua.Contains("var frostbiteEnemies = frostbitten.Count;", StringComparison.Ordinal),
-            "Expected reach before each attack, Frostbite read after the loop, Return inside the scope, and rewards after it.");
+            && energyIndex > scopeEndIndex
+            && !aqua.Contains("CardPileCmd.Draw", StringComparison.Ordinal),
+            "Expected reach and the per-target Frostbite bonus before each attack, Frostbite enemies read after the loop, Return inside the scope, and the Energy reward after it.");
         // The last legacy primitive owner (Time's line clock) is retired, so every
         // old Aqua/Hail/Blaze/Gale/Time builder left with its file.
         RegressionTestHarness.Require(
@@ -757,7 +758,7 @@ public sealed class ResourceContractSuite
         var loopIndex = shade.IndexOf("foreach (var enemy in targets)", StringComparison.Ordinal);
         var reachIndex = shade.IndexOf("await cues.ReachAsync(enemy);", StringComparison.Ordinal);
         var weakIndex = shade.IndexOf("await PowerCmd.Apply<WeakPower>(choiceContext, enemy,", StringComparison.Ordinal);
-        var extraIndex = shade.IndexOf("await ApplyExtraEffect(choiceContext, play);", StringComparison.Ordinal);
+        var extraBlockIndex = shade.IndexOf("activation.IsActive ? ExtraBlock : 0", StringComparison.Ordinal);
         RegressionTestHarness.Require(
             snapshotIndex >= 0
             && spreadIndex > snapshotIndex
@@ -765,10 +766,12 @@ public sealed class ResourceContractSuite
             && loopIndex > blockIndex
             && reachIndex > loopIndex
             && weakIndex > reachIndex
-            && extraIndex > weakIndex
+            && extraBlockIndex > spreadIndex
+            && extraBlockIndex < blockIndex
+            && !shade.Contains("BlurPower", StringComparison.Ordinal)
             && shade.Split("PowerCmd.Apply<WeakPower>(").Length - 1 == 1
             && !shade.Contains("HittableEnemies.ToList(), DynamicVars.Weak", StringComparison.Ordinal),
-            "Expected spread before Block, reach before each single-target Weak, and Blur after the loop.");
+            "Expected spread before Block (including Extra Block), and reach before each single-target Weak.");
     }
 
     public static TheoryData<float, float[], bool> ShadeLayouts => new()
@@ -1291,6 +1294,75 @@ public sealed class ResourceContractSuite
     }
 
     [Fact]
+    public void StormCycloneKeepsCardVfxEngineeringContracts()
+    {
+        var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/scenes/combat/card_vfx/storm_cyclone_vfx.tscn"));
+        var shader = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/shaders/card_vfx/storm_cyclone_stroke.gdshader"));
+        var session = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Visuals/Classic/StormCycloneVfx.cs"));
+        var storm = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Storm.cs"));
+
+        // Look (strand counts, widths, palettes, timing) is art direction and
+        // deliberately unpinned; only runtime contracts are checked here.
+        RegressionTestHarness.Require(
+            scene.Contains("storm_cyclone_stroke.gdshader", StringComparison.Ordinal)
+            && scene.Contains("resource_local_to_scene = true", StringComparison.Ordinal)
+            && scene.Contains("mouse_filter = 2", StringComparison.Ordinal)
+            && !scene.Contains("BackBufferCopy", StringComparison.Ordinal),
+            "Expected Storm's scene to own a local stroke material, ignore input, and capture no screen.");
+        RegressionTestHarness.Require(
+            !shader.Contains("SCREEN_TEXTURE", StringComparison.Ordinal)
+            && !shader.Contains("hint_screen_texture", StringComparison.Ordinal)
+            && !shader.Contains("TIME", StringComparison.Ordinal)
+            && shader.Contains("uniform float elapsed", StringComparison.Ordinal),
+            "Expected Storm's stroke shader to read the session clock, never shader TIME or the screen.");
+        RegressionTestHarness.Require(
+            session.Contains(": CelVfxSession", StringComparison.Ordinal)
+            && session.Contains("session.StartClock();", StringComparison.Ordinal)
+            && session.Contains("PlayCelPrelude(card, caster)", StringComparison.Ordinal)
+            && session.Contains("PreloadManager.Cache.GetScene(ScenePath)", StringComparison.Ordinal)
+            && session.Contains("AssetPaths { get; } = [ScenePath, ShaderPath]", StringComparison.Ordinal)
+            && session.Contains("room.BackCombatVfxContainer.AddChildSafely(backRoot)", StringComparison.Ordinal)
+            && session.Contains("CombatManager.Instance.CombatEnded += OnStormCombatEnded", StringComparison.Ordinal)
+            && session.Contains("backRoot.TreeExiting += OnBackTreeExiting", StringComparison.Ordinal),
+            "Expected Storm to stay a shared cel session with preloaded assets and a released back layer.");
+        RegressionTestHarness.Require(
+            !session.Contains("CombatCardSelection", StringComparison.Ordinal)
+            && !session.Contains("RunState.Rng", StringComparison.Ordinal),
+            "Expected Storm's presentation to draw its own randomness, never the gameplay RNG.");
+
+        // Presentation call order: TestMode skips card VFX, so no combat scenario can observe it.
+        Assert.Contains("StormCycloneVfx.PlayFunnelAsync(", storm, StringComparison.Ordinal);
+        Assert.Contains("StormCycloneVfx.PlayVortexAsync(", storm, StringComparison.Ordinal);
+        var strikeIndex = storm.IndexOf("cues.Strike(target", StringComparison.Ordinal);
+        var hitIndex = storm.IndexOf("DealDamageHit(attack", StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            strikeIndex >= 0 && hitIndex > strikeIndex
+            && storm.Split("hitVfx: cues.FallbackHitVfx").Length == 4
+            && !storm.Contains("hitVfx: SakuraNativeHitFx.Slash", StringComparison.Ordinal),
+            "Expected every Storm hit to cue the cyclone first and keep the native slash as its fallback.");
+    }
+
+    [Fact]
+    public void StormCycloneScalesFromTheCardsOwnNumbers()
+    {
+        Assert.Equal(0f, StormCycloneVfx.Strength(1, 1, 9));
+        Assert.Equal(0.5f, StormCycloneVfx.Strength(5, 1, 9), 5);
+        Assert.Equal(1f, StormCycloneVfx.Strength(9, 1, 9));
+        Assert.Equal(1f, StormCycloneVfx.Strength(12, 1, 9));
+        Assert.Equal(1f, StormCycloneVfx.Strength(4, 4, 4));
+
+        Assert.Equal(3, StormCycloneVfx.FunnelStrandCount(0));
+        Assert.Equal(4, StormCycloneVfx.FunnelStrandCount(1));
+        Assert.Equal(5, StormCycloneVfx.FunnelStrandCount(2));
+        Assert.Equal(5, StormCycloneVfx.FunnelStrandCount(9));
+        Assert.True(StormCycloneVfx.FunnelLead > 0f && StormCycloneVfx.VortexLead > 0f);
+    }
+
+    [Fact]
     public void ArrowBowProjectileStaysATravelledArrowWithNoOtherCardOperator()
     {
         var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -1523,7 +1595,7 @@ public sealed class ResourceContractSuite
             "Expected Clow Cloud, Sakura Cloud, Clow Rain's two paths, and Sakura Rain to each wrap one session.");
 
         var activatedIndex = cloud.IndexOf("Task PlayActivatedCard(", StringComparison.Ordinal);
-        var helperIndex = cloud.IndexOf("private async Task ResolveCloudMechanics(", StringComparison.Ordinal);
+        var helperIndex = cloud.IndexOf("private int CalculatedBlock()", StringComparison.Ordinal);
         RegressionTestHarness.Require(
             activatedIndex >= 0
             && helperIndex > activatedIndex
@@ -1531,11 +1603,11 @@ public sealed class ResourceContractSuite
             && !cloud[activatedIndex..helperIndex].Contains("PlayCard(", StringComparison.Ordinal)
             && cloud[activatedIndex..helperIndex].Contains("ExtraBlock", StringComparison.Ordinal)
             && !cloud.Contains("await PlayCard(", StringComparison.Ordinal),
-            "Expected Clow Cloud's activated path to wrap one session around the mechanical helper plus extra block.");
+            "Expected Clow Cloud's activated path to wrap one session around its Block gain plus extra block.");
 
         foreach (var (source, cueAfter) in new[]
                  {
-                     (cloud, "ResolveCloudMechanics("),
+                     (cloud, "await GainBlock("),
                      (rain, "ReduceHandCosts(")
                  })
         {

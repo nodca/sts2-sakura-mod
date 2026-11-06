@@ -20,6 +20,7 @@ public static class CombatCommand
         "generated-pile-memory",
         "remind-recalls-originals",
         "appear-power-manifest",
+        "repair-memory-heal",
         "forgotten-cleanup-without-transparent",
         "element-turn-cleanup",
         "dream-turn-restoration",
@@ -53,8 +54,7 @@ public static class CombatCommand
         "cleansing-stats",
         "dark-endpoint",
         "light-eternal-day",
-        "windy-bind-draw",
-        "repair-jump-regeneration"
+        "windy-bind-draw"
     ];
     private static readonly HashSet<string> SaveLoadScenarioIds =
     [

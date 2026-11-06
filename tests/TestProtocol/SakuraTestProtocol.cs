@@ -265,8 +265,7 @@ public static class SakuraMultiplayerScenarios
     public const string SealedWandCharge = "sealed-wand-charge";
     public const string TurnEndDamageSync = "turn-end-damage-sync";
     public const string ThreePlayerDefensivePowers = "three-player-defensive-powers";
-    public const string ThreePlayerRepairJump = "three-player-repair-jump";
-    public const string ThreePlayerRepairJumpLoad = "three-player-repair-jump-load";
+    public const string ThreePlayerDeckLoad = "three-player-deck-load";
     public const string ThreePlayerMirrorCopy = "three-player-mirror-copy";
 
     public static IReadOnlyList<string> All { get; } =
@@ -284,16 +283,14 @@ public static class SakuraMultiplayerScenarios
         SealedWandCharge,
         TurnEndDamageSync,
         ThreePlayerDefensivePowers,
-        ThreePlayerRepairJump,
-        ThreePlayerRepairJumpLoad,
+        ThreePlayerDeckLoad,
         ThreePlayerMirrorCopy
     ];
 
     private static readonly HashSet<string> ThreePlayerScenarios = new(StringComparer.Ordinal)
     {
         ThreePlayerDefensivePowers,
-        ThreePlayerRepairJump,
-        ThreePlayerRepairJumpLoad,
+        ThreePlayerDeckLoad,
         ThreePlayerMirrorCopy
     };
 
@@ -308,7 +305,7 @@ public static class SakuraMultiplayerScenarios
             : SakuraMultiplayerRoles.MinPeerCount;
 
     public static bool IsSaveLoad(string scenarioId) =>
-        string.Equals(scenarioId, ThreePlayerRepairJumpLoad, StringComparison.Ordinal);
+        string.Equals(scenarioId, ThreePlayerDeckLoad, StringComparison.Ordinal);
 }
 
 public sealed record SakuraMultiplayerRequest(

@@ -24,7 +24,7 @@ internal static class GeneratedPileMemoryScenario
             ?? throw new InvalidOperationException("Player combat state is unavailable.");
         var transitions = new List<Dictionary<string, object?>>();
 
-        var temporary = combat.CreateCard<Spiral>(player);
+        var temporary = combat.CreateCard<Break>(player);
         temporary.UpgradeInternal();
         CardCmd.Enchant(ModelDb.Enchantment<SharpEnchantment>().ToMutable(), temporary, 2m);
         temporary.EnergyCost.SetThisTurnOrUntilPlayed(0, reduceOnly: true);
@@ -163,7 +163,7 @@ internal static class GeneratedPileMemoryScenario
         assertions.True("played_temporary_power_effect_retained", player.Creature.HasPower<AnotherMePower>());
         assertions.True(
             "temporary_memory_types",
-            memory.Cards.Any(card => card is Spiral)
+            memory.Cards.Any(card => card is Break)
             && memory.Cards.Any(card => card is Time));
         assertions.True("temporary_memory_owner", memory.Cards.All(card => ReferenceEquals(card.Owner, player)));
         assertions.Equal("temporary_memory_is_stable", false, memory.Cards.Any(card => card.IsTemporary()));
@@ -215,10 +215,10 @@ internal static class GeneratedPileMemoryScenario
         assertions.Equal("temporary_memory_consumed", 0, SakuraMemoryPile.Count(player));
         assertions.True("remind_enters_discard", playerCombat.DiscardPile.Cards.Contains(remind));
         assertions.Equal("remind_two_recalls_in_one_choice", 2, recalled.Count);
-        assertions.True("recalled_copy_types", recalled.Any(card => card is Spiral) && recalled.Any(card => card is Time));
+        assertions.True("recalled_copy_types", recalled.Any(card => card is Break) && recalled.Any(card => card is Time));
         assertions.True(
             "recalled_copy_inherits_enchantment",
-            recalled.OfType<Spiral>().Single().Enchantment is SharpEnchantment { Amount: 2 });
+            recalled.OfType<Break>().Single().Enchantment is SharpEnchantment { Amount: 2 });
         assertions.True("upgraded_remind_upgrades_recalled_copies", recalled.All(card => card.IsUpgraded));
         assertions.True("recalled_copies_are_ordinary", recalled.All(card => !card.IsTemporary()));
         assertions.Equal("recalled_copies_return_to_memory", false, recalled.Any(card => card.ReturnsToMemoryAfterTemporary()));
@@ -271,19 +271,17 @@ internal static class GeneratedPileMemoryScenario
         await CombatScenarioContext.EnqueueAndWaitAsync(extraSetupAction);
         assertions.Equal("spiral_extra_memory_count", 2, SakuraMemoryPile.Count(player));
 
+        var scheduledBeforeExtra = player.Creature.Powers.OfType<SpiralNextTurnPower>().Sum(static power => power.Amount);
+        var handSpiralsBeforeExtra = playerCombat.Hand.Cards.OfType<Spiral>().Count(card => !ReferenceEquals(card, spiralWithExtra));
         await CombatScenarioContext.PlayCardAsync(spiralWithExtra, combat.HittableEnemies.First());
-        var extraSpirals = playerCombat.Hand.Cards
-            .OfType<Spiral>()
-            .Where(card => card.IsTemporary() && card.ReturnsToMemoryAfterTemporary())
-            .ToList();
-        assertions.Equal("spiral_extra_generates_two_copies", 2, extraSpirals.Count);
-        assertions.True(
-            "spiral_extra_copies_are_free_and_upgraded",
-            extraSpirals.All(card =>
-                card.CurrentUpgradeLevel == 1
-                && card.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0));
-
-        await CombatScenarioContext.PlayCardAsync(extraSpirals[0], combat.HittableEnemies.First());
+        assertions.Equal(
+            "spiral_extra_schedules_two_next_turn_copies",
+            2,
+            player.Creature.Powers.OfType<SpiralNextTurnPower>().Sum(static power => power.Amount) - scheduledBeforeExtra);
+        assertions.Equal(
+            "spiral_extra_adds_no_copies_to_hand",
+            handSpiralsBeforeExtra,
+            playerCombat.Hand.Cards.OfType<Spiral>().Count());
         assertions.Equal("pile_memory_selector_released", null, CardSelectCmd.Selector);
         RuntimeTestHost.WriteCheckpoint(
             request,
@@ -295,13 +293,13 @@ internal static class GeneratedPileMemoryScenario
             ["fixture"] = new
             {
                 seed = request.Seed.ToString("X16"),
-                temporary_card = typeof(Spiral).FullName,
+                temporary_card = typeof(Break).FullName,
                 temporary_time_card = typeof(Time).FullName,
                 temporary_power_card = typeof(AnotherMe).FullName,
                 ordinary_card = typeof(Gale).FullName,
                 setup_mutations = new[]
                 {
-                    "Generated Temporary Spiral -> draw",
+                    "Generated Temporary Break -> draw",
                     "Generated Temporary Time -> draw",
                     "Generated ordinary Gale -> hand"
                 }

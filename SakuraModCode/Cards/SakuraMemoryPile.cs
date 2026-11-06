@@ -5,7 +5,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Relics;
+using SakuraMod.SakuraModCode.Powers;
 using STS2RitsuLib.CardPiles;
 using STS2RitsuLib.Content;
 
@@ -103,16 +103,20 @@ internal static class SakuraMemoryPile
             SakuraMemoryRecallVisual.Mark(card, index, selected.Count);
         }
 
+        IReadOnlyList<CardModel> recalled;
         try
         {
             var results = await CardPileCmd.Add(selected, PileType.Hand, CardPilePosition.Bottom);
-            return results.Where(static result => result.success).Select(static result => result.cardAdded).ToList();
+            recalled = results.Where(static result => result.success).Select(static result => result.cardAdded).ToList();
         }
         finally
         {
             foreach (var card in selected)
                 SakuraMemoryRecallVisual.Unmark(card);
         }
+
+        await RepairPower.AfterRecalledFromMemory(player);
+        return recalled;
     }
 
     internal static void ValidateSelection(

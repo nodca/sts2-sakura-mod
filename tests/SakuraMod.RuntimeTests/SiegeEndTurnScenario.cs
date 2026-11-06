@@ -30,13 +30,25 @@ internal static class SiegeEndTurnScenario
 
         var siege = await CombatScenarioContext.AddGeneratedCardToHandAsync<Siege>(combat, player);
         var blockBeforePlay = player.Creature.Block;
+        var hpBeforePlay = enemies.ToDictionary(static enemy => enemy, static enemy => enemy.CurrentHp);
         await CombatScenarioContext.PlayCardAsync(siege);
         var expectedFirstGain = SiegeRules.BlockAmount(SiegeRules.BlockPerEnemy, enemyCount);
-        var blockAtEnemyTurnEnd = player.Creature.Block;
-        var hpBeforeResolution = enemies.ToDictionary(static enemy => enemy, static enemy => enemy.CurrentHp);
+        var blockAfterPlay = player.Creature.Block;
 
-        assertions.Equal("siege_initial_block_gain", expectedFirstGain, blockAtEnemyTurnEnd - blockBeforePlay);
+        assertions.Equal("siege_initial_block_gain", expectedFirstGain, blockAfterPlay - blockBeforePlay);
         assertions.Equal("siege_pending_before_enemy_end", 1, player.Creature.GetPower<SiegePendingPower>()?.Amount ?? 0);
+        foreach (var enemy in enemies)
+        {
+            assertions.Equal(
+                $"siege_extra_weak_on_play_{enemy.CombatId}",
+                SiegeRules.ExtraWeak,
+                enemy.GetPower<WeakPower>()?.Amount ?? 0);
+            assertions.Equal(
+                $"siege_extra_deals_no_damage_{enemy.CombatId}",
+                0,
+                hpBeforePlay[enemy] - enemy.CurrentHp);
+        }
+        var hpBeforeResolution = enemies.ToDictionary(static enemy => enemy, static enemy => enemy.CurrentHp);
 
         await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
 
@@ -45,12 +57,13 @@ internal static class SiegeEndTurnScenario
         foreach (var enemy in enemies)
         {
             assertions.Equal(
+                // Extra Weak ticks down once at the enemy turn end, then Siege adds its own Weak.
                 $"siege_weak_{enemy.CombatId}",
-                SiegeRules.WeakAmount,
+                SiegeRules.ExtraWeak - 1 + SiegeRules.WeakAmount,
                 enemy.GetPower<WeakPower>()?.Amount ?? 0);
             assertions.Equal(
-                $"siege_extra_damage_{enemy.CombatId}",
-                blockAtEnemyTurnEnd,
+                $"siege_no_turn_end_damage_{enemy.CombatId}",
+                0,
                 hpBeforeResolution[enemy] - enemy.CurrentHp);
         }
 
@@ -66,7 +79,7 @@ internal static class SiegeEndTurnScenario
         RuntimeTestHost.WriteCheckpoint(
             request,
             "siege_end_turn_verified",
-            "Siege retained Block through a stunned enemy turn, then applied Weak and dealt current-Block damage without increasing another copy's Block.");
+            "Siege Extra applied 2 Weak on play, then the retained Block applied Weak at enemy turn end without damage or growing another copy's Block.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -80,7 +93,7 @@ internal static class SiegeEndTurnScenario
             ["resolution"] = new
             {
                 first_block_gain = expectedFirstGain,
-                block_used_for_damage = blockAtEnemyTurnEnd,
+                block_after_play = blockAfterPlay,
                 second_block_gain = expectedSecondGain
             }
         };

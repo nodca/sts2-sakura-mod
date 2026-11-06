@@ -12,6 +12,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class Blank() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
+    internal const int ExtraEnergy = 2;
+
     private static readonly PileType[] ForgottenTargetPileTypes =
     [
         PileType.Hand,
@@ -21,7 +23,7 @@ public class Blank() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.
 
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
-        [SakuraCardHoverTips.TemporaryTipKey, SakuraCardHoverTips.DebuffTipKey];
+        [SakuraCardHoverTips.TemporaryTipKey];
     internal static IReadOnlyList<PileType> TargetPileTypes => ForgottenTargetPileTypes;
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
@@ -49,31 +51,20 @@ public class Blank() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.
         }
 
         if (activation.IsActive)
-            await ApplyExtraEffect();
+            await ApplyExtraEffect(choiceContext);
     }
 
     internal static bool CanGainForgotten(CardType type, bool isForgotten) =>
         !isForgotten && type is CardType.Status or CardType.Curse;
 
-    private async Task ApplyExtraEffect()
-    {
-        await SakuraActions.CleanseDebuffs(Owner);
-
-        foreach (var enemy in CombatState!.Enemies)
-        {
-            foreach (var power in enemy.Powers
-                         .Where(IsEnemyPositivePower)
-                         .ToList())
-                await PowerCmd.Remove(power);
-        }
-    }
-
-    private static bool IsEnemyPositivePower(PowerModel power) =>
-        IsPositiveStatPower(power)
-        || power is ArtifactPower { Amount: > 0 };
-
-    private static bool IsPositiveStatPower(PowerModel power) =>
-        power.Amount > 0 && power is StrengthPower or DexterityPower;
+    private Task ApplyExtraEffect(PlayerChoiceContext choiceContext) =>
+        PowerCmd.Apply<EnergyNextTurnPower>(
+            choiceContext,
+            Owner.Creature,
+            ExtraEnergy,
+            Owner.Creature,
+            this,
+            false);
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }

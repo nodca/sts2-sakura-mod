@@ -60,7 +60,6 @@ internal static class QueenBoundCleanupScenario
         assertions.True("no_orphan_bound_next_turn",
             exhaustBound.Affliction is null && first.Affliction is null);
 
-        await VerifyRemoval<Blank>("blank", beforePlay: true, turns: 0, magic: 20);
         await VerifyRemoval<ClowJump>("activated_jump", beforePlay: true, turns: 0, magic: 20);
         await VerifyRemoval<SakuraJump>("sakura_jump", beforePlay: false, turns: 1);
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player,

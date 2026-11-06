@@ -5,7 +5,6 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Saves;
-using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Relics;
@@ -15,8 +14,6 @@ namespace SakuraMod.RuntimeTests;
 
 internal static class TurnEndDamageSyncMultiplayerScenario
 {
-    private const int SiegeBlock = 5;
-
     public static async Task<Dictionary<string, object?>> ExecuteAsync(
         SakuraTestRequest request,
         SakuraRuntimeEnvironment environment,
@@ -32,7 +29,7 @@ internal static class TurnEndDamageSyncMultiplayerScenario
             .Take(3)
             .ToArray();
         var eraseEnemy = enemies[0];
-        var siegeEnemy = enemies[1];
+        var secondEraseEnemy = enemies[1];
         var survivor = enemies[2];
         var turnsBeforeErase = players.ToDictionary(
             static player => player.NetId,
@@ -51,7 +48,7 @@ internal static class TurnEndDamageSyncMultiplayerScenario
         assertions.Equal("fixture_primary_enemy_count", 3, enemies.Length);
 
         await CreatureCmd.SetMaxAndCurrentHp(eraseEnemy, 1);
-        await CreatureCmd.SetMaxAndCurrentHp(siegeEnemy, 1);
+        await CreatureCmd.SetMaxAndCurrentHp(secondEraseEnemy, 1);
         await CreatureCmd.SetMaxAndCurrentHp(survivor, 100);
         foreach (var enemy in enemies)
             await CreatureCmd.Stun(enemy);
@@ -93,11 +90,11 @@ internal static class TurnEndDamageSyncMultiplayerScenario
                 player.PlayerCombatState?.Hand.Cards.Count(static card => card is SpellTurn) ?? 0);
         }
         assertions.True("erase_left_combat_running", CombatManager.Instance.IsInProgress);
-        assertions.True("erase_left_primary_enemies", siegeEnemy.IsAlive && survivor.IsAlive);
+        assertions.True("erase_left_primary_enemies", secondEraseEnemy.IsAlive && survivor.IsAlive);
         context.ThrowIfNetworkFailed();
         await context.SignalAndWaitAsync("turn-end-sync-erase-verified");
 
-        var turnsBeforeSiege = players.ToDictionary(
+        var turnsBeforeSecondErase = players.ToDictionary(
             static player => player.NetId,
             static player => player.PlayerCombatState?.Hand.Cards.Count(static card => card is SpellTurn) ?? 0);
         foreach (var player in players)
@@ -108,66 +105,48 @@ internal static class TurnEndDamageSyncMultiplayerScenario
             if (!wand.ApplyDeathCharge(uint.MaxValue - 1, threshold))
                 throw new InvalidOperationException($"Could not prepare Sealed Wand duplicate guard for player {player.NetId}.");
         }
-        foreach (var enemy in new[] { siegeEnemy, survivor })
+        foreach (var enemy in new[] { secondEraseEnemy, survivor })
             await CreatureCmd.Stun(enemy);
-        if (context.ClientPlayer.Creature.Block > 0)
-            await CreatureCmd.LoseBlock(context.ClientPlayer.Creature, context.ClientPlayer.Creature.Block);
-        await CreatureCmd.GainBlock(
-            context.ClientPlayer.Creature,
-            SiegeBlock,
-            ValueProp.Unpowered,
-            cardPlay: null,
-            fast: false);
-        var pending = await PowerCmd.Apply<SiegePendingPower>(
+        await PowerCmd.Apply<SakuraErasePower>(
             new ThrowingPlayerChoiceContext(),
+            secondEraseEnemy,
+            33,
             context.ClientPlayer.Creature,
-            1,
-            context.ClientPlayer.Creature,
-            null)
-            ?? throw new InvalidOperationException("Siege pending Power was not applied.");
-        pending.QueueEffect(extraEffect: true, weakAmount: SiegeRules.WeakAmount);
-        var survivorHpBeforeSiege = survivor.CurrentHp;
-        assertions.Equal("siege_fixture_target_hp", 1, siegeEnemy.CurrentHp);
-        assertions.Equal("siege_fixture_block", SiegeBlock, context.ClientPlayer.Creature.Block);
-        assertions.Equal("siege_fixture_pending", 1, pending.Amount);
-        await context.SignalAndWaitAsync("turn-end-sync-siege-prepared");
+            null);
+        var survivorHpBeforeSecondErase = survivor.CurrentHp;
+        assertions.Equal("second_erase_fixture_target_hp", 1, secondEraseEnemy.CurrentHp);
+        assertions.Equal("second_erase_fixture_erase", 33, secondEraseEnemy.GetPowerAmount<SakuraErasePower>());
+        await context.SignalAndWaitAsync("turn-end-sync-second-erase-prepared");
 
-        var siegeChecksumBaseline = context.ChecksumCount;
+        var secondEraseChecksumBaseline = context.ChecksumCount;
         await context.EndLocalTurnAsync();
-        await context.SignalAndWaitAsync("turn-end-sync-siege-turns-ended");
+        await context.SignalAndWaitAsync("turn-end-sync-second-erase-turns-ended");
         await MultiplayerScenarioContext.WaitForStateAsync(
-            () => !siegeEnemy.IsAlive,
-            "Siege enemy death to resolve");
+            () => !secondEraseEnemy.IsAlive,
+            "second Sakura Erase enemy death to resolve");
         await RunManager.Instance.ActionExecutor.FinishedExecutingActions().WaitAsync(TimeSpan.FromSeconds(30));
         await context.WaitForActionChecksumsAsync(
-            siegeChecksumBaseline,
-            "Siege turn-end death",
+            secondEraseChecksumBaseline,
+            "second Sakura Erase turn-end death",
             "After enemy turn end");
         await MultiplayerScenarioContext.WaitForStateAsync(
-            () => players.All(static player => player.PlayerCombatState?.Phase == PlayerTurnPhase.Play)
-                && context.ClientPlayer.Creature.GetPower<SiegePendingPower>() is null
-                && survivor.CurrentHp == survivorHpBeforeSiege - SiegeBlock,
-            "next multiplayer player turn after Siege");
+            () => players.All(static player => player.PlayerCombatState?.Phase == PlayerTurnPhase.Play),
+            "next multiplayer player turn after second Sakura Erase");
 
-        var afterSiege = Charges(context);
+        var afterSecondErase = Charges(context);
         foreach (var player in players)
         {
             assertions.Equal(
-                $"sealed_wand_siege_remaining_charge_{player.NetId}",
+                $"sealed_wand_second_erase_remaining_charge_{player.NetId}",
                 3,
-                afterSiege[player.NetId]);
+                afterSecondErase[player.NetId]);
             assertions.Equal(
-                $"sealed_wand_siege_generated_one_turn_{player.NetId}",
-                turnsBeforeSiege[player.NetId] + 1,
+                $"sealed_wand_second_erase_generated_one_turn_{player.NetId}",
+                turnsBeforeSecondErase[player.NetId] + 1,
                 player.PlayerCombatState?.Hand.Cards.Count(static card => card is SpellTurn) ?? 0);
         }
-        assertions.Equal("siege_survivor_weak", 1, survivor.GetPowerAmount<WeakPower>());
-        assertions.Equal("siege_survivor_damage", SiegeBlock, survivorHpBeforeSiege - survivor.CurrentHp);
-        assertions.Equal(
-            "siege_pending_removed",
-            null,
-            context.ClientPlayer.Creature.GetPower<SiegePendingPower>());
-        assertions.True("siege_left_combat_running", CombatManager.Instance.IsInProgress && survivor.IsAlive);
+        assertions.Equal("second_erase_survivor_untouched", survivorHpBeforeSecondErase, survivor.CurrentHp);
+        assertions.True("second_erase_left_combat_running", CombatManager.Instance.IsInProgress && survivor.IsAlive);
         context.ThrowIfNetworkFailed();
 
         await CreatureCmd.SetMaxAndCurrentHp(survivor, 1);
@@ -178,7 +157,7 @@ internal static class TurnEndDamageSyncMultiplayerScenario
             12,
             context.ClientPlayer.Creature,
             null);
-        var expectedFinal = afterSiege.ToDictionary(
+        var expectedFinal = afterSecondErase.ToDictionary(
             static pair => pair.Key,
             static pair => pair.Value + 3);
         assertions.Equal("poison_fixture_hp", 1, survivor.CurrentHp);
@@ -208,7 +187,7 @@ internal static class TurnEndDamageSyncMultiplayerScenario
             assertions.Equal(
                 $"sealed_wand_final_poison_delta_{player.NetId}",
                 3,
-                afterFinalPoison[player.NetId] - afterSiege[player.NetId]);
+                afterFinalPoison[player.NetId] - afterSecondErase[player.NetId]);
         }
         assertions.True("final_poison_ended_combat", !CombatManager.Instance.IsInProgress);
         assertions.True(
@@ -242,12 +221,12 @@ internal static class TurnEndDamageSyncMultiplayerScenario
             System.Text.Encoding.UTF8.GetBytes(string.Join(
                 "|",
                 players.Select(player =>
-                    $"{player.NetId}:{before[player.NetId]}:{afterErase[player.NetId]}:{afterSiege[player.NetId]}:{afterFinalPoison[player.NetId]}")))));
+                    $"{player.NetId}:{before[player.NetId]}:{afterErase[player.NetId]}:{afterSecondErase[player.NetId]}:{afterFinalPoison[player.NetId]}")))));
         await context.SignalAndWaitAsync("turn-end-damage-sync-verified");
         RuntimeTestHost.WriteCheckpoint(
             request,
             "turn_end_damage_sync_verified",
-            "Non-final Sakura Erase/Siege deaths and a final vanilla Poison death remained synchronized and charged both Sealed Wands exactly once.");
+            "Two non-final Sakura Erase deaths and a final vanilla Poison death remained synchronized and charged both Sealed Wands exactly once.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -257,7 +236,7 @@ internal static class TurnEndDamageSyncMultiplayerScenario
                 {
                     "Two Sakura players",
                     "Three stunned primary enemies with mirrored HP",
-                    "Mirrored Sakura Erase, Siege pending, and vanilla Poison Powers"
+                    "Mirrored Sakura Erase on two enemies and vanilla Poison Powers"
                 }
             },
             ["peer"] = new
@@ -277,15 +256,14 @@ internal static class TurnEndDamageSyncMultiplayerScenario
                 final_digest = digest,
                 divergence = false,
                 erase_enemy_hp = eraseEnemy.CurrentHp,
-                siege_enemy_hp = siegeEnemy.CurrentHp,
+                second_erase_enemy_hp = secondEraseEnemy.CurrentHp,
                 survivor_hp = survivor.CurrentHp,
-                survivor_weak = survivor.GetPowerAmount<WeakPower>(),
                 charges = players.Select(player => new
                 {
                     net_id = player.NetId,
                     before = before[player.NetId],
                     after_erase = afterErase[player.NetId],
-                    after_siege = afterSiege[player.NetId],
+                    after_second_erase = afterSecondErase[player.NetId],
                     after_final_poison = afterFinalPoison[player.NetId]
                 }).ToArray()
             }

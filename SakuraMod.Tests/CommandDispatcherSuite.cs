@@ -87,8 +87,7 @@ public sealed class CommandDispatcherSuite
                      "sealed-wand-charge",
                      "turn-end-damage-sync",
                      "three-player-defensive-powers (3 peers)",
-                     "three-player-repair-jump (3 peers)",
-                     "three-player-repair-jump-load (3 peers)",
+                     "three-player-deck-load (3 peers)",
                      "three-player-mirror-copy (3 peers)"
                  })
         {

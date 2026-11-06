@@ -41,6 +41,11 @@ public sealed class CardMechanicsSuite
         Assert.False(LucidPiercePower.ShouldSpread(null, new ClowSword()));
         Assert.Null(LucidPiercePower.ExpandDamageTargets([], ValueProp.Move, null, new ClowSword()));
         Assert.Null(LucidPiercePower.ExpandDamageTargets([], ValueProp.Unblockable, null, null));
+        Assert.Equal(PowerStackType.Counter, new LucidPiercePower().StackType);
+        Assert.True(RegressionTestHarness.DeclaresMethod<LucidPiercePower>("BeforeCardPlayed"));
+        Assert.True(RegressionTestHarness.DeclaresMethod<LucidPiercePower>("AfterCardPlayed"));
+        var lucidSource = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/Transparent/Lucid.cs"));
+        Assert.DoesNotContain("CardType.Attack", lucidSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -136,7 +141,8 @@ public sealed class CardMechanicsSuite
             Assert.False(SakuraActions.IsCleansableDebuff(power));
         Assert.Contains(SakuraCardHoverTips.DebuffTipKey, SakuraSourceCardText.StaticTipKeys(new ClowJump()));
         Assert.Contains(SakuraCardHoverTips.DebuffTipKey, SakuraSourceCardText.StaticTipKeys(new SakuraJump()));
-        Assert.Contains(SakuraCardHoverTips.DebuffTipKey, SakuraCardHoverTips.StaticTipKeys(new Blank()));
+        Assert.Contains(SakuraCardHoverTips.ReleaseTipKey, SakuraSourceCardText.StaticTipKeys(new SpellRelease()));
+        Assert.DoesNotContain(SakuraCardHoverTips.DebuffTipKey, SakuraCardHoverTips.StaticTipKeys(new Blank()));
     }
 
     [Fact]
@@ -844,8 +850,9 @@ public sealed class CardMechanicsSuite
             && sakuraCloud.DynamicVars.CalculationExtra.IntValue == 3,
             "Expected Clow Cloud to block for 5 plus 5 per Watery card (7/7 upgraded) and Sakura Cloud to block for 7 plus 3 per Watery card.");
         RegressionTestHarness.Require(
-            SakuraSourceCardText.ElementStatesReferencedBy(clowCloud).SequenceEqual([SakuraElement.Water]),
-            "Expected Clow Cloud to expose the Watery-state hover tip used by its conditional Rain generation.");
+            !SakuraSourceCardText.ElementStatesReferencedBy(clowCloud).Any()
+            && !SakuraSourceCardText.ElementStatesReferencedBy(sakuraCloud).Any(),
+            "Expected Cloud to no longer reference the Watery state now that it does not generate Rain.");
 
         // The card's own Watery element must not feed its own multiplier: the played card sits in the
         // Play pile while OnPlay runs, so a preview that counted it would show one Watery card more
@@ -1330,13 +1337,14 @@ public sealed class CardMechanicsSuite
             && new Aqua().DynamicVars.Damage.IntValue == 4
             && new Aqua().DynamicVars.Energy.IntValue == 1
             && SakuraCardHoverTips.KeywordTips(new Aqua()).Contains(SakuraKeywords.Frostbite)
-            && AquaRules.DrawCount(0) == 0
-            && AquaRules.DrawCount(1) == 1
-            && AquaRules.DrawCount(2) == 2
+            && new Aqua().DynamicVars["FrostbiteBonus"].IntValue == 4
+            && AquaRules.DamageFor(4, 0, 4) == 4
+            && AquaRules.DamageFor(4, 3, 4) == 16
+            && AquaRules.DamageFor(7, 2, 4) == 15
             && AquaRules.FrostbiteEnemyCount([]) == 0
             && AquaRules.FrostbiteEnemies([]).Count == 0
             && upgradedAqua.DynamicVars.Damage.IntValue == 7,
-            "Expected Aqua to cost 0, deal 4/7 AOE damage, draw 1 per Frostbite enemy, and grant 1 Energy per Frostbite enemy with Extra.");
+            "Expected Aqua to cost 0, deal 4/7 AOE damage, deal 4 more per Frostbite stack on each target, and grant 1 Energy per Frostbite enemy with Extra.");
 
         var spiral = new Spiral();
         var upgradedSpiral = RegressionTestHarness.MutableForCostTest(new Spiral());
@@ -1346,43 +1354,42 @@ public sealed class CardMechanicsSuite
         var spiralNextTurnPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Powers/Transparent/SpiralNextTurnPower.cs"));
         RegressionTestHarness.Require(
-            spiral.EnergyCost.Canonical == 1
+            spiral.EnergyCost.Canonical == 0
             && spiral.Rarity == CardRarity.Uncommon
             && spiral.Type == CardType.Attack
             && spiral.TargetType == TargetType.AnyEnemy
             && spiral.CanonicalKeywords.SequenceEqual([SakuraKeywords.Wind])
             && !spiral.GainsBlock
-            && spiral.DynamicVars.Damage.IntValue == 8
+            && spiral.DynamicVars.Damage.IntValue == 4
             && spiral.DynamicVars.Damage is SpiralDamageVar
             && spiral.DynamicVars["MemoryScale"].IntValue == 2
             && spiral.DynamicVars["NextTurnCopies"].IntValue == 1
             && spiral.DynamicVars["ExtraCopies"].IntValue == 2
             && SpiralRules.OutputWithMemory(8, 0) == 8
             && SpiralRules.OutputWithMemory(8, 4) == 12
-            && upgradedSpiral.DynamicVars.Damage.IntValue == 11
+            && upgradedSpiral.DynamicVars.Damage.IntValue == 7
             && upgradedSpiral.DynamicVars["NextTurnCopies"].IntValue == 1
-            && SpiralRules.OutputWithMemory(upgradedSpiral.DynamicVars.Damage.IntValue, 4) == 15
+            && SpiralRules.OutputWithMemory(upgradedSpiral.DynamicVars.Damage.IntValue, 4) == 11
             && spiralSource.Contains("power?.CarryUpgradeFrom(this)", StringComparison.Ordinal)
             && new SpiralNextTurnPower().InstanceType == PowerInstanceType.Instanced
             && new SpiralNextTurnPower().StackType == PowerStackType.Counter
             && !new SpiralNextTurnPower().IsVisible
             && RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("BeforeHandDraw")
             && !RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("AfterPlayerTurnStart"),
-            "Expected Spiral to deal 8 (11 upgraded) damage plus Memory and always schedule a one-shot next-hand-draw Spiral.");
+            "Expected Spiral to cost 0 and deal 4 (7 upgraded) damage plus Memory and always schedule a one-shot next-hand-draw Spiral.");
         RegressionTestHarness.Require(
-            spiralSource.Contains("AddTemporaryGeneratedCardsToHand<Spiral>", StringComparison.Ordinal)
-            && spiralSource.Contains("freeThisTurn: true", StringComparison.Ordinal)
-            && spiralSource.Contains("upgradeLevel: CurrentUpgradeLevel", StringComparison.Ordinal)
+            !spiralSource.Contains("AddTemporaryGeneratedCardsToHand", StringComparison.Ordinal)
+            && spiralSource.Contains("DynamicVars[\"ExtraCopies\"].IntValue", StringComparison.Ordinal)
             && !spiralSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("combatState.CreateCard<Spiral>(player)", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("card.CurrentUpgradeLevel < CopyUpgradeLevel[this]", StringComparison.Ordinal)
-            && spiralNextTurnPowerSource.Contains("FreeThisTurn = true", StringComparison.Ordinal)
+            && !spiralNextTurnPowerSource.Contains("FreeThisTurn", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("Pile = PileType.Draw", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("Position = CardPilePosition.Top", StringComparison.Ordinal)
             && spiralNextTurnPowerSource.Contains("AddTemporary = true", StringComparison.Ordinal)
             && !spiralNextTurnPowerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal)
             && !spiralNextTurnPowerSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal),
-            "Expected Spiral to put a Forgotten Spiral at its own upgrade level on top before next turn's draw, costing 0 that turn, while Extra generates two Forgotten Spirals at its upgrade level that cost 0 this turn.");
+            "Expected Spiral to put a Forgotten Spiral at its own upgrade level on top before next turn's draw, while Extra raises that to two copies through the same next-turn rule.");
 
         var blockedHit = new DamageResult(null!, ValueProp.Move) { UnblockedDamage = 0 };
         var unblockedHit = new DamageResult(null!, ValueProp.Move) { UnblockedDamage = 1 };
@@ -1476,15 +1483,14 @@ public sealed class CardMechanicsSuite
             && SiegeRules.BlockAmount(4, 3) == 12
             && !SiegeRules.ShouldTrigger(0)
             && SiegeRules.ShouldTrigger(1)
-            && SiegeRules.ExtraDamage(-1) == 0
-            && SiegeRules.ExtraDamage(9) == 9
+            && SiegeRules.ExtraWeak == 2
             && upgradedSiege.DynamicVars.Block.IntValue == 4
             && upgradedSiege.DynamicVars.Weak.IntValue == 2
             && new SiegePendingPower().StackType == PowerStackType.Counter
             && new SiegePendingPower().IsVisible
             && RegressionTestHarness.DeclaresMethod<SiegePendingPower>("BeforeSideTurnEnd")
             && RegressionTestHarness.DeclaresMethod<SiegePendingPower>("AfterSideTurnEnd"),
-            "Expected Siege to be a zero-cost Common that gains 3-to-4 Block per enemy with no flat base Block, resolves its lethal Extra damage before the enemy turn-end synchronization boundary, then applies Weak and removes itself after the native side-turn tick without persistent combat growth.");
+            "Expected Siege to be a zero-cost Common that gains 3-to-4 Block per enemy with no flat base Block, applies 2 Extra Weak to all enemies on play, then applies Weak at enemy turn end and removes itself after the native side-turn tick without persistent combat growth.");
 
         var shade = new Shade();
         var upgradedShade = RegressionTestHarness.MutableForCostTest(new Shade());
@@ -1499,8 +1505,9 @@ public sealed class CardMechanicsSuite
             && shade.DynamicVars.Block.IntValue == 11
             && shade.DynamicVars.Weak.IntValue == 1
             && upgradedShade.DynamicVars.Block.IntValue == 13
-            && upgradedShade.DynamicVars.Weak.IntValue == 2,
-            "Expected Shade to be Uncommon, cost 2, gain 11 Block, apply 1 Weak to all enemies, retain Block with Extra, and upgrade to 13 Block and 2 Weak.");
+            && upgradedShade.DynamicVars.Weak.IntValue == 2
+            && Shade.ExtraBlock == 14,
+            "Expected Shade to be Uncommon, cost 2, gain 11 Block, apply 1 Weak to all enemies, gain 14 more Block with Extra, and upgrade to 13 Block and 2 Weak.");
 
         var flight = new Flight();
         var upgradedFlight = RegressionTestHarness.MutableForCostTest(new Flight());
@@ -1755,9 +1762,12 @@ public sealed class CardMechanicsSuite
             && blankSource.Contains("PowerCmd.Apply<DrawCardsNextTurnPower>", StringComparison.Ordinal)
             && blankSource.Contains("EnergyCost.UpgradeBy(-1)", StringComparison.Ordinal)
             && !blankSource.Contains("GainBlock", StringComparison.Ordinal)
+            && Blank.ExtraEnergy == 2
+            && blankSource.Contains("PowerCmd.Apply<EnergyNextTurnPower>", StringComparison.Ordinal)
+            && !blankSource.Contains("CleanseDebuffs", StringComparison.Ordinal)
             && blankSource.IndexOf("PowerCmd.Apply<DrawCardsNextTurnPower>", StringComparison.Ordinal)
                 < blankSource.IndexOf("if (activation.IsActive)", StringComparison.Ordinal),
-            "Expected Blank's ordinary effect to use the shared Forgotten grant path and apply vanilla next-turn draw before the Extra branch.");
+            "Expected Blank's ordinary effect to use the shared Forgotten grant path and apply vanilla next-turn draw before the Extra branch, whose Extra grants 2 native next-turn Energy.");
 
     }
 
@@ -1836,6 +1846,25 @@ public sealed class CardMechanicsSuite
             && AppearPower.SpellTypeFor(SakuraElement.Water) == typeof(SpellShuiLong)
             && manifestLoopSource.Contains("AppearPower.AfterManifested(owner, copy)", StringComparison.Ordinal),
             "Expected Appear to be a 2-cost (1 upgraded) Rare Power that Manifests 1 each turn start and adds the matching element Spell for every Manifested card.");
+
+        var repair = new Repair();
+        var upgradedRepair = RegressionTestHarness.MutableForCostTest(new Repair());
+        upgradedRepair.UpgradeInternal();
+        var memoryPileSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraMemoryPile.cs"));
+        RegressionTestHarness.Require(
+            repair.Rarity == CardRarity.Rare
+            && repair.Type == CardType.Power
+            && repair.CanonicalKeywords.Contains(SakuraKeywords.Earth)
+            && !TransparentCard.HasMagicChargeExtraEffect(repair)
+            && repair.EnergyCost.Canonical == 1
+            && upgradedRepair.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
+            && repair.DynamicVars.Heal.IntValue == 3
+            && upgradedRepair.DynamicVars.Heal.IntValue == 4
+            && new RepairPower().StackType == PowerStackType.Counter
+            && RegressionTestHarness.DeclaresMethod<RepairPower>("BeforeSideTurnStart")
+            && memoryPileSource.Contains("await RepairPower.AfterRecalledFromMemory(player);", StringComparison.Ordinal),
+            "Expected Repair to be a 1-cost Rare Power that heals 3 (4 upgraded) the first time each turn a card returns from Memory to the hand.");
 
         RegressionTestHarness.Require(
             new SakuraDream().EnergyCost.Canonical == 1,
@@ -2302,10 +2331,10 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             storm.DynamicVars.Damage is SakuraSourceDamageVar
             && storm.DynamicVars[SakuraStorm.MaxDamageVar] is SakuraSourceDamageVar
-            && storm.DynamicVars.Damage.IntValue == 4
+            && storm.DynamicVars.Damage.IntValue == 1
             && storm.DynamicVars[SakuraStorm.MaxDamageVar].IntValue == 9
             && storm.DynamicVars["Magic"].IntValue == 7,
-            "Expected Sakura Storm's 4-9 range to expose both ends as damage vars so Strength and other damage hooks move them together.");
+            "Expected Sakura Storm's 1-9 range to expose both ends as damage vars so Strength and other damage hooks move them together.");
 
         RegressionTestHarness.Require(
             stormSource.Contains("ReleasedValue(MaxDamageVar)", StringComparison.Ordinal)
