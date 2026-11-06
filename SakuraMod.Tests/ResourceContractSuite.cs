@@ -230,7 +230,8 @@ public sealed class ResourceContractSuite
         foreach (var (power, iconFileName) in new (SakuraPowerModel Power, string IconFileName)[]
                  {
                      (new KindnessPower(), "kindness.png"),
-                     (new GravitationHoldPower(), "gravitation_hold.png")
+                     (new GravitationHoldPower(), "gravitation_hold.png"),
+                     (new AppearPower(), "appear.png")
                  })
         {
             Assert.True(power.IsVisible);

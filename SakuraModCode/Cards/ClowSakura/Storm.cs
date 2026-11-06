@@ -32,7 +32,7 @@ public class ClowStorm() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Un
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new CalculationBaseVar(3),
+        new CalculationBaseVar(4),
         new ExtraDamageVar(1),
         new CalculatedDamageVar(ValueProp.Move).WithMultiplier(StormRules.WindCardsPlayedThisTurn),
         new DynamicVar("Magic", Hits)

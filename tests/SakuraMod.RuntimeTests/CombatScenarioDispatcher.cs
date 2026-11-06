@@ -30,6 +30,7 @@ internal static class CombatScenarioDispatcher
             "manifest-temporary" => await ManifestTemporaryScenario.ExecuteAsync(request, assertions),
             "generated-pile-memory" => await GeneratedPileMemoryScenario.ExecuteAsync(request, assertions),
             "remind-recalls-originals" => await RemindRecallsOriginalsScenario.ExecuteAsync(request, assertions),
+            "appear-power-manifest" => await AppearPowerScenario.ExecuteAsync(request, assertions),
             "forgotten-cleanup-without-transparent" => await ForgottenCleanupWithoutTransparentScenario.ExecuteAsync(request, assertions),
             "element-turn-cleanup" => await ElementTurnCleanupScenario.ExecuteAsync(request, assertions),
             "dream-turn-restoration" => await DreamTurnRestorationScenario.ExecuteAsync(request, assertions),
