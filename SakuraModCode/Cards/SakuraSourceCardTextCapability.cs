@@ -204,7 +204,6 @@ internal static class SakuraSourceCardText
                 break;
             case ClowLock:
                 yield return SakuraCardHoverTips.TemporaryTipKey;
-                yield return SakuraMemoryPile.PileId;
                 break;
         }
 
@@ -220,14 +219,8 @@ internal static class SakuraSourceCardText
         if (card is ClowFreeze or ClowSnow or SakuraSnow or SpellShuiLong)
             yield return SakuraKeywords.Frostbite;
 
-        if (card is SpellLeiDi)
-            yield return SakuraKeywords.Stabilize;
-
         if (card is ClowLock)
-        {
             yield return CardKeyword.Retain;
-            yield return SakuraKeywords.Stabilize;
-        }
 
         if (card is SpellTurn)
             yield return SakuraKeywords.Purge;

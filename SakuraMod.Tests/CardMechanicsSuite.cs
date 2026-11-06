@@ -22,7 +22,7 @@ public sealed class CardMechanicsSuite
     {
         Assert.True(SakuraSourceCardText.ReferencesMagicChargeTip(new SpellHuoShen()));
         Assert.Contains(SakuraKeywords.Frostbite, SakuraSourceCardText.KeywordTips(new SpellShuiLong()));
-        Assert.Contains(SakuraKeywords.Stabilize, SakuraSourceCardText.KeywordTips(new SpellLeiDi()));
+        Assert.DoesNotContain(SakuraKeywords.Stabilize, SakuraSourceCardText.KeywordTips(new SpellLeiDi()));
         Assert.DoesNotContain(SakuraKeywords.Stabilize, SakuraSourceCardText.KeywordTips(new SpellFengHua()));
     }
 
@@ -1568,6 +1568,8 @@ public sealed class CardMechanicsSuite
             "Expected Hail to lock element state before spending Magic Charge, deal 8/11 damage to all enemies, and spend up to 3 Magic Charge for 1 Frostbite each.");
 
         var clowLock = new ClowLock();
+        var lockSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/ClowSakura/Lock.cs"));
         var upgradedClowLock = RegressionTestHarness.MutableForCostTest(new ClowLock());
         upgradedClowLock.UpgradeInternal();
         RegressionTestHarness.Require(
@@ -1577,8 +1579,11 @@ public sealed class CardMechanicsSuite
             && upgradedClowLock.DynamicVars.Cards.IntValue == 2
             && !clowLock.Keywords.Contains(CardKeyword.Retain)
             && !upgradedClowLock.Keywords.Contains(CardKeyword.Retain)
-            && ClowLock.ChargePerSelectedCard == 2,
-            "Expected Clow Lock to cost 0, choose 1 card (2 upgraded), and gain 2 Magic Charge per chosen card.");
+            && ClowLock.ChargePerSelectedCard == 2
+            && lockSource.Contains("card.GiveSingleTurnRetain();\n            await card.Stabilize(choiceContext);", StringComparison.Ordinal)
+            && !lockSource.Contains("DelayTemporaryRemoval", StringComparison.Ordinal)
+            && !SakuraSourceCardText.KeywordTips(clowLock).Contains(SakuraKeywords.Stabilize),
+            "Expected Clow Lock to cost 0, choose 1 card (2 upgraded) to Retain this turn and lose Forgotten, and gain 2 Magic Charge per chosen card.");
 
         var change = new ClowChange();
         var upgradedChange = RegressionTestHarness.MutableForCostTest(new ClowChange());
@@ -1808,8 +1813,8 @@ public sealed class CardMechanicsSuite
         upgradedAppear.UpgradeInternal();
         var appearSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Appear.cs"));
-        var appearPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/Transparent/AppearPower.cs"));
+        var manifestLoopSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraManifestLoop.cs"));
         RegressionTestHarness.Require(
             appear.Rarity == CardRarity.Rare
             && appear.Type == CardType.Power
@@ -1818,17 +1823,19 @@ public sealed class CardMechanicsSuite
             && SakuraTransparentCardCatalog.TransparentCardTypes.Count == 36
             && SakuraTransparentCardCatalog.TransparentCardTypes.Contains(typeof(Appear))
             && appear.EnergyCost.Canonical == 2
-            && upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
+            && upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
             && appear.DynamicVars["ManifestCards"].IntValue == 1
             && upgradedAppear.DynamicVars["ManifestCards"].IntValue == 1
-            && appearSource.Contains("if (IsUpgraded)", StringComparison.Ordinal)
-            && appearSource.Contains("power?.MarkUpgraded()", StringComparison.Ordinal)
+            && appearSource.Contains("EnergyCost.UpgradeBy(-1)", StringComparison.Ordinal)
             && new AppearPower().Type == PowerType.Buff
             && new AppearPower().StackType == PowerStackType.Counter
-            && AppearPower.WideManifestChoiceCount == 5
             && RegressionTestHarness.DeclaresMethod<AppearPower>("BeforeHandDraw")
-            && appearPowerSource.Contains("Math.Max(choiceCount, WideManifestChoiceCount)", StringComparison.Ordinal),
-            "Expected Appear to be a 2-cost Rare Power that Manifests 1 each turn start and, upgraded, widens every Manifest to 5 choices.");
+            && AppearPower.SpellTypeFor(SakuraElement.Fire) == typeof(SpellHuoShen)
+            && AppearPower.SpellTypeFor(SakuraElement.Earth) == typeof(SpellLeiDi)
+            && AppearPower.SpellTypeFor(SakuraElement.Wind) == typeof(SpellFengHua)
+            && AppearPower.SpellTypeFor(SakuraElement.Water) == typeof(SpellShuiLong)
+            && manifestLoopSource.Contains("AppearPower.AfterManifested(owner, copy)", StringComparison.Ordinal),
+            "Expected Appear to be a 2-cost (1 upgraded) Rare Power that Manifests 1 each turn start and adds the matching element Spell for every Manifested card.");
 
         RegressionTestHarness.Require(
             new SakuraDream().EnergyCost.Canonical == 1,

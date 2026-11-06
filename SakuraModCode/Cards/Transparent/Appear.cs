@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Hooks;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
@@ -26,17 +27,24 @@ public class Appear() : TransparentCard(2, CardType.Power, CardRarity.Rare, Targ
         [SakuraCardHoverTips.TemporaryTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
         [new CardsVar("ManifestCards", 1)];
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips =>
+    [
+        HoverTipFactory.FromCard<SpellHuoShen>(),
+        HoverTipFactory.FromCard<SpellLeiDi>(),
+        HoverTipFactory.FromCard<SpellFengHua>(),
+        HoverTipFactory.FromCard<SpellShuiLong>()
+    ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var power = await PowerCmd.Apply<AppearPower>(
+        await PowerCmd.Apply<AppearPower>(
             choiceContext,
             Owner.Creature,
             DynamicVars["ManifestCards"].IntValue,
             Owner.Creature,
             this,
             false);
-        if (IsUpgraded)
-            power?.MarkUpgraded();
     }
+
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }

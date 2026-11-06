@@ -10,8 +10,8 @@ using SakuraMod.TestProtocol;
 
 namespace SakuraMod.RuntimeTests;
 
-// Appear Manifests at the start of each turn; an upgraded copy widens every
-// Manifest (including stacked ones) from 3 to 5 choices.
+// Appear Manifests at the start of each turn, and every Manifested card brings
+// the Spell of its element; a second copy stacks both halves.
 internal static class AppearPowerScenario
 {
     public static async Task<Dictionary<string, object?>> ExecuteAsync(
@@ -28,40 +28,52 @@ internal static class AppearPowerScenario
         await CombatScenarioContext.PlayCardAsync(appear);
         assertions.Equal("appear_power_amount", 1, player.Creature.GetPower<AppearPower>()?.Amount ?? 0);
 
-        var handBefore = playerCombat.Hand.Cards.ToHashSet();
-        using (CardSelectCmd.UseSelector(selector))
-        {
-            await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
-        }
+        var (firstManifested, firstSpells) = await EndTurnAsync();
         assertions.True("base_manifest_offers_three", selector.OptionCounts.SequenceEqual([3]));
-        var manifested = playerCombat.Hand.Cards
-            .Where(card => !handBefore.Contains(card) && card.IsTemporary())
-            .Where(SakuraTransparentCardCatalog.IsTransparentCard)
-            .ToArray();
-        assertions.True("base_manifest_reaches_hand", manifested.Length >= 1);
+        assertions.Equal("base_manifest_reaches_hand", 1, firstManifested.Length);
+        assertions.True(
+            "base_spell_matches_manifest_element",
+            firstSpells.Select(card => card.GetType())
+                .SequenceEqual(SakuraActions.ElementsOf(firstManifested[0]).Select(AppearPower.SpellTypeFor)));
 
         var upgradedAppear = await CombatScenarioContext.AddGeneratedCardToHandAsync<Appear>(combat, player);
         upgradedAppear.UpgradeInternal();
+        assertions.Equal("upgraded_appear_costs_one", 1, upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local));
         await CombatScenarioContext.PlayCardAsync(upgradedAppear);
         assertions.Equal("stacked_appear_power_amount", 2, player.Creature.GetPower<AppearPower>()?.Amount ?? 0);
 
         selector.OptionCounts.Clear();
-        using (CardSelectCmd.UseSelector(selector))
-        {
-            await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
-        }
-        assertions.True("upgraded_manifests_offer_five", selector.OptionCounts.SequenceEqual([5, 5]));
+        var (stackedManifested, stackedSpells) = await EndTurnAsync();
+        assertions.Equal("stacked_manifest_count", 2, stackedManifested.Length);
+        assertions.Equal(
+            "stacked_spells_per_manifest",
+            stackedManifested.Sum(card => SakuraActions.ElementsOf(card).Count) * 2,
+            stackedSpells.Length);
         assertions.Equal("selector_released", null, CardSelectCmd.Selector);
 
         RuntimeTestHost.WriteCheckpoint(
             request,
             "appear_power_manifest_verified",
-            "Appear Manifested at turn start, stacked, and its upgrade widened every Manifest to 5 choices.");
+            "Appear Manifested at turn start, added the matching element Spell per Manifested card, and stacked.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
-            ["upgraded_option_counts"] = selector.OptionCounts.ToArray()
+            ["stacked_spells"] = stackedSpells.Select(card => card.GetType().Name).ToArray()
         };
+
+        async Task<(CardModel[] Manifested, CardModel[] Spells)> EndTurnAsync()
+        {
+            var handBefore = playerCombat.Hand.Cards.ToHashSet();
+            using (CardSelectCmd.UseSelector(selector))
+            {
+                await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
+            }
+
+            var added = playerCombat.Hand.Cards.Where(card => !handBefore.Contains(card)).ToArray();
+            return (
+                added.Where(card => card.IsTemporary() && SakuraTransparentCardCatalog.IsTransparentCard(card)).ToArray(),
+                added.Where(card => card is ElementSpellCard).ToArray());
+        }
     }
 
     private sealed class RecordingCardSelector : ICardSelector
