@@ -20,6 +20,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 
 public class Shade() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity.Uncommon, TargetType.AllEnemies)
 {
+    internal const int ExtraBlock = 14;
+
     public override bool GainsBlock => true;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
 
@@ -31,7 +33,9 @@ public class Shade() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity.
         await ShadeGroundDragonVfx.PlayOrResolveAsync(this, Owner.Creature, targets, activation.IsActive, async cues =>
         {
             await cues.SpreadAsync();
-            await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
+            // The Extra Block joins the same gain, so Dexterity applies once.
+            var block = DynamicVars.Block.IntValue + (activation.IsActive ? ExtraBlock : 0);
+            await CreatureCmd.GainBlock(Owner.Creature, block, ValueProp.Move, play, false);
 
             // Native multi-target Apply is this same per-target loop; splitting it
             // lets each enemy's Weak land as the shadow passes under it.
@@ -40,14 +44,8 @@ public class Shade() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity.
                 await cues.ReachAsync(enemy);
                 await PowerCmd.Apply<WeakPower>(choiceContext, enemy, DynamicVars.Weak.IntValue, Owner.Creature, this, false);
             }
-
-            if (activation.IsActive)
-                await ApplyExtraEffect(choiceContext, play);
         });
     }
-
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await PowerCmd.Apply<BlurPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
 
     protected override void OnUpgrade()
     {

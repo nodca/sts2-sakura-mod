@@ -401,6 +401,7 @@ internal static class SakuraCardHoverTips
     internal const string BubblesBuffTipKey = "SAKURAMOD-BUBBLES_BUFF";
     internal const string BubblesBasicBuffTipKey = "SAKURAMOD-BUBBLES_BASIC_BUFF";
     internal const string MistDefenseTipKey = "SAKURAMOD-MIST_DEFENSE";
+    internal const string ReleaseTipKey = "SAKURAMOD-RELEASE";
 
     internal static IEnumerable<IHoverTip> HoverTips(CardModel card)
     {

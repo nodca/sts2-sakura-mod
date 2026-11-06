@@ -72,7 +72,7 @@ internal static class LucidAoeScenario
             assertions.Equal($"selected_attack_hits_all_with_block_{i}", 2, before[i] - enemies[i].CurrentHp);
             assertions.Equal($"weak_stays_on_original_target_{i}", i == 0 ? 1 : 0, enemies[i].GetPowerAmount<WeakPower>());
         }
-        assertions.True("selected_mark_persists_after_play", player.Creature.GetPower<LucidPiercePower>() is not null);
+        assertions.True("next_attack_charge_spent_after_play", player.Creature.GetPower<LucidPiercePower>() is null);
 
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async _ =>
         {
@@ -80,14 +80,24 @@ internal static class LucidAoeScenario
         }));
         before = enemies.Select(enemy => enemy.CurrentHp).ToArray();
         await CombatScenarioContext.PlayCardAsync(selected, enemies[0]);
-        for (var i = 0; i < enemies.Count; i++)
-            assertions.Equal($"recovered_attack_still_spreads_{i}", 3, before[i] - enemies[i].CurrentHp);
+        for (var i = 1; i < enemies.Count; i++)
+            assertions.Equal($"second_attack_after_spent_charge_does_not_spread_{i}", before[i], enemies[i].CurrentHp);
 
         var unselected = await CombatScenarioContext.AddGeneratedCardToHandAsync<Neutralize>(combat, player);
         before = enemies.Select(enemy => enemy.CurrentHp).ToArray();
         await CombatScenarioContext.PlayCardAsync(unselected, enemies[0]);
         for (var i = 1; i < enemies.Count; i++)
             assertions.Equal($"unselected_attack_does_not_spread_{i}", before[i], enemies[i].CurrentHp);
+
+        // The spread follows your next Attack, not the searched card.
+        var searchedSkill = await CombatScenarioContext.AddGeneratedCardToHandAsync<DefendIronclad>(combat, player);
+        await SearchAsync(searchedSkill);
+        assertions.Equal("skill_search_still_grants_next_attack", 1, player.Creature.GetPowerAmount<LucidPiercePower>());
+        var unsearched = await CombatScenarioContext.AddGeneratedCardToHandAsync<Neutralize>(combat, player);
+        before = enemies.Select(enemy => enemy.CurrentHp).ToArray();
+        await CombatScenarioContext.PlayCardAsync(unsearched, enemies[0]);
+        for (var i = 0; i < enemies.Count; i++)
+            assertions.Equal($"unsearched_next_attack_hits_all_{i}", 3, before[i] - enemies[i].CurrentHp);
 
         var random = await CombatScenarioContext.AddGeneratedCardToHandAsync<SwordBoomerang>(combat, player);
         await SearchAsync(random);
@@ -101,12 +111,12 @@ internal static class LucidAoeScenario
         await SearchAsync(unusedPower);
         assertions.Equal("selected_power_cost_not_reduced", 1, unusedPower.EnergyCost.GetWithModifiers(CostModifiers.All));
         await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
-        assertions.True("all_selected_marks_expire", player.Creature.GetPower<LucidPiercePower>() is null);
+        assertions.True("unused_next_attack_charge_expires", player.Creature.GetPower<LucidPiercePower>() is null);
 
         await PrepareAsync(10);
         var skill = await CombatScenarioContext.AddGeneratedCardToHandAsync<DefendIronclad>(combat, player);
         await SearchAsync(skill);
-        assertions.True("skill_selection_does_not_mark", player.Creature.GetPower<LucidPiercePower>() is null);
+        assertions.True("extra_replaces_next_attack_charge", player.Creature.GetPower<LucidPiercePower>() is null);
         assertions.True("extra_active_without_attack_selection", player.Creature.GetPower<LucidPierceAllPower>() is not null);
         assertions.Equal("selected_skill_cost_not_reduced", 1, skill.EnergyCost.GetWithModifiers(CostModifiers.All));
         var energyBeforeSkill = player.PlayerCombatState!.Energy;
@@ -128,7 +138,7 @@ internal static class LucidAoeScenario
         before = enemies.Select(enemy => enemy.CurrentHp).ToArray();
         await CombatScenarioContext.PlayCardAsync(storm);
         var stormDamage = before[0] - enemies[0].CurrentHp;
-        assertions.True("manual_random_multi_hit_damage_range", stormDamage >= 28 && stormDamage <= 63);
+        assertions.True("manual_random_multi_hit_damage_range", stormDamage >= 7 && stormDamage <= 63);
         for (var i = 1; i < enemies.Count; i++)
             assertions.Equal($"manual_random_multi_hit_hits_all_{i}", stormDamage, before[i] - enemies[i].CurrentHp);
 

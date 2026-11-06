@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
@@ -35,7 +36,9 @@ public class ClassicSwordJadeRelic : SakuraRelicModel
 
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DynamicVar("BaseReleasePercent", 50),
         new DynamicVar("ReleasePercent", (int)(ReleaseRate * 100))
     ];
+
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips =>
+        [SakuraCardHoverTips.StaticTip(SakuraCardHoverTips.ReleaseTipKey)];
 }

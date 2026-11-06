@@ -63,6 +63,12 @@ public sealed class CardVisualContractSuite
                 new SakuraRain(),
                 [CloudRainWeatherVfx.ScenePath, .. sharedCelPaths]),
             new VfxCase(
+                new ClowStorm(),
+                [StormCycloneVfx.ScenePath, StormCycloneVfx.ShaderPath, .. sharedCelPaths]),
+            new VfxCase(
+                new SakuraStorm(),
+                [StormCycloneVfx.ScenePath, StormCycloneVfx.ShaderPath, .. sharedCelPaths]),
+            new VfxCase(
                 new SpellTurn(),
                 [
                     SpellTurnTransformationVfx.ScenePath,
@@ -100,6 +106,7 @@ public sealed class CardVisualContractSuite
                      "SakuraModCode/Cards/Visuals/Transparent/TimeStopVfx.cs",
                      "SakuraModCode/Cards/Visuals/Transparent/ShadeGroundDragonVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/CloudRainWeatherVfx.cs",
+                     "SakuraModCode/Cards/Visuals/Classic/StormCycloneVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/ArrowBowProjectileVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/SpellTurnTransformationVfx.cs",
                      "SakuraModCode/Cards/Visuals/Classic/ClowTimeHourglassVfx.cs",

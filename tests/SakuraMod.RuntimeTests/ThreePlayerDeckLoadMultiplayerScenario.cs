@@ -12,7 +12,9 @@ using SakuraMod.TestProtocol;
 
 namespace SakuraMod.RuntimeTests;
 
-internal static class ThreePlayerRepairJumpLoadMultiplayerScenario
+// Three players each save one Clear card (Repair) and one Clow card (Jump) in their deck.
+// After load, the cards come back owned and deck-linked, and playing Jump stays in sync.
+internal static class ThreePlayerDeckLoadMultiplayerScenario
 {
     private const int FixtureMagicCharge = 20;
     private const int FixtureVulnerable = 2;
@@ -132,20 +134,6 @@ internal static class ThreePlayerRepairJumpLoadMultiplayerScenario
 
         foreach (var player in players)
         {
-            var repair = cards[player.NetId].Repair;
-            if (context.LocalPlayer.NetId == player.NetId)
-                await context.PlayOwnedCardAsync(repair);
-            await context.SignalAndWaitAsync($"loaded-repair-played-{player.NetId}");
-            await MultiplayerScenarioContext.WaitForStateAsync(
-                () => repair.Pile?.Type == PileType.Exhaust
-                    && player.Creature.GetPower<RegenPower>()?.Amount == ActivatedRegen(repair),
-                $"loaded Repair regeneration for player {player.NetId}");
-            await context.WaitForActionsAsync();
-            await context.SignalAndWaitAsync($"loaded-repair-settled-{player.NetId}");
-        }
-
-        foreach (var player in players)
-        {
             var jump = cards[player.NetId].Jump;
             if (context.LocalPlayer.NetId == player.NetId)
                 await context.PlayOwnedCardAsync(jump);
@@ -154,10 +142,6 @@ internal static class ThreePlayerRepairJumpLoadMultiplayerScenario
                 () => jump.Pile?.Type == PileType.Exhaust
                     && !player.Creature.HasPower<VulnerablePower>(),
                 $"loaded Jump debuff removal for player {player.NetId}");
-            assertions.Equal(
-                $"loaded_repair_regen_after_jump_{player.NetId}",
-                ActivatedRegen(cards[player.NetId].Repair),
-                player.Creature.GetPower<RegenPower>()?.Amount ?? 0);
             await context.WaitForActionsAsync();
             await context.SignalAndWaitAsync($"loaded-jump-settled-{player.NetId}");
         }
@@ -179,19 +163,11 @@ internal static class ThreePlayerRepairJumpLoadMultiplayerScenario
             () => players.All(static player => player.PlayerCombatState?.Phase == PlayerTurnPhase.Play),
             "loaded three-player next turn Play phase");
 
-        foreach (var player in players)
-        {
-            assertions.Equal(
-                $"loaded_repair_regen_decays_once_after_turn_{player.NetId}",
-                ActivatedRegen(cards[player.NetId].Repair) - 1,
-                player.Creature.GetPower<RegenPower>()?.Amount ?? 0);
-        }
-
         await context.SignalAndWaitAsync("loaded-comparison-ready");
         RuntimeTestHost.WriteCheckpoint(
             request,
-            "loaded_repair_jump_regeneration_verified",
-            "All three loaded players kept Repair regeneration through activated Jump, then it decayed normally at the turn boundary.");
+            "loaded_deck_play_verified",
+            "All three loaded players kept their restored Repair and Jump, played Jump in sync, and reached the next turn together.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -214,7 +190,6 @@ internal static class ThreePlayerRepairJumpLoadMultiplayerScenario
                 players = players.Select(player => new
                 {
                     net_id = player.NetId,
-                    regen = player.Creature.GetPower<RegenPower>()?.Amount ?? 0,
                     vulnerable = player.Creature.GetPower<VulnerablePower>()?.Amount ?? 0,
                     turn = player.PlayerCombatState?.TurnNumber,
                     phase = player.PlayerCombatState?.Phase.ToString()
@@ -222,10 +197,6 @@ internal static class ThreePlayerRepairJumpLoadMultiplayerScenario
             }
         };
     }
-
-    // Activated Repair stacks its Extra Regeneration on top of the base amount.
-    private static int ActivatedRegen(Repair repair) =>
-        repair.DynamicVars["RegenPower"].IntValue + Repair.ExtraRegen;
 
     private static Task MoveToHandAsync(CardModel card) =>
         card.Pile?.Type == PileType.Hand

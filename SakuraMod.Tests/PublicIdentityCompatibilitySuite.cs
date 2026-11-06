@@ -10,7 +10,7 @@ using STS2RitsuLib.Content;
 public sealed class PublicIdentityCompatibilitySuite
 {
     private const string ExpectedRegisteredEntryHash =
-        "F3CFEBFACDCB20CF114B8B2DBF155F280719C2F410F7D26CB9C535DC60A2FDDC";
+        "EB526599C3524DF3B9792EED9140E9E41B717C6AC98D3884B1760583FB1F7A7F";
 
     [Fact]
     public void RegisteredPublicEntriesRemainSaveCompatible()
@@ -76,7 +76,8 @@ public sealed class PublicIdentityCompatibilitySuite
                      "SakuraMod_ClassicTwinCardsDoubledThisTurn",
                      "SakuraMod_ClowCreateCostReductions",
                      "SakuraMod_RedCapeActivatedThisCombat",
-                     "SakuraMod_FrogRaincoatManifestedThisTurn"
+                     "SakuraMod_FrogRaincoatManifestedThisTurn",
+                     "SakuraMod_RepairPowerHealedThisTurn"
                  })
         {
             RegressionTestHarness.Require(

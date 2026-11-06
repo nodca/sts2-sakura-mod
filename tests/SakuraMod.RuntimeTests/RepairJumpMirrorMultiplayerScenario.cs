@@ -16,7 +16,8 @@ namespace SakuraMod.RuntimeTests;
 
 internal static class RepairJumpMirrorMultiplayerScenario
 {
-    private const int FixtureMagicCharge = 20;
+    // Charge Jump's extra effect while leaving Mirror on its single-copy path.
+    private const int FixtureMagicCharge = SakuraMagicCharge.ExtraEffectCost;
 
     public static async Task<Dictionary<string, object?>> ExecuteAsync(
         SakuraTestRequest request,
@@ -63,12 +64,11 @@ internal static class RepairJumpMirrorMultiplayerScenario
             await context.PlayOwnedCardAsync(repair);
         await context.SignalAndWaitAsync("repair-played");
         await MultiplayerScenarioContext.WaitForStateAsync(
-            () => repair.Pile?.Type == PileType.Exhaust
-                && client.Creature.GetPower<RegenPower>()?.Amount == repair.DynamicVars["RegenPower"].IntValue + Repair.ExtraRegen,
-            "client Repair extra effect to synchronize");
+            () => client.Creature.GetPower<RepairPower>()?.Amount == repair.DynamicVars.Heal.IntValue,
+            "client Repair power to synchronize");
 
-        var regenBeforeJump = client.Creature.GetPower<RegenPower>()?.Amount ?? 0;
-        assertions.True("repair_regen_positive_before_jump", regenBeforeJump > 0);
+        var repairBeforeJump = client.Creature.GetPower<RepairPower>()?.Amount ?? 0;
+        assertions.True("repair_power_positive_before_jump", repairBeforeJump > 0);
         assertions.True("vulnerable_present_before_jump", client.Creature.HasPower<VulnerablePower>());
 
         if (context.LocalPlayer.NetId == client.NetId)
@@ -80,9 +80,9 @@ internal static class RepairJumpMirrorMultiplayerScenario
             "client activated Jump to remove Vulnerable");
 
         assertions.Equal(
-            "repair_regen_retained_after_jump",
-            regenBeforeJump,
-            client.Creature.GetPower<RegenPower>()?.Amount ?? 0);
+            "repair_power_retained_after_jump",
+            repairBeforeJump,
+            client.Creature.GetPower<RepairPower>()?.Amount ?? 0);
         assertions.Equal("vulnerable_removed_by_jump", false, client.Creature.HasPower<VulnerablePower>());
 
         foreach (var card in client.PlayerCombatState!.Hand.Cards.ToArray())
@@ -140,9 +140,9 @@ internal static class RepairJumpMirrorMultiplayerScenario
             }),
             $"all {context.Run.Players.Count} peers to reach the next player turn");
         assertions.Equal(
-            "repair_regen_decays_once_after_turn_boundary",
-            regenBeforeJump - 1,
-            client.Creature.GetPower<RegenPower>()?.Amount ?? 0);
+            "repair_power_retained_after_turn_boundary",
+            repairBeforeJump,
+            client.Creature.GetPower<RepairPower>()?.Amount ?? 0);
         assertions.Equal(
             "mirror_deck_count_unchanged_after_turn_boundary",
             deckCountBeforeMirror,
@@ -172,7 +172,7 @@ internal static class RepairJumpMirrorMultiplayerScenario
                     environment.SakuraVersion
                 },
                 client_net_id = client.NetId,
-                regen = client.Creature.GetPower<RegenPower>()?.Amount ?? 0,
+                repair_power = client.Creature.GetPower<RepairPower>()?.Amount ?? 0,
                 vulnerable = client.Creature.HasPower<VulnerablePower>(),
                 deck_count_before_mirror = deckCountBeforeMirror,
                 deck_count_after_turn = client.Deck.Cards.Count,
@@ -196,6 +196,15 @@ internal static class RepairJumpMirrorMultiplayerScenario
         var combat = await context.EnterWeakCrawlerCombatAsync();
         var client = context.ClientPlayer;
         var fixtureContext = new ThrowingPlayerChoiceContext();
+
+        foreach (var card in client.PlayerCombatState!.Hand.Cards.ToArray())
+        {
+            await SakuraActions.MoveExistingCardToPileWithoutVisuals(
+                null,
+                card,
+                PileType.Discard,
+                CardPilePosition.Bottom);
+        }
 
         var repair = combat.CreateCard<Repair>(client);
         var jump = combat.CreateCard<ClowJump>(client);
@@ -246,13 +255,12 @@ internal static class RepairJumpMirrorMultiplayerScenario
 
         await context.SignalAndWaitAsync("race-actions-finished");
         await MultiplayerScenarioContext.WaitForStateAsync(
-            () => repair.Pile?.Type == PileType.Exhaust
-                && jump.Pile?.Type == PileType.Exhaust
-                && client.Creature.GetPower<RegenPower>()?.Amount == repair.DynamicVars["RegenPower"].IntValue + Repair.ExtraRegen,
+            () => jump.Pile?.Type == PileType.Exhaust
+                && client.Creature.GetPower<RepairPower>()?.Amount == repair.DynamicVars.Heal.IntValue,
             "raced Repair, Jump, and peer turn actions to synchronize");
 
-        var regenAfterRace = client.Creature.GetPower<RegenPower>()?.Amount ?? 0;
-        assertions.Equal("race_repair_regen_retained", repair.DynamicVars["RegenPower"].IntValue + Repair.ExtraRegen, regenAfterRace);
+        var repairAfterRace = client.Creature.GetPower<RepairPower>()?.Amount ?? 0;
+        assertions.Equal("race_repair_power_retained", repair.DynamicVars.Heal.IntValue, repairAfterRace);
         assertions.Equal("race_vulnerable_removed", false, client.Creature.HasPower<VulnerablePower>());
 
         if (context.LocalPlayer.NetId == client.NetId)
@@ -281,9 +289,9 @@ internal static class RepairJumpMirrorMultiplayerScenario
             "all raced peers to reach the next player turn");
 
         assertions.Equal(
-            "race_repair_regen_decays_once_after_turn",
-            regenAfterRace - 1,
-            client.Creature.GetPower<RegenPower>()?.Amount ?? 0);
+            "race_repair_power_retained_after_turn",
+            repairAfterRace,
+            client.Creature.GetPower<RepairPower>()?.Amount ?? 0);
         assertions.Equal(
             "race_mirror_deck_count_unchanged_after_turn",
             deckCountBeforeMirror,
@@ -312,7 +320,7 @@ internal static class RepairJumpMirrorMultiplayerScenario
                     environment.SakuraVersion
                 },
                 client_net_id = client.NetId,
-                regen = client.Creature.GetPower<RegenPower>()?.Amount ?? 0,
+                repair_power = client.Creature.GetPower<RepairPower>()?.Amount ?? 0,
                 vulnerable = client.Creature.HasPower<VulnerablePower>(),
                 deck_count_before_mirror = deckCountBeforeMirror,
                 deck_count_after_turn = client.Deck.Cards.Count,

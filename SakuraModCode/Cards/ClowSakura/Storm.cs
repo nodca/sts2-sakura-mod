@@ -41,12 +41,49 @@ public class ClowStorm() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Un
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        await DealDamage(choiceContext, play, target, CalculatedDamage(target), hitCount: ReleasedMagic(), hitVfx: SakuraNativeHitFx.Slash);
+        await StormCycloneVfx.PlayFunnelAsync(
+            this,
+            Owner.Creature,
+            [target],
+            StormRules.WindCardsPlayedThisTurnCount(this),
+            wholeLine: false,
+            async cues => await DealDamage(
+                choiceContext,
+                play,
+                target,
+                CalculatedDamage(target),
+                hitCount: ReleasedMagic(),
+                onHit: hit =>
+                {
+                    cues.Hit(hit);
+                    return Task.CompletedTask;
+                },
+                hitVfx: cues.FallbackHitVfx));
     }
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await DealDamageToEnemies(choiceContext, play, CombatState!.HittableEnemies, CalculatedDamage(null), hitCount: ReleasedMagic(), hitVfx: SakuraNativeHitFx.Slash);
+        var targets = CombatState!.HittableEnemies.ToList();
+        await StormCycloneVfx.PlayFunnelAsync(
+            this,
+            Owner.Creature,
+            targets,
+            StormRules.WindCardsPlayedThisTurnCount(this),
+            wholeLine: true,
+            async cues => await DealDamageToEnemies(
+                choiceContext,
+                play,
+                targets,
+                CalculatedDamage(null),
+                hitCount: ReleasedMagic(),
+                hitVfx: cues.FallbackHitVfx,
+                // A pure observer: the factory reports each creature a hit is
+                // about to strike and contributes no node.
+                hitVfxNode: hit =>
+                {
+                    cues.Hit(hit);
+                    return null;
+                }));
     }
 
     private int CalculatedDamage(Creature? target) =>
@@ -77,8 +114,8 @@ internal static class StormRules
 
 public class SakuraStorm() : SakuraFormCard(1, CardType.Attack, TargetType.None)
 {
-    private const int MinDamage = 4;
-    private const int MaxDamageOffset = 5;
+    private const int MinDamage = 1;
+    private const int MaxDamageOffset = 8;
 
     internal const string MaxDamageVar = "MaxDamage";
 
@@ -94,19 +131,25 @@ public class SakuraStorm() : SakuraFormCard(1, CardType.Attack, TargetType.None)
         new DynamicVar("Magic", 7)
     ];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await using var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, play);
-        for (var i = 0; i < ReleasedMagic(); i++)
-        {
-            var target = Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
-            if (target is null)
-                return;
+    protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+        StormCycloneVfx.PlayVortexAsync(
+            this,
+            Owner.Creature,
+            CombatState!.HittableEnemies.ToList(),
+            async cues =>
+            {
+                await using var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, play);
+                for (var i = 0; i < ReleasedMagic(); i++)
+                {
+                    var target = Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
+                    if (target is null)
+                        return;
 
-            var amount = Owner.RunState.Rng.CombatCardSelection.NextInt(
-                ReleasedDamage(),
-                ReleasedValue(MaxDamageVar) + 1);
-            await DealDamageHit(attack, choiceContext, play, target, amount, hitVfx: SakuraNativeHitFx.Slash);
-        }
-    }
+                    var min = ReleasedDamage();
+                    var max = ReleasedValue(MaxDamageVar);
+                    var amount = Owner.RunState.Rng.CombatCardSelection.NextInt(min, max + 1);
+                    cues.Strike(target, StormCycloneVfx.Strength(amount, min, max));
+                    await DealDamageHit(attack, choiceContext, play, target, amount, hitVfx: cues.FallbackHitVfx);
+                }
+            });
 }

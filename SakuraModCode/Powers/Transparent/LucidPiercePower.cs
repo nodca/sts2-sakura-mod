@@ -12,16 +12,19 @@ using SakuraMod.SakuraModCode.Extensions;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
+// Amount is how many of your next Attacks spread. Each Attack spends one charge as it starts,
+// and stays spread until its play ends; the power leaves once a spent last charge's play ends.
 public class LucidPiercePower : SakuraPowerModel
 {
     private sealed class Data
     {
-        public readonly List<uint> Cards = [];
+        public readonly List<uint> ActivePlays = [];
+        public bool LastChargeSpent;
     }
 
     protected override string IconFileName => "lucid_pierce.png";
     public override PowerType Type => PowerType.Buff;
-    public override PowerStackType StackType => PowerStackType.Single;
+    public override PowerStackType StackType => PowerStackType.Counter;
 
     protected override object InitInternalData() => new Data();
 
@@ -31,7 +34,7 @@ public class LucidPiercePower : SakuraPowerModel
         && cardSource.TargetType != TargetType.AllEnemies
         && cardSource.Owner?.Creature == dealer
         && (dealer.GetPower<LucidPierceAllPower>() is not null
-            || dealer.GetPower<LucidPiercePower>()?.GetInternalData<Data>().Cards
+            || dealer.GetPower<LucidPiercePower>()?.GetInternalData<Data>().ActivePlays
                 .Contains(NetCombatCard.FromModel(cardSource).CombatCardIndex) == true);
 
     internal static void SpreadAttack(AttackCommand command)
@@ -57,11 +60,29 @@ public class LucidPiercePower : SakuraPowerModel
         return combat.GetOpponentsOf(dealer).Where(target => target.IsHittable).Distinct().ToList();
     }
 
-    public static async Task Mark(PlayerChoiceContext choiceContext, Creature owner, CardModel card, CardModel source)
+    public override async Task BeforeCardPlayed(CardPlay cardPlay)
     {
-        var power = owner.GetPower<LucidPiercePower>()
-            ?? await PowerCmd.Apply<LucidPiercePower>(choiceContext, owner, 1, owner, source, false);
-        power?.GetInternalData<Data>().Cards.Add(NetCombatCard.FromModel(card).CombatCardIndex);
+        var data = GetInternalData<Data>();
+        if (data.LastChargeSpent
+            || cardPlay.Card.Owner?.Creature != Owner
+            || cardPlay.Card.Type != CardType.Attack)
+            return;
+
+        data.ActivePlays.Add(NetCombatCard.FromModel(cardPlay.Card).CombatCardIndex);
+        if (Amount > 1)
+            await PowerCmd.Decrement(this);
+        else
+            data.LastChargeSpent = true;
+    }
+
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        var data = GetInternalData<Data>();
+        if (!data.ActivePlays.Remove(NetCombatCard.FromModel(cardPlay.Card).CombatCardIndex))
+            return;
+
+        if (data.LastChargeSpent && data.ActivePlays.Count == 0)
+            await PowerCmd.Remove(this);
     }
 
     public override Task BeforeAttack(AttackCommand command)

@@ -175,17 +175,17 @@ public sealed class RuntimeRunnerSuite
         var coordinationRoot = Path.Combine(fixture.Root, "coordination");
         var host = fixture.CreateMultiplayerRequest("Host", 1, coordinationRoot, expectedPlayerCount: 3) with
         {
-            ScenarioId = SakuraMultiplayerScenarios.ThreePlayerRepairJumpLoad,
+            ScenarioId = SakuraMultiplayerScenarios.ThreePlayerDeckLoad,
             Phase = "write"
         };
         var client2 = fixture.CreateMultiplayerRequest("Client", 2, coordinationRoot, expectedPlayerCount: 3) with
         {
-            ScenarioId = SakuraMultiplayerScenarios.ThreePlayerRepairJumpLoad,
+            ScenarioId = SakuraMultiplayerScenarios.ThreePlayerDeckLoad,
             Phase = "write"
         };
         var client3 = fixture.CreateMultiplayerRequest("Client", 3, coordinationRoot, expectedPlayerCount: 3) with
         {
-            ScenarioId = SakuraMultiplayerScenarios.ThreePlayerRepairJumpLoad,
+            ScenarioId = SakuraMultiplayerScenarios.ThreePlayerDeckLoad,
             Phase = "write"
         };
 

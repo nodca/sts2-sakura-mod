@@ -51,8 +51,7 @@ public class SpiralNextTurnPower : SakuraPowerModel
                 {
                     Pile = PileType.Draw,
                     Position = CardPilePosition.Top,
-                    AddTemporary = true,
-                    FreeThisTurn = true
+                    AddTemporary = true
                 },
                 choiceContext);
         }

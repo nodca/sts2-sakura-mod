@@ -24,7 +24,6 @@ public sealed class ExtraEffectTransactionSuite
         typeof(Promise),
         typeof(SakuraMod.SakuraModCode.Cards.Record),
         typeof(Reflect),
-        typeof(Repair),
         typeof(Reversal),
         typeof(Remind),
         typeof(Rewind),

@@ -1,0 +1,29 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://SakuraMod/shaders/card_vfx/storm_cyclone_stroke.gdshader" id="1_stroke"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_stroke"]
+resource_local_to_scene = true
+shader = ExtResource("1_stroke")
+
+[node name="StormCycloneVfx" type="Node2D"]
+
+[node name="StrokeTemplate" type="MeshInstance2D" parent="."]
+unique_name_in_owner = true
+visible = false
+material = SubResource("ShaderMaterial_stroke")
+
+[node name="Strands" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Strokes" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="Bits" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="InputPassThrough" type="Control" parent="."]
+layout_mode = 0
+offset_right = 1.0
+offset_bottom = 1.0
+mouse_filter = 2

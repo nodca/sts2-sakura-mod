@@ -267,8 +267,7 @@ public static class SakuraMultiplayerScenarios
     public const string RepairJumpMirrorThreePlayerForeseerRace = "repair-jump-mirror-three-player-foreseer-race";
     public const string RepairJumpMirrorThreePlayerChoiceRace = "repair-jump-mirror-three-player-choice-race";
     public const string ThreePlayerDefensivePowers = "three-player-defensive-powers";
-    public const string ThreePlayerRepairJump = "three-player-repair-jump";
-    public const string ThreePlayerRepairJumpLoad = "three-player-repair-jump-load";
+    public const string ThreePlayerDeckLoad = "three-player-deck-load";
     public const string ThreePlayerMirrorCopy = "three-player-mirror-copy";
 
     public static IReadOnlyList<string> All { get; } =
@@ -295,8 +294,7 @@ public static class SakuraMultiplayerScenarios
         RepairJumpMirrorThreePlayerForeseerRace,
         RepairJumpMirrorThreePlayerChoiceRace,
         ThreePlayerDefensivePowers,
-        ThreePlayerRepairJump,
-        ThreePlayerRepairJumpLoad,
+        ThreePlayerDeckLoad,
         ThreePlayerMirrorCopy
     ];
 
@@ -309,8 +307,7 @@ public static class SakuraMultiplayerScenarios
             or RepairJumpMirrorThreePlayerForeseerRace
             or RepairJumpMirrorThreePlayerChoiceRace
             or ThreePlayerDefensivePowers
-            or ThreePlayerRepairJump
-            or ThreePlayerRepairJumpLoad
+            or ThreePlayerDeckLoad
             or ThreePlayerMirrorCopy ? 3 : 2;
 
     public static bool RequiresRandomForeseer(string scenarioId) =>
@@ -324,7 +321,7 @@ public static class SakuraMultiplayerScenarios
             or RepairJumpMirrorThreePlayerForeseerKitLib;
 
     public static bool IsSaveLoad(string scenarioId) =>
-        string.Equals(scenarioId, ThreePlayerRepairJumpLoad, StringComparison.Ordinal);
+        string.Equals(scenarioId, ThreePlayerDeckLoad, StringComparison.Ordinal);
 }
 
 public sealed record SakuraMultiplayerRequest(

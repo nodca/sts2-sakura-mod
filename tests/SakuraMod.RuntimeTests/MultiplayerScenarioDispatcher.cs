@@ -51,10 +51,8 @@ internal static class MultiplayerScenarioDispatcher
                 await RepairJumpMirrorMultiplayerScenario.ExecuteAsync(request, environment, assertions),
             SakuraMultiplayerScenarios.ThreePlayerDefensivePowers =>
                 await ClowDefensivePowersMultiplayerScenario.ExecuteAsync(request, environment, assertions),
-            SakuraMultiplayerScenarios.ThreePlayerRepairJump =>
-                await ThreePlayerRepairJumpMultiplayerScenario.ExecuteAsync(request, environment, assertions),
-            SakuraMultiplayerScenarios.ThreePlayerRepairJumpLoad =>
-                await ThreePlayerRepairJumpLoadMultiplayerScenario.ExecuteAsync(request, environment, assertions),
+            SakuraMultiplayerScenarios.ThreePlayerDeckLoad =>
+                await ThreePlayerDeckLoadMultiplayerScenario.ExecuteAsync(request, environment, assertions),
             SakuraMultiplayerScenarios.ThreePlayerMirrorCopy =>
                 await ThreePlayerMirrorCopyMultiplayerScenario.ExecuteAsync(request, environment, assertions),
             _ => throw new NotSupportedException(

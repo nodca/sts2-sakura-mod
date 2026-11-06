@@ -22,22 +22,22 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Repair() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Repair() : TransparentCard(1, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
-    internal const int ExtraRegen = 3;
-
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth, CardKeyword.Exhaust];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<RegenPower>(3)];
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Earth];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys => [SakuraMemoryPile.PileId];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new HealVar(3)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        await PowerCmd.Apply<RegenPower>(choiceContext, Owner.Creature, DynamicVars["RegenPower"].IntValue, Owner.Creature, this, false);
-        if (activation.IsActive)
-            await ApplyExtraEffect(choiceContext, play);
+        await PowerCmd.Apply<RepairPower>(
+            choiceContext,
+            Owner.Creature,
+            DynamicVars.Heal.IntValue,
+            Owner.Creature,
+            this,
+            false);
     }
 
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play) =>
-        await PowerCmd.Apply<RegenPower>(choiceContext, Owner.Creature, ExtraRegen, Owner.Creature, this, false);
-
-    protected override void OnUpgrade() => DynamicVars["RegenPower"].UpgradeValueBy(1);
+    protected override void OnUpgrade() => DynamicVars.Heal.UpgradeValueBy(1);
 }

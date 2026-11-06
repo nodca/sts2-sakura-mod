@@ -18,6 +18,7 @@ public class Aqua() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
         new DamageVar(4, ValueProp.Move),
+        new DynamicVar("FrostbiteBonus", 4),
         new EnergyVar(1)
     ];
 
@@ -38,8 +39,10 @@ public class Aqua() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
                     if (!enemy.IsAlive)
                         continue;
 
+                    var damage = AquaRules.DamageAgainst(
+                        enemy, DynamicVars.Damage.IntValue, DynamicVars["FrostbiteBonus"].IntValue);
                     attack.AddHit(await CreatureCmd.Damage(
-                        choiceContext, enemy, DynamicVars.Damage.IntValue, ValueProp.Move, Owner.Creature, this, play));
+                        choiceContext, enemy, damage, ValueProp.Move, Owner.Creature, this, play));
                 }
             }
 
@@ -49,20 +52,12 @@ public class Aqua() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
             cues.Return(frostbitten);
         });
 
-        var frostbiteEnemies = frostbitten.Count;
-        if (frostbiteEnemies <= 0)
+        if (!activation.IsActive)
             return;
 
-        var drawCount = AquaRules.DrawCount(frostbiteEnemies);
-        if (drawCount > 0)
-            await CardPileCmd.Draw(choiceContext, drawCount, Owner, false);
-
-        if (activation.IsActive)
-        {
-            var energy = frostbiteEnemies * DynamicVars.Energy.IntValue;
-            if (energy > 0)
-                await PlayerCmd.GainEnergy(energy, Owner);
-        }
+        var energy = frostbitten.Count * DynamicVars.Energy.IntValue;
+        if (energy > 0)
+            await PlayerCmd.GainEnergy(energy, Owner);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
@@ -77,8 +72,12 @@ internal static class AquaRules
     internal static int FrostbiteEnemyCount(IEnumerable<Creature> enemies) =>
         FrostbiteEnemies(enemies).Count;
 
-    internal static int DrawCount(int frostbiteEnemyCount) =>
-        Math.Max(0, frostbiteEnemyCount);
+    // Frostbite is read just before each hit, so earlier hits cannot change a later enemy's bonus.
+    internal static int DamageAgainst(Creature enemy, int baseDamage, int bonusPerFrostbite) =>
+        DamageFor(baseDamage, enemy.GetPower<SakuraFrostbitePower>()?.Amount ?? 0, bonusPerFrostbite);
+
+    internal static int DamageFor(int baseDamage, int frostbite, int bonusPerFrostbite) =>
+        Math.Max(0, baseDamage) + Math.Max(0, frostbite) * Math.Max(0, bonusPerFrostbite);
 
     private static bool HasFrostbite(Creature enemy) =>
         enemy.IsAlive && (enemy.GetPower<SakuraFrostbitePower>()?.Amount ?? 0) > 0;

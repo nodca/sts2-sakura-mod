@@ -22,8 +22,8 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class SiegePendingPower : SakuraPowerModel
 {
-    private readonly Queue<(bool ExtraEffect, int WeakAmount)> _pendingEffects = [];
-    private (bool ExtraEffect, int WeakAmount)[]? _effectsResolvedThisTurn;
+    private readonly Queue<int> _pendingWeakAmounts = [];
+    private int[]? _effectsResolvedThisTurn;
     private bool _triggeredThisTurn;
 
     protected override string IconFileName => "earth_element.png";
@@ -31,8 +31,8 @@ public class SiegePendingPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
 
-    public void QueueEffect(bool extraEffect, int weakAmount) =>
-        _pendingEffects.Enqueue((extraEffect, weakAmount));
+    public void QueueEffect(int weakAmount) =>
+        _pendingWeakAmounts.Enqueue(weakAmount);
 
     public override async Task BeforeSideTurnEnd(
         PlayerChoiceContext choiceContext,
@@ -42,31 +42,16 @@ public class SiegePendingPower : SakuraPowerModel
         if (side != CombatSide.Enemy || Owner.Side != CombatSide.Player)
             return;
 
-        var pendingEffects = _pendingEffects.ToArray();
-        _pendingEffects.Clear();
+        var pendingEffects = _pendingWeakAmounts.ToArray();
+        _pendingWeakAmounts.Clear();
         _effectsResolvedThisTurn = pendingEffects;
         _triggeredThisTurn = SiegeRules.ShouldTrigger(Owner.Block);
         if (_triggeredThisTurn)
         {
             Flash();
-            await SiegeEnclosureVfx.PlayOrResolveAsync(Owner.CombatState?.HittableEnemies.ToList() ?? [], async () =>
-            {
-                foreach (var effect in pendingEffects.Where(static effect => effect.ExtraEffect))
-                {
-                    var damage = SiegeRules.ExtraDamage(Owner.Block);
-                    foreach (var enemy in Owner.CombatState?.HittableEnemies.ToList() ?? [])
-                    {
-                        await CreatureCmd.Damage(
-                            choiceContext,
-                            enemy,
-                            damage,
-                            SakuraPowerValueProps.Damage,
-                            Owner,
-                            null,
-                            null);
-                    }
-                }
-            });
+            await SiegeEnclosureVfx.PlayOrResolveAsync(
+                Owner.CombatState?.HittableEnemies.ToList() ?? [],
+                static () => Task.CompletedTask);
         }
     }
 
@@ -85,7 +70,7 @@ public class SiegePendingPower : SakuraPowerModel
         _triggeredThisTurn = false;
         if (triggeredThisTurn)
         {
-            foreach (var effect in pendingEffects)
+            foreach (var weakAmount in pendingEffects)
             {
                 var enemies = Owner.CombatState?.HittableEnemies.ToList() ?? [];
                 if (enemies.Count > 0)
@@ -93,7 +78,7 @@ public class SiegePendingPower : SakuraPowerModel
                     await PowerCmd.Apply<WeakPower>(
                         choiceContext,
                         enemies,
-                        effect.WeakAmount,
+                        weakAmount,
                         Owner,
                         null,
                         false);
@@ -105,7 +90,7 @@ public class SiegePendingPower : SakuraPowerModel
 
     public override Task AfterRemoved(Creature oldOwner)
     {
-        _pendingEffects.Clear();
+        _pendingWeakAmounts.Clear();
         _effectsResolvedThisTurn = null;
         _triggeredThisTurn = false;
         return Task.CompletedTask;

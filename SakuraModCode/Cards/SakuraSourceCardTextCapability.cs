@@ -205,6 +205,9 @@ internal static class SakuraSourceCardText
             case ClowLock:
                 yield return SakuraCardHoverTips.TemporaryTipKey;
                 break;
+            case SpellRelease:
+                yield return SakuraCardHoverTips.ReleaseTipKey;
+                break;
         }
 
         foreach (var element in card.Elements.AsElements())
@@ -264,8 +267,7 @@ internal static class SakuraSourceCardText
         if (!card.IsClassicSourceCard)
             return [];
 
-        return card.Identity is SourceCardIdentity.Cloud
-            or SourceCardIdentity.Flower
+        return card.Identity is SourceCardIdentity.Flower
             or SourceCardIdentity.Earthy
             or SourceCardIdentity.Firey
             or SourceCardIdentity.Watery

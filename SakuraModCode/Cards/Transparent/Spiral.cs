@@ -23,14 +23,14 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
+public class Spiral() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.Uncommon, TargetType.AnyEnemy)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
         [SakuraMemoryPile.PileId, SakuraCardHoverTips.TemporaryTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new SpiralDamageVar(8, ValueProp.Move),
+        new SpiralDamageVar(4, ValueProp.Move),
         new DynamicVar("MemoryScale", 2),
         new CardsVar("NextTurnCopies", 1),
         new CardsVar("ExtraCopies", 2)
@@ -41,14 +41,15 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
         var target = RequiredTarget(play);
         var damage = SpiralRules.ScaledValue(this, DynamicVars.Damage);
         await DealDamage(choiceContext, play, target, damage, hitVfx: SakuraNativeHitFx.Slash);
-        await ScheduleNextTurnCopies(choiceContext);
-        if (activation.IsActive)
-            await ApplyExtraEffect(choiceContext, play);
+        // Extra only raises the copy count; both paths share the next-turn draw-top rule.
+        var copies = activation.IsActive
+            ? DynamicVars["ExtraCopies"].IntValue
+            : DynamicVars["NextTurnCopies"].IntValue;
+        await ScheduleNextTurnCopies(choiceContext, copies);
     }
 
-    private async Task ScheduleNextTurnCopies(PlayerChoiceContext choiceContext)
+    private async Task ScheduleNextTurnCopies(PlayerChoiceContext choiceContext, int copies)
     {
-        var copies = DynamicVars["NextTurnCopies"].IntValue;
         if (copies <= 0)
             return;
 
@@ -60,17 +61,6 @@ public class Spiral() : TransparentExtraEffectCard(1, CardType.Attack, CardRarit
             this,
             false);
         power?.CarryUpgradeFrom(this);
-    }
-
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await SakuraGeneratedCardLifecycle.AddTemporaryGeneratedCardsToHand<Spiral>(
-            Owner,
-            DynamicVars["ExtraCopies"].IntValue,
-            freeThisTurn: true,
-            choiceContext,
-            refreshGeneratedTransparentHandVisual: false,
-            upgradeLevel: CurrentUpgradeLevel);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);

@@ -46,7 +46,7 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
             async cues =>
             {
                 cues.Impact();
-                await ResolveCloudMechanics(choiceContext, play, 0);
+                await GainBlock(play, CalculatedBlock());
             });
 
     protected override Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play) =>
@@ -57,17 +57,9 @@ public class ClowCloud() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Com
             async cues =>
             {
                 cues.Impact();
-                await ResolveCloudMechanics(choiceContext, play, ExtraBlock);
+                // The Extra Block joins the same gain, so Dexterity applies once.
+                await GainBlock(play, CalculatedBlock() + ExtraBlock);
             });
-
-    // The Extra Block joins the same gain, so Dexterity applies once.
-    private async Task ResolveCloudMechanics(PlayerChoiceContext choiceContext, CardPlay play, int extraBlock)
-    {
-        await GainBlock(play, CalculatedBlock() + extraBlock);
-
-        if (Owner.Creature.GetPower<ClassicWateryPower>()?.Amount > 0)
-            await SakuraCloudEffects.AddRainToHand(Owner, choiceContext, freeForCombat: false);
-    }
 
     private int CalculatedBlock() =>
         Math.Max(0, (int)DynamicVars.CalculatedBlock.Calculate(null));
@@ -98,15 +90,8 @@ public class SakuraCloud() : SakuraFormCard(1, CardType.Skill, TargetType.None)
             async cues =>
             {
                 cues.Impact();
-                await ResolveCloudMechanics(choiceContext, play);
+                await GainBlock(play, CalculatedBlock());
             });
-
-    private async Task ResolveCloudMechanics(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await GainBlock(play, CalculatedBlock());
-        if (Owner.Creature.GetPower<ClassicWateryPower>()?.Amount > 0)
-            await SakuraCloudEffects.AddRainToHand(Owner, choiceContext, freeForCombat: true);
-    }
 
     private int CalculatedBlock() =>
         Math.Max(0, (int)DynamicVars.CalculatedBlock.Calculate(null));
@@ -132,22 +117,4 @@ internal static class SakuraCloudEffects
 
     internal static int CountWateryCards(IEnumerable<CardModel> cards, CardModel? source) =>
         cards.Count(card => card != source && SakuraActions.HasElement(card, SakuraElement.Water));
-
-    public static async Task AddRainToHand(Player owner, PlayerChoiceContext choiceContext, bool freeForCombat)
-    {
-        var combatState = owner.Creature.CombatState
-            ?? throw new InvalidOperationException("Cloud-generated Rain requires an active combat.");
-        var rain = combatState.CreateCard<ClowRain>(owner);
-        if (freeForCombat)
-        {
-            rain.EnergyCost.SetThisCombat(0, reduceOnly: true);
-            await SakuraGeneratedCardLifecycle.AddGeneratedCardToHand(rain, choiceContext);
-            return;
-        }
-
-        await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
-            rain,
-            new GeneratedCardOptions { FreeThisTurn = true },
-            choiceContext);
-    }
 }
