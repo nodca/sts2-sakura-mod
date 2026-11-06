@@ -8,7 +8,6 @@ public sealed class ExtraEffectTransactionSuite
     private static readonly IReadOnlySet<Type> TransparentExtraCards = new HashSet<Type>
     {
         typeof(SakuraMod.SakuraModCode.Cards.Action),
-        typeof(Appear),
         typeof(Aqua),
         typeof(Blade),
         typeof(Blank),

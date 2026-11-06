@@ -19,6 +19,7 @@ public static class CombatCommand
         "manifest-temporary",
         "generated-pile-memory",
         "remind-recalls-originals",
+        "appear-power-manifest",
         "forgotten-cleanup-without-transparent",
         "element-turn-cleanup",
         "dream-turn-restoration",

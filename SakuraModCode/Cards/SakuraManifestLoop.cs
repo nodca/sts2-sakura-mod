@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Extensions;
+using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -45,6 +46,7 @@ public static class SakuraManifestLoop
         int choiceCount = BaseManifestChoiceCount)
     {
         List<CardModel> manifested = [];
+        choiceCount = AppearPower.ManifestChoiceCount(owner, choiceCount);
 
         for (var i = 0; i < amount; i++)
         {
