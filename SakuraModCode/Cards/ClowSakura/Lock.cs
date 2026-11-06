@@ -36,12 +36,12 @@ public class ClowLock() : ClowExtraEffectCard(0, CardType.Skill, CardRarity.Comm
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        // Retain this turn; a Forgotten card also skips this turn's move into Memory.
+        // Forgotten would still send a Retained card into Memory, so Lock removes it.
         var selected = await SelectLockedCards(choiceContext);
         foreach (var card in selected)
         {
             card.GiveSingleTurnRetain();
-            card.DelayTemporaryRemoval(1);
+            await card.Stabilize(choiceContext);
         }
 
         await GainCharge(choiceContext, selected);

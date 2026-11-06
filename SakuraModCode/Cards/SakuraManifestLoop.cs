@@ -46,7 +46,6 @@ public static class SakuraManifestLoop
         int choiceCount = BaseManifestChoiceCount)
     {
         List<CardModel> manifested = [];
-        choiceCount = AppearPower.ManifestChoiceCount(owner, choiceCount);
 
         for (var i = 0; i < amount; i++)
         {
@@ -86,6 +85,7 @@ public static class SakuraManifestLoop
                     context,
                     addTemporary: !stabilize);
                 manifested.Add(copy);
+                await AppearPower.AfterManifested(owner, copy);
             }
             finally
             {
