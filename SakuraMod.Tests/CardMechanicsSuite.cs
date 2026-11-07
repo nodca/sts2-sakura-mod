@@ -328,12 +328,12 @@ public sealed class CardMechanicsSuite
             RegressionTestHarness.DeclaresMethod<RecordPower>("AfterCardPlayed"),
             powerSource.Contains("MaxRecordedCards", StringComparison.Ordinal),
             powerSource.Contains("play.IsLastInSeries", StringComparison.Ordinal),
-            powerSource.Contains("play.Card.Type == CardType.Power", StringComparison.Ordinal),
+            !powerSource.Contains("CardType.Power", StringComparison.Ordinal),
             powerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal),
             !powerSource.Contains("AddRememberedCardToHand", StringComparison.Ordinal),
             powerSource.Contains("freeThisTurn", StringComparison.Ordinal),
         };
-        RegressionTestHarness.Require(checks.All(static check => check), "Expected Record to be a 2-cost Exhaust Skill that upgrades to 1 and materializes up to three Forgotten copies of non-Power cards before the next hand draw.");
+        RegressionTestHarness.Require(checks.All(static check => check), "Expected Record to be a 2-cost Exhaust Skill that upgrades to 1 and materializes up to three Forgotten copies of the cards played after it, Powers included, before the next hand draw.");
     }
 
     [Fact]
@@ -1386,10 +1386,10 @@ public sealed class CardMechanicsSuite
         var upgradedAqua = RegressionTestHarness.MutableForCostTest(new Aqua());
         upgradedAqua.UpgradeInternal();
         RegressionTestHarness.Require(
-            new Aqua().EnergyCost.Canonical == 0
+            new Aqua().EnergyCost.Canonical == 1
             && !new Aqua().CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && new Aqua().DynamicVars.Damage.IntValue == 4
-            && new Aqua().DynamicVars.Energy.IntValue == 1
+            && new Aqua().DynamicVars.Damage.IntValue == 6
+            && new Aqua().DynamicVars.Energy.IntValue == 2
             && SakuraCardHoverTips.KeywordTips(new Aqua()).Contains(SakuraKeywords.Frostbite)
             && new Aqua().DynamicVars["FrostbiteBonus"].IntValue == 4
             && AquaRules.DamageFor(4, 0, 4) == 4
@@ -1397,8 +1397,8 @@ public sealed class CardMechanicsSuite
             && AquaRules.DamageFor(7, 2, 4) == 15
             && AquaRules.FrostbiteEnemyCount([]) == 0
             && AquaRules.FrostbiteEnemies([]).Count == 0
-            && upgradedAqua.DynamicVars.Damage.IntValue == 7,
-            "Expected Aqua to cost 0, deal 4/7 AOE damage, deal 4 more per Frostbite stack on each target, and grant 1 Energy per Frostbite enemy with Extra.");
+            && upgradedAqua.DynamicVars.Damage.IntValue == 9,
+            "Expected Aqua to cost 1, deal 6/9 AOE damage, deal 4 more per Frostbite stack on each target, and grant 2 Energy with Extra.");
 
         var spiral = new Spiral();
         var upgradedSpiral = RegressionTestHarness.MutableForCostTest(new Spiral());

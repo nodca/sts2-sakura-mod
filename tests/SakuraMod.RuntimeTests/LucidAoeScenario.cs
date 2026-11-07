@@ -131,7 +131,7 @@ internal static class LucidAoeScenario
         before = enemies.Select(enemy => enemy.CurrentHp).ToArray();
         await CombatScenarioContext.PlayCardAsync(aoe);
         for (var i = 0; i < enemies.Count; i++)
-            assertions.Equal($"aqua_vigor_hits_each_enemy_once_{i}", 10, before[i] - enemies[i].CurrentHp);
+            assertions.Equal($"aqua_vigor_hits_each_enemy_once_{i}", 12, before[i] - enemies[i].CurrentHp);
         assertions.True("aqua_consumes_vigor_after_complete_sweep", player.Creature.GetPower<VigorPower>() is null);
 
         var storm = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraStorm>(combat, player);
