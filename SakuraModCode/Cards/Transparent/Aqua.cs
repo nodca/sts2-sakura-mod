@@ -11,15 +11,15 @@ using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Aqua() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
+public class Aqua() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity.Uncommon, TargetType.AllEnemies)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
     internal override IEnumerable<CardKeyword> ReferencedKeywords => [SakuraKeywords.Frostbite];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(4, ValueProp.Move),
+        new DamageVar(6, ValueProp.Move),
         new DynamicVar("FrostbiteBonus", 4),
-        new EnergyVar(1)
+        new EnergyVar(2)
     ];
 
     protected override async Task PlayCard(
@@ -52,12 +52,8 @@ public class Aqua() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
             cues.Return(frostbitten);
         });
 
-        if (!activation.IsActive)
-            return;
-
-        var energy = frostbitten.Count * DynamicVars.Energy.IntValue;
-        if (energy > 0)
-            await PlayerCmd.GainEnergy(energy, Owner);
+        if (activation.IsActive)
+            await PlayerCmd.GainEnergy(DynamicVars.Energy.IntValue, Owner);
     }
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
