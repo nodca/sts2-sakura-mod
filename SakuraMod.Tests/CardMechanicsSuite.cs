@@ -27,25 +27,21 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void LucidKeepsItsSearchBudgetAndRejectsNonCombatDamageSources()
+    public void LucidSearchesTheTopOfTheDrawPile()
     {
         var lucid = new Lucid();
         var upgraded = RegressionTestHarness.MutableForCostTest(new Lucid());
         upgraded.UpgradeInternal();
+        var lucidSource = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/Transparent/Lucid.cs"));
 
         Assert.Equal(0, lucid.EnergyCost.Canonical);
         Assert.Equal(0, upgraded.EnergyCost.Canonical);
         Assert.Contains(CardKeyword.Exhaust, lucid.CanonicalKeywords);
         Assert.Equal(3, lucid.DynamicVars["Look"].IntValue);
         Assert.Equal(4, upgraded.DynamicVars["Look"].IntValue);
-        Assert.False(LucidPiercePower.ShouldSpread(null, new ClowSword()));
-        Assert.Null(LucidPiercePower.ExpandDamageTargets([], ValueProp.Move, null, new ClowSword()));
-        Assert.Null(LucidPiercePower.ExpandDamageTargets([], ValueProp.Unblockable, null, null));
-        Assert.Equal(PowerStackType.Counter, new LucidPiercePower().StackType);
-        Assert.True(RegressionTestHarness.DeclaresMethod<LucidPiercePower>("BeforeCardPlayed"));
-        Assert.True(RegressionTestHarness.DeclaresMethod<LucidPiercePower>("AfterCardPlayed"));
-        var lucidSource = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/Transparent/Lucid.cs"));
-        Assert.DoesNotContain("CardType.Attack", lucidSource, StringComparison.Ordinal);
+        Assert.Equal(2, Lucid.ExtraPicks);
+        Assert.DoesNotContain("SetThisTurn", lucidSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("LucidPierce", lucidSource, StringComparison.Ordinal);
     }
 
     [Fact]

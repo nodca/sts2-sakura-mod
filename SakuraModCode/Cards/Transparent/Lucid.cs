@@ -22,20 +22,23 @@ public class Lucid() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
 
+    internal const int ExtraPicks = 2;
+
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("Look", 3)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        var top = CardPile.Get(PileType.Draw, Owner)!.Cards.Take(DynamicVars["Look"].IntValue).ToList();
-        var card = await SakuraActions.SelectFromCardPreviews(this, choiceContext, top, cancelable: false);
-        if (card is not null)
-            await SakuraActions.MoveExistingCardToHand(this, card);
+        var choices = CardPile.Get(PileType.Draw, Owner)!.Cards.Take(DynamicVars["Look"].IntValue).ToList();
+        var picks = activation.IsActive ? ExtraPicks : 1;
+        for (var i = 0; i < picks && choices.Count > 0; i++)
+        {
+            var card = await SakuraActions.SelectFromCardPreviews(this, choiceContext, choices, cancelable: false);
+            if (card is null)
+                break;
 
-        // Extra widens the same spread from your next Attack to every Attack this turn.
-        if (activation.IsActive)
-            await PowerCmd.Apply<LucidPierceAllPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
-        else
-            await PowerCmd.Apply<LucidPiercePower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
+            choices.Remove(card);
+            await SakuraActions.MoveExistingCardToHand(this, card);
+        }
     }
 
     protected override void OnUpgrade() => DynamicVars["Look"].UpgradeValueBy(1);
