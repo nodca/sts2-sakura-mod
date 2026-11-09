@@ -1,9 +1,16 @@
 using SakuraMod.TestProtocol;
+using static SakuraMod.TestProtocol.SakuraCombatScenarios;
 
 namespace SakuraMod.RuntimeTests;
 
 internal static class CombatScenarioDispatcher
 {
+    private delegate Task<Dictionary<string, object?>> ExecuteScenario(
+        SakuraTestRequest request,
+        RuntimeAssertionCollector assertions);
+
+    private static readonly Lazy<Dictionary<string, ExecuteScenario>> Bindings = new(CreateBindings);
+
     public static async Task<(
         SakuraRuntimeEnvironment Environment,
         Dictionary<string, object?> Snapshots,
@@ -11,65 +18,82 @@ internal static class CombatScenarioDispatcher
         SakuraTestRequest request,
         RuntimeAssertionCollector assertions)
     {
+        var bindings = Bindings.Value;
         var environment = RuntimeEnvironmentCapture.Capture(request, assertions);
         RuntimeTestHost.WriteCheckpoint(
             request,
             "environment_verified",
             "Loaded runtime identities were verified before combat setup.");
 
-        var snapshots = request.ScenarioId switch
+        if (!bindings.TryGetValue(request.ScenarioId, out var execute))
+            throw new NotSupportedException(
+                $"Combat scenario '{request.ScenarioId}' is not implemented by this host.");
+
+        return (environment, await execute(request, assertions), []);
+    }
+
+    private static Dictionary<string, ExecuteScenario> CreateBindings()
+    {
+        var bindings = new Dictionary<string, ExecuteScenario>(StringComparer.Ordinal)
         {
-            "starter-run" => await StarterRunScenario.ExecuteAsync(request, assertions),
-            "clow-shield-singleplayer" => await ClowShieldSingleplayerScenario.ExecuteAsync(request, assertions),
-            "clow-mist-slippery" => await ClowMistSlipperyScenario.ExecuteAsync(request, assertions),
-            "sleep-wake" => await SleepWakeScenario.ExecuteAsync(request, assertions),
-            "clow-fly-airborne" => await ClowFlyAirborneScenario.ExecuteAsync(request, assertions),
-            "extra-effect-choice" => await ExtraEffectChoiceScenario.ExecuteAsync(request, assertions),
-            "extra-effect-play" => await ExtraEffectPlayScenario.ExecuteAsync(request, assertions),
-            "exchange-four-pile-selection" => await ExchangePileScenario.ExecuteAsync(request, assertions),
-            "manifest-temporary" => await ManifestTemporaryScenario.ExecuteAsync(request, assertions),
-            "generated-pile-memory" => await GeneratedPileMemoryScenario.ExecuteAsync(request, assertions),
-            "remind-recalls-originals" => await RemindRecallsOriginalsScenario.ExecuteAsync(request, assertions),
-            "appear-power-manifest" => await AppearPowerScenario.ExecuteAsync(request, assertions),
-            "repair-memory-heal" => await RepairMemoryHealScenario.ExecuteAsync(request, assertions),
-            "forgotten-cleanup-without-transparent" => await ForgottenCleanupWithoutTransparentScenario.ExecuteAsync(request, assertions),
-            "element-turn-cleanup" => await ElementTurnCleanupScenario.ExecuteAsync(request, assertions),
-            "dream-turn-restoration" => await DreamTurnRestorationScenario.ExecuteAsync(request, assertions),
-            "spell-turn-transformation" => await SpellTurnTransformationScenario.ExecuteAsync(request, assertions),
-            "wand-turn-persistence" => await WandTurnPersistenceScenario.ExecuteAsync(request, assertions),
-            "labyrinth-field" => await LabyrinthFieldScenario.ExecuteAsync(request, assertions),
-            "magic-charge-thresholds" => await MagicChargeThresholdScenario.ExecuteAsync(request, assertions),
-            "sakura-ancient-cards" => await SakuraAncientCardsScenario.ExecuteAsync(request, assertions),
-            "frostbite-threshold" => await FrostbiteThresholdScenario.ExecuteAsync(request, assertions),
-            "sakura-time-freeze" => await SakuraTimeFreezeScenario.ExecuteAsync(request, assertions),
-            "clow-time-stasis" => await ClowTimeStasisScenario.ExecuteAsync(request, assertions),
-            "classic-time-integration" => await ClassicTimeIntegrationScenario.ExecuteAsync(request, assertions),
-            "snow-frostbite" => await SnowFrostbiteScenario.ExecuteAsync(request, assertions),
-            "freeze-turn-coverage" => await FreezeTurnCoverageScenario.ExecuteAsync(request, assertions),
-            "siege-end-turn" => await SiegeEndTurnScenario.ExecuteAsync(request, assertions),
-            "combat-transition-cleanup" => await CombatTransitionCleanupScenario.ExecuteAsync(request, assertions),
-            "dark-selection-combat-reentry" => await DarkSelectionCombatReentryScenario.ExecuteAsync(request, assertions),
-            "through-poison" => await ThroughPoisonScenario.ExecuteAsync(request, assertions),
-            "change-swap" => await ChangeSwapScenario.ExecuteAsync(request, assertions),
-            "lucid-search" => await LucidSearchScenario.ExecuteAsync(request, assertions),
-            "aqua-sweep" => await AquaSweepScenario.ExecuteAsync(request, assertions),
-            "sakura-erase" => await SakuraEraseScenario.ExecuteAsync(request, assertions),
-            "affliction-visual-layout" => await AfflictionVisualLayoutScenario.ExecuteAsync(request, assertions),
-            "card-layout-pooled-reuse" => await CardLayoutPooledReuseScenario.ExecuteAsync(request, assertions),
-            "queen-bound-cleanup" => await QueenBoundCleanupScenario.ExecuteAsync(request, assertions),
-            "fourth-act-card-afflictions" => await FourthActCardAfflictionScenario.ExecuteAsync(request, assertions),
-            "fourth-act-audio" => await FourthActAudioScenario.ExecuteAsync(request, assertions),
-            "cleansing-stats" => await CleansingStatsScenario.ExecuteAsync(request, assertions),
-            "dark-endpoint" => await DarkEndpointScenario.ExecuteAsync(request, assertions),
-            "light-eternal-day" => await LightEternalDayScenario.ExecuteAsync(request, assertions),
-            "windy-bind-draw" => await WindyBindDrawScenario.ExecuteAsync(request, assertions),
-            "save-load-restoration" => await SaveLoadRestorationScenario.ExecuteAsync(request, assertions),
-            "fourth-act-save-load" => await FourthActSaveLoadScenario.ExecuteAsync(request, assertions),
-            "fourth-act-terminal-transition" => await FourthActTerminalTransitionScenario.ExecuteLiveAsync(request, assertions),
-            "fourth-act-finished-combat-transition" => await FourthActTerminalTransitionScenario.ExecuteFinishedCombatAsync(request, assertions),
-            _ => throw new NotSupportedException(
-                $"Combat scenario '{request.ScenarioId}' is not implemented by this host.")
+            { StarterRun, StarterRunScenario.ExecuteAsync },
+            { ClowShieldSingleplayer, ClowShieldSingleplayerScenario.ExecuteAsync },
+            { ClowMistSlippery, ClowMistSlipperyScenario.ExecuteAsync },
+            { SleepWake, SleepWakeScenario.ExecuteAsync },
+            { SleepTunneler, SleepTunnelerScenario.ExecuteAsync },
+            { ClowFlyAirborne, ClowFlyAirborneScenario.ExecuteAsync },
+            { ExtraEffectChoice, ExtraEffectChoiceScenario.ExecuteAsync },
+            { ExtraEffectPlay, ExtraEffectPlayScenario.ExecuteAsync },
+            { ExchangeFourPileSelection, ExchangePileScenario.ExecuteAsync },
+            { ManifestTemporary, ManifestTemporaryScenario.ExecuteAsync },
+            { GeneratedPileMemory, GeneratedPileMemoryScenario.ExecuteAsync },
+            { RemindRecallsOriginals, RemindRecallsOriginalsScenario.ExecuteAsync },
+            { AppearPowerManifest, AppearPowerScenario.ExecuteAsync },
+            { RepairMemoryHeal, RepairMemoryHealScenario.ExecuteAsync },
+            { ForgottenCleanupWithoutTransparent, ForgottenCleanupWithoutTransparentScenario.ExecuteAsync },
+            { ElementTurnCleanup, ElementTurnCleanupScenario.ExecuteAsync },
+            { DreamTurnRestoration, DreamTurnRestorationScenario.ExecuteAsync },
+            { SpellTurnTransformation, SpellTurnTransformationScenario.ExecuteAsync },
+            { WandTurnPersistence, WandTurnPersistenceScenario.ExecuteAsync },
+            { LabyrinthField, LabyrinthFieldScenario.ExecuteAsync },
+            { MagicChargeThresholds, MagicChargeThresholdScenario.ExecuteAsync },
+            { SakuraAncientCards, SakuraAncientCardsScenario.ExecuteAsync },
+            { FrostbiteThreshold, FrostbiteThresholdScenario.ExecuteAsync },
+            { SakuraTimeFreeze, SakuraTimeFreezeScenario.ExecuteAsync },
+            { ClowTimeStasis, ClowTimeStasisScenario.ExecuteAsync },
+            { ClassicTimeIntegration, ClassicTimeIntegrationScenario.ExecuteAsync },
+            { SnowFrostbite, SnowFrostbiteScenario.ExecuteAsync },
+            { FreezeTurnCoverage, FreezeTurnCoverageScenario.ExecuteAsync },
+            { SiegeEndTurn, SiegeEndTurnScenario.ExecuteAsync },
+            { CombatTransitionCleanup, CombatTransitionCleanupScenario.ExecuteAsync },
+            { DarkSelectionCombatReentry, DarkSelectionCombatReentryScenario.ExecuteAsync },
+            { ThroughPoison, ThroughPoisonScenario.ExecuteAsync },
+            { ChangeSwap, ChangeSwapScenario.ExecuteAsync },
+            { LucidSearch, LucidSearchScenario.ExecuteAsync },
+            { AquaSweep, AquaSweepScenario.ExecuteAsync },
+            { SakuraErase, SakuraEraseScenario.ExecuteAsync },
+            { AfflictionVisualLayout, AfflictionVisualLayoutScenario.ExecuteAsync },
+            { CardLayoutPooledReuse, CardLayoutPooledReuseScenario.ExecuteAsync },
+            { QueenBoundCleanup, QueenBoundCleanupScenario.ExecuteAsync },
+            { FourthActCardAfflictions, FourthActCardAfflictionScenario.ExecuteAsync },
+            { FourthActAudio, FourthActAudioScenario.ExecuteAsync },
+            { CleansingStats, CleansingStatsScenario.ExecuteAsync },
+            { DarkEndpoint, DarkEndpointScenario.ExecuteAsync },
+            { LightEternalDay, LightEternalDayScenario.ExecuteAsync },
+            { WindyBindDraw, WindyBindDrawScenario.ExecuteAsync },
+            { SaveLoadRestoration, SaveLoadRestorationScenario.ExecuteAsync },
+            { FourthActSaveLoad, FourthActSaveLoadScenario.ExecuteAsync },
+            { FourthActTerminalTransition, FourthActTerminalTransitionScenario.ExecuteLiveAsync },
+            { FourthActFinishedCombatTransition, FourthActTerminalTransitionScenario.ExecuteFinishedCombatAsync },
         };
-        return (environment, snapshots, []);
+
+        var missing = All.Except(bindings.Keys, StringComparer.Ordinal).ToArray();
+        var unknown = bindings.Keys.Except(All, StringComparer.Ordinal).ToArray();
+        if (missing.Length != 0 || unknown.Length != 0)
+            throw new InvalidOperationException(
+                $"Invalid combat scenario bindings. Missing: [{string.Join(", ", missing)}]. "
+                + $"Unknown: [{string.Join(", ", unknown)}].");
+
+        return bindings;
     }
 }

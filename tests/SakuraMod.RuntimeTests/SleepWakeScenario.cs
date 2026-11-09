@@ -1,5 +1,7 @@
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.MonsterMoves.Intents;
+using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
@@ -49,10 +51,31 @@ internal static class SleepWakeScenario
             assertions.True("unblocked_attack_wakes", target.GetPower<ClassicSleepPower>() is null);
         }));
 
-        return new Dictionary<string, object?>
+        var snapshots = new Dictionary<string, object?>
         {
             ["target_hp"] = target.CurrentHp,
             ["sleep_remaining"] = target.GetPower<ClassicSleepPower>()?.Amount ?? 0
         };
+        await NGame.Instance!.ReturnToMainMenu();
+        await VerifyShadowEchoAsync(request, assertions);
+        return snapshots;
+    }
+
+    private static async Task VerifyShadowEchoAsync(SakuraTestRequest request, RuntimeAssertionCollector assertions)
+    {
+        var context = await CombatScenarioContext.StartAsync(request);
+        var combat = await context.EnterShadowCombatAsync();
+        var player = context.Player;
+        var shadow = combat.HittableEnemies.Single();
+        var sword = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowSword>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(sword, shadow);
+        var sleep = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowSleep>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(sleep, shadow);
+        assertions.True("sleep_immediately_covers_shadow_echo", shadow.Monster!.NextMove.Intents is [SleepIntent]);
+
+        var hpBeforeTurn = shadow.CurrentHp;
+        await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
+        assertions.Equal("shadow_echo_does_not_heal_while_asleep", hpBeforeTurn, shadow.CurrentHp);
+        assertions.Equal("shadow_spends_one_sleep_on_first_turn", 1, shadow.GetPower<ClassicSleepPower>()?.Amount ?? 0);
     }
 }

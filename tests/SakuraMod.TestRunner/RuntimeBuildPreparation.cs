@@ -25,7 +25,8 @@ public static class RuntimeBuildPreparation
             repoRoot,
             runId,
             runRoot,
-            cancellationToken);
+            cancellationToken,
+            reusePck: true);
         await SakuraTestProtocol.WriteAtomicAsync(
             Path.Combine(runRoot, "package-result.json"),
             package.Verification,

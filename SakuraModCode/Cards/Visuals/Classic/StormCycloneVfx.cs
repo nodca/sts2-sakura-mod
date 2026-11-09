@@ -51,6 +51,7 @@ internal sealed class StormCycloneVfx : CelVfxSession
     internal const float DissolveTime = 0.28f;
     private const float DissolveStagger = 0.03f;
     private const int Segments = 96;
+    private const int StrandVertexCount = (Segments + 1) * 2;
     private const float EasePower = 2f;
     private const float StrandStart = 0.06f;
     private const float FormGrow = 0.22f;
@@ -100,6 +101,7 @@ internal sealed class StormCycloneVfx : CelVfxSession
     private static readonly Palette SakuraPalette =
         new(new Color(1f, 1f, 1f), new Color(1f, 0.96f, 0.98f), new Color(1f, 0.66f, 0.82f));
     private static readonly Color BackTint = new(0.80f, 0.85f, 0.93f);
+    private static readonly Vector2[] StrandUvs = BuildStrandUvs();
 
     private readonly record struct FunnelShape(
         float Cx, float Rb, float Rt, float BaseY, float TopY, float K, float Omega, float Sway);
@@ -116,6 +118,9 @@ internal sealed class StormCycloneVfx : CelVfxSession
         internal ArrayMesh Back { get; } = back;
         internal Vector2[] Points { get; } = new Vector2[Segments + 1];
         internal float[] Depths { get; } = new float[Segments + 1];
+        internal Vector2[] Vertices { get; } = new Vector2[StrandVertexCount];
+        internal Color[] FrontColors { get; } = new Color[StrandVertexCount];
+        internal Color[] BackColors { get; } = new Color[StrandVertexCount];
         internal int Index { get; init; }
         internal float Phase { get; init; }
         internal float Turns { get; init; }
@@ -806,6 +811,18 @@ internal sealed class StormCycloneVfx : CelVfxSession
 
     // --- Strands -----------------------------------------------------------------
 
+    private static Vector2[] BuildStrandUvs()
+    {
+        var uvs = new Vector2[StrandVertexCount];
+        for (var i = 0; i <= Segments; i++)
+        {
+            var s = i / (float)Segments;
+            uvs[i * 2] = new Vector2(s, 0f);
+            uvs[i * 2 + 1] = new Vector2(s, 1f);
+        }
+        return uvs;
+    }
+
     private Strand AddStrand(
         float halfWidth, int index, float phase, float turns, float delay, float grow,
         float v0, float v1, float flare, float dissolveShare = 1f)
@@ -856,10 +873,9 @@ internal sealed class StormCycloneVfx : CelVfxSession
         }
 
         var count = strand.Points.Length;
-        var vertices = new Vector2[count * 2];
-        var uvs = new Vector2[count * 2];
-        var front = new Color[count * 2];
-        var back = new Color[count * 2];
+        var vertices = strand.Vertices;
+        var front = strand.FrontColors;
+        var back = strand.BackColors;
         var length = 0f;
         for (var i = 0; i < count; i++)
         {
@@ -872,25 +888,22 @@ internal sealed class StormCycloneVfx : CelVfxSession
             var halfWidth = strand.HalfWidth * Mathf.Lerp(0.35f, 1f, MathF.Abs(depth));
             vertices[i * 2] = strand.Points[i] + normal * halfWidth;
             vertices[i * 2 + 1] = strand.Points[i] - normal * halfWidth;
-            var s = i / (float)(count - 1);
-            uvs[i * 2] = new Vector2(s, 0f);
-            uvs[i * 2 + 1] = new Vector2(s, 1f);
             var near = Mathf.SmoothStep(-0.35f, 0.35f, depth);
             front[i * 2] = front[i * 2 + 1] = new Color(1f, 1f, 1f, near);
             back[i * 2] = back[i * 2 + 1] = new Color(BackTint, (1f - near) * 0.55f);
         }
 
-        Rebuild(strand.Front, vertices, uvs, front);
-        Rebuild(strand.Back, vertices, uvs, back);
+        Rebuild(strand.Front, vertices, front);
+        Rebuild(strand.Back, vertices, back);
         strand.Material.SetShaderParameter("path_length_px", Math.Max(length, 1f));
     }
 
-    private static void Rebuild(ArrayMesh mesh, Vector2[] vertices, Vector2[] uvs, Color[] colors)
+    private static void Rebuild(ArrayMesh mesh, Vector2[] vertices, Color[] colors)
     {
         var arrays = new Godot.Collections.Array();
         arrays.Resize((int)Mesh.ArrayType.Max);
         arrays[(int)Mesh.ArrayType.Vertex] = vertices;
-        arrays[(int)Mesh.ArrayType.TexUV] = uvs;
+        arrays[(int)Mesh.ArrayType.TexUV] = StrandUvs;
         arrays[(int)Mesh.ArrayType.Color] = colors;
         mesh.ClearSurfaces();
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.TriangleStrip, arrays);

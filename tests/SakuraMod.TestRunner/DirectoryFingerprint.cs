@@ -18,11 +18,14 @@ public static class DirectoryFingerprinter
 
     public static async Task<ProtectedDirectoryFingerprint> ComputeAsync(
         string root,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool rejectLinks = false)
     {
         root = Path.GetFullPath(root);
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        var state = new FingerprintState(root);
+        var state = new FingerprintState(root, rejectLinks);
+        if (rejectLinks && new DirectoryInfo(root).LinkTarget is not null)
+            throw new IOException($"Cannot fingerprint linked inputs at {root}.");
         if (!Directory.Exists(root))
         {
             AppendToken(hash, "absent\0");
@@ -30,8 +33,9 @@ public static class DirectoryFingerprinter
         }
 
         await VisitDirectoryAsync(root, string.Empty, hash, state, cancellationToken);
-        Console.WriteLine(
-            $"[isolation] fingerprint complete: {root} ({state.FileCount} files, {state.TotalBytes} bytes)");
+        if (!rejectLinks)
+            Console.WriteLine(
+                $"[isolation] fingerprint complete: {root} ({state.FileCount} files, {state.TotalBytes} bytes)");
         return new ProtectedDirectoryFingerprint(
             root,
             Convert.ToHexStringLower(hash.GetHashAndReset()),
@@ -85,6 +89,8 @@ public static class DirectoryFingerprinter
                 : Path.Combine(relativePath, entry.Name);
             if (entry.LinkTarget is not null)
             {
+                if (state.RejectLinks)
+                    throw new IOException($"Cannot fingerprint linked inputs at {entry.FullName}.");
                 AppendToken(hash, $"L\0{Normalize(childRelative)}\0{entry.LinkTarget}\0");
                 continue;
             }
@@ -144,17 +150,18 @@ public static class DirectoryFingerprinter
 
     private static string Normalize(string path) => path.Replace(Path.DirectorySeparatorChar, '/');
 
-    private sealed class FingerprintState(string root)
+    private sealed class FingerprintState(string root, bool rejectLinks)
     {
         private long _lastReportedBytes;
 
         public long FileCount { get; set; }
         public long DirectoryCount { get; set; }
         public long TotalBytes { get; set; }
+        public bool RejectLinks => rejectLinks;
 
         public void ReportProgressIfNeeded()
         {
-            if (TotalBytes - _lastReportedBytes < ProgressByteInterval && FileCount % 1000 != 0)
+            if (rejectLinks || (TotalBytes - _lastReportedBytes < ProgressByteInterval && FileCount % 1000 != 0))
             {
                 return;
             }
