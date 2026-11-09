@@ -6,64 +6,6 @@ public static class CombatCommand
 {
     private const int DefaultTimeoutSeconds = 120;
     private const ulong ScenarioSeed = 0x53414B555241UL;
-    internal static readonly string[] ScenarioIds =
-    [
-        "starter-run",
-        "clow-shield-singleplayer",
-        "clow-mist-slippery",
-        "sleep-wake",
-        "clow-fly-airborne",
-        "extra-effect-choice",
-        "extra-effect-play",
-        "exchange-four-pile-selection",
-        "manifest-temporary",
-        "generated-pile-memory",
-        "remind-recalls-originals",
-        "appear-power-manifest",
-        "repair-memory-heal",
-        "forgotten-cleanup-without-transparent",
-        "element-turn-cleanup",
-        "dream-turn-restoration",
-        "spell-turn-transformation",
-        "wand-turn-persistence",
-        "labyrinth-field",
-        "magic-charge-thresholds",
-        "sakura-ancient-cards",
-        "siege-end-turn",
-        "freeze-turn-coverage",
-        "frostbite-threshold",
-        "sakura-time-freeze",
-        "clow-time-stasis",
-        "classic-time-integration",
-        "snow-frostbite",
-        "save-load-restoration",
-        "fourth-act-save-load",
-        "fourth-act-terminal-transition",
-        "fourth-act-finished-combat-transition",
-        "combat-transition-cleanup",
-        "dark-selection-combat-reentry",
-        "through-poison",
-        "change-swap",
-        "lucid-search",
-        "aqua-sweep",
-        "sakura-erase",
-        "affliction-visual-layout",
-        "card-layout-pooled-reuse",
-        "queen-bound-cleanup",
-        "fourth-act-card-afflictions",
-        "fourth-act-audio",
-        "cleansing-stats",
-        "dark-endpoint",
-        "light-eternal-day",
-        "windy-bind-draw"
-    ];
-    private static readonly HashSet<string> SaveLoadScenarioIds =
-    [
-        "light-eternal-day",
-        "save-load-restoration",
-        "fourth-act-save-load",
-        "fourth-act-finished-combat-transition"
-    ];
 
     private const int DefaultJobs = 2;
 
@@ -78,7 +20,7 @@ public static class CombatCommand
         writer.WriteLine("per scenario instead (to bisect state leaking between scenarios).");
         writer.WriteLine("--only runs that subset the same way; --scenario runs one scenario in its own process.");
         writer.WriteLine("Available scenarios:");
-        foreach (var scenarioId in ScenarioIds)
+        foreach (var scenarioId in SakuraCombatScenarios.All)
             writer.WriteLine($"  {scenarioId}");
     }
 
@@ -162,7 +104,7 @@ public static class CombatCommand
 
         if (only is not null)
         {
-            var unknown = only.Where(id => !ScenarioIds.Contains(id, StringComparer.Ordinal)).ToList();
+            var unknown = only.Where(id => !SakuraCombatScenarios.All.Contains(id, StringComparer.Ordinal)).ToList();
             if (scenario is not null || only.Length == 0 || unknown.Count > 0)
             {
                 Console.Error.WriteLine(
@@ -175,13 +117,13 @@ public static class CombatCommand
 
         if (scenario is null)
         {
-            return new CombatOptions(ScenarioIds, false, jobs, isolated);
+            return new CombatOptions(SakuraCombatScenarios.All, false, jobs, isolated);
         }
 
-        if (!ScenarioIds.Contains(scenario, StringComparer.Ordinal))
+        if (!SakuraCombatScenarios.All.Contains(scenario, StringComparer.Ordinal))
         {
             Console.Error.WriteLine(
-                $"Unknown combat scenario '{scenario}'. Available: {string.Join(", ", ScenarioIds)}");
+                $"Unknown combat scenario '{scenario}'. Available: {string.Join(", ", SakuraCombatScenarios.All)}");
             return null;
         }
 
@@ -198,7 +140,7 @@ public static class CombatCommand
         RuntimeBuildArtifacts build,
         CombatOptions options)
     {
-        var batchable = options.Scenarios.Where(id => !options.Isolated && !SaveLoadScenarioIds.Contains(id)).ToList();
+        var batchable = options.Scenarios.Where(id => !options.Isolated && !SakuraCombatScenarios.IsSaveLoad(id)).ToList();
         var separate = options.Scenarios.Except(batchable).ToList();
         var queues = Enumerable.Range(0, Math.Min(options.Jobs, options.Scenarios.Count))
             .Select(static _ => (Batched: new List<string>(), Separate: new List<string>()))
@@ -249,7 +191,7 @@ public static class CombatCommand
         var scenarioStartedAt = DateTimeOffset.UtcNow;
         var scenarioRoot = Path.Combine(runRoot, "scenarios", scenarioId);
         Directory.CreateDirectory(scenarioRoot);
-        var isSaveLoad = SaveLoadScenarioIds.Contains(scenarioId);
+        var isSaveLoad = SakuraCombatScenarios.IsSaveLoad(scenarioId);
         var resultPath = Path.Combine(
             scenarioRoot,
             isSaveLoad ? "read-result.json" : "runtime-result.json");

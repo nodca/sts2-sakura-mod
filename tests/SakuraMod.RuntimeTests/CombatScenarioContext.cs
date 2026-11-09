@@ -15,6 +15,7 @@ using MegaCrit.Sts2.Core.Saves;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Encounters;
+using SakuraMod.SakuraModCode.FourthAct.Earth.Encounters;
 using SakuraMod.SakuraModCode.FourthAct.Fire.Encounters;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Encounters;
 using SakuraMod.TestProtocol;
@@ -66,6 +67,17 @@ internal sealed record CombatScenarioContext(
         EnterCombatAsync(
             ModelDb.Encounter<FuzzyWurmCrawlerWeak>().ToMutable(),
             "The fixed Fuzzy Wurm/Crawler encounter reached player Play phase.");
+
+    public Task<CombatState> EnterTunnelerCombatAsync() =>
+        EnterCombatAsync(
+            ModelDb.Encounter<TunnelerNormal>().ToMutable(),
+            "The fixed Tunneler encounter reached player Play phase.");
+
+    public Task<CombatState> EnterShadowCombatAsync() =>
+        EnterCombatAsync(
+            ModelDb.Encounter<ShadowEncounter>().ToMutable(),
+            "The fixed Shadow encounter reached player Play phase.",
+            RoomType.Elite);
 
     public Task<CombatState> EnterWeakSlimesCombatAsync() =>
         EnterCombatAsync(

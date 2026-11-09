@@ -45,17 +45,23 @@ public class ClassicSleepPower : SakuraPowerModel
             await PowerCmd.Remove(this);
     }
 
+    public override Task AfterSideTurnStartLate(CombatSide side, IReadOnlyList<Creature> participants, ICombatState combatState)
+    {
+        if (side == CombatSide.Player)
+            SakuraSleepMove.Apply(Owner);
+
+        return Task.CompletedTask;
+    }
+
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
         if (Owner.Side != side
             || !participants.Contains(Owner)
-            || !SakuraSleepMove.WasConsumedBy(Owner))
+            || !SakuraSleepMove.SkippedActionThisTurn(Owner))
             return;
 
         // Decrement, not Remove, so Clow Time's stasis can hold the last stack.
         await PowerCmd.Decrement(this);
-        if (Amount > 0)
-            SakuraSleepMove.Renew(Owner);
     }
 
     public override Task AfterRemoved(Creature oldOwner)

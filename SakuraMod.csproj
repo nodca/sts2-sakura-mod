@@ -91,11 +91,11 @@
         <Error Text=" Godot path must be set up before publishing; Godot not found at path '$(GodotPath)'. Check Directory.Build.props file." Condition="'$(GodotPath)' == '' or !Exists('$(GodotPath)')" />
     </Target>
     
-    <Target Name="PrepareGodotExportProjectAssembly" BeforeTargets="GodotPublish" Condition="'$(IsInnerGodotExport)' != 'true'">
+    <Target Name="PrepareGodotExportProjectAssembly" BeforeTargets="GodotPublish" Condition="'$(IsInnerGodotExport)' != 'true' and '$(SakuraTestPckAlreadyStaged)' != 'true'">
         <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Build" Properties="Configuration=Debug;IsInnerGodotExport=true;SkipSakuraPackageCopy=true" BuildInParallel="false" />
     </Target>
 
-    <Target Name="GodotPublish" AfterTargets="Publish" DependsOnTargets="PrepareGodotExportProjectAssembly" Condition="'$(GodotPath)' != '' and Exists('$(GodotPath)') and '$(IsInnerGodotExport)' != 'true'">
+    <Target Name="GodotPublish" AfterTargets="Publish" DependsOnTargets="PrepareGodotExportProjectAssembly" Condition="'$(GodotPath)' != '' and Exists('$(GodotPath)') and '$(IsInnerGodotExport)' != 'true' and '$(SakuraTestPckAlreadyStaged)' != 'true'">
         <Message Text="Exporting Godot .pck to mods folder" Importance="high" />
         <MakeDir Directories="$(SakuraPackageRoot)" />
         <Exec Command="&quot;$(GodotPath)&quot; --headless --quiet --export-pack &quot;BasicExport&quot; &quot;$(SakuraPackageRoot)$(MSBuildProjectName).pck&quot;" WorkingDirectory="$(MSBuildProjectDirectory)" EnvironmentVariables="IsInnerGodotExport=true;MSBUILDDISABLENODEREUSE=1" />
