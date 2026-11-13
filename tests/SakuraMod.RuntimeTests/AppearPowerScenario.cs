@@ -1,4 +1,4 @@
-using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Entities.CardRewardAlternatives;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
@@ -49,7 +49,7 @@ internal static class AppearPowerScenario
             "stacked_spells_per_manifest",
             stackedManifested.Sum(card => SakuraActions.ElementsOf(card).Count) * 2,
             stackedSpells.Length);
-        assertions.Equal("selector_released", null, CardSelectCmd.Selector);
+        assertions.Equal("selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
 
         RuntimeTestHost.WriteCheckpoint(
             request,
@@ -64,7 +64,7 @@ internal static class AppearPowerScenario
         async Task<(CardModel[] Manifested, CardModel[] Spells)> EndTurnAsync()
         {
             var handBefore = playerCombat.Hand.Cards.ToHashSet();
-            using (CardSelectCmd.UseSelector(selector))
+            using (RunManager.Instance.CardSelectorStack.UseSelector(player, selector))
             {
                 await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
             }

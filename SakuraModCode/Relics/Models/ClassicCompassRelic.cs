@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Entities.Relics;
+using MegaCrit.Sts2.Core.Extensions;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
@@ -59,7 +60,7 @@ public class ClassicCompassRelic : SakuraRelicModel
         var combatState = Owner.Creature.CombatState
             ?? throw new InvalidOperationException("Compass card choice requires an active combat.");
         var templates = SakuraSourceCardRules.RewardableClowTemplates(Owner).ToList();
-        Owner.RunState.Rng.CombatCardSelection.Shuffle(templates);
+        templates.UnstableShuffle(Owner.RunState.Rng.CombatCardSelection);
         var choices = templates
             .Take(DynamicVars.Cards.IntValue)
             .Select(template => combatState.CreateCard(template, Owner))

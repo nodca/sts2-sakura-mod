@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -148,11 +149,11 @@ internal static class GeneratedPileMemoryScenario
         // Pile choice only appears once Memory has cards; Draw Pile is index 0 either way.
         dreamingSelector.PrepareToSelect([0]);
         dreamingSelector.PrepareToSelect([0]);
-        using (CardSelectCmd.UseSelector(dreamingSelector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, dreamingSelector))
         {
             await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
         }
-        assertions.Equal("dreaming_selector_released", null, CardSelectCmd.Selector);
+        assertions.Equal("dreaming_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
         var memory = SakuraMemoryPile.Get(player)
             ?? throw new InvalidOperationException("Memory pile is unavailable after Temporary cleanup.");
         assertions.True("temporary_moved_into_memory", ReferenceEquals(temporary.Pile, memory));
@@ -204,11 +205,11 @@ internal static class GeneratedPileMemoryScenario
         var handBeforeRemind = playerCombat.Hand.Cards.ToList();
         var remindSelector = new TestCardSelector();
         remindSelector.PrepareToSelect([0, 1]);
-        using (CardSelectCmd.UseSelector(remindSelector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, remindSelector))
         {
             await CombatScenarioContext.PlayCardAsync(remind);
         }
-        assertions.Equal("remind_selector_released", null, CardSelectCmd.Selector);
+        assertions.Equal("remind_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
         // Recalled copies return as ordinary combat cards with stale Temporary
         // stripped, so they are not reachable through IsTemporary(); diff the hand.
         var recalled = playerCombat.Hand.Cards
@@ -289,7 +290,7 @@ internal static class GeneratedPileMemoryScenario
             "spiral_extra_adds_no_copies_to_hand",
             handSpiralsBeforeExtra,
             playerCombat.Hand.Cards.OfType<Spiral>().Count());
-        assertions.Equal("pile_memory_selector_released", null, CardSelectCmd.Selector);
+        assertions.Equal("pile_memory_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
         RuntimeTestHost.WriteCheckpoint(
             request,
             "generated_pile_memory_verified",

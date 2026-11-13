@@ -2,6 +2,7 @@ using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.TestSupport;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Relics;
@@ -21,7 +22,9 @@ internal static class WandTurnPersistenceScenario
         var wand = player.Relics.OfType<ClassicSealedWandRelic>().Single();
 
         assertions.Equal("fixture_wand_charge_before_trigger", 0, wand.ChargeAmount);
+        assertions.Equal("wand_description_initial_threshold", 40m, wand.DynamicDescription.Variables["TriggerThreshold"]);
         wand.AddReturnRecharge();
+        assertions.Equal("wand_description_remaining_after_recharge", 10m, wand.DynamicDescription.Variables["RemainingCharge"]);
         wand.AddReturnRecharge();
         await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
 
@@ -37,6 +40,8 @@ internal static class WandTurnPersistenceScenario
             "hand_turn_links_to_deck_body",
             ReferenceEquals(handTurns[0].DeckVersion, deckTurns[0]));
         assertions.Equal("deck_body_pile", PileType.Deck, deckTurns[0].Pile?.Type);
+        assertions.Equal("wand_description_threshold_after_grant", 60m, wand.DynamicDescription.Variables["TriggerThreshold"]);
+        assertions.Equal("wand_description_remaining_after_grant", 40m, wand.DynamicDescription.Variables["RemainingCharge"]);
         RuntimeTestHost.WriteCheckpoint(
             request,
             "wand_granted_one_linked_turn",
@@ -89,7 +94,7 @@ internal static class WandTurnPersistenceScenario
         assertions.True("turn_is_playable_in_later_combat", turnToPlay.CanPlay());
         var selector = new TestCardSelector();
         selector.PrepareToSelect([selectedIndex]);
-        using (CardSelectCmd.UseSelector(selector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, selector))
         {
             await CombatScenarioContext.PlayCardAsync(turnToPlay);
         }

@@ -13,7 +13,6 @@ using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Models.Enchantments;
 using MegaCrit.Sts2.Core.Models.Events;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Singleton;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Pooling;
@@ -283,7 +282,7 @@ internal static class RuntimeSmokeScenario
         var optionsPatchInfo = Harmony.GetPatchInfo(AccessTools.Method(
             typeof(NCharacterSelectScreen),
             nameof(NCharacterSelectScreen.SelectCharacter),
-            [typeof(NCharacterSelectButton), typeof(CharacterModel)]));
+            [typeof(NCharacterSelectButton)]));
         assertions.True(
             "sakura_character_select_options_patch_owned_by_sakura",
             optionsPatchInfo?.Postfixes.Any(static patch =>
@@ -369,6 +368,24 @@ internal static class RuntimeSmokeScenario
 
     private static object InspectFourthActMapCreation(RuntimeAssertionCollector assertions)
     {
+        var fourthActSetting = SakuraModConfig.EnableFourthActBinding;
+        var originalFourthActSetting = fourthActSetting.Read();
+        fourthActSetting.Write(true);
+        try
+        {
+            foreach (var mode in new[] { GameMode.Standard, GameMode.Blitz, GameMode.Dread })
+            {
+                var modeRun = RunState.CreateForTest(gameMode: mode,
+                    players: [Player.CreateForNewRun<ClassicSakura>(UnlockState.all, 1UL)]);
+                assertions.Equal($"fourth_act_entry_in_{mode}", mode == GameMode.Standard,
+                    FourthActEntryRegistration.CanEnter(modeRun));
+            }
+        }
+        finally
+        {
+            fourthActSetting.Write(originalFourthActSetting);
+        }
+
         var runState = MegaCrit.Sts2.Core.Runs.RunState.CreateForTest(
             acts: [ModelDb.Act<SakuraFourthAct>()],
             seed: "SAKURA_WATER_ROUTE_RUNTIME");
@@ -409,7 +426,10 @@ internal static class RuntimeSmokeScenario
         {
             var point = runState.Map.GetAllMapPoints()
                 .Single(point => point.coord.col == index * 2 && point.coord.row == 3);
-            var node = NBossMapPoint.Create(point, null!, runState);
+            var routeEncounter = SakuraFourthActMap.EncounterAt(FourthActRouteCatalog.Resolve().CompleteRoutes,
+                point.coord, runState.Rng.Seed)!;
+            var encounter = ModelDb.GetById<EncounterModel>(ModelDb.GetId(routeEncounter.EncounterType));
+            var node = NBossMapPoint.Create(point, null!, encounter, runState);
             try
             {
                 var icon = node.GetNode<TextureRect>("%PlaceholderImage");
@@ -439,7 +459,7 @@ internal static class RuntimeSmokeScenario
     private static void InspectFourthActEndpointIcon(RunState runState, string expected,
         RuntimeAssertionCollector assertions)
     {
-        var node = NBossMapPoint.Create(runState.Map.BossMapPoint, null!, runState);
+        var node = NBossMapPoint.Create(runState.Map.BossMapPoint, null!, runState.Act.BossEncounter, runState);
         try
         {
             var icon = node.GetNode<TextureRect>("%PlaceholderImage");

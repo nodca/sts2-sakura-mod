@@ -264,7 +264,7 @@ internal static class SakuraFourthActElementalBossRewardsPatch
             return true;
         }
 
-        TaskHelper.RunSafely(RunManager.Instance.ProceedFromTerminalRewardsScreen());
+        RunManager.Instance.ProceedFromTerminalRewardsScreen();
         return false;
     }
 }

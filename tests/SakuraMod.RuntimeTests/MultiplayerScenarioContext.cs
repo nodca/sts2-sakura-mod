@@ -134,12 +134,14 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             LocalContext.NetId = host.NetId;
             lobby = new StartRunLobby(
                 GameMode.Standard,
+                isCustom: false,
                 host,
                 listener,
                 maxPlayers: multiplayer.ExpectedPlayerCount);
             lobby.AddLocalHostPlayer(
                 new UnlockState(SaveManager.Instance.Progress),
-                SaveManager.Instance.Progress.MaxMultiplayerAscension);
+                SaveManager.Instance.Progress.MaxMultiplayerAscension,
+                SaveManager.Instance.Progress.MaxBlitzAscension);
             RuntimeTestHost.WriteCheckpoint(
                 request,
                 "host_listening",
@@ -147,18 +149,18 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         }
         else
         {
-            var joinFlow = new JoinFlow(new NetClientGameService(PeerVersionInfo.LocalDefault()));
             IClientConnectionInitializer initializer = new ENetClientConnectionInitializer(
                 multiplayer.LocalNetId,
                 multiplayer.HostAddress,
                 multiplayer.Port);
-            var join = await joinFlow.Begin(initializer, game.GetTree());
+            var joinFlow = new JoinFlow(new NetClientGameService(PeerVersionInfo.LocalDefault()), initializer);
+            var join = await joinFlow.Begin(game.GetTree());
             if (join.sessionState != RunSessionState.InLobby || !join.joinResponse.HasValue)
                 throw new InvalidOperationException($"Client joined unexpected session state {join.sessionState}.");
             netService = joinFlow.NetService
                 ?? throw new InvalidOperationException("JoinFlow returned without a client network service.");
             LocalContext.NetId = netService.NetId;
-            lobby = new StartRunLobby(join.gameMode, netService, listener, maxPlayers: -1);
+            lobby = new StartRunLobby(join.gameMode, join.isCustom, netService, listener, maxPlayers: -1);
             lobby.InitializeFromMessage(join.joinResponse.Value);
         }
 
@@ -181,6 +183,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             lobby.SetReady(ready: true);
             var begin = await listener.Begin.Task.WaitAsync(StateTimeout);
             var run = await game.StartNewMultiplayerRun(
+                lobby.GeneratePlayers(begin.Seed),
                 lobby,
                 shouldSave,
                 begin.Acts,
@@ -254,12 +257,12 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         }
         else
         {
-            var joinFlow = new JoinFlow(new NetClientGameService(PeerVersionInfo.LocalDefault()));
             IClientConnectionInitializer initializer = new ENetClientConnectionInitializer(
                 multiplayer.LocalNetId,
                 multiplayer.HostAddress,
                 multiplayer.Port);
-            var join = await joinFlow.Begin(initializer, game.GetTree());
+            var joinFlow = new JoinFlow(new NetClientGameService(PeerVersionInfo.LocalDefault()), initializer);
+            var join = await joinFlow.Begin(game.GetTree());
             if (join.sessionState != RunSessionState.InLoadedLobby || !join.loadJoinResponse.HasValue)
                 throw new InvalidOperationException(
                     $"Client joined unexpected load-run session state {join.sessionState}.");
@@ -563,7 +566,8 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         public void LocalPlayerDisconnected(NetErrorInfo info) =>
             Begin.TrySetException(new InvalidOperationException($"Disconnected before run start: {info}."));
         public void PlayerConnected(StartRunLobbyPlayer player) { }
-        public void PlayerChanged(StartRunLobbyPlayer player, bool isRandomCharacterResolution) { }
+        public void PlayerChanged(StartRunLobbyPlayer player) { }
+        public void GameModeChanged() { }
         public void AscensionChanged() { }
         public void SeedChanged() { }
         public void ModifiersChanged() { }

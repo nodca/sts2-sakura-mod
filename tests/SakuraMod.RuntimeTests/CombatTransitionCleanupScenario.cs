@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
@@ -75,7 +76,7 @@ internal static class CombatTransitionCleanupScenario
             ?? throw new InvalidOperationException("First combat Memory pile is unavailable.");
         assertions.Equal("first_magic_charge", 7, player.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0);
         assertions.True("first_firey_present", player.Creature.HasPower<ClassicFireyPower>());
-        assertions.Equal("selector_clear_before_transition", null, CardSelectCmd.Selector);
+        assertions.Equal("selector_clear_before_transition", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
         RuntimeTestHost.WriteCheckpoint(
             request,
             "first_combat_state_seeded",
@@ -112,7 +113,7 @@ internal static class CombatTransitionCleanupScenario
             "second_generated_history_clear",
             0,
             CombatManager.Instance.History.Entries.OfType<CardGeneratedEntry>().Count());
-        assertions.Equal("selector_clear_after_transition", null, CardSelectCmd.Selector);
+        assertions.Equal("selector_clear_after_transition", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
 
         var secondTemporary = secondCombat.CreateCard<Spiral>(player);
         await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(

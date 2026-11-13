@@ -122,7 +122,8 @@ public sealed class TelemetryContractSuite
             })
             && !SakuraTelemetry.IsSakuraSerializableRun(new SerializableRun
             {
-                GameMode = GameMode.Custom,
+                GameMode = GameMode.Standard,
+                IsCustomGame = true,
                 Players =
                 [
                     new SerializablePlayer

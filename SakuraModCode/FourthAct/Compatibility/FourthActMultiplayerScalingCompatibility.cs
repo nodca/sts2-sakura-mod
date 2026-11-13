@@ -1,7 +1,6 @@
 using System.Reflection;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Singleton;
 using MegaCrit.Sts2.Core.Rooms;
 
 namespace SakuraMod.SakuraModCode.FourthAct.Compatibility;
@@ -11,7 +10,7 @@ internal static class FourthActMultiplayerScalingCompatibility
     internal const int FourthActIndex = 3;
     internal const decimal NonBossScale = 1.2m;
     internal const decimal BossScale = 1.3m;
-    internal const string SupportedGameCommitPrefix = "0.1.0+41cef1ea";
+    internal const string SupportedGameCommitPrefix = "0.1.0+16ac0fe3";
 
     internal static bool TryResolve(EncounterModel? encounter, int actIndex, out decimal scale)
     {

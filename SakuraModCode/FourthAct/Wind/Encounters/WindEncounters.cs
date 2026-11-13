@@ -91,6 +91,7 @@ public sealed class WindyEncounter() : WindEncounterTemplate(RoomType.Boss)
 
     protected override IReadOnlyDictionary<string, Vector2> SlotPositions => EncounterSlotPositions;
     public override EncounterAssetProfile AssetProfile => FourthActEncounterAssets.WindBoss;
+    public override string BossNodePath => AssetProfile.BossNodeSpinePath!;
 
     public override IEnumerable<MonsterModel> AllPossibleMonsters =>
     [

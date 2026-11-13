@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Runs;
 using System.Diagnostics;
 using Godot;
 using MegaCrit.Sts2.Core.Assets;
@@ -55,7 +56,7 @@ internal static class SpellTurnTransformationScenario
         assertions.True("turn_is_playable_before_conversion", turn.CanPlay());
         var selector = new TestCardSelector();
         selector.PrepareToSelect([selectedIndex]);
-        using (CardSelectCmd.UseSelector(selector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, selector))
         {
             await CombatScenarioContext.PlayCardAsync(turn);
         }
@@ -77,7 +78,7 @@ internal static class SpellTurnTransformationScenario
         assertions.True(
             "duplicate_sword_conversion_blocked",
             playerCombat.AllCards.OfType<ClowSword>().All(card => !SakuraSourceCardRules.IsEligibleClowForTurn(card)));
-        assertions.Equal("turn_selector_released", null, CardSelectCmd.Selector);
+        assertions.Equal("turn_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
         assertions.Equal(
             "card_vfx_playback_cache_misses",
             missedCacheAssetsBefore,

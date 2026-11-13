@@ -18,7 +18,7 @@ public sealed class TelemetryMultiplayerSuite
         Assert.False(SakuraTelemetry.IsSakuraSerializableRun(run, 10142));
         Assert.False(SakuraTelemetry.IsSakuraSerializableRun(run, 999));
         Assert.False(SakuraTelemetry.IsSakuraSerializableRun(run, null));
-        run.GameMode = GameMode.Custom;
+        run.IsCustomGame = true;
         Assert.False(SakuraTelemetry.IsSakuraSerializableRun(run, 20242));
     }
 

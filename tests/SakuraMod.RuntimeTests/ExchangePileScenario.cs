@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Runs;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
@@ -96,7 +97,7 @@ internal static class ExchangePileScenario
         var selector = new TestCardSelector();
         selector.PrepareToSelect([0]);
         selector.PrepareToSelect([0, 2]);
-        using (CardSelectCmd.UseSelector(selector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, selector))
         {
             await CombatScenarioContext.PlayCardAsync(exchange);
         }
@@ -135,7 +136,7 @@ internal static class ExchangePileScenario
             1,
             SakuraActions.ExtraEffectTriggerCountThisTurn(player) - triggerBefore);
         assertions.True("exchange_result_pile", playerCombat.DiscardPile.Cards.Contains(exchange));
-        assertions.Equal("selector_released", null, CardSelectCmd.Selector);
+        assertions.Equal("selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
         assertions.Equal(
             "draw_ui_count_synchronized_after_exchange",
             playerCombat.DrawPile.Cards.Count,

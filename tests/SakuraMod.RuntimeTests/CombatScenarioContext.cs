@@ -42,13 +42,16 @@ internal sealed record CombatScenarioContext(
 
         var game = NGame.Instance
             ?? throw new InvalidOperationException("NGame is unavailable at main-menu scenario dispatch.");
+        var player = Player.CreateForNewRun<ClassicSakura>(
+            SaveManager.Instance.GenerateUnlockStateFromProgress(), 1UL);
         var run = await game.StartNewSingleplayerRun(
-            ModelDb.Character<ClassicSakura>(),
+            player,
             shouldSave,
             acts ?? ActModel.GetDefaultList(),
             Array.Empty<ModifierModel>(),
             request.Seed.ToString("X16"),
-            GameMode.Standard);
+            GameMode.Standard,
+            isCustomGame: false);
         RunManager.Instance.CombatReplayWriter.IsEnabled = false;
         if (run.Players.Count != 1)
         {

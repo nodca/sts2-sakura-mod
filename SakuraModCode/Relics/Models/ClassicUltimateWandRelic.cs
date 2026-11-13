@@ -61,7 +61,7 @@ public class ClassicUltimateWandRelic : ClassicSealedWandRelic
         new DynamicVar(HandUpgradesVar, HandUpgrades)
     ];
 
-    public override bool IsAllowed(IRunState runState) =>
+    protected override bool IsAllowedInternal(IRunState runState) =>
         false;
 
     public override async Task BeforeCombatStart()

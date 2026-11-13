@@ -13,6 +13,7 @@ namespace SakuraMod.SakuraModCode.FourthAct.Dark.Encounters;
 public sealed class DarkEncounter : ModEncounterTemplate
 {
     public override EncounterAssetProfile AssetProfile => FourthActEncounterAssets.DarkBoss;
+    public override string BossNodePath => AssetProfile.BossNodeSpinePath!;
     public override RoomType RoomType => RoomType.Boss;
     public override bool ShouldGiveRewards => false;
     public override bool IsValidForAct(ActModel act) => act is SakuraFourthAct;

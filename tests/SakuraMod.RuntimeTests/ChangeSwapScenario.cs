@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -37,7 +38,7 @@ internal static class ChangeSwapScenario
         var selector = new TestCardSelector();
         selector.PrepareToSelect([0]);
         selector.PrepareToSelect([0]);
-        using (CardSelectCmd.UseSelector(selector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, selector))
         {
             await CombatScenarioContext.PlayCardAsync(change);
         }

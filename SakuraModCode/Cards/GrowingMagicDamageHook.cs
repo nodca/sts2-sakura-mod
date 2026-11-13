@@ -3,16 +3,11 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.ValueProps;
-using STS2RitsuLib.Models;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public sealed class GrowingMagicDamageHook : HookedSingletonModel
+public sealed class GrowingMagicDamageHook : RunModel
 {
-    public GrowingMagicDamageHook() : base(HookType.Combat)
-    {
-    }
-
     public override async Task AfterDamageGiven(
         PlayerChoiceContext choiceContext,
         Creature? dealer,

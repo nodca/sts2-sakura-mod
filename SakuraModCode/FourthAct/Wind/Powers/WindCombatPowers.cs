@@ -357,7 +357,7 @@ public sealed class WindSleepSelectionPower : SakuraPowerModel
         await PowerCmd.ModifyAmount(choiceContext, this, -1, Applier, null, true);
     }
 
-    public override async Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, bool wasRemovalPrevented, float deathAnimLength)
+    public override async Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, CardModel? source, bool wasRemovalPrevented, float deathAnimLength)
     {
         if (!wasRemovalPrevented && creature.Monster is Models.SleepMonster)
         {
@@ -387,7 +387,7 @@ public sealed class WindSleepWakePower : SakuraPowerModel
         }
     }
 
-    public override async Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, bool wasRemovalPrevented, float deathAnimLength)
+    public override async Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, CardModel? source, bool wasRemovalPrevented, float deathAnimLength)
     {
         if (!wasRemovalPrevented && creature.Monster is Models.SleepMonster)
         {

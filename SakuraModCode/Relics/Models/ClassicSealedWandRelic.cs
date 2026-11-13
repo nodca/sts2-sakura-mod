@@ -1,3 +1,5 @@
+using System.Reflection;
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Combat;
@@ -76,9 +78,9 @@ public class ClassicSealedWandRelic : SakuraRelicModel
         new DynamicVar(EliteBossExtraGainVar, EliteBossExtraGainAmount),
         new DynamicVar(SealExtraGainVar, SealExtraGainAmount),
         new CardsVar(1),
-        new SealedWandTriggerThresholdVar(BaseTriggerAmount),
+        new DynamicVar(TriggerThresholdVar, BaseTriggerAmount),
         new DynamicVar(TriggerIncreaseVar, TriggerIncreaseAmount),
-        new SealedWandRemainingChargeVar(BaseTriggerAmount)
+        new DynamicVar(RemainingChargeVar, BaseTriggerAmount)
     ];
 
     public override async Task BeforeCombatStart()
@@ -284,27 +286,24 @@ public class ClassicSealedWandRelic : SakuraRelicModel
         InvokeDisplayAmountChanged();
     }
 
-    private sealed class SealedWandTriggerThresholdVar(int fallbackValue) : DynamicVar(TriggerThresholdVar, fallbackValue)
+    [HarmonyPatch]
+    private static class WandDescriptionPatch
     {
-        public override string ToString() =>
-            CurrentValue().ToString();
+        [HarmonyTargetMethods]
+        private static IEnumerable<MethodBase> TargetMethods() =>
+        [
+            AccessTools.PropertyGetter(typeof(RelicModel), nameof(RelicModel.DynamicDescription)),
+            AccessTools.PropertyGetter(typeof(RelicModel), nameof(RelicModel.DynamicEventDescription))
+        ];
 
-        protected override decimal GetBaseValueForIConvertible() =>
-            CurrentValue();
+        [HarmonyPostfix]
+        private static void AddCurrentCharge(RelicModel __instance, LocString __result)
+        {
+            if (__instance is not ClassicSealedWandRelic wand)
+                return;
 
-        private int CurrentValue() =>
-            _owner is ClassicSealedWandRelic relic ? relic.DisplayTriggerThreshold() : fallbackValue;
-    }
-
-    private sealed class SealedWandRemainingChargeVar(int fallbackValue) : DynamicVar(RemainingChargeVar, fallbackValue)
-    {
-        public override string ToString() =>
-            CurrentValue().ToString();
-
-        protected override decimal GetBaseValueForIConvertible() =>
-            CurrentValue();
-
-        private int CurrentValue() =>
-            _owner is ClassicSealedWandRelic relic ? relic.DisplayRemainingCharge() : fallbackValue;
+            __result.Add(TriggerThresholdVar, (decimal)wand.DisplayTriggerThreshold());
+            __result.Add(RemainingChargeVar, (decimal)wand.DisplayRemainingCharge());
+        }
     }
 }

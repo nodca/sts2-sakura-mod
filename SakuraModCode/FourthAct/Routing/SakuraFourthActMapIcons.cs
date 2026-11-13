@@ -1,6 +1,7 @@
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Map;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Runs;
 using SakuraMod.SakuraModCode.FourthAct.Dark.Encounters;
@@ -54,7 +55,7 @@ internal static class SakuraFourthActMapIcons
     }
 }
 
-// STS2 0.107.1 creates temporary normal nodes for all interior coordinates.
+// STS2 creates temporary normal nodes for all interior coordinates.
 // Skip the empty Boss filename until DrawPaths replaces them with boss scenes.
 [HarmonyPatch(typeof(NNormalMapPoint), "UpdateIcon")]
 internal static class SakuraFourthActBranchIconPatch
@@ -78,13 +79,17 @@ internal static class SakuraFourthActBranchBossNodePatch
         if (____runState.Act is not SakuraFourthAct)
             return;
 
+        var routes = FourthActRouteCatalog.Resolve().CompleteRoutes;
         foreach (var original in ____mapPointDictionary.Values.OfType<NNormalMapPoint>().ToArray())
         {
-            if (SakuraFourthActMapIcons.Resolve(original, ____runState) is null)
+            if (original.Point.PointType != MapPointType.Boss
+                || SakuraFourthActMap.EncounterAt(routes, original.Point.coord, ____runState.Rng.Seed)
+                    is not { } routeEncounter)
                 continue;
 
             var center = original.Position; // Native GetLineEndpoint for a normal node.
-            var boss = NBossMapPoint.Create(original.Point, __instance, ____runState);
+            var encounter = ModelDb.GetById<EncounterModel>(ModelDb.GetId(routeEncounter.EncounterType));
+            var boss = NBossMapPoint.Create(original.Point, __instance, encounter, ____runState);
             boss.Name = original.Name;
             ____points.RemoveChild(original);
             original.QueueFree();

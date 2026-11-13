@@ -59,7 +59,7 @@ public static class PackageBuilder
             stageWasAbsent,
             startedAt,
             "SakuraMod",
-            "v0.110.0",
+            $"v{RuntimePreflight.MinimumSupportedGameVersion}",
             "STS2-RitsuLib",
             Path.Combine(runRoot, "pck-inventory.json"),
             Path.Combine(runRoot, "pck-inspector.log")), cancellationToken);

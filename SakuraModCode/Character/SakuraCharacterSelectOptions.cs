@@ -2,7 +2,6 @@ using System.Runtime.CompilerServices;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Localization;
-using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Game.Lobby;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
@@ -28,14 +27,13 @@ internal static class SakuraCharacterSelectOptionsPatch
     [HarmonyPostfix]
     private static void SelectCharacterPostfix(
         NCharacterSelectScreen __instance,
-        NCharacterSelectButton charSelectButton,
-        CharacterModel characterModel)
+        NCharacterSelectButton charSelectButton)
     {
         try
         {
             var state = States.GetValue(__instance, static screen => new OptionsState(screen));
             var shouldShow = ShouldShow(
-                SakuraStarterCompatibility.IsKinomotoSakuraCharacter(characterModel),
+                SakuraStarterCompatibility.IsKinomotoSakuraCharacter(charSelectButton.Character),
                 charSelectButton.IsRandom,
                 charSelectButton.IsLocked);
             state.SetVisibleFor(shouldShow ? charSelectButton : null);

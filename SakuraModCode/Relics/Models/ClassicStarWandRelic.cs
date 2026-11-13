@@ -36,7 +36,7 @@ public class ClassicStarWandRelic : ClassicSealedWandRelic
     protected override int EliteBossExtraGainAmount => 3;
     protected override string GeneratedTurnSourceName => "Star Wand";
 
-    public override bool IsAllowed(IRunState runState) =>
+    protected override bool IsAllowedInternal(IRunState runState) =>
         runState.Players.Any(static player => SakuraUltimateWandRecipe.FindExactSealedWand(player) is not null);
 
     public override async Task AfterObtained()

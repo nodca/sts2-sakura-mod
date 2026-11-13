@@ -45,7 +45,7 @@ internal static class DarkSelectionCombatReentryScenario
             "dark_selection_has_eligible_hand_card",
             eligibleHandCount > 0,
             "Dark needs a live hand card in order to open its end-of-turn selector.");
-        assertions.Equal("dark_selector_override_absent", null, CardSelectCmd.Selector);
+        assertions.Equal("dark_selector_override_absent", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
 
         var endTurnAction = new EndPlayerTurnAction(player, firstPlayerCombat.TurnNumber);
         RunManager.Instance.ActionQueueSynchronizer.RequestEnqueue(endTurnAction);
@@ -116,7 +116,7 @@ internal static class DarkSelectionCombatReentryScenario
                 seed = request.Seed.ToString("X16"),
                 dark_amount = 1,
                 eligible_hand_count = eligibleHandCount,
-                selector_override = CardSelectCmd.Selector?.GetType().FullName,
+                selector_override = RunManager.Instance.CardSelectorStack.GetSelector(player)?.GetType().FullName,
                 setup_mutation = $"RuntimeFixtureAction -> PowerCmd.Apply<{nameof(ClassicDarkPower)}>(1)"
             },
             ["transition"] = new

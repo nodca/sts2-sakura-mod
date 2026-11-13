@@ -169,7 +169,7 @@ public sealed class ShadowEchoPower : SakuraPowerModel
     internal CardType? GetIntentCardType(Creature player) =>
         _currentTurnCard.TryGetValue(player, out var cardType) ? cardType : null;
 
-    public override Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature,
+    public override Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, CardModel? source,
         bool wasRemovalPrevented, float deathAnimLength)
     {
         if (creature.IsPlayer)
@@ -251,7 +251,7 @@ public sealed class EarthySedimentPower : SakuraPowerModel
         return Task.CompletedTask;
     }
 
-    public override Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, bool wasRemovalPrevented, float deathAnimLength)
+    public override Task AfterDeath(PlayerChoiceContext choiceContext, Creature creature, CardModel? source, bool wasRemovalPrevented, float deathAnimLength)
     {
         if (creature == Owner)
         {

@@ -16,8 +16,9 @@ internal static class SakuraCharacterSelectBackgroundPatch
     [HarmonyPostfix]
     private static void SelectCharacterPostfix(
         NCharacterSelectScreen __instance,
-        CharacterModel characterModel)
+        NCharacterSelectButton charSelectButton)
     {
+        var characterModel = charSelectButton.Character;
         if (!SakuraStarterCompatibility.IsKinomotoSakuraCharacter(characterModel))
             return;
 

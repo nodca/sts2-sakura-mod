@@ -53,6 +53,9 @@ internal static class FourthActEntryRegistration
 
     internal static bool CanEnter(IRunState runState)
     {
+        if (runState.GameMode is GameMode.Blitz or GameMode.Dread)
+            return false;
+
         if (runState is RunState state && _runData is not null && _runData.TryGet(state, out var entry))
         {
             return CanEnter(entry.Enabled,

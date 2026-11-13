@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -44,7 +45,7 @@ internal static class LucidSearchScenario
             foreach (var pick in picks)
                 selector.PrepareToSelect([pick]);
             var energyBefore = playerCombat.Energy;
-            using (CardSelectCmd.UseSelector(selector))
+            using (RunManager.Instance.CardSelectorStack.UseSelector(player, selector))
                 await CombatScenarioContext.PlayCardAsync(lucid);
             assertions.Equal("lucid_costs_zero", energyBefore, playerCombat.Energy);
             assertions.True("lucid_exhausts", lucid.Pile?.Type == PileType.Exhaust);

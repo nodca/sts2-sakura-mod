@@ -32,7 +32,7 @@ public class ClassicFrogRaincoatRelic : SakuraRelicModel
         SakuraCardHoverTips.StaticTip(SakuraCardHoverTips.TemporaryTipKey)
     ];
 
-    public override bool IsAllowed(IRunState runState) => false;
+    protected override bool IsAllowedInternal(IRunState runState) => false;
 
     public override Task BeforeCombatStart()
     {

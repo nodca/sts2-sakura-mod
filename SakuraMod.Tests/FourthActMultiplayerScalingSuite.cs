@@ -1,4 +1,4 @@
-using MegaCrit.Sts2.Core.Models.Singleton;
+using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.FourthAct.Compatibility;
 using SakuraMod.SakuraModCode.FourthAct.Wind.Encounters;
 

@@ -1,4 +1,4 @@
-using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.TestSupport;
@@ -24,7 +24,7 @@ internal static class ManifestTemporaryScenario
         var manifestSelector = new TestCardSelector();
         manifestSelector.PrepareToSelect([0]);
         manifestSelector.PrepareToSelect([0]);
-        using (CardSelectCmd.UseSelector(manifestSelector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, manifestSelector))
         {
             await CombatScenarioContext.PlayCardAsync(choice);
         }
@@ -59,7 +59,7 @@ internal static class ManifestTemporaryScenario
         var stabilizeSelector = new TestCardSelector();
         stabilizeSelector.PrepareToSelect([1]);
         stabilizeSelector.PrepareToSelect([0]);
-        using (CardSelectCmd.UseSelector(stabilizeSelector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, stabilizeSelector))
         {
             await CombatScenarioContext.PlayCardAsync(trueOrFalse);
         }
@@ -72,7 +72,7 @@ internal static class ManifestTemporaryScenario
         assertions.True(
             "true_or_false_result_pile",
             playerCombat.DiscardPile.Cards.Contains(trueOrFalse));
-        assertions.Equal("manifest_selector_released", null, CardSelectCmd.Selector);
+        assertions.Equal("manifest_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
 
         var virtualOnly = await CombatScenarioContext.AddGeneratedCardToHandAsync<TrueOrFalse>(combat, player);
         var energyBeforeVirtual = playerCombat.Energy;
@@ -80,7 +80,7 @@ internal static class ManifestTemporaryScenario
         assertions.True("virtual_only_is_playable", virtualOnly.CanPlay());
         var virtualSelector = new TestCardSelector();
         virtualSelector.PrepareToSelect([0]);
-        using (CardSelectCmd.UseSelector(virtualSelector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, virtualSelector))
         {
             await CombatScenarioContext.PlayCardAsync(virtualOnly);
         }
@@ -91,7 +91,7 @@ internal static class ManifestTemporaryScenario
             playerCombat.Hand.Cards.Count(card => card.IsTemporary()));
         assertions.Equal("virtual_only_does_not_gain_energy", energyBeforeVirtual, playerCombat.Energy);
         assertions.True("virtual_only_exhausts", playerCombat.ExhaustPile.Cards.Contains(virtualOnly));
-        assertions.Equal("virtual_selector_released", null, CardSelectCmd.Selector);
+        assertions.Equal("virtual_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
 
         var classicTemporary = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowSword>(combat, player);
         var isolateClassicTemporaryAction = new RuntimeFixtureAction(
@@ -115,7 +115,7 @@ internal static class ManifestTemporaryScenario
         assertions.True("classic_temporary_real_only_is_playable", realOnly.CanPlay());
         var classicStabilizeSelector = new TestCardSelector();
         classicStabilizeSelector.PrepareToSelect([0]);
-        using (CardSelectCmd.UseSelector(classicStabilizeSelector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, classicStabilizeSelector))
         {
             await CombatScenarioContext.PlayCardAsync(realOnly);
         }
@@ -126,7 +126,7 @@ internal static class ManifestTemporaryScenario
             energyBeforeClassicStabilize + 1,
             playerCombat.Energy);
         assertions.True("classic_real_only_exhausts", playerCombat.ExhaustPile.Cards.Contains(realOnly));
-        assertions.Equal("classic_stabilize_selector_released", null, CardSelectCmd.Selector);
+        assertions.Equal("classic_stabilize_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
 
         var noTarget = await CombatScenarioContext.AddGeneratedCardToHandAsync<TrueOrFalse>(combat, player);
         var isolateNoTargetAction = new RuntimeFixtureAction(

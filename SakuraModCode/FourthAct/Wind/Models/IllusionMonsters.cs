@@ -122,7 +122,6 @@ public sealed class IllusionProjectionMonster : WindMonsterTemplate
     protected override IEnumerable<AbstractIntent> DeclaredIntents => [new StunIntent()];
     public override int MinInitialHp => 1;
     public override int MaxInitialHp => 1;
-    public override bool IsHealthBarVisible => true;
     public override bool HasDeathSfx => false;
 
     public override async Task AfterAddedToRoom()

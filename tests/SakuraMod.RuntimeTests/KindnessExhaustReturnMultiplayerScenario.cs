@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -111,7 +112,7 @@ internal static class KindnessExhaustReturnMultiplayerScenario
         var releaseChecksumBaseline = context.ChecksumCount;
         var releaseSelector = new TestCardSelector();
         releaseSelector.PrepareToSelect([0]);
-        using (CardSelectCmd.UseSelector(releaseSelector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(owner, releaseSelector))
         {
             await context.SignalAndWaitAsync("releaseChecksumBaseline-ready");
             if (context.LocalPlayer.NetId == owner.NetId)
@@ -172,7 +173,7 @@ internal static class KindnessExhaustReturnMultiplayerScenario
         var manifestChecksumBaseline = context.ChecksumCount;
         var selector = new TestCardSelector();
         selector.PrepareToSelect([0]);
-        using var manifestSelector = CardSelectCmd.UseSelector(selector);
+        using var manifestSelector = RunManager.Instance.CardSelectorStack.UseSelector(owner, selector);
         await context.SignalAndWaitAsync("kindness-manifest-ready");
         if (context.LocalPlayer.NetId == owner.NetId)
             await context.PlayOwnedCardAsync(manifest);

@@ -80,7 +80,7 @@ public class SakuraErase() : SakuraFormCard(1, CardType.Skill, TargetType.AnyEne
     {
         if (SakuraEnemyRules.IsEliteOrBossTarget(target))
         {
-            await CreatureCmd.LoseMaxHp(choiceContext, target, ReleasedValue("MaxHpLoss"), isFromCard: true);
+            await CreatureCmd.LoseMaxHp(choiceContext, target, ReleasedValue("MaxHpLoss"), this);
             return;
         }
 

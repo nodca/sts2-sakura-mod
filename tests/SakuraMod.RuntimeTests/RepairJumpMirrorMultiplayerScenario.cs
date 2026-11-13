@@ -1,13 +1,15 @@
-using MegaCrit.Sts2.Core.CardSelection;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Combat;
-using MegaCrit.Sts2.Core.Entities.CardRewardAlternatives;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
-using MegaCrit.Sts2.Core.TestSupport;
+using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
+using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
+using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
+using MegaCrit.Sts2.Core.Runs;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.TestProtocol;
@@ -343,8 +345,7 @@ internal static class RepairJumpMirrorMultiplayerScenario
         await using var context = await MultiplayerScenarioContext.StartAsync(request);
         var combat = await context.EnterWeakCrawlerCombatAsync();
         var client = context.ClientPlayer;
-        // Let the local selector hold the choice open; the multiplayer harness
-        // normally enables AutoSlay, which would answer Mirror immediately.
+        // Use the native hand screen so the selected card is sent to remote peers.
         NonInteractiveMode.AutoSlayerCheck = static () => false;
 
         foreach (var card in client.PlayerCombatState!.Hand.Cards.ToArray())
@@ -369,132 +370,106 @@ internal static class RepairJumpMirrorMultiplayerScenario
             client,
             CardPilePosition.Bottom);
 
+        // With a single eligible card, the native command resolves without showing the hand.
+        await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
+            combat.CreateCard<ClowShield>(client), PileType.Hand, client, CardPilePosition.Bottom);
+
         var deckCountBeforeMirror = client.Deck.Cards.Count;
         var deckSwordCountBeforeMirror = client.Deck.Cards.OfType<ClowSword>().Count();
         await context.SignalAndWaitAsync("mirror-choice-race-fixture-ready");
 
-        GatedCardSelector? selector = null;
-        IDisposable? selectorScope = null;
-        var suspendedSelectorScope = CardSelectCmd.SuspendSelectorForTest();
-        var suspendedLocalSelectorScope = CardSelectCmd.SuspendSelectorForTest(localOnly: true);
-        try
+        var selectors = RunManager.Instance.CardSelectorStack;
+        if (selectors.GetSelector(client) is not null || selectors.LocalSelector is not null)
+            throw new InvalidOperationException("The Mirror choice race requires a clean selector stack.");
+
+        if (context.LocalPlayer.NetId == client.NetId)
         {
-            if (context.LocalPlayer.NetId == client.NetId)
+            context.RequestOwnedCard(mirror);
+            await MultiplayerScenarioContext.WaitForStateAsync(
+                () => NPlayerHand.Instance is { IsInCardSelection: true, CurrentMode: NPlayerHand.Mode.SimpleSelect },
+                "Clow Mirror choice to open on client 2");
+        }
+
+        // Host and client 3 enter this barrier immediately; client 2 only
+        // arrives after its Mirror selection is visibly waiting.
+        await context.SignalAndWaitAsync("mirror-choice-race-choice-open");
+
+        if (context.LocalPlayer.NetId != client.NetId)
+            await context.EndLocalTurnAsync();
+        await context.SignalAndWaitAsync("mirror-choice-race-peer-turns");
+
+        if (context.LocalPlayer.NetId == client.NetId)
+        {
+            var hand = NPlayerHand.Instance!;
+            var holder = hand.ActiveHolders.Single(holder => ReferenceEquals(holder.CardNode?.Model, mirrorTarget));
+            holder.EmitSignal(NCardHolder.SignalName.Pressed, holder);
+            if (hand.IsInCardSelection)
             {
-                selector = new GatedCardSelector();
-                selectorScope = CardSelectCmd.UseSelector(selector, localOnly: true);
-                context.RequestOwnedCard(mirror);
-                await MultiplayerScenarioContext.WaitForStateAsync(
-                    () => selector.ChoiceStarted.Task.IsCompleted,
-                    "Clow Mirror choice to open on client 2");
+                var confirm = hand.GetNode<NConfirmButton>("%SelectModeConfirmButton");
+                confirm.EmitSignal(NClickableControl.SignalName.Released, confirm);
             }
+        }
 
-            // Host and client 3 enter this barrier immediately; client 2 only
-            // arrives after its Mirror selection is visibly waiting.
-            await context.SignalAndWaitAsync("mirror-choice-race-choice-open");
+        await MultiplayerScenarioContext.WaitForStateAsync(
+            () => mirror.Pile?.Type == PileType.Exhaust
+                && client.PlayerCombatState!.Hand.Cards.OfType<ClowSword>().Count() == 2,
+            "Clow Mirror to resolve after peer end-turn actions");
+        assertions.Equal("choice_race_mirror_deck_count_unchanged", deckCountBeforeMirror, client.Deck.Cards.Count);
+        assertions.Equal(
+            "choice_race_mirror_deck_sword_count_unchanged",
+            deckSwordCountBeforeMirror,
+            client.Deck.Cards.OfType<ClowSword>().Count());
 
-            if (context.LocalPlayer.NetId != client.NetId)
-                await context.EndLocalTurnAsync();
-            await context.SignalAndWaitAsync("mirror-choice-race-peer-turns");
+        await context.SignalAndWaitAsync("mirror-choice-race-resolved");
 
-            if (context.LocalPlayer.NetId == client.NetId)
-                selector!.ReleaseChoice();
-
-            await MultiplayerScenarioContext.WaitForStateAsync(
-                () => mirror.Pile?.Type == PileType.Exhaust
-                    && client.PlayerCombatState!.Hand.Cards.OfType<ClowSword>().Count() == 2,
-                "Clow Mirror to resolve after peer end-turn actions");
-            assertions.Equal("choice_race_mirror_deck_count_unchanged", deckCountBeforeMirror, client.Deck.Cards.Count);
-            assertions.Equal(
-                "choice_race_mirror_deck_sword_count_unchanged",
-                deckSwordCountBeforeMirror,
-                client.Deck.Cards.OfType<ClowSword>().Count());
-
-            await context.SignalAndWaitAsync("mirror-choice-race-resolved");
-
-            if (context.LocalPlayer.NetId == client.NetId)
-                await context.EndLocalTurnAsync();
-            await context.SignalAndWaitAsync("mirror-choice-race-turn-ended");
-            await MultiplayerScenarioContext.WaitForStateAsync(
-                () => context.Run.Players.All(static player => player.PlayerCombatState is
-                {
-                    Phase: PlayerTurnPhase.Play,
-                    TurnNumber: > 1
-                }),
-                "all peers to reach the next turn after the choice race");
-            assertions.Equal(
-                "choice_race_mirror_deck_count_unchanged_after_turn",
-                deckCountBeforeMirror,
-                client.Deck.Cards.Count);
-            context.ThrowIfNetworkFailed();
-            await context.SignalAndWaitAsync("mirror-choice-race-comparison-ready");
-            RuntimeTestHost.WriteCheckpoint(
-                request,
-                "repair_jump_mirror_choice_race_verified",
-                "Clow Mirror choice remained pending while peer end-turn actions resolved without adding the copy to the deck.");
-
-            return new Dictionary<string, object?>(StringComparer.Ordinal)
+        if (context.LocalPlayer.NetId == client.NetId)
+            await context.EndLocalTurnAsync();
+        await context.SignalAndWaitAsync("mirror-choice-race-turn-ended");
+        await MultiplayerScenarioContext.WaitForStateAsync(
+            () => context.Run.Players.All(static player => player.PlayerCombatState is
             {
-                ["peer"] = new
+                Phase: PlayerTurnPhase.Play,
+                TurnNumber: > 1
+            }),
+            "all peers to reach the next turn after the choice race");
+        assertions.Equal(
+            "choice_race_mirror_deck_count_unchanged_after_turn",
+            deckCountBeforeMirror,
+            client.Deck.Cards.Count);
+        context.ThrowIfNetworkFailed();
+        await context.SignalAndWaitAsync("mirror-choice-race-comparison-ready");
+        RuntimeTestHost.WriteCheckpoint(
+            request,
+            "repair_jump_mirror_choice_race_verified",
+            "Clow Mirror choice remained pending while peer end-turn actions resolved without adding the copy to the deck.");
+
+        return new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["peer"] = new
+            {
+                role = request.Multiplayer!.Role,
+                local_net_id = context.LocalPlayer.NetId,
+                player_count = context.Run.Players.Count
+            },
+            ["comparison"] = new
+            {
+                versions = new
                 {
-                    role = request.Multiplayer!.Role,
-                    local_net_id = context.LocalPlayer.NetId,
-                    player_count = context.Run.Players.Count
+                    environment.GameVersion,
+                    environment.RitsuVersion,
+                    environment.SakuraVersion
                 },
-                ["comparison"] = new
-                {
-                    versions = new
-                    {
-                        environment.GameVersion,
-                        environment.RitsuVersion,
-                        environment.SakuraVersion
-                    },
-                    client_net_id = client.NetId,
-                    deck_count_before_mirror = deckCountBeforeMirror,
-                    deck_count_after_turn = client.Deck.Cards.Count,
-                    deck_swords_before_mirror = deckSwordCountBeforeMirror,
-                    deck_swords_after_turn = client.Deck.Cards.OfType<ClowSword>().Count(),
-                    combat_swords = client.PlayerCombatState!.AllPiles
-                        .SelectMany(static pile => pile.Cards)
-                        .OfType<ClowSword>()
-                        .Count(),
-                    turn = client.PlayerCombatState.TurnNumber
-                }
-            };
-        }
-        finally
-        {
-            selectorScope?.Dispose();
-            suspendedLocalSelectorScope.Dispose();
-            suspendedSelectorScope.Dispose();
-        }
-    }
-
-    private sealed class GatedCardSelector : ICardSelector
-    {
-        private readonly TaskCompletionSource _release =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public TaskCompletionSource ChoiceStarted { get; } =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public async Task<IEnumerable<CardModel>> GetSelectedCards(
-            IEnumerable<CardModel> options,
-            int minSelect,
-            int maxSelect)
-        {
-            var selected = options.FirstOrDefault(static card => card is ClowSword)
-                ?? throw new InvalidOperationException("Clow Mirror choice race has no ClowSword candidate.");
-            ChoiceStarted.TrySetResult();
-            await _release.Task;
-            return [selected];
-        }
-
-        public CardRewardSelection GetSelectedCardReward(
-            IReadOnlyList<CardCreationResult> options,
-            IReadOnlyList<CardRewardAlternative> alternatives) =>
-            new() { card = options.FirstOrDefault()?.Card };
-
-        public void ReleaseChoice() => _release.TrySetResult();
+                client_net_id = client.NetId,
+                deck_count_before_mirror = deckCountBeforeMirror,
+                deck_count_after_turn = client.Deck.Cards.Count,
+                deck_swords_before_mirror = deckSwordCountBeforeMirror,
+                deck_swords_after_turn = client.Deck.Cards.OfType<ClowSword>().Count(),
+                combat_swords = client.PlayerCombatState!.AllPiles
+                    .SelectMany(static pile => pile.Cards)
+                    .OfType<ClowSword>()
+                    .Count(),
+                turn = client.PlayerCombatState.TurnNumber
+            }
+        };
     }
 }

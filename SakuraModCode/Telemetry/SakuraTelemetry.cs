@@ -126,13 +126,13 @@ internal static class SakuraTelemetry
         IsSakuraSerializableRun(run, LocalContext.NetId);
 
     internal static bool IsSakuraSerializableRun(SerializableRun? run, ulong? localPlayerId) =>
-        run is { GameMode: GameMode.Standard, Players.Count: > 0 }
+        run is { GameMode: GameMode.Standard, IsCustomGame: false, Players.Count: > 0 }
         && IsSakuraCharacterId((localPlayerId is { } id
             ? run.Players.FirstOrDefault(player => player.NetId == id)
             : run.Players.Count == 1 ? run.Players[0] : null)?.CharacterId);
 
     internal static bool IsEligibleRun(RunState? runState) =>
-        runState is { GameMode: GameMode.Standard, Players.Count: > 0 }
+        runState is { GameMode: GameMode.Standard, IsCustomGame: false, Players.Count: > 0 }
         && IsSakuraCharacterId(LocalPlayer(runState)?.Character.Id);
 
     internal static Player? LocalPlayer(RunState runState) =>

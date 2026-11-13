@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -78,7 +79,7 @@ internal static class SakuraAncientCardsScenario
         var combatSpellRelease = await CombatScenarioContext.AddGeneratedCardToHandAsync<SpellRelease>(combat, player);
         var releaseSelector = new TestCardSelector();
         releaseSelector.PrepareToSelect([0]);
-        using (CardSelectCmd.UseSelector(releaseSelector))
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, releaseSelector))
         {
             await CombatScenarioContext.PlayCardAsync(combatSpellRelease);
         }
@@ -87,7 +88,7 @@ internal static class SakuraAncientCardsScenario
             "spell_release_sets_target_cost_to_zero",
             0m,
             releaseTarget.EnergyCost.GetWithModifiers(CostModifiers.Local));
-        assertions.Equal("spell_release_selector_released", null, CardSelectCmd.Selector);
+        assertions.Equal("spell_release_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
 
         await SetMagicAsync(player, 0);
         var anotherMe = await CombatScenarioContext.AddGeneratedCardToHandAsync<AnotherMe>(combat, player);

@@ -4,7 +4,6 @@ using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Singleton;
 using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.ValueProps;
 
@@ -56,7 +55,7 @@ public static class AttackCommandExtensions
         public IReadOnlyList<Creature> PlayerCreatures => targets;
         public IReadOnlyList<Player> Players => inner.Players;
         public IReadOnlyList<ModifierModel> Modifiers => inner.Modifiers;
-        public MultiplayerScalingModel? MultiplayerScalingModel => inner.MultiplayerScalingModel;
+        public IReadOnlyList<RunModel> RunModels => inner.RunModels;
         public int RoundNumber { get => inner.RoundNumber; set => inner.RoundNumber = value; }
         public CombatSide CurrentSide { get => inner.CurrentSide; set => inner.CurrentSide = value; }
         public EncounterModel? Encounter => inner.Encounter;

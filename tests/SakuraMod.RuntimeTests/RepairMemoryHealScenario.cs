@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -50,7 +51,7 @@ internal static class RepairMemoryHealScenario
         var hpAtNextTurn = player.Creature.CurrentHp;
         await RecallOneAsync();
         assertions.Equal("next_turn_recall_heals_again", hpAtNextTurn + heal, player.Creature.CurrentHp);
-        assertions.Equal("selector_released", null, CardSelectCmd.Selector);
+        assertions.Equal("selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
 
         RuntimeTestHost.WriteCheckpoint(
             request,
@@ -67,7 +68,7 @@ internal static class RepairMemoryHealScenario
         {
             var selector = new TestCardSelector();
             selector.PrepareToSelect([0]);
-            using (CardSelectCmd.UseSelector(selector))
+            using (RunManager.Instance.CardSelectorStack.UseSelector(player, selector))
             {
                 await ActAsync(async choiceContext =>
                     await Remind.RecallIntoHand(player, choiceContext, 1, upgradeCopies: false));
