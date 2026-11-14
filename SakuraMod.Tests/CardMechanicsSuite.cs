@@ -35,13 +35,13 @@ public sealed class CardMechanicsSuite
         var lucidSource = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/Transparent/Lucid.cs"));
 
         Assert.Equal(0, lucid.EnergyCost.Canonical);
-        Assert.Equal(0, upgraded.EnergyCost.Canonical);
         Assert.Contains(CardKeyword.Exhaust, lucid.CanonicalKeywords);
+        Assert.DoesNotContain(CardKeyword.Exhaust, upgraded.Keywords);
         Assert.Equal(3, lucid.DynamicVars["Look"].IntValue);
-        Assert.Equal(4, upgraded.DynamicVars["Look"].IntValue);
-        Assert.Equal(2, Lucid.ExtraPicks);
-        Assert.DoesNotContain("SetThisTurn", lucidSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("LucidPierce", lucidSource, StringComparison.Ordinal);
+        Assert.Equal(3, upgraded.DynamicVars["Look"].IntValue);
+        Assert.Contains(SakuraCardHoverTips.TemporaryTipKey, SakuraCardHoverTips.StaticTipKeys(lucid));
+        Assert.Contains("SakuraForgotten.GrantTemporary(choiceContext, rest)", lucidSource, StringComparison.Ordinal);
+        Assert.Contains("SetThisTurnOrUntilPlayed(0, reduceOnly: true)", lucidSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1315,18 +1315,20 @@ public sealed class CardMechanicsSuite
         var exchange = new Exchange();
         var upgradedExchange = RegressionTestHarness.MutableForCostTest(new Exchange());
         upgradedExchange.UpgradeInternal();
+        var exchangeCardSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Exchange.cs"));
         RegressionTestHarness.Require(
-            exchange.EnergyCost.Canonical == 1
-            && upgradedExchange.EnergyCost.GetWithModifiers(CostModifiers.None) == 0
+            exchange.EnergyCost.Canonical == 0
             && exchange.DynamicVars.Cards.IntValue == 1
             && upgradedExchange.DynamicVars.Cards.IntValue == 1
+            && exchangeCardSource.Contains("SakuraActions.SelectHandCard(this, choiceContext, CanBecomeForgotten", StringComparison.Ordinal)
             && !exchange.CanonicalKeywords.Contains(CardKeyword.Exhaust)
             && exchange.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
             && exchange.DynamicVars["Remind"].IntValue == 1
             && SakuraCardHoverTips.StaticTipKeys(exchange).Contains(SakuraCardHoverTips.RemindTipKey)
             && new ExchangeRecallPower().StackType == PowerStackType.Counter
             && RegressionTestHarness.DeclaresMethod<ExchangeRecallPower>("AfterPlayerTurnStart"),
-            "Expected Exchange to cost 1 (0 upgraded), Manifest 1 without Exhaust, and schedule a stacking next-turn Remind 1.");
+            "Expected Exchange to cost 0, Manifest 1 without Exhaust, pick the Forgotten hand card when upgraded, and schedule a stacking next-turn Remind 1.");
 
         RegressionTestHarness.Require(
             Synchronize.CanSynchronize(new Synchronize(), new Gale())
@@ -1625,12 +1627,8 @@ public sealed class CardMechanicsSuite
             && HailRules.Frostbite(new Hail(), spentMagic: 0) == 0
             && HailRules.Frostbite(new Hail(), spentMagic: 3) == 3
             && HailRules.Frostbite(upgradedHail, spentMagic: 3) == 3
-            && hailSource.Contains("CaptureOpportunity", StringComparison.Ordinal)
-            && hailSource.Contains("TryApplyCapturedOpportunity", StringComparison.Ordinal)
-            && hailSource.IndexOf("TryApplyCapturedOpportunity", StringComparison.Ordinal)
-                < hailSource.IndexOf("SpendUpToMagic", StringComparison.Ordinal)
             && hailSource.Contains("SpendUpToMagic", StringComparison.Ordinal),
-            "Expected Hail to lock element state before spending Magic Charge, deal 8/11 damage to all enemies, and spend up to 3 Magic Charge for 1 Frostbite each.");
+            "Expected Hail to deal 8/11 damage to all enemies, and spend up to 3 Magic Charge for 1 Frostbite each.");
 
         var clowLock = new ClowLock();
         var lockSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
@@ -2355,7 +2353,7 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void ChoiceKeepsManifestedCombatCostContracts()
+    public void ChoicePairsBlockWithManifestAndDamageWithRemind()
     {
         var choice = new Choice();
         var upgradedChoice = RegressionTestHarness.MutableForCostTest(new Choice());
@@ -2365,18 +2363,20 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             choice.EnergyCost.Canonical == 1
             && choice.Rarity == CardRarity.Uncommon
+            && choice.DynamicVars.Block.IntValue == 9
+            && choice.DynamicVars.Damage.IntValue == 11
             && choice.DynamicVars["ManifestCards"].IntValue == 1
             && choice.DynamicVars["RemindCards"].IntValue == 1
+            && upgradedChoice.DynamicVars.Block.IntValue == 12
+            && upgradedChoice.DynamicVars.Damage.IntValue == 15
             && upgradedChoice.DynamicVars["ManifestCards"].IntValue == 1
             && upgradedChoice.DynamicVars["RemindCards"].IntValue == 1
             && choiceSource.Contains("if (activation.IsActive)", StringComparison.Ordinal)
-            && choiceSource.Contains("BaseValue", StringComparison.Ordinal)
-            && choiceSource.Contains("Manifest(choiceContext", StringComparison.Ordinal)
-            && choiceSource.Contains("upgradeCopies: IsUpgraded", StringComparison.Ordinal)
-            && choiceSource.Contains("upgraded: IsUpgraded", StringComparison.Ordinal)
-            && choiceSource.Contains("Remind.HasRecallChoices(Owner)", StringComparison.Ordinal)
-            && choiceSource.Contains("SetThisCombat", StringComparison.Ordinal),
-            "Expected Choice to offer Manifest or Remind (Remind only when Memory has cards, upgrading what it brings in when upgraded), execute both during Extra, and keep manifested cards at their combat cost reductions.");
+            && choiceSource.Contains("DealDamageToRandomEnemies", StringComparison.Ordinal)
+            && choiceSource.Contains("upgradeCopies: false", StringComparison.Ordinal)
+            && !choiceSource.Contains("Remind.HasRecallChoices(Owner)", StringComparison.Ordinal)
+            && !choiceSource.Contains("SetThisCombat", StringComparison.Ordinal),
+            "Expected Choice to cost 1 and offer 9 (12) Block plus Manifest 1 or 11 (15) random-enemy damage plus Remind 1, both on Extra, even with an empty Memory pile.");
     }
 
     [Fact]

@@ -4,6 +4,8 @@ using MegaCrit.Sts2.Core.Models;
 using System.Reflection;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.FourthAct.Fire.Powers;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.TestProtocol;
 
@@ -24,11 +26,9 @@ internal static class MagicChargeThresholdScenario
             choiceContext => SakuraMagicCharge.GainMagic(choiceContext, player, 5));
         await CombatScenarioContext.EnqueueAndWaitAsync(initialGain);
         var charge = player.Creature.GetPower<ClassicMagicChargePower>()
-            ?? throw new InvalidOperationException("Magic Charge was not created at the midpoint threshold.");
-        assertions.True("midpoint_fixture_choice_context", initialGain.ChoiceContext is GameActionPlayerChoiceContext);
-        assertions.Equal("midpoint_charge_ready", 5, charge.Amount);
-        assertions.True("midpoint_opportunity_ready", charge.ArmedOpportunityGeneration > 0);
-        var generationBeforeTurnEnd = charge.ArmedOpportunityGeneration;
+            ?? throw new InvalidOperationException("Magic Charge was not created.");
+        assertions.True("charge_fixture_choice_context", initialGain.ChoiceContext is GameActionPlayerChoiceContext);
+        assertions.Equal("initial_charge", 5, charge.Amount);
 
         var persistentLock = new RuntimeFixtureAction(
             player,
@@ -46,11 +46,7 @@ internal static class MagicChargeThresholdScenario
             player.Creature.GetPower<ClassicLockSakuraPower>()?.Amount ?? 0);
 
         await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
-        assertions.Equal("midpoint_charge_survives_turn", 5, charge.Amount);
-        assertions.Equal(
-            "midpoint_opportunity_survives_turn",
-            generationBeforeTurnEnd,
-            charge.ArmedOpportunityGeneration);
+        assertions.Equal("charge_survives_turn", 5, charge.Amount);
         assertions.Equal(
             "lock_sakura_survives_turn_boundary",
             1,
@@ -67,38 +63,20 @@ internal static class MagicChargeThresholdScenario
 
         var fireSpell = await CombatScenarioContext.AddGeneratedCardToHandAsync<SpellHuoShen>(combat, player);
         await CombatScenarioContext.PlayCardAsync(fireSpell, combat.HittableEnemies.First());
-        assertions.True("midpoint_applies_fire_state", player.Creature.HasPower<ClassicFireyPower>());
-        assertions.Equal("fire_spell_adds_charge_at_midpoint", 6, charge.Amount);
+        assertions.Equal("fire_spell_at_five_does_not_enter_state", false, player.Creature.HasPower<ClassicFireyPower>());
+        assertions.Equal("fire_spell_gains_charge", 6, charge.Amount);
+
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(
-            player, choiceContext => SakuraMagicCharge.SpendMagic(choiceContext, player, 1)));
-        assertions.Equal("midpoint_consumes_once", 0, charge.ArmedOpportunityGeneration);
+            player, choiceContext => SakuraMagicCharge.GainMagic(choiceContext, player, 3)));
+        assertions.Equal("charge_before_filling_card", 9, charge.Amount);
+        var triggerBefore = SakuraActions.ExtraEffectTriggerCountThisTurn(player);
 
-        var waterWithoutOpportunity = await CombatScenarioContext.AddGeneratedCardToHandAsync<SpellShuiLong>(combat, player);
-        await CombatScenarioContext.PlayCardAsync(waterWithoutOpportunity);
-        assertions.Equal("spent_midpoint_does_not_apply_water", false, player.Creature.HasPower<ClassicWateryPower>());
-        assertions.Equal("spent_midpoint_keeps_charge", 5, charge.Amount);
+        var fillingFlower = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowFlower>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(fillingFlower);
+        assertions.Equal("card_can_fill_charge_for_next_play", 10, charge.Amount);
+        assertions.Equal("filling_card_does_not_enter_earth_state", false, player.Creature.HasPower<ClassicEarthyPower>());
+        assertions.Equal("filling_card_does_not_trigger_extra", triggerBefore, SakuraActions.ExtraEffectTriggerCountThisTurn(player));
 
-        var reentry = new RuntimeFixtureAction(
-            player,
-            async choiceContext =>
-            {
-                await SakuraMagicCharge.SpendMagic(choiceContext, player, 1);
-                await SakuraMagicCharge.GainMagic(choiceContext, player, 1);
-            });
-        await CombatScenarioContext.EnqueueAndWaitAsync(reentry);
-        var reentryGeneration = charge.ArmedOpportunityGeneration;
-        assertions.True("midpoint_reentry_rearms", reentryGeneration > 0);
-
-        var waterWithOpportunity = await CombatScenarioContext.AddGeneratedCardToHandAsync<SpellShuiLong>(combat, player);
-        await CombatScenarioContext.PlayCardAsync(waterWithOpportunity);
-        assertions.True("rearmed_midpoint_applies_water", player.Creature.HasPower<ClassicWateryPower>());
-        assertions.Equal("rearmed_midpoint_consumes_once", 0, charge.ArmedOpportunityGeneration);
-
-        var reachFull = new RuntimeFixtureAction(
-            player,
-            choiceContext => SakuraMagicCharge.GainMagic(choiceContext, player, 5));
-        await CombatScenarioContext.EnqueueAndWaitAsync(reachFull);
-        assertions.Equal("full_threshold_charge", 10, charge.Amount);
         var nonExtraFlower = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraFlower>(combat, player);
         await CombatScenarioContext.PlayCardAsync(nonExtraFlower);
         assertions.Equal("flower_without_earthy_exhausts", PileType.Exhaust, nonExtraFlower.Pile?.Type);
@@ -107,7 +85,6 @@ internal static class MagicChargeThresholdScenario
             "full_non_extra_does_not_apply_element",
             false,
             player.Creature.HasPower<ClassicEarthyPower>());
-        var triggerBefore = SakuraActions.ExtraEffectTriggerCountThisTurn(player);
 
         var flower = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowFlower>(combat, player);
         var blockBeforeFlower = player.Creature.Block;
@@ -138,32 +115,16 @@ internal static class MagicChargeThresholdScenario
         var voice = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowVoice>(combat, player);
         await CombatScenarioContext.PlayCardAsync(voice);
         assertions.Equal("overflow_spend_then_regain", 8, postFlowerCharge.Amount);
-        assertions.True("overflow_arms_later_midpoint", postFlowerCharge.ArmedOpportunityGeneration > 0);
         assertions.True("overflow_extra_applies_wind_state", player.Creature.HasPower<ClassicWindyPower>());
         assertions.Equal(
             "overflow_triggers_second_extra",
             triggerBefore + 2,
             SakuraActions.ExtraEffectTriggerCountThisTurn(player));
 
-        var clearFire = new RuntimeFixtureAction(
-            player,
-            async choiceContext =>
-            {
-                if (player.Creature.GetPower<ClassicFireyPower>() is { } firey)
-                    await PowerCmd.Remove(firey);
-                var hand = player.PlayerCombatState?.Hand.Cards.ToList() ?? [];
-                if (hand.Count > 0)
-                    await CardCmd.Discard(choiceContext, hand);
-            });
-        await CombatScenarioContext.EnqueueAndWaitAsync(clearFire);
-        var overflowGeneration = postFlowerCharge.ArmedOpportunityGeneration;
         var fireAfterOverflow = await CombatScenarioContext.AddGeneratedCardToHandAsync<SpellHuoShen>(combat, player);
         await CombatScenarioContext.PlayCardAsync(fireAfterOverflow, combat.HittableEnemies.First());
-        assertions.True("overflow_opportunity_applies_on_later_card", player.Creature.HasPower<ClassicFireyPower>());
-        assertions.Equal("overflow_opportunity_consumed_on_later_card", 0, postFlowerCharge.ArmedOpportunityGeneration);
+        assertions.Equal("overflow_does_not_enable_free_state", false, player.Creature.HasPower<ClassicFireyPower>());
         assertions.Equal("fire_spell_adds_charge_after_overflow", 9, postFlowerCharge.Amount);
-        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(
-            player, choiceContext => SakuraMagicCharge.SpendMagic(choiceContext, player, 1)));
 
         var lockCard = await CombatScenarioContext.AddGeneratedCardToHandAsync<SakuraLock>(combat, player);
         await CombatScenarioContext.PlayCardAsync(lockCard);
@@ -172,10 +133,7 @@ internal static class MagicChargeThresholdScenario
             1,
             player.Creature.GetPower<ClassicLockSakuraPower>()?.Amount ?? 0);
 
-        var chargeForLock = new RuntimeFixtureAction(
-            player,
-            choiceContext => SakuraMagicCharge.GainMagic(choiceContext, player, 1));
-        await CombatScenarioContext.EnqueueAndWaitAsync(chargeForLock);
+        assertions.Equal("lock_card_does_not_enter_fire_state", false, player.Creature.HasPower<ClassicFireyPower>());
         assertions.Equal("lock_sakura_charge_before_trigger", 10, postFlowerCharge.Amount);
 
         // Resolve real overrides: equivalent C# syntax must not affect this contract.
@@ -235,34 +193,41 @@ internal static class MagicChargeThresholdScenario
                 player.PlayerCombatState!.Hand.Cards.OfType<SpellHuoShen>().Count());
         }
 
+        var sovereign = combat.HittableEnemies.First();
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choiceContext =>
+        {
+            if (player.Creature.GetPower<ClassicEarthyPower>() is { } earthy)
+                await PowerCmd.Remove(earthy);
+            if (player.Creature.GetPower<ClassicFireyPower>() is { } firey)
+                await PowerCmd.Remove(firey);
+            await PowerCmd.Apply<LightSovereigntyPower>(choiceContext, sovereign, 1, sovereign, null, silent: true);
+            await SakuraMagicCharge.SpendAllMagic(choiceContext, player);
+            await SakuraMagicCharge.GainMagic(choiceContext, player, 10);
+        }));
+
+        var blockedFlower = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowFlower>(combat, player);
+        var beforeBlockedExtra = SakuraActions.ExtraEffectTriggerCountThisTurn(player);
+        await CombatScenarioContext.PlayCardAsync(blockedFlower);
+        assertions.Equal("sovereignty_allows_extra", beforeBlockedExtra + 1, SakuraActions.ExtraEffectTriggerCountThisTurn(player));
+        assertions.Equal("sovereignty_still_pays_extra_cost", 1, player.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0);
+        assertions.Equal("sovereignty_blocks_extra_element", false, player.Creature.HasPower<ClassicEarthyPower>());
+        assertions.Equal("blocked_extra_records_no_entry", false, SakuraElementState.ConsumeEnteredByPlay(blockedFlower, SakuraElement.Earth));
+
+        var blockedFirey = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowFirey>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(blockedFirey);
+        assertions.Equal("sovereignty_blocks_direct_element", false, player.Creature.HasPower<ClassicFireyPower>());
+        assertions.Equal("blocked_direct_effect_records_no_entry", false, SakuraElementState.ConsumeEnteredByPlay(blockedFirey, SakuraElement.Fire));
+
         RuntimeTestHost.WriteCheckpoint(
             request,
             "magic_charge_thresholds_verified",
-            "Native card actions proved midpoint use, Extra spend, overflow, and next-trigger Lock preservation.");
+            "Native card actions proved the 10-Charge threshold, overflow, Lock Sakura, direct entry, and Sovereignty.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
-            ["fixture"] = new
-            {
-                seed = request.Seed.ToString("X16"),
-                setup_mutations = new[]
-                {
-                    "RuntimeFixtureAction -> SakuraMagicCharge.GainMagic(5)",
-                    "RuntimeFixtureAction -> 5->4->5 reentry",
-                    "RuntimeFixtureAction -> gain to 10",
-                    "RuntimeFixtureAction -> gain to 17",
-                    "RuntimeFixtureAction -> gain from 9 to 10 for Lock trigger"
-                }
-            },
             ["thresholds"] = new
             {
-                midpoint_reentry_generation = reentryGeneration,
-                overflow_generation = overflowGeneration,
-                final_charge = postFlowerCharge.Amount,
-                firey = player.Creature.HasPower<ClassicFireyPower>(),
-                watery = player.Creature.HasPower<ClassicWateryPower>(),
-                earthy = player.Creature.HasPower<ClassicEarthyPower>(),
-                windy = player.Creature.HasPower<ClassicWindyPower>(),
+                final_charge = player.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0,
                 extra_trigger_delta = SakuraActions.ExtraEffectTriggerCountThisTurn(player) - triggerBefore
             }
         };

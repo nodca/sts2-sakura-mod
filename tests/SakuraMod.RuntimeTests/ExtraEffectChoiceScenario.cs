@@ -58,6 +58,8 @@ internal static class ExtraEffectChoiceScenario
 
         var choice = await CombatScenarioContext.AddGeneratedCardToHandAsync<Choice>(combat, player);
         var energyBefore = playerCombat.Energy;
+        var blockBefore = player.Creature.Block;
+        var enemyHpBefore = combat.HittableEnemies.Sum(static enemy => enemy.CurrentHp);
         var drawBefore = playerCombat.DrawPile.Cards.Count;
         var triggerBefore = SakuraActions.ExtraEffectTriggerCountThisTurn(player);
         var selector = new TestCardSelector();
@@ -88,6 +90,11 @@ internal static class ExtraEffectChoiceScenario
             playerCombat.Hand.Cards.Count(card => card is Snooze && !card.IsTemporary()));
         assertions.Equal("choice_extra_manifest_count", 1, manifestedCards.Length);
         assertions.Equal("choice_energy_spent", energyBefore - 1, playerCombat.Energy);
+        assertions.Equal("choice_extra_block", blockBefore + 9, player.Creature.Block);
+        assertions.True(
+            "choice_extra_damage",
+            enemyHpBefore - combat.HittableEnemies.Sum(static enemy => enemy.CurrentHp) >= 11
+            || combat.HittableEnemies.Count() == 0);
         assertions.True("choice_result_pile", playerCombat.DiscardPile.Cards.Contains(choice));
         assertions.Equal("choice_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
 
@@ -97,7 +104,7 @@ internal static class ExtraEffectChoiceScenario
         RuntimeTestHost.WriteCheckpoint(
             request,
             "extra_effect_choice_verified",
-            "Choice spent 1 energy and resolved Extra Manifest plus Remind.");
+            "Choice spent 1 energy and resolved Extra Block, Manifest, damage and Remind.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {

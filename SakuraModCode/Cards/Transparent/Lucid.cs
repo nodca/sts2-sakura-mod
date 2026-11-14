@@ -22,24 +22,28 @@ public class Lucid() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
 
-    internal const int ExtraPicks = 2;
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys => [SakuraCardHoverTips.TemporaryTipKey];
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("Look", 3)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var choices = CardPile.Get(PileType.Draw, Owner)!.Cards.Take(DynamicVars["Look"].IntValue).ToList();
-        var picks = activation.IsActive ? ExtraPicks : 1;
-        for (var i = 0; i < picks && choices.Count > 0; i++)
+        var card = await SakuraActions.SelectFromCardPreviews(this, choiceContext, choices, cancelable: false);
+        if (card is not null)
         {
-            var card = await SakuraActions.SelectFromCardPreviews(this, choiceContext, choices, cancelable: false);
-            if (card is null)
-                break;
-
             choices.Remove(card);
             await SakuraActions.MoveExistingCardToHand(this, card);
+            // Same free-this-turn rule as Remind: it lasts the turn or until the card is played.
+            if (activation.IsActive)
+                card.EnergyCost.SetThisTurnOrUntilPlayed(0, reduceOnly: true);
         }
+
+        // The unpicked cards stay on the draw pile and move to Memory at turn end.
+        foreach (var rest in choices)
+            await SakuraForgotten.GrantTemporary(choiceContext, rest);
     }
 
-    protected override void OnUpgrade() => DynamicVars["Look"].UpgradeValueBy(1);
+    // Native Secret Weapon precedent: the upgrade only removes Exhaust.
+    protected override void OnUpgrade() => RemoveKeyword(CardKeyword.Exhaust);
 }

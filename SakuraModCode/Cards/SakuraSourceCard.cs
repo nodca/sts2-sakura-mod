@@ -77,14 +77,13 @@ public abstract class SakuraSourceCard(
     /// </summary>
     /// <remarks>
     /// An element state pays off on element cards played while it is up, so the play that
-    /// enters it must not also collect the payoff. Stacks on an existing state instead of
-    /// skipping it, unlike the Extra Effect and Magic Charge entries which only fill gaps.
+    /// enters it must not also collect the payoff. Direct entry stacks on an existing state.
     /// </remarks>
     protected async Task EnterElementState<T>(PlayerChoiceContext choiceContext) where T : SakuraElementStatePower
     {
         var wasMissing = Owner.Creature.GetPower<T>() is null;
-        var power = await PowerCmd.Apply<T>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
-        if (wasMissing && power is not null)
+        await PowerCmd.Apply<T>(choiceContext, Owner.Creature, 1, Owner.Creature, this, false);
+        if (wasMissing && Owner.Creature.GetPower<T>() is { } power)
             SakuraElementState.MarkEnteredByPlay(this, power.Element);
     }
 

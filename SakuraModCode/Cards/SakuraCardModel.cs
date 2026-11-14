@@ -64,10 +64,8 @@ public abstract class SakuraCardModel : ModCardTemplate
             return;
         }
 
-        var opportunity = SakuraMagicCharge.CaptureOpportunity(Owner);
         SakuraExtraEffectTransaction.TryShowMagicCircle(this, default);
         await PlayCard(choiceContext, play, default);
-        await SakuraMagicCharge.TryApplyCapturedOpportunity(choiceContext, this, opportunity);
     }
 
     protected virtual Task PlayCard(

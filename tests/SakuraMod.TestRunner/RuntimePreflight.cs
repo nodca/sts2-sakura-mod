@@ -21,7 +21,7 @@ public static class RuntimePreflight
 {
     public const string ExpectedGameVersion = "0.113.0";
     public const string MinimumSupportedGameVersion = "0.113.0";
-    public const string ExpectedRitsuVersion = "0.6.11";
+    public const string ExpectedRitsuVersion = "0.6.12";
 
     public static RuntimePrerequisites Inspect(string repoRoot)
     {

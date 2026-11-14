@@ -11,8 +11,9 @@ using SakuraMod.TestProtocol;
 
 namespace SakuraMod.RuntimeTests;
 
-// Lucid looks at the top of the draw pile and puts 1 card (2 with Extra) into hand.
-// It costs 0, Exhausts, and leaves the picked cards' costs alone.
+// Lucid looks at the top 3 cards, puts 1 into hand and gives the rest Forgotten,
+// so they move from the draw pile to Memory at turn end. Extra makes the pick free
+// this turn; the upgrade only removes Exhaust.
 internal static class LucidSearchScenario
 {
     public static async Task<Dictionary<string, object?>> ExecuteAsync(
@@ -38,17 +39,17 @@ internal static class LucidSearchScenario
             }));
         }
 
-        async Task<Lucid> PlayLucidAsync(params int[] picks)
+        async Task<Lucid> PlayLucidAsync(bool upgraded = false)
         {
             var lucid = await CombatScenarioContext.AddGeneratedCardToHandAsync<Lucid>(combat, player);
+            if (upgraded)
+                lucid.UpgradeInternal();
             var selector = new TestCardSelector();
-            foreach (var pick in picks)
-                selector.PrepareToSelect([pick]);
+            selector.PrepareToSelect([0]);
             var energyBefore = playerCombat.Energy;
             using (RunManager.Instance.CardSelectorStack.UseSelector(player, selector))
                 await CombatScenarioContext.PlayCardAsync(lucid);
             assertions.Equal("lucid_costs_zero", energyBefore, playerCombat.Energy);
-            assertions.True("lucid_exhausts", lucid.Pile?.Type == PileType.Exhaust);
             return lucid;
         }
 
@@ -58,26 +59,43 @@ internal static class LucidSearchScenario
         var defend = combat.CreateCard<DefendIronclad>(player);
         var strike = combat.CreateCard<StrikeIronclad>(player);
         await PrepareAsync(0, bludgeon, defend, strike);
-        await PlayLucidAsync(0);
+        var baseLucid = await PlayLucidAsync();
+        assertions.True("lucid_exhausts", baseLucid.Pile?.Type == PileType.Exhaust);
         assertions.True("pick_moves_same_card_to_hand", bludgeon.Pile?.Type == PileType.Hand);
         assertions.Equal("pick_keeps_its_cost", 3, Cost(bludgeon));
-        assertions.True("unpicked_stay_in_draw",
+        assertions.True("pick_stays_unforgotten", !bludgeon.IsTemporary());
+        assertions.True("rest_stay_in_draw",
             defend.Pile?.Type == PileType.Draw && strike.Pile?.Type == PileType.Draw);
-        assertions.True("unpicked_keep_cost", Cost(defend) == 1 && Cost(strike) == 1);
+        assertions.True("rest_gain_forgotten", defend.IsTemporary() && strike.IsTemporary());
 
-        var whirlwind = combat.CreateCard<Whirlwind>(player);
-        var secondBludgeon = combat.CreateCard<Bludgeon>(player);
-        var thirdCard = combat.CreateCard<DefendIronclad>(player);
-        await PrepareAsync(10, whirlwind, secondBludgeon, thirdCard);
-        await PlayLucidAsync(0, 0);
-        assertions.True("extra_picks_two",
-            whirlwind.Pile?.Type == PileType.Hand && secondBludgeon.Pile?.Type == PileType.Hand);
-        assertions.True("extra_leaves_third_in_draw", thirdCard.Pile?.Type == PileType.Draw);
-        assertions.Equal("extra_picks_keep_their_cost", 3, Cost(secondBludgeon));
+        var extraBludgeon = combat.CreateCard<Bludgeon>(player);
+        var extraRest = combat.CreateCard<DefendIronclad>(player);
+        var extraRestTwo = combat.CreateCard<StrikeIronclad>(player);
+        await PrepareAsync(10, extraBludgeon, extraRest, extraRestTwo);
+        await PlayLucidAsync();
+        assertions.Equal("extra_pick_costs_zero_this_turn", 0, Cost(extraBludgeon));
+        assertions.True("extra_rest_gain_forgotten", extraRest.IsTemporary() && extraRestTwo.IsTemporary());
+
+        await PrepareAsync(0, combat.CreateCard<DefendIronclad>(player), combat.CreateCard<DefendIronclad>(player),
+            combat.CreateCard<DefendIronclad>(player));
+        var upgradedLucid = await PlayLucidAsync(upgraded: true);
+        assertions.True("upgraded_lucid_does_not_exhaust", upgradedLucid.Pile?.Type != PileType.Exhaust);
+
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async _ =>
+        {
+            foreach (var enemy in combat.Enemies.Where(static enemy => enemy.IsAlive))
+                await CreatureCmd.Stun(enemy);
+        }));
+        await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
+        var memory = SakuraMemoryPile.Get(player)
+            ?? throw new InvalidOperationException("Memory pile is unavailable after Lucid's turn end.");
+        assertions.True("forgotten_rest_move_to_memory",
+            ReferenceEquals(defend.Pile, memory) && ReferenceEquals(strike.Pile, memory));
+        assertions.Equal("extra_free_cost_expires_after_turn", 3, Cost(extraBludgeon));
 
         return new Dictionary<string, object?>
         {
-            ["fixture"] = "Native top-of-draw cards; Lucid with and without 10 Magic Charge."
+            ["fixture"] = "Native top-of-draw cards; Lucid with and without 10 Magic Charge; upgraded Lucid; one stunned turn boundary."
         };
     }
 }
