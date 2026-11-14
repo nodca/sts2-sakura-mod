@@ -50,21 +50,16 @@ internal static class SakuraElementState
         return true;
     }
 
-    public static async Task<bool> ApplyMissing(PlayerChoiceContext choiceContext, CardModel card)
+    public static async Task ApplyMissing(PlayerChoiceContext choiceContext, CardModel card)
     {
         if (!card.IsMutable)
-            return false;
+            return;
 
-        var applied = false;
         foreach (var element in SakuraActions.ElementSetOf(card).AsElements())
         {
-            var elementApplied = await ApplyMissing(choiceContext, card.Owner, element);
-            if (elementApplied)
+            if (await ApplyMissing(choiceContext, card.Owner, element))
                 MarkEnteredByPlay(card, element);
-            applied |= elementApplied;
         }
-
-        return applied;
     }
 
     public static bool Has(Player player, SakuraElement element) =>
@@ -145,19 +140,21 @@ internal static class SakuraElementState
         {
             case SakuraElement.Earth when owner.Creature.GetPower<ClassicEarthyPower>() is null:
                 await PowerCmd.Apply<ClassicEarthyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
-                return true;
+                break;
             case SakuraElement.Fire when owner.Creature.GetPower<ClassicFireyPower>() is null:
                 await PowerCmd.Apply<ClassicFireyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
-                return true;
+                break;
             case SakuraElement.Water when owner.Creature.GetPower<ClassicWateryPower>() is null:
                 await PowerCmd.Apply<ClassicWateryPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
-                return true;
+                break;
             case SakuraElement.Wind when owner.Creature.GetPower<ClassicWindyPower>() is null:
                 await PowerCmd.Apply<ClassicWindyPower>(choiceContext, owner.Creature, 1, owner.Creature, null, false);
-                return true;
+                break;
             default:
                 return false;
         }
+
+        return Has(owner, element);
     }
 
     private static int TriggerAmount(Player player, SakuraElement element) => element switch

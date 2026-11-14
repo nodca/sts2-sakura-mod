@@ -14,57 +14,10 @@ internal static class SakuraMagicCharge
 {
     public const int NormalMagicChargeGain = 1;
     public const int PowerMagicChargeGain = 2;
-    public const int ElementOpportunityThreshold = 5;
     public const int ExtraEffectCost = 10;
 
     public static bool CanSpendMagic(Player? owner) =>
         owner?.Creature.GetPower<ClassicMagicChargePower>()?.Amount >= ExtraEffectCost;
-
-    internal static SakuraMagicChargeBand BandFor(int amount) =>
-        amount >= ExtraEffectCost
-            ? SakuraMagicChargeBand.Full
-            : amount >= ElementOpportunityThreshold
-                ? SakuraMagicChargeBand.Resonant
-                : SakuraMagicChargeBand.Low;
-
-    internal static SakuraMagicChargeOpportunityTransition OpportunityTransition(int previousAmount, int currentAmount)
-    {
-        var previousBand = BandFor(previousAmount);
-        var currentBand = BandFor(currentAmount);
-        if (currentBand == SakuraMagicChargeBand.Resonant && previousBand != SakuraMagicChargeBand.Resonant)
-            return SakuraMagicChargeOpportunityTransition.Arm;
-        if (currentBand != SakuraMagicChargeBand.Resonant)
-            return SakuraMagicChargeOpportunityTransition.Expire;
-        return SakuraMagicChargeOpportunityTransition.Preserve;
-    }
-
-    internal static SakuraMagicChargeOpportunity? CaptureOpportunity(Player owner)
-    {
-        var power = owner.Creature.GetPower<ClassicMagicChargePower>();
-        if (power is null || BandFor(power.Amount) != SakuraMagicChargeBand.Resonant)
-            return null;
-
-        var generation = power.ArmedOpportunityGeneration;
-        return generation > 0
-            ? new SakuraMagicChargeOpportunity(power, generation)
-            : null;
-    }
-
-    internal static bool TryConsumeOpportunity(Player owner, SakuraMagicChargeOpportunity opportunity) =>
-        ReferenceEquals(owner.Creature.GetPower<ClassicMagicChargePower>(), opportunity.Power)
-        && opportunity.Power.TryConsumeOpportunity(opportunity.Generation);
-
-    internal static async Task TryApplyCapturedOpportunity(
-        PlayerChoiceContext choiceContext,
-        CardModel card,
-        SakuraMagicChargeOpportunity? opportunity)
-    {
-        if (opportunity is not { } captured)
-            return;
-
-        if (await SakuraElementState.ApplyMissing(choiceContext, card))
-            TryConsumeOpportunity(card.Owner, captured);
-    }
 
     // Sealed Book owns every after-play Charge grant; without it no card charges.
     internal static bool GainsMagicAfterPlay(CardModel card, bool hasSealedBook) =>
@@ -149,24 +102,8 @@ internal static class SakuraMagicCharge
             await PowerCmd.ModifyAmount(choiceContext, power, delta, owner.Creature, cardSource, fast);
         }
 
-        var currentPower = owner.Creature.GetPower<ClassicMagicChargePower>();
-        var currentAmount = currentPower?.Amount ?? 0;
-        if (currentPower is not null)
-        {
-            switch (OpportunityTransition(previousAmount, currentAmount))
-            {
-                case SakuraMagicChargeOpportunityTransition.Arm:
-                    currentPower.ArmNextOpportunity();
-                    break;
-                case SakuraMagicChargeOpportunityTransition.Expire:
-                    currentPower.ExpireOpportunity();
-                    break;
-            }
-
-            currentPower.NotifyProjectionChanged();
-        }
-
-        if (currentPower is not null && currentAmount > previousAmount)
+        var currentAmount = owner.Creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0;
+        if (currentAmount > previousAmount)
             SakuraGlowVisual.NotifyMagicChargeGained(owner.Creature, currentAmount - previousAmount);
     }
 
@@ -200,21 +137,3 @@ internal static class SakuraMagicCharge
             CardPilePosition.Bottom));
     }
 }
-
-internal enum SakuraMagicChargeBand
-{
-    Low,
-    Resonant,
-    Full
-}
-
-internal enum SakuraMagicChargeOpportunityTransition
-{
-    Preserve,
-    Arm,
-    Expire
-}
-
-internal readonly record struct SakuraMagicChargeOpportunity(
-    ClassicMagicChargePower Power,
-    int Generation);

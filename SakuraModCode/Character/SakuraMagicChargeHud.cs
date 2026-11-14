@@ -42,11 +42,8 @@ internal static class SakuraMagicChargeHud
     private static readonly Vector2 BaseScale = new(0.8f, 0.8f);
     private static readonly Color ZeroColor = new(0.46f, 0.49f, 0.52f, 0.62f);
     private static readonly Color LowColor = new(0.66f, 0.78f, 0.79f, 0.9f);
-    private static readonly Color ResonantColor = new(0.76f, 1.08f, 1.04f, 1f);
-    private static readonly Color SpentColor = new(0.6f, 0.64f, 0.66f, 0.78f);
     private static readonly Color FullColor = new(1.14f, 1.06f, 0.72f, 1f);
     private static readonly Color LockedColor = new(0.74f, 0.67f, 0.62f, 0.82f);
-    private static readonly Color ResonantGlow = new(0.55f, 1.15f, 1.1f, 0.82f);
     private static readonly Color FullGlow = new(1.2f, 1.04f, 0.54f, 0.9f);
     private static readonly ConditionalWeakTable<NCombatUi, HudState> MountedStates = new();
 
@@ -107,7 +104,6 @@ internal static class SakuraMagicChargeHud
         private readonly TextureRect _chargeLiquid;
         private readonly ShaderMaterial _chargeLiquidMaterial;
         private readonly Label _amount;
-        private ClassicMagicChargePower? _chargePower;
         private SakuraMagicChargeProjection? _projection;
         private Tween? _liquidTween;
         private Tween? _pulseTween;
@@ -142,10 +138,8 @@ internal static class SakuraMagicChargeHud
             if (_disposed)
                 return;
 
-            BindChargePower(_creature.GetPower<ClassicMagicChargePower>());
             var next = SakuraMagicChargeProjection.From(
-                _chargePower?.Amount ?? 0,
-                _chargePower?.ArmedOpportunityGeneration > 0,
+                _creature.GetPower<ClassicMagicChargePower>()?.Amount ?? 0,
                 SakuraExtraEffectTransaction.CanActivate(_player));
             if (next == _projection)
                 return;
@@ -168,26 +162,18 @@ internal static class SakuraMagicChargeHud
             {
                 SakuraMagicChargeHudState.Zero => ZeroColor,
                 SakuraMagicChargeHudState.Low => LowColor,
-                SakuraMagicChargeHudState.ResonantReady => ResonantColor,
-                SakuraMagicChargeHudState.ResonantSpent => SpentColor,
                 SakuraMagicChargeHudState.FullReady => FullColor,
                 SakuraMagicChargeHudState.FullLocked => LockedColor,
                 _ => Colors.White,
             };
             _emblem.Modulate = color;
-            _chargeLiquid.Modulate = projection.State switch
-            {
-                SakuraMagicChargeHudState.ResonantSpent => SpentColor,
-                SakuraMagicChargeHudState.FullLocked => LockedColor,
-                _ => Colors.White,
-            };
+            _chargeLiquid.Modulate = projection.State == SakuraMagicChargeHudState.FullLocked
+                ? LockedColor
+                : Colors.White;
             _amount.Modulate = color;
 
-            _glow.Visible = projection.State is SakuraMagicChargeHudState.ResonantReady
-                or SakuraMagicChargeHudState.FullReady;
-            _glow.Modulate = projection.State == SakuraMagicChargeHudState.FullReady
-                ? FullGlow
-                : ResonantGlow;
+            _glow.Visible = projection.State == SakuraMagicChargeHudState.FullReady;
+            _glow.Modulate = FullGlow;
         }
 
         private void SetLiquidFill(float target, bool animate)
@@ -221,7 +207,7 @@ internal static class SakuraMagicChargeHud
             if (!Root.IsInsideTree())
                 return;
 
-            var pulseScale = state is SakuraMagicChargeHudState.ResonantReady or SakuraMagicChargeHudState.FullReady
+            var pulseScale = state == SakuraMagicChargeHudState.FullReady
                 ? 1.14f
                 : 1.07f;
             Root.Scale = BaseScale * pulseScale;
@@ -250,20 +236,6 @@ internal static class SakuraMagicChargeHud
             Refresh(animate: true);
         }
 
-        private void BindChargePower(ClassicMagicChargePower? power)
-        {
-            if (ReferenceEquals(_chargePower, power))
-                return;
-
-            if (_chargePower is not null)
-                _chargePower.ProjectionChanged -= OnProjectionChanged;
-            _chargePower = power;
-            if (_chargePower is not null)
-                _chargePower.ProjectionChanged += OnProjectionChanged;
-        }
-
-        private void OnProjectionChanged() => Refresh(animate: true);
-
         private void ShowHoverTip() =>
             NHoverTipSet.CreateAndShow(
                 Root,
@@ -278,7 +250,6 @@ internal static class SakuraMagicChargeHud
                 return;
 
             _disposed = true;
-            BindChargePower(null);
             _creature.PowerApplied -= OnPowerApplied;
             _creature.PowerIncreased -= OnPowerIncreased;
             _creature.PowerDecreased -= OnPowerDecreased;

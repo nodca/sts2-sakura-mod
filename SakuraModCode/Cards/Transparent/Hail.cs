@@ -28,9 +28,6 @@ public class Hail() : TransparentCard(1, CardType.Attack, CardRarity.Uncommon, T
         CardPlay play,
         SakuraExtraEffectActivation activation)
     {
-        var opportunity = SakuraMagicCharge.CaptureOpportunity(Owner);
-        await SakuraMagicCharge.TryApplyCapturedOpportunity(choiceContext, this, opportunity);
-
         var maxSpend = DynamicVars["Magic"].IntValue;
         var spent = HailRules.SpendableMagic(this);
         if (spent > 0)

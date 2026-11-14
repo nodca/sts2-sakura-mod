@@ -110,7 +110,6 @@ internal static class SakuraExtraEffectTransaction
 
         var redCapeActivation = card.Owner.GetRelic<ClassicRedCapeRelic>()?.TryActivateFreeExtraEffect(card) == true;
         var activation = new SakuraExtraEffectActivation(redCapeActivation || CanActivate(card.Owner));
-        var opportunity = SakuraMagicCharge.CaptureOpportunity(card.Owner);
         var lockSakura = activation.IsActive
             ? card.Owner.Creature.GetPower<ClassicLockSakuraPower>()
             : null;
@@ -147,23 +146,8 @@ internal static class SakuraExtraEffectTransaction
                 TryShowMagicCircle(card, activation);
                 return extra.PlayWithExtraEffect(choiceContext, play, activation);
             },
-            () => ApplyGameplayPostEffects(card, choiceContext, activation, opportunity),
+            () => SakuraElementState.ApplyMissing(choiceContext, card),
             activationCost);
-    }
-
-    private static async Task ApplyGameplayPostEffects(
-        CardModel card,
-        PlayerChoiceContext choiceContext,
-        SakuraExtraEffectActivation activation,
-        SakuraMagicChargeOpportunity? opportunity)
-    {
-        if (activation.IsActive)
-        {
-            await SakuraElementState.ApplyMissing(choiceContext, card);
-            return;
-        }
-
-        await SakuraMagicCharge.TryApplyCapturedOpportunity(choiceContext, card, opportunity);
     }
 
     private sealed record ActivatedPlay(SakuraExtraEffectActivationCost Cost);
@@ -195,7 +179,8 @@ internal static class SakuraExtraEffectTransaction
             }
 
             await gameplay();
-            await postPlay();
+            if (activation.IsActive)
+                await postPlay();
         }
         finally
         {

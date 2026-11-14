@@ -23,49 +23,53 @@ public class Choice() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, SakuraKeywords.Manifest];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
         [SakuraMemoryPile.PileId, SakuraCardHoverTips.RemindTipKey];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("ManifestCards", 1), new CardsVar("RemindCards", 1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new BlockVar(9, ValueProp.Move),
+        new DamageVar(11, ValueProp.Move),
+        new CardsVar("ManifestCards", 1),
+        new CardsVar("RemindCards", 1)
+    ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         if (activation.IsActive)
         {
-            await Manifest(choiceContext, DynamicVars["ManifestCards"].IntValue);
-            await RemindCards(choiceContext, DynamicVars["RemindCards"].IntValue);
+            await Guard(choiceContext, play);
+            await Strike(choiceContext);
             return;
         }
 
-        // With an empty Memory pile the Remind branch has nothing to offer, so
-        // Choice resolves its Manifest branch directly.
-        if (!Remind.HasRecallChoices(Owner))
-        {
-            await Manifest(choiceContext, DynamicVars["ManifestCards"].IntValue);
-            return;
-        }
-
-        var manifestChoice = SakuraActions.CloneWithCurrentUpgrade<ChoiceManifestChoice>(this);
-        var remindChoice = SakuraActions.CloneWithCurrentUpgrade<ChoiceRemindChoice>(this);
-        manifestChoice.DynamicVars["ManifestCards"].BaseValue = DynamicVars["ManifestCards"].IntValue;
-        remindChoice.DynamicVars["RemindCards"].BaseValue = DynamicVars["RemindCards"].IntValue;
-        var choice = await SakuraActions.SelectFromCards(this, choiceContext, [manifestChoice, remindChoice], cancelable: false);
+        // Both branches stay on offer even with an empty Memory pile: the Strike
+        // branch still deals its damage when Remind finds nothing.
+        var guardChoice = SakuraActions.CloneWithCurrentUpgrade<ChoiceManifestChoice>(this);
+        var strikeChoice = SakuraActions.CloneWithCurrentUpgrade<ChoiceRemindChoice>(this);
+        guardChoice.DynamicVars.Block.BaseValue = DynamicVars.Block.BaseValue;
+        guardChoice.DynamicVars["ManifestCards"].BaseValue = DynamicVars["ManifestCards"].IntValue;
+        strikeChoice.DynamicVars.Damage.BaseValue = DynamicVars.Damage.BaseValue;
+        strikeChoice.DynamicVars["RemindCards"].BaseValue = DynamicVars["RemindCards"].IntValue;
+        var choice = await SakuraActions.SelectFromCards(this, choiceContext, [guardChoice, strikeChoice], cancelable: false);
         if (choice is ChoiceRemindChoice)
-            await RemindCards(choiceContext, DynamicVars["RemindCards"].IntValue);
+            await Strike(choiceContext);
         else
-            await Manifest(choiceContext, DynamicVars["ManifestCards"].IntValue);
+            await Guard(choiceContext, play);
     }
 
-    private async Task Manifest(PlayerChoiceContext choiceContext, int amount)
+    private async Task Guard(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        var manifested = await SakuraManifestLoop.Manifest(this, choiceContext, amount, upgraded: IsUpgraded);
-        foreach (var card in manifested)
-        {
-            if (!card.EnergyCost.CostsX)
-                card.EnergyCost.SetThisCombat(Math.Max(0, card.EnergyCost.GetResolved() - 1), reduceOnly: true);
-        }
+        await CreatureCmd.GainBlock(Owner.Creature, DynamicVars.Block.IntValue, ValueProp.Move, play, false);
+        await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars["ManifestCards"].IntValue);
     }
 
-    private Task RemindCards(PlayerChoiceContext choiceContext, int amount) =>
-        Remind.RecallIntoHand(Owner, choiceContext, amount, upgradeCopies: IsUpgraded);
+    private async Task Strike(PlayerChoiceContext choiceContext)
+    {
+        await DealDamageToRandomEnemies(choiceContext, DynamicVars.Damage.IntValue, 1);
+        await Remind.RecallIntoHand(Owner, choiceContext, DynamicVars["RemindCards"].IntValue, upgradeCopies: false);
+    }
 
-    // The upgrade upgrades what Choice brings in; no displayed number changes.
-    protected override void OnUpgrade() { }
+    protected override void OnUpgrade()
+    {
+        DynamicVars.Block.UpgradeValueBy(3);
+        DynamicVars.Damage.UpgradeValueBy(4);
+    }
 }

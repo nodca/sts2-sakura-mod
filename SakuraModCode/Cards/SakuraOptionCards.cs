@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Character;
 using STS2RitsuLib.Scaffolding.Content;
 
@@ -47,9 +48,10 @@ public class ChoiceManifestChoice() : SakuraOptionCard(CardType.Skill)
 {
     public override string EnglishName => "MANIFEST";
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Manifest];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("ManifestCards", 1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+        [new BlockVar(9, ValueProp.Move), new CardsVar("ManifestCards", 1)];
 
-    protected override void OnUpgrade() => DynamicVars["ManifestCards"].UpgradeValueBy(1);
+    protected override void OnUpgrade() => DynamicVars.Block.UpgradeValueBy(3);
 }
 
 public class ChoiceRemindChoice() : SakuraOptionCard(CardType.Skill)
@@ -57,7 +59,10 @@ public class ChoiceRemindChoice() : SakuraOptionCard(CardType.Skill)
     public override string EnglishName => "REMIND";
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
         [SakuraMemoryPile.PileId, SakuraCardHoverTips.RemindTipKey];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar("RemindCards", 1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+        [new DamageVar(11, ValueProp.Move), new CardsVar("RemindCards", 1)];
+
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(4);
 }
 
 public class TrueOrFalseDrawChoice() : SakuraOptionCard(CardType.Skill)

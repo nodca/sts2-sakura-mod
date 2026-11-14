@@ -6,61 +6,7 @@ using System.Text.Json;
 public sealed class MagicChargeStateSuite
 {
     [Fact]
-    public void ChargeBandsAndOpportunityTransitionsFollowVisibleRanges()
-    {
-        RegressionTestHarness.Require(
-            SakuraMagicCharge.BandFor(0) == SakuraMagicChargeBand.Low
-            && SakuraMagicCharge.BandFor(4) == SakuraMagicChargeBand.Low
-            && SakuraMagicCharge.BandFor(5) == SakuraMagicChargeBand.Resonant
-            && SakuraMagicCharge.BandFor(9) == SakuraMagicChargeBand.Resonant
-            && SakuraMagicCharge.BandFor(10) == SakuraMagicChargeBand.Full
-            && SakuraMagicCharge.BandFor(17) == SakuraMagicChargeBand.Full,
-            "Expected Magic Charge bands to use 0-4, 5-9, and 10+.");
-
-        AssertTransition(4, 5, SakuraMagicChargeOpportunityTransition.Arm);
-        AssertTransition(4, 6, SakuraMagicChargeOpportunityTransition.Arm);
-        AssertTransition(17, 7, SakuraMagicChargeOpportunityTransition.Arm);
-        AssertTransition(5, 9, SakuraMagicChargeOpportunityTransition.Preserve);
-        AssertTransition(9, 6, SakuraMagicChargeOpportunityTransition.Preserve);
-        AssertTransition(9, 10, SakuraMagicChargeOpportunityTransition.Expire);
-        AssertTransition(6, 4, SakuraMagicChargeOpportunityTransition.Expire);
-        AssertTransition(4, 10, SakuraMagicChargeOpportunityTransition.Expire);
-        AssertTransition(12, 3, SakuraMagicChargeOpportunityTransition.Expire);
-    }
-
-    [Fact]
-    public void OpportunityGenerationIdentifiesExactlyOneArmedEntry()
-    {
-        var power = new ClassicMagicChargePower();
-        RegressionTestHarness.Require(
-            power.ArmedOpportunityGeneration == 0,
-            "Expected a new Magic Charge Power to have no midpoint opportunity.");
-
-        power.ArmNextOpportunity();
-        var firstGeneration = power.ArmedOpportunityGeneration;
-        RegressionTestHarness.Require(
-            firstGeneration == 1
-            && !power.TryConsumeOpportunity(firstGeneration + 1)
-            && power.ArmedOpportunityGeneration == firstGeneration,
-            "Expected an unrelated generation not to consume the armed opportunity.");
-
-        RegressionTestHarness.Require(
-            power.TryConsumeOpportunity(firstGeneration)
-            && power.ArmedOpportunityGeneration == 0
-            && !power.TryConsumeOpportunity(firstGeneration),
-            "Expected the matching opportunity generation to be consumed exactly once.");
-
-        power.ArmNextOpportunity();
-        var secondGeneration = power.ArmedOpportunityGeneration;
-        power.ExpireOpportunity();
-        RegressionTestHarness.Require(
-            secondGeneration > firstGeneration
-            && power.ArmedOpportunityGeneration == 0,
-            "Expected reentry to create a new generation and leaving the band to expire it.");
-    }
-
-    [Fact]
-    public void MidpointElementProjectionCoversEverySakuraCardFamily()
+    public void ElementProjectionCoversEverySakuraCardFamily()
     {
         RegressionTestHarness.Require(
             SakuraActions.ElementSetOf(new ClowDark())
@@ -69,7 +15,7 @@ public sealed class MagicChargeStateSuite
                 == (SakuraElementSet.Wind | SakuraElementSet.Water)
             && SakuraActions.ElementSetOf(new SpellFengHua()) == SakuraElementSet.Wind
             && SakuraActions.ElementSetOf(new Gale()) == SakuraElementSet.Wind,
-            "Expected Clow, Sakura, Spell, and Transparent cards to share one midpoint element projection.");
+            "Expected Clow, Sakura, Spell, and Transparent cards to share one element projection.");
     }
 
     [Fact]
@@ -99,23 +45,6 @@ public sealed class MagicChargeStateSuite
                     StringComparison.Ordinal),
                 $"Expected {Path.GetRelativePath(sourceRoot, file)} to route Magic Charge writes through SakuraMagicCharge.");
         }
-    }
-
-    [Fact]
-    public void NonExtraPlayPathsApplyCapturedMidpointOpportunity()
-    {
-        // The non-extra play path is asserted in play by the magic-charge-thresholds
-        // combat scenario; every Sakura card shares that single OnPlay.
-        var extra = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraExtraEffectTransaction.cs"));
-        var charge = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Character/SakuraMagicCharge.cs"));
-
-        RegressionTestHarness.Require(
-            charge.Contains("TryApplyCapturedOpportunity", StringComparison.Ordinal)
-            && extra.Contains("SakuraMagicCharge.TryApplyCapturedOpportunity", StringComparison.Ordinal)
-            && extra.Contains("SakuraMagicCharge.CaptureOpportunity", StringComparison.Ordinal),
-            "Expected Magic Charge to own midpoint opportunity apply for Extra Effect and the single non-extra OnPlay path.");
     }
 
     [Fact]
@@ -152,12 +81,12 @@ public sealed class MagicChargeStateSuite
     [Fact]
     public void HudProjectionDistinguishesAllChargeAndReadinessStates()
     {
-        AssertHudState(0, false, false, SakuraMagicChargeHudState.Zero);
-        AssertHudState(4, false, false, SakuraMagicChargeHudState.Low);
-        AssertHudState(5, true, false, SakuraMagicChargeHudState.ResonantReady);
-        AssertHudState(9, false, false, SakuraMagicChargeHudState.ResonantSpent);
-        AssertHudState(10, false, true, SakuraMagicChargeHudState.FullReady);
-        AssertHudState(17, false, false, SakuraMagicChargeHudState.FullLocked);
+        AssertHudState(0, false, SakuraMagicChargeHudState.Zero);
+        AssertHudState(4, false, SakuraMagicChargeHudState.Low);
+        AssertHudState(5, false, SakuraMagicChargeHudState.Low);
+        AssertHudState(9, false, SakuraMagicChargeHudState.Low);
+        AssertHudState(10, true, SakuraMagicChargeHudState.FullReady);
+        AssertHudState(17, false, SakuraMagicChargeHudState.FullLocked);
     }
 
     [Fact]
@@ -207,7 +136,10 @@ public sealed class MagicChargeStateSuite
             && runtime.Contains("BaseScale", StringComparison.Ordinal)
             && runtime.Contains("SetShaderParameter", StringComparison.Ordinal)
             && runtime.Contains("HoverTipFactory.FromPower", StringComparison.Ordinal)
-            && runtime.Contains("ProjectionChanged", StringComparison.Ordinal)
+            && runtime.Contains("PowerApplied += OnPowerApplied", StringComparison.Ordinal)
+            && runtime.Contains("PowerIncreased += OnPowerIncreased", StringComparison.Ordinal)
+            && runtime.Contains("PowerDecreased += OnPowerDecreased", StringComparison.Ordinal)
+            && runtime.Contains("PowerRemoved += OnPowerRemoved", StringComparison.Ordinal)
             && !runtime.Contains("_Process(", StringComparison.Ordinal),
             "Expected the Magic Charge HUD to stay event-driven with a native power hover tip.");
 
@@ -239,21 +171,12 @@ public sealed class MagicChargeStateSuite
         }
     }
 
-    private static void AssertTransition(
-        int previousAmount,
-        int currentAmount,
-        SakuraMagicChargeOpportunityTransition expected) =>
-        RegressionTestHarness.Require(
-            SakuraMagicCharge.OpportunityTransition(previousAmount, currentAmount) == expected,
-            $"Expected Magic Charge transition {previousAmount}->{currentAmount} to be {expected}.");
-
     private static void AssertHudState(
         int amount,
-        bool hasOpportunity,
         bool canActivateExtra,
         SakuraMagicChargeHudState expected)
     {
-        var projection = SakuraMagicChargeProjection.From(amount, hasOpportunity, canActivateExtra);
+        var projection = SakuraMagicChargeProjection.From(amount, canActivateExtra);
         RegressionTestHarness.Require(
             projection.Amount == amount && projection.State == expected,
             $"Expected {amount} Magic Charge to project as {expected}.");

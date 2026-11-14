@@ -72,7 +72,6 @@ public sealed class PublicIdentityCompatibilitySuite
                  {
                      "SakuraMod_ClassicSealedWandCharge",
                      "SakuraMod_ClassicMoonBellUsed",
-                     "SakuraMod_ClassicMagicChargeOpportunityToken",
                      "SakuraMod_ClassicTwinCardsDoubledThisTurn",
                      "SakuraMod_ClowCreateCostReductions",
                      "SakuraMod_RedCapeActivatedThisCombat",
