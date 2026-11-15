@@ -1,0 +1,16 @@
+{
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.title": "木之本桜",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.titleObject": "木之本桜",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.description": "「絶対大丈夫だよ！」\n顕現・追加効果・忘却の夢カードを操るカードキャプター。",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.pronounSubject": "彼女",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.pronounObject": "彼女",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.pronounPossessive": "彼女の",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.possessiveAdjective": "彼女の",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.goldMonologue": "……",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.eventDeathPrevention": "……",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.aromaPrinciple": "……",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.cardsModifierTitle": "さくらのカード",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.cardsModifierDescription": "報酬やショップに木之本桜のカードが出現するようになる。",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.banter.alive.endTurnPing": "お願いします！",
+  "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.banter.dead.endTurnPing": "[jitter]……[/jitter]"
+}

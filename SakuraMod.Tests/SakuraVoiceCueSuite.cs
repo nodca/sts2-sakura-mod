@@ -21,7 +21,7 @@ public sealed class SakuraVoiceCueSuite
             && !defaultBinding.CreateDefaultValue(),
             "Expected one RitsuLib-backed Sakura voice toggle with a false default.");
 
-        foreach (var locale in new[] { "eng", "zhs" })
+        foreach (var locale in new[] { "eng", "zhs", "jpn" })
         {
             var relativePath = $"SakuraMod/localization/{locale}/settings_ui.json";
             var settings = JsonSerializer.Deserialize<Dictionary<string, string>>(

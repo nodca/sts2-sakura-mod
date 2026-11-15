@@ -59,7 +59,7 @@ public sealed class TelemetryContractSuite
     }
 
     [Fact]
-    public void SerializedRunFilterAcceptsOnlyStandardKinomotoSakuraRuns()
+    public void SerializedRunFilterAcceptsOnlyStandardAndDreadKinomotoSakuraRuns()
     {
         RegressionTestHarness.Require(
             SakuraTelemetry.SakuraCharacterEntry == "SAKURA_MOD_CHARACTER_CLASSIC_SAKURA"
@@ -133,6 +133,27 @@ public sealed class TelemetryContractSuite
                 ]
             }),
             "Expected Sakura telemetry to reject Daily and Custom Sakura runs.");
+        RegressionTestHarness.Require(
+            SakuraTelemetry.IsTelemetryGameMode(GameMode.Standard)
+            && !SakuraTelemetry.IsTelemetryGameMode(GameMode.Daily)
+            && !SakuraTelemetry.IsTelemetryGameMode(GameMode.None),
+            "Expected only Standard and Dread game modes to be eligible for telemetry.");
+        // GameMode.Dread exists only from STS2 0.113; public builds keep the ordinal for Custom.
+        if (Enum.TryParse<GameMode>(SakuraTelemetry.DreadGameModeName, out var dread))
+            RegressionTestHarness.Require(
+                SakuraTelemetry.IsTelemetryGameMode(dread)
+                && SakuraTelemetry.IsSakuraSerializableRun(new SerializableRun
+                {
+                    GameMode = dread,
+                    Players =
+                    [
+                        new SerializablePlayer
+                        {
+                            CharacterId = new ModelId("CHARACTER", SakuraTelemetry.SakuraCharacterEntry)
+                        }
+                    ]
+                }, null),
+                "Expected Sakura telemetry to accept Dread Sakura runs.");
     }
 
     [Fact]
@@ -187,8 +208,8 @@ public sealed class TelemetryContractSuite
             runHistoryRequest.DescriptionText is not null,
             "Expected the single authorization to include localized disclosure text.");
         RegressionTestHarness.Require(
-            runHistoryRequest.Description.Contains("Standard-mode Kinomoto Sakura", StringComparison.Ordinal),
-            "Expected the single authorization disclosure to mention Standard-mode Kinomoto Sakura.");
+            runHistoryRequest.Description.Contains("Standard- and Dread-mode Kinomoto Sakura", StringComparison.Ordinal),
+            "Expected the single authorization disclosure to mention Standard- and Dread-mode Kinomoto Sakura.");
         RegressionTestHarness.Require(
             runHistoryRequest.CaptureFilter!(new TelemetryCaptureContext(
                 SakuraTelemetry.RunHistoryEventName,
@@ -314,6 +335,7 @@ public sealed class TelemetryContractSuite
                 SakuraTelemetryCoverage.BuildCoveragePayload(
                     fixtureContext.RunKey,
                     SakuraTelemetryCoverage.StageStarted,
+                    gameMode: "Standard",
                     playerCount: 1,
                     sakuraPlayerCount: 1,
                     startedCoverage),
@@ -457,6 +479,7 @@ public sealed class TelemetryContractSuite
                 SakuraTelemetryCoverage.BuildCoveragePayload(
                     "018f6b8d-78ef-7a63-8f4a-4d663f3f0e61",
                     SakuraTelemetryCoverage.StageTerminalAttempted,
+                    gameMode: "Standard",
                     playerCount: 1,
                     sakuraPlayerCount: 1,
                     accumulator))

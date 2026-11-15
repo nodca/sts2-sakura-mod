@@ -160,7 +160,7 @@ public sealed class MagicChargeStateSuite
     [Fact]
     public void MagicChargeLocalizationKeepsPowerDescriptionKey()
     {
-        foreach (var locale in new[] { "eng", "zhs" })
+        foreach (var locale in new[] { "eng", "zhs", "jpn" })
         {
             var powers = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
                 RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/powers.json")))

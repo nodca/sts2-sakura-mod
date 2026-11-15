@@ -14,6 +14,7 @@ using MegaCrit.Sts2.Core.Models.Enchantments;
 using MegaCrit.Sts2.Core.Models.Events;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
+using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Pooling;
 using MegaCrit.Sts2.Core.Nodes.RestSite;
@@ -242,6 +243,7 @@ internal static class RuntimeSmokeScenario
         var resources = InspectResources(assertions);
         RuntimeTestHost.WriteCheckpoint(request, "resources_verified", "Representative Godot resources were loaded.");
         var enchantmentVisuals = InspectEnchantmentVisuals(assertions);
+        AssertCardBundleAlignment(assertions);
         RuntimeTestHost.WriteCheckpoint(request, "enchantment_visuals_verified", "Native enchantment controls were inspected on pooled Sakura cards.");
 
         var selfCheckDirectory = Path.Combine(request.ArtifactRoot, "self-check");
@@ -1381,6 +1383,50 @@ internal static class RuntimeSmokeScenario
             ["gameplay_section"] = gameplaySection?.Id ?? string.Empty,
             ["fourth_act_toggle"] = fourthActToggle?.Id ?? string.Empty
         };
+    }
+
+    private static void AssertCardBundleAlignment(RuntimeAssertionCollector assertions)
+    {
+        var root = ((SceneTree)Engine.GetMainLoop()).Root;
+        var bundle = NCardBundle.Create([
+            ModelDb.Card<Bash>().ToMutable(),
+            ModelDb.Card<ClowShield>().ToMutable(),
+            ModelDb.Card<Gale>().ToMutable()
+        ]) ?? throw new InvalidOperationException("Could not create the native card bundle.");
+        root.AddChild(bundle);
+        try
+        {
+            AssertCenters("initial");
+            foreach (var card in bundle.RemoveCardNodes())
+            {
+                var holder = NPreviewCardHolder.Create(card, showHoverTips: false, scaleOnHover: false)
+                    ?? throw new InvalidOperationException("Could not create the native preview holder.");
+                root.AddChild(holder);
+                holder.QueueFree();
+                card.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
+            }
+            bundle.ReAddCardNodes();
+            AssertCenters("after_preview");
+        }
+        finally
+        {
+            bundle.QueueFree();
+        }
+
+        void AssertCenters(string stage)
+        {
+            var nativeCenter = CenterFromAnchor(bundle.CardNodes[0]);
+            foreach (var card in bundle.CardNodes.Skip(1))
+            {
+                var center = CenterFromAnchor(card);
+                assertions.True($"bundle_{stage}_{card.Model?.Id.Entry}_center",
+                    center.DistanceTo(nativeCenter) < 0.5f,
+                    $"Expected native offset {nativeCenter}; got {center}.");
+            }
+        }
+
+        static Vector2 CenterFromAnchor(NCard card) =>
+            card.GetTransform() * (card.Body.GetTransform() * (card.Body.Size * 0.5f)) - card.Position;
     }
 
     private static Dictionary<string, string> InspectEnchantmentVisuals(RuntimeAssertionCollector assertions)

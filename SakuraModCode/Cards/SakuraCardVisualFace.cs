@@ -426,7 +426,10 @@ internal readonly record struct SakuraCardFaceLayoutContext(
             return new SakuraCardFaceLayoutContext(new Rect2(Vector2.Zero, rootSize), pivot, null);
 
         var parent = card.GetParent();
-        if (parent is NCardHolder || IsGeneratedTransparentHandEntryCard(card, parent))
+        // The bundle's %Cards control also positions cards by their centers.
+        if (parent is NCardHolder
+            || parent?.GetParent() is NCardBundle
+            || IsGeneratedTransparentHandEntryCard(card, parent))
         {
             context = CenteredOrigin(null);
             priority = 4;

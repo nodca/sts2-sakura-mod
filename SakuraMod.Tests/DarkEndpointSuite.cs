@@ -80,9 +80,9 @@ public sealed class DarkEndpointSuite
     }
 
     [Fact]
-    public void LocalizedDarknessAndMicroLightTextExistInBothLocales()
+    public void LocalizedDarknessAndMicroLightTextExistInAllLocales()
     {
-        foreach (var locale in new[] { "eng", "zhs" })
+        foreach (var locale in new[] { "eng", "zhs", "jpn" })
         {
             var cards = ReadJson($"SakuraMod/localization/{locale}/cards.json");
             var powers = ReadJson($"SakuraMod/localization/{locale}/powers.json");

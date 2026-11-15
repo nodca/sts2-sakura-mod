@@ -98,7 +98,7 @@ public sealed class SakuraCombatArtSuite
             SakuraCharacterSelectOptionsPatch.VoiceOnKey,
             SakuraCharacterSelectOptionsPatch.VoiceOffKey
         ];
-        foreach (var locale in new[] { "eng", "zhs" })
+        foreach (var locale in new[] { "eng", "zhs", "jpn" })
         {
             var relativePath = $"SakuraMod/localization/{locale}/settings_ui.json";
             var settings = JsonSerializer.Deserialize<Dictionary<string, string>>(

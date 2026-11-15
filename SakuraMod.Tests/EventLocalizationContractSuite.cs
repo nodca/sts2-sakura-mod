@@ -50,6 +50,7 @@ public sealed class EventLocalizationContractSuite
     [Theory]
     [InlineData("eng")]
     [InlineData("zhs")]
+    [InlineData("jpn")]
     public void ClassicEventsUseRegisteredLocalizationEntries(string locale)
     {
         var relativePath = $"SakuraMod/localization/{locale}/events.json";

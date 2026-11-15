@@ -152,7 +152,7 @@ public sealed class FourthActMoveTitleSuite
                 .Invoke(monster, null)!)
             .States.Values.OfType<MoveState>().Select(static move => move.StateId).ToArray();
         Assert.NotEmpty(moves);
-        foreach (var locale in new[] { "zhs", "eng" })
+        foreach (var locale in new[] { "zhs", "eng", "jpn" })
         {
             var titles = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(
                 File.ReadAllText(RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/monsters.json")))!;

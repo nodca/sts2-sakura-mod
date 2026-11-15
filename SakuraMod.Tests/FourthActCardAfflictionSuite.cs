@@ -69,7 +69,7 @@ public sealed class FourthActCardAfflictionSuite
     [Fact]
     public void AfflictionTextExistsAndConfinementIsGone()
     {
-        foreach (var locale in new[] { "zhs", "eng" })
+        foreach (var locale in new[] { "zhs", "eng", "jpn" })
         {
             var text = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
                 RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/afflictions.json")))!;

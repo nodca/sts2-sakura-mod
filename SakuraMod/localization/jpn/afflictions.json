@@ -1,0 +1,8 @@
+{
+  "SAKURA_MOD_AFFLICTION_SLEEPING_AFFLICTION.title": "睡眠",
+  "SAKURA_MOD_AFFLICTION_SLEEPING_AFFLICTION.description": "手動ではプレイできない。ブロックされていないアタックダメージを受けるか、スリープが倒されると目覚める。",
+  "SAKURA_MOD_AFFLICTION_BURIED_AFFLICTION.title": "埋没",
+  "SAKURA_MOD_AFFLICTION_BURIED_AFFLICTION.description": "次のシャッフル時、このカードは[gold]捨て札[/gold]に残る。",
+  "SAKURA_MOD_AFFLICTION_FROZEN_AFFLICTION.title": "氷結",
+  "SAKURA_MOD_AFFLICTION_FROZEN_AFFLICTION.description": "手動ではプレイできない。"
+}

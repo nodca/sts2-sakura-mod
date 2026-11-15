@@ -41,6 +41,7 @@ public sealed class TomoyoAncientCostumesSuite
     [Theory]
     [InlineData("eng")]
     [InlineData("zhs")]
+    [InlineData("jpn")]
     public void EventLocalizationCoversIdentityDialoguePagesAndRelicOptions(string locale)
     {
         var relativePath = $"SakuraMod/localization/{locale}/ancients.json";

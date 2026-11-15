@@ -146,7 +146,7 @@ public sealed class ElementStateHudSuite
             "SAKURAMOD-EARTHY_STATE",
             "SAKURAMOD-WATERY_STATE",
         ];
-        foreach (var locale in new[] { "eng", "zhs" })
+        foreach (var locale in new[] { "eng", "zhs", "jpn" })
         {
             var tips = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
                 RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/static_hover_tips.json")))
