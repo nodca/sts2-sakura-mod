@@ -1,0 +1,7 @@
+{
+  "SAKURAMOD-SAKURA_SPIRAL.title": "らせん",
+  "SAKURAMOD-SAKURA_SPIRAL.description": "このカードは追加で1回プレイされる。",
+  "SAKURAMOD-SAKURA_GOOPY.title": "べとべと",
+  "SAKURAMOD-SAKURA_GOOPY.description": "プレイするたび、{Amount}[gold]ブロック[/gold]を得る。",
+  "SAKURAMOD-SAKURA_GOOPY.extraCardText": "べとべと：{Amount}[gold]ブロック[/gold]。"
+}

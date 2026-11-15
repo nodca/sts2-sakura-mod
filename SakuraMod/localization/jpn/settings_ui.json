@@ -1,0 +1,15 @@
+{
+  "SAKURAMOD-ENABLE_SAKURA_VOICE.title": "さくらボイス",
+  "SAKURAMOD-ENABLE_SAKURA_VOICE.description": "各戦闘で初めて対応する呪文カードをプレイしたとき、さくらのボイスを再生する。",
+  "SAKURAMOD-ENABLE_FOURTH_ACT.title": "第4幕を有効化（実験的）",
+  "SAKURAMOD-ENABLE_FOURTH_ACT.label": "第4幕",
+  "SAKURAMOD-ENABLE_FOURTH_ACT.description": "第3幕のクリア後、制作途中の SakuraMod 第4幕へ進む。",
+  "SAKURAMOD-COMBAT_ART.label": "戦闘立ち絵",
+  "SAKURAMOD-COMBAT_ART.standard": "通常",
+  "SAKURAMOD-COMBAT_ART.chibi": "SD（ちび）",
+  "SAKURAMOD-CARD_BGM.label": "カードBGM",
+  "SAKURAMOD-CARD_VFX.label": "カードエフェクト",
+  "SAKURAMOD-ENABLE_SAKURA_VOICE.on": "オン",
+  "SAKURAMOD-ENABLE_SAKURA_VOICE.off": "オフ",
+  "SAKURAMOD-TELEMETRY_CONSENT.description": "バランス調整の診断用として、スタンダードモードおよびドレッドモードにおける木之本桜のソロおよびマルチプレイの完走・終了履歴、カード選択肢・選択結果と対応定義、カードドロー集計数、ランダムなラン識別子、正確なアセンションとパーティ人数、SakuraMod のバージョン、およびゲームプレイに影響する導入済み Mod の ID/バージョンを送信します。マルチプレイのレポートにはあなた自身のプレイヤーデータのみが含まれ、同様のバランス統計に集計されます。SakuraMod はカードプレイ履歴、カードテキスト、ローカルパス、個人を特定できる情報は送信しません。"
+}

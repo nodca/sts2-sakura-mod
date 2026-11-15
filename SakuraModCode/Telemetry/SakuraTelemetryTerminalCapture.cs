@@ -100,7 +100,7 @@ internal static class SakuraTelemetryTerminalCapture
         var coverage = new SakuraTelemetryCoverageAccumulator();
         SakuraTelemetryCoverage.CaptureIfEnabled(client, SakuraTelemetryCoverage.CoverageEventName,
             SakuraTelemetryCoverage.BuildCoveragePayload(data.RunKey,
-                SakuraTelemetryCoverage.StageTerminalAttempted, 1, 1, coverage),
+                SakuraTelemetryCoverage.StageTerminalAttempted, run.GameMode.ToString(), 1, 1, coverage),
             properties: new Dictionary<string, object?>
             {
                 ["report_scope"] = "player", ["party_player_count"] = run.Players.Count

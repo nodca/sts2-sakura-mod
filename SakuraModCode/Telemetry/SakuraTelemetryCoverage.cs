@@ -26,6 +26,7 @@ internal static class SakuraTelemetryCoverage
     internal static JsonObject BuildCoveragePayload(
         string runKey,
         string stage,
+        string gameMode,
         int playerCount,
         int sakuraPlayerCount,
         SakuraTelemetryCoverageAccumulator accumulator) =>
@@ -33,7 +34,7 @@ internal static class SakuraTelemetryCoverage
             ContractVersion,
             runKey,
             stage,
-            "Standard",
+            gameMode,
             playerCount,
             sakuraPlayerCount,
             accumulator.Expected,

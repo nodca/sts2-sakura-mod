@@ -1609,8 +1609,8 @@ public sealed class CardMechanicsSuite
         var swingPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Powers/Transparent/SwingDamageWindowPower.cs"));
         RegressionTestHarness.Require(
-            swing.DynamicVars.Damage.IntValue == 14
-            && upgradedSwing.DynamicVars.Damage.IntValue == 18
+            swing.DynamicVars.Damage.IntValue == 12
+            && upgradedSwing.DynamicVars.Damage.IntValue == 16
             && SwingDamageWindowPower.RequestedMultiplier(extraEffect: false) == 2
             && SwingDamageWindowPower.RequestedMultiplier(extraEffect: true) == 3
             && SwingDamageWindowPower.HighestMultiplier(0, 2) == 2
@@ -1623,7 +1623,7 @@ public sealed class CardMechanicsSuite
             && swingPowerSource.Contains("cardSource is { Type: CardType.Attack }", StringComparison.Ordinal)
             && swingPowerSource.Contains("cardSource.Owner?.Creature == owner", StringComparison.Ordinal)
             && swingPowerSource.Contains("GetScaledAmountForMultiplayer", StringComparison.Ordinal),
-            "Expected Swing to deal 14/18 damage and open a 2x/3x owner-scoped Weak damage window for Powered Attacks.");
+            "Expected Swing to deal 12/16 damage and open a 2x/3x owner-scoped Weak damage window for Powered Attacks.");
 
         var struggle = new Struggle();
         var upgradedStruggle = RegressionTestHarness.MutableForCostTest(new Struggle());

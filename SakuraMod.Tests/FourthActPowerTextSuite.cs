@@ -11,7 +11,7 @@ using SakuraMod.SakuraModCode.FourthAct.Wind.Powers;
 
 public sealed class FourthActPowerTextSuite
 {
-    private static readonly string[] Locales = ["zhs", "eng"];
+    private static readonly string[] Locales = ["zhs", "eng", "jpn"];
 
     public static TheoryData<PowerModel> PowersWithTunableText => new()
     {
@@ -111,7 +111,9 @@ public sealed class FourthActPowerTextSuite
         {
             var zhs = ReadJson($"SakuraMod/localization/zhs/{file}").Keys.Where(IsFourthActKey).ToHashSet();
             var eng = ReadJson($"SakuraMod/localization/eng/{file}").Keys.Where(IsFourthActKey).ToHashSet();
+            var jpn = ReadJson($"SakuraMod/localization/jpn/{file}").Keys.Where(IsFourthActKey).ToHashSet();
             Assert.Equal(zhs.Order(), eng.Order());
+            Assert.Equal(zhs.Order(), jpn.Order());
         }
     }
 

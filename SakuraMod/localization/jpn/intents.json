@@ -1,0 +1,16 @@
+{
+  "SAKURA_MOD_SUMMON_DASH.title": "ダッシュ召喚",
+  "SAKURA_MOD_SUMMON_DASH.description": "ウィンディが仲間枠にダッシュを召喚する。",
+  "SAKURA_MOD_SUMMON_FLOAT.title": "フロート召喚",
+  "SAKURA_MOD_SUMMON_FLOAT.description": "ウィンディが仲間枠にフロートを召喚する。",
+  "SAKURA_MOD_SUMMON_SLEEP.title": "スリープ召喚",
+  "SAKURA_MOD_SUMMON_SLEEP.description": "ウィンディが仲間枠にスリープを召喚する。",
+  "SAKURA_MOD_FORMAT_DAMAGE_RANGE": "{Min}-{Max}",
+  "SAKURA_MOD_STEAL_BLOCK.title": "ブロック奪取",
+  "SAKURA_MOD_STEAL_BLOCK.description": "攻撃後、あなたの残りの[gold]ブロック[/gold]をすべて取り除き、同量の水として蓄える。",
+  "SAKURA_MOD_SHADOW_ATTACK_SINGLE.description": "[gold]{Target}[/gold]に[red]{Damage}[/red]ダメージを与える予定。",
+  "SAKURA_MOD_SHADOW_ATTACK_MULTI.description": "[gold]{Target}[/gold]に[red]{Damage}[/red]ダメージを[red]{Repeat}[/red]回与える予定。",
+  "SAKURA_MOD_SHADOW_DEFEND.description": "[gold]{Amount}[/gold][gold]ブロック[/gold]を得る予定。",
+  "SAKURA_MOD_SHADOW_HEAL.description": "HPを[green]{Amount}[/green]回復する予定。",
+  "SAKURA_MOD_SHADOW_STRENGTH.description": "[gold]筋力[/gold][gold]{Amount}[/gold]を得る予定。"
+}

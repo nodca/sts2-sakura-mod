@@ -34,7 +34,7 @@ internal static class SakuraTelemetry
 
     private const string DisplayName = "SakuraMod";
     private const string ConsentDescriptionKey = "SAKURAMOD-TELEMETRY_CONSENT.description";
-    private const string ConsentDescriptionFallback = "Sends your completed Standard-mode Kinomoto Sakura run history in solo and multiplayer games, your card choices and their definitions, aggregate card draw counts, an opaque run key, exact ascension and party size, SakuraMod version, and loaded gameplay Mod ids/versions for balance diagnostics. Multiplayer reports contain only your player data and join the same balance statistics. SakuraMod adds no card-play data, card text, local path, or personal identifier.";
+    private const string ConsentDescriptionFallback = "Sends your completed Standard- and Dread-mode Kinomoto Sakura run history in solo and multiplayer games, your card choices and their definitions, aggregate card draw counts, an opaque run key, exact ascension and party size, SakuraMod version, and loaded gameplay Mod ids/versions for balance diagnostics. Multiplayer reports contain only your player data and join the same balance statistics. SakuraMod adds no card-play data, card text, local path, or personal identifier.";
     internal const string BalanceContextEventName = "balance_run.context";
     internal const string CardRewardOfferedEventName = "card_reward.offered";
     internal const string CardRewardTakenEventName = "card_reward.taken";
@@ -126,14 +126,22 @@ internal static class SakuraTelemetry
         IsSakuraSerializableRun(run, LocalContext.NetId);
 
     internal static bool IsSakuraSerializableRun(SerializableRun? run, ulong? localPlayerId) =>
-        run is { GameMode: GameMode.Standard, Players.Count: > 0 }
+        run is { Players.Count: > 0 }
+        && IsTelemetryGameMode(run.GameMode)
         && IsSakuraCharacterId((localPlayerId is { } id
             ? run.Players.FirstOrDefault(player => player.NetId == id)
             : run.Players.Count == 1 ? run.Players[0] : null)?.CharacterId);
 
     internal static bool IsEligibleRun(RunState? runState) =>
-        runState is { GameMode: GameMode.Standard, Players.Count: > 0 }
+        runState is { Players.Count: > 0 }
+        && IsTelemetryGameMode(runState.GameMode)
         && IsSakuraCharacterId(LocalPlayer(runState)?.Character.Id);
+
+    internal const string DreadGameModeName = "Dread";
+
+    // Public 0.107 has no GameMode.Dread and reuses its ordinal for Custom, so match the name.
+    internal static bool IsTelemetryGameMode(GameMode gameMode) =>
+        gameMode == GameMode.Standard || gameMode.ToString() == DreadGameModeName;
 
     internal static Player? LocalPlayer(RunState runState) =>
         LocalContext.NetId is { } id ? runState.Players.FirstOrDefault(player => player.NetId == id)
@@ -524,6 +532,7 @@ internal sealed class SakuraTelemetryRunHook : AbstractModel
                     SakuraTelemetryCoverage.BuildCoveragePayload(
                         _runData.RunKey,
                         stage,
+                        BoundRunState.GameMode.ToString(),
                         1, 1, _coverage),
                     properties: new Dictionary<string, object?>
                     {

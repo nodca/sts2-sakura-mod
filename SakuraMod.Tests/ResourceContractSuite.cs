@@ -46,7 +46,7 @@ public sealed class ResourceContractSuite
     public void ThunderExtraEffectDescriptionsRemainLocalized()
     {
         const string thunderExtraKey = "SAKURA_MOD_CARD_CLOW_THUNDER.extraDescription";
-        foreach (var locale in new[] { "eng", "zhs" })
+        foreach (var locale in new[] { "eng", "zhs", "jpn" })
         {
             var relativePath = $"SakuraMod/localization/{locale}/cards.json";
             var cards = JsonSerializer.Deserialize<Dictionary<string, string>>(
@@ -2877,6 +2877,7 @@ public sealed class ResourceContractSuite
     [Theory]
     [InlineData("eng")]
     [InlineData("zhs")]
+    [InlineData("jpn")]
     public void AncientDialogueLinesProvideNextButtonKeys(string locale)
     {
         var relativePath = $"SakuraMod/localization/{locale}/ancients.json";
@@ -2931,16 +2932,25 @@ public sealed class ResourceContractSuite
             "SakuraMod/localization/zhs/relics.json",
             RegressionTestData.RemovedLegacyRelicLocalizationPrefixes);
         RegressionTestHarness.RequireNoLocalizationPrefixes(
+            "SakuraMod/localization/jpn/relics.json",
+            RegressionTestData.RemovedLegacyRelicLocalizationPrefixes);
+        RegressionTestHarness.RequireNoLocalizationPrefixes(
             "SakuraMod/localization/eng/characters.json",
             RegressionTestData.RemovedLegacyHostLocalizationPrefixes);
         RegressionTestHarness.RequireNoLocalizationPrefixes(
             "SakuraMod/localization/zhs/characters.json",
             RegressionTestData.RemovedLegacyHostLocalizationPrefixes);
         RegressionTestHarness.RequireNoLocalizationPrefixes(
+            "SakuraMod/localization/jpn/characters.json",
+            RegressionTestData.RemovedLegacyHostLocalizationPrefixes);
+        RegressionTestHarness.RequireNoLocalizationPrefixes(
             "SakuraMod/localization/eng/ancients.json",
             RegressionTestData.RemovedLegacyHostLocalizationPrefixes);
         RegressionTestHarness.RequireNoLocalizationPrefixes(
             "SakuraMod/localization/zhs/ancients.json",
+            RegressionTestData.RemovedLegacyHostLocalizationPrefixes);
+        RegressionTestHarness.RequireNoLocalizationPrefixes(
+            "SakuraMod/localization/jpn/ancients.json",
             RegressionTestData.RemovedLegacyHostLocalizationPrefixes);
 
     }
@@ -2953,7 +2963,7 @@ public sealed class ResourceContractSuite
             File.Exists(memoryIcon) && File.Exists($"{memoryIcon}.import"),
             "Expected the Memory pile to reuse the tracked Record icon resource.");
 
-        foreach (var locale in new[] { "eng", "zhs" })
+        foreach (var locale in new[] { "eng", "zhs", "jpn" })
         {
             var tipsPath = $"SakuraMod/localization/{locale}/static_hover_tips.json";
             var tips = JsonSerializer.Deserialize<Dictionary<string, string>>(
@@ -3080,7 +3090,7 @@ public sealed class ResourceContractSuite
     [Fact]
     public void LabyrinthFieldLocalizationAndStateContractRemainComplete()
     {
-        foreach (var locale in new[] { "eng", "zhs" })
+        foreach (var locale in new[] { "eng", "zhs", "jpn" })
         {
             var tips = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(
                 RegressionTestHarness.FindRepoFile($"SakuraMod/localization/{locale}/static_hover_tips.json")))!;

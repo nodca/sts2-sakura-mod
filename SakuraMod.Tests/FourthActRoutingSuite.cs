@@ -316,7 +316,7 @@ public sealed class FourthActRoutingSuite
         Assert.Equal(SakuraModConfig.FourthActToggleId, toggle.Id);
         Assert.False(defaultBinding.CreateDefaultValue());
 
-        foreach (var locale in new[] { "eng", "zhs" })
+        foreach (var locale in new[] { "eng", "zhs", "jpn" })
         {
             var relativePath = $"SakuraMod/localization/{locale}/settings_ui.json";
             var settings = JsonSerializer.Deserialize<Dictionary<string, string>>(
@@ -328,13 +328,15 @@ public sealed class FourthActRoutingSuite
     }
 
     [Fact]
-    public void FourthActTitleIsLocalizedInBothSupportedLocales()
+    public void FourthActTitleIsLocalizedInAllSupportedLocales()
     {
         const string key = "SAKURA_MOD_ACT_SAKURA_FOURTH_ACT.title";
         Assert.Contains(key, File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/localization/eng/acts.json")));
         Assert.Contains(key, File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraMod/localization/zhs/acts.json")));
+        Assert.Contains(key, File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraMod/localization/jpn/acts.json")));
     }
 
     [Fact]

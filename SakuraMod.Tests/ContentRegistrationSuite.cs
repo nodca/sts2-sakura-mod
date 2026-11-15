@@ -25,12 +25,16 @@ public sealed class ContentRegistrationSuite
             "Expected registered-power localization checks to follow RitsuLib's default public entry rule.");
         RegressionTestHarness.RequireRegisteredCardLocalizationKeys("SakuraMod/localization/eng/cards.json", registeredCardTypes);
         RegressionTestHarness.RequireRegisteredCardLocalizationKeys("SakuraMod/localization/zhs/cards.json", registeredCardTypes);
+        RegressionTestHarness.RequireRegisteredCardLocalizationKeys("SakuraMod/localization/jpn/cards.json", registeredCardTypes);
         RegressionTestHarness.RequireRegisteredPowerLocalizationKeys("SakuraMod/localization/eng/powers.json", registeredPowerTypes);
         RegressionTestHarness.RequireRegisteredPowerLocalizationKeys("SakuraMod/localization/zhs/powers.json", registeredPowerTypes);
+        RegressionTestHarness.RequireRegisteredPowerLocalizationKeys("SakuraMod/localization/jpn/powers.json", registeredPowerTypes);
         RegressionTestHarness.RequireRegisteredCharacterLocalizationKeys("SakuraMod/localization/eng/characters.json", [typeof(ClassicSakura)]);
         RegressionTestHarness.RequireRegisteredCharacterLocalizationKeys("SakuraMod/localization/zhs/characters.json", [typeof(ClassicSakura)]);
+        RegressionTestHarness.RequireRegisteredCharacterLocalizationKeys("SakuraMod/localization/jpn/characters.json", [typeof(ClassicSakura)]);
         RegressionTestHarness.RequireRegisteredRelicLocalizationKeys("SakuraMod/localization/eng/relics.json", SakuraRelicCatalog.AllRelicTypes());
         RegressionTestHarness.RequireRegisteredRelicLocalizationKeys("SakuraMod/localization/zhs/relics.json", SakuraRelicCatalog.AllRelicTypes());
+        RegressionTestHarness.RequireRegisteredRelicLocalizationKeys("SakuraMod/localization/jpn/relics.json", SakuraRelicCatalog.AllRelicTypes());
         RegressionTestHarness.RequireNoRemovedCardTypes(
             "registered Sakura card types",
             registeredCardTypes,
@@ -44,6 +48,9 @@ public sealed class ContentRegistrationSuite
             RegressionTestData.RemovedAncientCardLocalizationPrefixes);
         RegressionTestHarness.RequireNoLocalizationPrefixes(
             "SakuraMod/localization/zhs/cards.json",
+            RegressionTestData.RemovedAncientCardLocalizationPrefixes);
+        RegressionTestHarness.RequireNoLocalizationPrefixes(
+            "SakuraMod/localization/jpn/cards.json",
             RegressionTestData.RemovedAncientCardLocalizationPrefixes);
 
     }

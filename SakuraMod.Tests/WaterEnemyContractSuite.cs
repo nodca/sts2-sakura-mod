@@ -196,7 +196,7 @@ public sealed class WaterEnemyContractSuite
         Assert.Contains("WaterReservoirPower", watery);
         Assert.Contains("SakuraPowerValueProps.Block", watery);
 
-        foreach (var locale in new[] { "eng", "zhs" })
+        foreach (var locale in new[] { "eng", "zhs", "jpn" })
         {
             using var monsters = JsonDocument.Parse(File.ReadAllText(RegressionTestHarness.FindRepoFile(
                 $"SakuraMod/localization/{locale}/monsters.json")));
