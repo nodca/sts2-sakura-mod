@@ -2353,6 +2353,28 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
+    public void ActionDrawsTwoOnlyWhenItExhaustsAnUnplayableCard()
+    {
+        var action = new SakuraMod.SakuraModCode.Cards.Action();
+        var upgradedAction = RegressionTestHarness.MutableForCostTest(new SakuraMod.SakuraModCode.Cards.Action());
+        upgradedAction.UpgradeInternal();
+        var actionSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Action.cs"));
+        var unplayableRead = actionSource.IndexOf("card.Keywords.Contains(CardKeyword.Unplayable)", StringComparison.Ordinal);
+        var exhaust = actionSource.IndexOf("CardCmd.Exhaust(choiceContext, card)", StringComparison.Ordinal);
+        RegressionTestHarness.Require(
+            action.EnergyCost.Canonical == 1
+            && upgradedAction.EnergyCost.GetWithModifiers(CostModifiers.None) == 0
+            && action.DynamicVars["UnplayableDraw"].IntValue == 2
+            && action.DynamicVars["ExtraDraw"].IntValue == 2
+            && upgradedAction.DynamicVars["ExtraDraw"].IntValue == 2
+            && !action.DynamicVars.ContainsKey("WindDraw")
+            && unplayableRead >= 0
+            && exhaust > unplayableRead,
+            "Expected Action to cost 1 (0 upgraded), draw 2 when the Exhausted card was Unplayable, and draw a fixed 2 on Extra.");
+    }
+
+    [Fact]
     public void ChoicePairsBlockWithManifestAndDamageWithRemind()
     {
         var choice = new Choice();

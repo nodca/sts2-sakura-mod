@@ -10,7 +10,6 @@ internal static class FourthActMultiplayerScalingCompatibility
     internal const int FourthActIndex = 3;
     internal const decimal NonBossScale = 1.2m;
     internal const decimal BossScale = 1.3m;
-    internal const string SupportedGameCommitPrefix = "0.1.0+16ac0fe3";
 
     internal static bool TryResolve(EncounterModel? encounter, int actIndex, out decimal scale)
     {
@@ -26,7 +25,8 @@ internal static class FourthActMultiplayerScalingCompatibility
 
     internal static bool IsSupportedGameAssembly(Assembly assembly) =>
         assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion.StartsWith(SupportedGameCommitPrefix, StringComparison.Ordinal) == true;
+            .InformationalVersion is "0.1.0+16ac0fe3775f571e5f3b1c81e47d511024515730"
+                or "0.1.0+d09d48e516cfd24314c1781f662787904f894aa8";
 }
 
 [HarmonyPatch(

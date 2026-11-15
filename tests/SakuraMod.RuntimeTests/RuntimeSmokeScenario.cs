@@ -1245,7 +1245,38 @@ internal static class RuntimeSmokeScenario
             false,
             ResourceLoader.Exists("res://tests/SakuraMod.RuntimeTests/fixture.tscn"));
         InspectSharedCelResourceRecovery(assertions);
+        InspectCardPoolFrameMaterial(assertions);
         return resources;
+    }
+
+    private static void InspectCardPoolFrameMaterial(RuntimeAssertionCollector assertions)
+    {
+        var cardPool = ModelDb.CardPool<ClassicSakuraCardPool>();
+        var frameMaterial = cardPool.FrameMaterial as ShaderMaterial;
+        assertions.True(
+            "classic_sakura_card_pool_frame_material_is_valid_shader",
+            frameMaterial is not null
+            && GodotObject.IsInstanceValid(frameMaterial)
+            && frameMaterial.Shader is not null
+            && GodotObject.IsInstanceValid(frameMaterial.Shader),
+            cardPool.FrameMaterial?.GetType().Name);
+
+        if (frameMaterial is null)
+            return;
+
+        var hue = frameMaterial.GetShaderParameter("h").AsSingle();
+        var saturation = frameMaterial.GetShaderParameter("s").AsSingle();
+        var value = frameMaterial.GetShaderParameter("v").AsSingle();
+        assertions.True(
+            "classic_sakura_card_pool_frame_material_not_colorless",
+            saturation > 0.1f,
+            $"h={hue}, s={saturation}, v={value}");
+        assertions.True(
+            "classic_sakura_card_pool_frame_material_hsv_values",
+            Mathf.IsEqualApprox(hue, 0.95f)
+            && Mathf.IsEqualApprox(saturation, 0.58f)
+            && Mathf.IsEqualApprox(value, 1.35f),
+            $"h={hue}, s={saturation}, v={value}");
     }
 
     private static void InspectSharedCelResourceRecovery(RuntimeAssertionCollector assertions)
