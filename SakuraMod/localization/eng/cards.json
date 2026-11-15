@@ -16,7 +16,7 @@
   "SAKURA_MOD_CARD_FLIGHT.title": "Flight",
   "SAKURA_MOD_CARD_FLIGHT.description": "[gold]Windy[/gold]\nGain {Block:diff()} [gold]Block[/gold].\nGain {SakuraTemporaryDexterityPower:diff()} [gold]Temporary Dexterity[/gold].\n[gold]Extra:[/gold] Gain {Energy:energyIcons()}.",
   "SAKURA_MOD_CARD_ACTION.title": "Action",
-  "SAKURA_MOD_CARD_ACTION.description": "[gold]Windy[/gold]\nExhaust 1 card in your [gold]Hand[/gold]. If it is [gold]Windy[/gold], draw {WindDraw:diff()} {WindDraw:plural:card|cards}.\n[gold]Manifest[/gold] {Cards:diff()}. {Cards:plural:It costs|They cost} {energyPrefix:energyIcons(1)} less this turn.\n[gold]Extra:[/gold] Draw {ExtraDraw:diff()} {ExtraDraw:plural:card|cards}.",
+  "SAKURA_MOD_CARD_ACTION.description": "[gold]Windy[/gold]\nExhaust 1 card in your [gold]Hand[/gold]. If it is [gold]Unplayable[/gold], draw {UnplayableDraw:diff()} {UnplayableDraw:plural:card|cards}.\n[gold]Manifest[/gold] {Cards:diff()}. {Cards:plural:It costs|They cost} {energyPrefix:energyIcons(1)} less this turn.\n[gold]Extra:[/gold] Draw {ExtraDraw:diff()} {ExtraDraw:plural:card|cards}.",
   "SAKURA_MOD_CARD_APPEAR.title": "Appear",
   "SAKURA_MOD_CARD_APPEAR.description": "[gold]Windy[/gold]\nAt the start of your turn, [gold]Manifest[/gold] {ManifestCards:diff()}.\nWhenever you [gold]Manifest[/gold] a card, add a [gold]Spell[/gold] of its element into your [gold]Hand[/gold].",
   "SAKURA_MOD_CARD_AQUA.title": "Aqua",

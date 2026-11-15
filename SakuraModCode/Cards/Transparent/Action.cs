@@ -21,7 +21,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class Action() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind, SakuraKeywords.Manifest];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new CardsVar("WindDraw", 1), new CardsVar("ExtraDraw", 1)];
+    internal override IEnumerable<CardKeyword> ReferencedKeywords => [CardKeyword.Unplayable];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new CardsVar(1), new CardsVar("UnplayableDraw", 2), new CardsVar("ExtraDraw", 2)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
@@ -31,9 +32,11 @@ public class Action() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
 
         if (card is not null)
         {
+            // Read before the Exhaust: the keyword set is the card's playability while it is in Hand.
+            var wasUnplayable = card.Keywords.Contains(CardKeyword.Unplayable);
             await CardCmd.Exhaust(choiceContext, card);
-            if (SakuraActions.HasElement(card, SakuraElement.Wind))
-                await CardPileCmd.Draw(choiceContext, DynamicVars["WindDraw"].IntValue, Owner, false);
+            if (wasUnplayable)
+                await CardPileCmd.Draw(choiceContext, DynamicVars["UnplayableDraw"].IntValue, Owner, false);
         }
 
         var manifested = await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars.Cards.IntValue);
@@ -44,9 +47,5 @@ public class Action() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
             await CardPileCmd.Draw(choiceContext, DynamicVars["ExtraDraw"].IntValue, Owner, false);
     }
 
-    protected override void OnUpgrade()
-    {
-        EnergyCost.UpgradeBy(-1);
-        DynamicVars["ExtraDraw"].UpgradeValueBy(1);
-    }
+    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
 }
