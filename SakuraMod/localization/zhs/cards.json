@@ -324,7 +324,7 @@
   "SAKURA_MOD_CARD_CLOW_WOOD.title": "树",
   "SAKURA_MOD_CARD_CLOW_WOOD.description": "[gold]地[/gold]\n每当你触发[gold]地元素状态[/gold]，或敌人的攻击被完全格挡时，给予随机敌人{PoisonPower:diff()}层[gold]中毒[/gold]。",
   "SAKURA_MOD_CARD_SAKURA_WOOD.title": "树",
-  "SAKURA_MOD_CARD_SAKURA_WOOD.description": "[gold]小樱牌[/gold] [gold]地[/gold]\n每当你触发[gold]地元素状态[/gold]时，给予所有敌人{PoisonPower:diff()}层[gold]中毒[/gold]。\n每当敌人的攻击被完全格挡时，触发其[gold]中毒[/gold]1次。",
+  "SAKURA_MOD_CARD_SAKURA_WOOD.description": "[gold]小樱牌[/gold] [gold]地[/gold]\n所有敌人失去{StrengthLoss:diff()}层[gold]力量[/gold]。\n每当你触发[gold]地元素状态[/gold]，或敌人的攻击被完全格挡时，给予所有敌人{PoisonPower:diff()}层[gold]中毒[/gold]。",
   "SAKURA_MOD_CARD_CLOW_SONG.title": "歌",
   "SAKURA_MOD_CARD_CLOW_SONG.description": "[gold]风[/gold]\n消耗至多X+1张手牌。\n每消耗1张牌，对所有敌人造成{Damage:diff()}点伤害；若消耗的是[gold]风[/gold]元素牌，额外造成1次该伤害。",
   "SAKURA_MOD_CARD_CLOW_SONG.extraDescription": "[gold]额外效果：[/gold]额外造成{ExtraHits:diff()}次该伤害。",

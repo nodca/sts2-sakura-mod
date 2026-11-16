@@ -324,7 +324,7 @@
   "SAKURA_MOD_CARD_CLOW_WOOD.title": "Wood",
   "SAKURA_MOD_CARD_CLOW_WOOD.description": "[gold]Earthy[/gold]\nWhenever you trigger [gold]Earthy state[/gold] or an enemy attack is fully Blocked, apply {PoisonPower:diff()} [gold]Poison[/gold] to a random enemy.",
   "SAKURA_MOD_CARD_SAKURA_WOOD.title": "Wood",
-  "SAKURA_MOD_CARD_SAKURA_WOOD.description": "[gold]Sakura Card[/gold] [gold]Earthy[/gold]\nWhenever you trigger [gold]Earthy state[/gold], apply {PoisonPower:diff()} [gold]Poison[/gold] to ALL enemies.\nWhenever an enemy attack is fully Blocked, trigger its [gold]Poison[/gold] once.",
+  "SAKURA_MOD_CARD_SAKURA_WOOD.description": "[gold]Sakura Card[/gold] [gold]Earthy[/gold]\nALL enemies lose {StrengthLoss:diff()} [gold]Strength[/gold].\nWhenever you trigger [gold]Earthy state[/gold] or an enemy attack is fully Blocked, apply {PoisonPower:diff()} [gold]Poison[/gold] to ALL enemies.",
   "SAKURA_MOD_CARD_CLOW_SONG.title": "Song",
   "SAKURA_MOD_CARD_CLOW_SONG.description": "[gold]Windy[/gold]\nExhaust up to X+1 cards in your [gold]Hand[/gold].\nDeal {Damage:diff()} damage to ALL enemies for each card Exhausted. [gold]Windy[/gold] cards deal it 1 more time.",
   "SAKURA_MOD_CARD_CLOW_SONG.extraDescription": "[gold]Extra:[/gold] Deal the damage {ExtraHits:diff()} more times.",

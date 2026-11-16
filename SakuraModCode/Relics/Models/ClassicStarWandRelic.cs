@@ -32,6 +32,7 @@ public class ClassicStarWandRelic : ClassicSealedWandRelic
     public override RelicRarity Rarity => RelicRarity.Ancient;
     public override bool IsAllowedInShops => false;
     protected override int BaseTriggerAmount => 35;
+    protected override int TriggerIncreaseAmount => 10;
     protected override int BaseChargeGainAmount => 4;
     protected override int EliteBossExtraGainAmount => 3;
     protected override string GeneratedTurnSourceName => "Star Wand";

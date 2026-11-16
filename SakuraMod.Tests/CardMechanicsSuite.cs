@@ -399,10 +399,10 @@ public sealed class CardMechanicsSuite
             && growingMagic.TargetType == TargetType.AnyEnemy
             && growingMagic.EnergyCost.Canonical == 1
             && growingMagic.CanonicalKeywords.SequenceEqual([CardKeyword.Retain])
-            && growingMagic.DynamicVars.Damage.IntValue == 18
-            && upgradedGrowingMagic.DynamicVars.Damage.IntValue == 24
+            && growingMagic.DynamicVars.Damage.IntValue == 28
+            && upgradedGrowingMagic.DynamicVars.Damage.IntValue == 38
             && !growingMagic.CanBeGeneratedInCombat,
-            "Expected Growing Magic to be a 1-cost 18/24 Ancient Retain Attack excluded from combat generation.");
+            "Expected Growing Magic to be a 1-cost 28/38 Ancient Retain Attack excluded from combat generation.");
         RegressionTestHarness.Require(
             anotherMe.Rarity == CardRarity.Ancient
             && anotherMe.Type == CardType.Power
@@ -2229,6 +2229,8 @@ public sealed class CardMechanicsSuite
         var upgradedClowWood = RegressionTestHarness.MutableForCostTest(new ClowWood());
         upgradedClowWood.UpgradeInternal();
         var sakuraWood = new SakuraWood();
+        var sakuraWoodPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/SourceCards/ClassicSakuraWoodPower.cs"));
         RegressionTestHarness.Require(
             clowWood.Type == CardType.Power
             && clowWood.TargetType == TargetType.None
@@ -2242,6 +2244,10 @@ public sealed class CardMechanicsSuite
             && sakuraWood.Rarity == CardRarity.Token
             && sakuraWood.EnergyCost.Canonical == 1
             && sakuraWood.DynamicVars["PoisonPower"].IntValue == 4
+            && sakuraWood.DynamicVars["StrengthLoss"].IntValue == 3
+            && sakuraWoodPowerSource.Contains("OnEarthTriggered(PlayerChoiceContext choiceContext) =>\n        PoisonAllEnemies", StringComparison.Ordinal)
+            && sakuraWoodPowerSource.Contains("OnAttackFullyBlocked(PlayerChoiceContext choiceContext, Creature attacker) =>\n        PoisonAllEnemies", StringComparison.Ordinal)
+            && !sakuraWoodPowerSource.Contains("CreatureCmd.Damage", StringComparison.Ordinal)
             && !clowWood.DynamicVars.ContainsKey("ThornsPower")
             && !sakuraWood.DynamicVars.ContainsKey("ThornsPower")
             && new ClassicWoodPower().Type == PowerType.Buff
@@ -2250,7 +2256,7 @@ public sealed class CardMechanicsSuite
             && new ClassicSakuraWoodPower().StackType == PowerStackType.Single
             && RegressionTestHarness.DeclaresMethod<ClassicWoodPower>("AfterDamageReceived")
             && !RegressionTestHarness.DeclaresMethod<ClassicWoodPower>("BeforeDamageReceived"),
-            "Expected Wood to drop Thorns: Clow poisons a random enemy on Earth triggers and fully blocked hits, Sakura poisons all enemies on Earth triggers and triggers the attacker's Poison on fully blocked hits.");
+            "Expected Wood to drop Thorns: Clow poisons a random enemy on Earth triggers and fully blocked hits, Sakura removes 3 Strength from all enemies and poisons all enemies on Earth triggers and fully blocked hits.");
     }
 
     [Fact]

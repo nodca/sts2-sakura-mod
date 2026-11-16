@@ -142,6 +142,17 @@ public sealed class SakuraRelicParitySuite
     }
 
     [Fact]
+    public void AncientWandConversionThresholdsIncreaseByTen()
+    {
+        RegressionTestHarness.Require(
+            new ClassicSealedWandRelic().DynamicVars["TriggerIncrease"].IntValue == 20
+            && new ClassicStarWandRelic().DynamicVars["TriggerIncrease"].IntValue == 10
+            && new ClassicUltimateWandRelic().DynamicVars["TriggerIncrease"].IntValue == 10
+            && ClassicSealedWandRelic.TriggerThresholdFor(3, 35, 10) == 65,
+            "Expected Star Wand and Ultimate Wand conversion thresholds to grow by 10 per Sakura conversion while Sealed Wand stays at 20.");
+    }
+
+    [Fact]
     public void EveryTurnGrantingRelicUsesTheOneSharedPersistentGrant()
     {
         var spellTurn = File.ReadAllText(RegressionTestHarness.FindRepoFile(
