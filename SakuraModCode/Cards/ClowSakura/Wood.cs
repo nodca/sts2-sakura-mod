@@ -41,11 +41,21 @@ public class ClowWood() : ClowCard(1, CardType.Power, CardRarity.Uncommon, Targe
 
 public class SakuraWood() : SakuraFormCard(1, CardType.Power, TargetType.None)
 {
-    private const int PoisonPerEarthTrigger = 4;
+    private const int PoisonPerTrigger = 4;
+    private const int EnemyStrengthLoss = 3;
 
     public override SakuraElementSet Elements => SakuraElementSet.Earth;
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new PowerVar<PoisonPower>(PoisonPerEarthTrigger)];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+    [
+        new DynamicVar("StrengthLoss", EnemyStrengthLoss),
+        new PowerVar<PoisonPower>(PoisonPerTrigger)
+    ];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        foreach (var enemy in CombatState!.HittableEnemies.ToList())
+            await PowerCmd.Apply<StrengthPower>(choiceContext, enemy, -DynamicVars["StrengthLoss"].IntValue, Owner.Creature, this, false);
+
         await ApplyPower<ClassicSakuraWoodPower>(choiceContext, Owner.Creature, DynamicVars["PoisonPower"].IntValue);
+    }
 }

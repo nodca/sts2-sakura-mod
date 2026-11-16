@@ -47,6 +47,7 @@ public class ClassicUltimateWandRelic : ClassicSealedWandRelic
     public override RelicRarity Rarity => RelicRarity.Ancient;
     public override bool IsAllowedInShops => false;
     protected override int BaseTriggerAmount => 35;
+    protected override int TriggerIncreaseAmount => 10;
     protected override int BaseChargeGainAmount => 5;
     protected override int EliteBossExtraGainAmount => 5;
     protected override string GeneratedTurnSourceName => "Ultimate Wand";

@@ -21,7 +21,7 @@ public class GrowingMagic() :
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Retain];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new SakuraSourceDamageVar(18, ValueProp.Move),
+        new SakuraSourceDamageVar(28, ValueProp.Move),
         new DynamicVar("Magic", MagicChargeOnKill),
         new DynamicVar("WandChargeGain", ClassicSealedWandRelic.DefaultSealExtraGain)
     ];
@@ -32,5 +32,5 @@ public class GrowingMagic() :
         await DealDamage(choiceContext, play, RequiredTarget(play), ReleasedDamage(), hitVfx: SakuraNativeHitFx.HeavyBlunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx);
     }
 
-    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(6);
+    protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(10);
 }

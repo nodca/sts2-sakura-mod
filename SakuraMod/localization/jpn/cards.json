@@ -324,7 +324,7 @@
   "SAKURA_MOD_CARD_CLOW_WOOD.title": "ウッド",
   "SAKURA_MOD_CARD_CLOW_WOOD.description": "[gold]地[/gold]\n[gold]地状態[/gold]を発動させるか、敵の攻撃を完全にブロックしたとき、ランダムな敵1体に[gold]毒[/gold]{PoisonPower:diff()}を与える。",
   "SAKURA_MOD_CARD_SAKURA_WOOD.title": "ウッド",
-  "SAKURA_MOD_CARD_SAKURA_WOOD.description": "[gold]さくらカード[/gold] [gold]地[/gold]\n[gold]地状態[/gold]を発動させるたび、敵全体に[gold]毒[/gold]{PoisonPower:diff()}を与える。\n敵の攻撃を完全にブロックしたとき、その敵の[gold]毒[/gold]を1回発動させる。",
+  "SAKURA_MOD_CARD_SAKURA_WOOD.description": "[gold]さくらカード[/gold] [gold]地[/gold]\n敵全体の[gold]筋力[/gold]を{StrengthLoss:diff()}失わせる。\n[gold]地状態[/gold]を発動させるか、敵の攻撃を完全にブロックしたとき、敵全体に[gold]毒[/gold]{PoisonPower:diff()}を与える。",
   "SAKURA_MOD_CARD_CLOW_SONG.title": "ソング",
   "SAKURA_MOD_CARD_CLOW_SONG.description": "[gold]風[/gold]\n[gold]手札[/gold]から最大X+1枚のカードを廃棄する。\n廃棄したカード1枚につき敵全体に{Damage:diff()}ダメージを与える。廃棄したのが[gold]風[/gold]カードなら追加で1回同じダメージを与える。",
   "SAKURA_MOD_CARD_CLOW_SONG.extraDescription": "[gold]追加効果：[/gold]さらに{ExtraHits:diff()}回同じダメージを与える。",
