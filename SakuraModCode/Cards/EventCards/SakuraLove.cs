@@ -17,7 +17,7 @@ public class SakuraLove() : SakuraEventCard(-2, CardType.Skill, TargetType.None)
     internal override bool AddsVoidOnNormalSakuraPlay => false;
     protected override bool IsPlayable => false;
     public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Unplayable];
-    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Energy", 1)];
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new EnergyVar(1)];
 
     protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
         Task.CompletedTask;
@@ -25,7 +25,7 @@ public class SakuraLove() : SakuraEventCard(-2, CardType.Skill, TargetType.None)
     public override async Task AfterCardDrawn(PlayerChoiceContext choiceContext, CardModel card, bool fromHandDraw)
     {
         if (card == this)
-            await PlayerCmd.GainEnergy(DynamicVars["Energy"].IntValue, Owner);
+            await PlayerCmd.GainEnergy(DynamicVars.Energy.IntValue, Owner);
     }
 }
 
