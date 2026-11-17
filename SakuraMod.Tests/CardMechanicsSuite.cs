@@ -558,7 +558,7 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void ReversalIsZeroCostAttackWithoutBaseDamageOrNormalDraw()
+    public void ReversalIsZeroCostAttackScalingBlockAndDamageWithSwappedCards()
     {
         var reversal = new Reversal();
         var upgradedReversal = RegressionTestHarness.MutableForCostTest(new Reversal());
@@ -567,14 +567,21 @@ public sealed class CardMechanicsSuite
             reversal.EnergyCost.Canonical == 0
             && reversal.Type == CardType.Attack
             && reversal.DynamicVars.Damage.IntValue == 0
+            && reversal.DynamicVars.Block.IntValue == 0
             && reversal.DynamicVars.Damage is ReversalDamageVar
-            && reversal.DynamicVars["PileDamage"] is not DamageVar
+            && reversal.DynamicVars.Block is ReversalBlockVar
+            && reversal.DynamicVars["PileBonus"] is not DamageVar
             && !reversal.DynamicVars.ContainsKey("Cards")
-            && reversal.DynamicVars["PileCardsPerDamage"].IntValue == 3
-            && upgradedReversal.DynamicVars["PileCardsPerDamage"].IntValue == 2
-            && ReversalRules.TotalDamage(0, 8, 3, 1) == 2
-            && ReversalRules.TotalDamage(0, 8, 2, 1) == 4,
-            "Expected Reversal to be a 0-cost Attack with no base damage or normal draw, dynamically scaling every 3/2 exchanged cards.");
+            && reversal.DynamicVars["PileCards"].IntValue == 3
+            && upgradedReversal.DynamicVars["PileCards"].IntValue == 2
+            && ReversalRules.ScaledValue(0, 8, 3, 1) == 2
+            && ReversalRules.ScaledValue(0, 8, 2, 1) == 4,
+            "Expected Reversal to be a 0-cost Attack whose Block and damage both scale every 3/2 exchanged cards.");
+        RegressionTestHarness.Require(
+            ReversalRules.ExtraDrawTarget(10) == 5
+            && ReversalRules.ExtraDrawTarget(9) == 4
+            && ReversalRules.ExtraDrawTarget(0) == 0,
+            "Expected Reversal's Extra to draw up to half the max hand size, rounded down.");
     }
 
     [Fact]

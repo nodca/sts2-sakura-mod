@@ -73,7 +73,7 @@
   "SAKURA_MOD_CARD_REPAIR.title": "Repair",
   "SAKURA_MOD_CARD_REPAIR.description": "[gold]Earthy[/gold]\nThe first time each turn a card returns from [gold]Memory[/gold] to your [gold]Hand[/gold], heal {Heal:diff()} HP.",
   "SAKURA_MOD_CARD_REVERSAL.title": "Reversal",
-  "SAKURA_MOD_CARD_REVERSAL.description": "[gold]Windy[/gold]\nSwap your [gold]Draw Pile[/gold] and [gold]Discard Pile[/gold].\nDeal {Damage:diff()} damage, plus {PileDamage:diff()} for every {PileCardsPerDamage:diff()} cards swapped.\n[gold]Extra:[/gold] Draw until your [gold]Hand[/gold] is full.",
+  "SAKURA_MOD_CARD_REVERSAL.description": "[gold]Windy[/gold]\nSwap your [gold]Draw Pile[/gold] and [gold]Discard Pile[/gold].\nGain {Block:diff()} [gold]Block[/gold]. Deal {Damage:diff()} damage. Both increase by {PileBonus:diff()} for every {PileCards:diff()} cards swapped.\n[gold]Extra:[/gold] Draw until your [gold]Hand[/gold] is half full.",
   "SAKURA_MOD_CARD_REWIND.title": "Rewind",
   "SAKURA_MOD_CARD_REWIND.description": "[gold]Watery[/gold]\nChoose {Cards:diff()} {Cards:plural:card|cards} from your [gold]Exhaust Pile[/gold] and put them into your [gold]Hand[/gold].\n[gold]Extra:[/gold] They are free to play this turn.",
   "SAKURA_MOD_CARD_SNOOZE.title": "Snooze",
