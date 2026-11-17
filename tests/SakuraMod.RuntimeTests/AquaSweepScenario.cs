@@ -36,7 +36,7 @@ internal static class AquaSweepScenario
                 foreach (var enemy in enemies.Where(static enemy => enemy.IsAlive))
                 {
                     await CreatureCmd.SetMaxAndCurrentHp(enemy, 1000);
-                    await CreatureCmd.LoseBlock(enemy, enemy.Block);
+                    await CreatureCmd.LoseBlock(choice, enemy, enemy.Block, null);
                     if (enemy.GetPower<SakuraFrostbitePower>() is { } frostbite)
                         await PowerCmd.Remove(frostbite);
                 }

@@ -1,3 +1,5 @@
+using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Models.Powers;
 using SakuraMod.SakuraModCode.Cards;
@@ -50,17 +52,22 @@ internal static class SiegeEndTurnScenario
         }
         var hpBeforeResolution = enemies.ToDictionary(static enemy => enemy, static enemy => enemy.CurrentHp);
 
+        var history = CombatManager.Instance.History;
+        var historyEntryCount = history.Entries.Count();
         await CombatScenarioContext.EndTurnAndWaitForNextPlayAsync(player);
+        var turnEndWeak = history.Entries.Skip(historyEntryCount)
+            .OfType<PowerReceivedEntry>()
+            .Where(entry => entry.Power is WeakPower && entry.Applier == player.Creature)
+            .ToLookup(entry => entry.Actor);
 
         assertions.Equal("siege_growth_not_applied", null, player.Creature.GetPower<SiegeGrowthPower>());
         assertions.Equal("siege_pending_removed_after_resolution", null, player.Creature.GetPower<SiegePendingPower>());
         foreach (var enemy in enemies)
         {
             assertions.Equal(
-                // Extra Weak ticks down once at the enemy turn end, then Siege adds its own Weak.
                 $"siege_weak_{enemy.CombatId}",
-                SiegeRules.ExtraWeak - 1 + SiegeRules.WeakAmount,
-                enemy.GetPower<WeakPower>()?.Amount ?? 0);
+                SiegeRules.WeakAmount,
+                turnEndWeak[enemy].Single().Amount);
             assertions.Equal(
                 $"siege_no_turn_end_damage_{enemy.CombatId}",
                 0,
@@ -69,8 +76,9 @@ internal static class SiegeEndTurnScenario
 
         var secondSiege = await CombatScenarioContext.AddGeneratedCardToHandAsync<Siege>(combat, player);
         var blockBeforeSecondPlay = player.Creature.Block;
+        var secondEnemyCount = combat.HittableEnemies.Count();
         await CombatScenarioContext.PlayCardAsync(secondSiege);
-        var expectedSecondGain = SiegeRules.BlockAmount(SiegeRules.BlockPerEnemy, enemyCount);
+        var expectedSecondGain = SiegeRules.BlockAmount(SiegeRules.BlockPerEnemy, secondEnemyCount);
         assertions.Equal(
             "siege_second_copy_has_unchanged_block",
             expectedSecondGain,

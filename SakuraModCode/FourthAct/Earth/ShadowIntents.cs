@@ -17,7 +17,7 @@ public sealed class ShadowAttackIntent(Creature target, int damage, int repeats)
         var amount = DamageCalc!();
         if (target.Player is { } player)
             amount = Hook.ModifyDamage(player.RunState, target.CombatState, target, owner, amount, ValueProp.Move,
-                null, ModifyDamageHookType.All, CardPreviewMode.None, out _);
+                null, null, ModifyDamageHookType.All, CardPreviewMode.None, out _);
         return Math.Max(0, (int)amount);
     }
 

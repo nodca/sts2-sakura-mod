@@ -48,7 +48,7 @@ internal static class SleepTunnelerScenario
                 CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
                 {
                     var attack = combat.CreateCard<ClowSword>(player);
-                    await DamageCmd.Attack(damage).FromCard(attack).Targeting(target).Execute(choice);
+                    await DamageCmd.Attack(damage).FromCard(attack, null).Targeting(target).Execute(choice);
                 }));
 
             int SleepAmount() => target.GetPower<ClassicSleepPower>()?.Amount ?? 0;

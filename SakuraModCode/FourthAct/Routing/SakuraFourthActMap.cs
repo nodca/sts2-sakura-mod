@@ -63,7 +63,7 @@ public sealed class SakuraFourthActMap : ActMap
     internal static FourthActRouteEncounter? EncounterAt(
         IReadOnlyList<FourthActRouteDefinition> routes,
         MapCoord coord,
-        uint runSeed)
+        ulong runSeed)
     {
         var route = RouteForColumn(routes, coord.col);
         return coord.row switch

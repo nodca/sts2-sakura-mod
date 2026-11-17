@@ -42,7 +42,8 @@ public class ClassicCerberusMarkPower : SakuraPowerModel
         decimal amount,
         ValueProp props,
         Creature? dealer,
-        CardModel? cardSource) =>
+        CardModel? cardSource,
+        CardPlay? cardPlay) =>
         target == Owner && Amount > 0 && props.IsPoweredAttack()
             ? 1m + DamageMultiplierPerStack * Amount
             : 1m;

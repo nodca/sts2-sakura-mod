@@ -42,26 +42,28 @@ public class GravitationHoldPower : SakuraPowerModel
         return Task.CompletedTask;
     }
 
-    public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
+    public override CardLocation ModifyCardPlayResultLocation(
         CardModel card,
         bool isAutoPlay,
         ResourceInfo resources,
-        PileType pileType,
-        CardPilePosition position)
+        CardLocation cardLocation)
     {
-        if (!CanReturnPlayedCard(card) || pileType != PileType.Discard)
-            return (pileType, position);
+        if (!CanReturnPlayedCard(card) || cardLocation.pileType != PileType.Discard)
+            return cardLocation;
 
         _pendingReturns.Add(card);
-        return (PileType.Hand, CardPilePosition.Bottom);
+        return cardLocation with
+        {
+            pileType = PileType.Hand,
+            position = CardPilePosition.Bottom
+        };
     }
 
-    public override Task AfterModifyingCardPlayResultPileOrPosition(
+    public override Task AfterModifyingCardPlayResultLocation(
         CardModel card,
-        PileType pileType,
-        CardPilePosition position)
+        CardLocation cardLocation)
     {
-        if (!_pendingReturns.Remove(card) || pileType != PileType.Hand)
+        if (!_pendingReturns.Remove(card) || cardLocation.pileType != PileType.Hand)
             return Task.CompletedTask;
 
         PreservePlayedLocalCost(card);

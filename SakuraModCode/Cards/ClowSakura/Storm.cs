@@ -49,6 +49,7 @@ public class ClowStorm() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Un
             wholeLine: false,
             async cues => await DealDamage(
                 choiceContext,
+                play,
                 target,
                 CalculatedDamage(target),
                 hitCount: ReleasedMagic(),
@@ -71,6 +72,7 @@ public class ClowStorm() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.Un
             wholeLine: true,
             async cues => await DealDamageToEnemies(
                 choiceContext,
+                play,
                 targets,
                 CalculatedDamage(null),
                 hitCount: ReleasedMagic(),
@@ -136,7 +138,7 @@ public class SakuraStorm() : SakuraFormCard(1, CardType.Attack, TargetType.None)
             CombatState!.HittableEnemies.ToList(),
             async cues =>
             {
-                await using var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, this);
+                await using var attack = await AttackCommand.CreateContextAsync(CombatState!, choiceContext, play);
                 for (var i = 0; i < ReleasedMagic(); i++)
                 {
                     var target = Owner.RunState.Rng.CombatCardSelection.NextItem(CombatState!.HittableEnemies.ToList());
@@ -147,7 +149,7 @@ public class SakuraStorm() : SakuraFormCard(1, CardType.Attack, TargetType.None)
                     var max = ReleasedValue(MaxDamageVar);
                     var amount = Owner.RunState.Rng.CombatCardSelection.NextInt(min, max + 1);
                     cues.Strike(target, StormCycloneVfx.Strength(amount, min, max));
-                    await DealDamageHit(attack, choiceContext, target, amount, hitVfx: cues.FallbackHitVfx);
+                    await DealDamageHit(attack, choiceContext, play, target, amount, hitVfx: cues.FallbackHitVfx);
                 }
             });
 }

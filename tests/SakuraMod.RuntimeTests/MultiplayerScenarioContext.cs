@@ -124,7 +124,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         INetGameService netService;
         if (multiplayer.Role == SakuraMultiplayerRoles.Host)
         {
-            var host = new NetHostGameService();
+            var host = new NetHostGameService(PeerVersionInfo.LocalDefault());
             var error = host.StartENetHost(multiplayer.Port, maxClients: multiplayer.PeerCount - 1);
             if (error.HasValue)
                 throw new InvalidOperationException($"Failed to start ENet multiplayer host: {error.Value}.");
@@ -141,7 +141,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         }
         else
         {
-            var joinFlow = new JoinFlow();
+            var joinFlow = new JoinFlow(new NetClientGameService(PeerVersionInfo.LocalDefault()));
             IClientConnectionInitializer initializer = new ENetClientConnectionInitializer(
                 multiplayer.LocalNetId,
                 multiplayer.HostAddress,
@@ -231,7 +231,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         INetGameService netService;
         if (multiplayer.Role == SakuraMultiplayerRoles.Host)
         {
-            var host = new NetHostGameService();
+            var host = new NetHostGameService(PeerVersionInfo.LocalDefault());
             var error = host.StartENetHost(multiplayer.Port, maxClients: multiplayer.PeerCount - 1);
             if (error.HasValue)
                 throw new InvalidOperationException($"Failed to start ENet multiplayer host: {error.Value}.");
@@ -253,7 +253,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         }
         else
         {
-            var joinFlow = new JoinFlow();
+            var joinFlow = new JoinFlow(new NetClientGameService(PeerVersionInfo.LocalDefault()));
             IClientConnectionInitializer initializer = new ENetClientConnectionInitializer(
                 multiplayer.LocalNetId,
                 multiplayer.HostAddress,
@@ -276,11 +276,11 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             game.ReactionContainer.InitializeNetworking(netService);
             await WaitUntilAsync(
                 game,
-                () => lobby.ConnectedPlayerIds.Count == multiplayer.PeerCount,
+                () => lobby.PlayerCount == multiplayer.PeerCount,
                 $"{multiplayer.PeerCount} connected load-run lobby players");
             game.RemoteCursorContainer.Initialize(
                 lobby.InputSynchronizer,
-                lobby.ConnectedPlayerIds.Order().ToArray());
+                lobby.PlayerIds.Order().ToArray());
             lobby.SetReady(ready: true);
             await listener.Begin.Task.WaitAsync(StateTimeout);
 
@@ -544,7 +544,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         _checksumObservations.Add(new ChecksumObservation(data.id, context, data.checksum));
     }
 
-    private void OnStateDiverged(NetFullCombatState _) =>
+    private void OnStateDiverged(ulong _, NetFullCombatState __) =>
         _networkFailure = "ChecksumTracker reported StateDiverged.";
 
     private void OnHostClientDisconnected(ulong _, NetErrorInfo info) =>
@@ -562,13 +562,13 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
             Begin.TrySetResult(new BeginRunData(seed, acts, modifiers));
         public void LocalPlayerDisconnected(NetErrorInfo info) =>
             Begin.TrySetException(new InvalidOperationException($"Disconnected before run start: {info}."));
-        public void PlayerConnected(LobbyPlayer player) { }
-        public void PlayerChanged(LobbyPlayer player, bool isRandomCharacterResolution) { }
+        public void PlayerConnected(StartRunLobbyPlayer player) { }
+        public void PlayerChanged(StartRunLobbyPlayer player, bool isRandomCharacterResolution) { }
         public void AscensionChanged() { }
         public void SeedChanged() { }
         public void ModifiersChanged() { }
         public void MaxAscensionChanged() { }
-        public void RemotePlayerDisconnected(LobbyPlayer player) { }
+        public void RemotePlayerDisconnected(StartRunLobbyPlayer player) { }
     }
 
     private sealed class LoadRunListener : ILoadRunLobbyListener
@@ -580,7 +580,7 @@ internal sealed class MultiplayerScenarioContext : IAsyncDisposable
         public Task<bool> ShouldAllowRunToBegin() => Task.FromResult(true);
         public void LocalPlayerDisconnected(NetErrorInfo info) =>
             Begin.TrySetException(new InvalidOperationException($"Disconnected before saved run loaded: {info}."));
-        public void PlayerConnected(ulong playerId) { }
+        public void PlayerConnected(LoadRunLobbyPlayer player) { }
         public void RemotePlayerDisconnected(ulong playerId) { }
         public void PlayerReadyChanged(ulong playerId) { }
     }

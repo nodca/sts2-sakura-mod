@@ -33,7 +33,7 @@ public class SpellShuiLong() : ElementSpellCard(0, CardType.Attack, TargetType.N
         await SpellTalismanVfx.PlayOrResolveAsync(this, async cues =>
         {
             await cues.Release();
-            await DealDamageToEnemies(choiceContext, CombatState!.HittableEnemies, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.WaterSplash);
+            await DealDamageToEnemies(choiceContext, play, CombatState!.HittableEnemies, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.WaterSplash);
             foreach (var enemy in CombatState!.HittableEnemies.ToList())
                 await ApplyPower<SakuraFrostbitePower>(choiceContext, enemy, ReleasedValue("SakuraFrostbitePower"));
         });

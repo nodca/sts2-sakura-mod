@@ -35,7 +35,7 @@ public class SpellHuoShen() : ElementSpellCard(0, CardType.Attack, TargetType.An
         await SpellTalismanVfx.PlayOrResolveAsync(this, async cues =>
         {
             await cues.Release();
-            await DealDamage(choiceContext, target, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.FireBurst);
+            await DealDamage(choiceContext, play, target, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.FireBurst);
             await SakuraMagicCharge.GainMagic(choiceContext, Owner, ReleasedValue("Charge"), this);
         });
     }

@@ -33,6 +33,7 @@ public class Gale() : TransparentExtraEffectCard(0, CardType.Attack, CardRarity.
             cues.Impact();
             await DealDamage(
                 choiceContext,
+                play,
                 target,
                 DynamicVars.Damage.IntValue,
                 DynamicVars.Damage.Props,

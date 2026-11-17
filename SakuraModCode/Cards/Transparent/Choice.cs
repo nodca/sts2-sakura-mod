@@ -36,7 +36,7 @@ public class Choice() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
         if (activation.IsActive)
         {
             await Guard(choiceContext, play);
-            await Strike(choiceContext);
+            await Strike(choiceContext, play);
             return;
         }
 
@@ -50,7 +50,7 @@ public class Choice() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
         strikeChoice.DynamicVars["RemindCards"].BaseValue = DynamicVars["RemindCards"].IntValue;
         var choice = await SakuraActions.SelectFromCards(this, choiceContext, [guardChoice, strikeChoice], cancelable: false);
         if (choice is ChoiceRemindChoice)
-            await Strike(choiceContext);
+            await Strike(choiceContext, play);
         else
             await Guard(choiceContext, play);
     }
@@ -61,9 +61,9 @@ public class Choice() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
         await SakuraManifestLoop.Manifest(this, choiceContext, DynamicVars["ManifestCards"].IntValue);
     }
 
-    private async Task Strike(PlayerChoiceContext choiceContext)
+    private async Task Strike(PlayerChoiceContext choiceContext, CardPlay play)
     {
-        await DealDamageToRandomEnemies(choiceContext, DynamicVars.Damage.IntValue, 1);
+        await DealDamageToRandomEnemies(choiceContext, play, DynamicVars.Damage.IntValue, 1);
         await Remind.RecallIntoHand(Owner, choiceContext, DynamicVars["RemindCards"].IntValue, upgradeCopies: false);
     }
 

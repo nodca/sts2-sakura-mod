@@ -79,7 +79,7 @@ public class ClassicTheSealedCardEvent() : SakuraModEventTemplate
     {
         var hpLoss = Math.Max(0, Owner!.Creature.MaxHp * HpLossPercent / 100);
         if (hpLoss > 0)
-            await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(), Owner.Creature, hpLoss, ValueProp.Unblockable | ValueProp.Unpowered, null, null);
+            await CreatureCmd.Damage(new ThrowingPlayerChoiceContext(), Owner.Creature, hpLoss, ValueProp.Unblockable | ValueProp.Unpowered, null, null, null);
 
         var cards = Owner.Deck.Cards.ToList();
         var removed = new List<CardModel>();

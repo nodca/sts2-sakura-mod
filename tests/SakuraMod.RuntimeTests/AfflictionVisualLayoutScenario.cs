@@ -41,7 +41,8 @@ internal static class AfflictionVisualLayoutScenario
         {
             var vanilla = combat.CreateCard<DefendIronclad>(player);
             var classic = combat.CreateCard<ClowShield>(player);
-            var clear = combat.CreateCard<Repair>(player);
+            // Native Tainted only accepts Skill cards.
+            var clear = combat.CreateCard<Record>(player);
             vanillaNode = CreateAttachedCard(vanilla);
             classicNode = CreateAttachedCard(classic);
             clearNode = CreateAttachedCard(clear);

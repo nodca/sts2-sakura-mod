@@ -49,7 +49,8 @@ public sealed class ClassicBigUpgradedPower : SakuraPowerModel
         decimal amount,
         ValueProp props,
         Creature? dealer,
-        CardModel? cardSource)
+        CardModel? cardSource,
+        CardPlay? cardPlay)
     {
         if (Amount <= 0
             || cardSource is not { Type: CardType.Attack }

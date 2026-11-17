@@ -22,6 +22,7 @@ public class ClowThunder() : ClowExtraEffectCard(3, CardType.Attack, CardRarity.
     {
         await DealDamageToRandomEnemies(
             choiceContext,
+            play,
             ReleasedDamage(),
             ReleasedMagic(),
             hitVfx: SakuraNativeHitFx.Lightning,
@@ -51,6 +52,7 @@ public class SakuraThunder() : SakuraFormCard(0, CardType.Attack, TargetType.Non
         var count = ((int)play.Resources.EnergySpent * ResourceDivisor + charge) / ResourceDivisor;
         await DealDamageToRandomEnemies(
             choiceContext,
+            play,
             ReleasedDamage(),
             count,
             hitVfx: SakuraNativeHitFx.Lightning,

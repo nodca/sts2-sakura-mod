@@ -83,7 +83,7 @@ public sealed class ExtraEffectActivationGatingSuite
         RegressionTestHarness.Require(
             ResultPileForCardPlay(RegressionTestHarness.MutableForCostTest(new ClowTime())) == PileType.Exhaust
             && !File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/ClowSakura/Time.cs"))
-                .Contains("GetResultPileTypeForCardPlay", StringComparison.Ordinal),
+                .Contains("GetResultLocationForCardPlay", StringComparison.Ordinal),
             "Expected Time to Exhaust regardless of its Extra Effect, which now draws instead.");
     }
 
@@ -105,7 +105,7 @@ public sealed class ExtraEffectActivationGatingSuite
     }
 
     private static PileType ResultPileForCardPlay(CardModel card) =>
-        (PileType)typeof(CardModel)
-            .GetMethod("GetResultPileTypeForCardPlay", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(card, null)!;
+        ((CardLocation)typeof(CardModel)
+            .GetMethod("GetResultLocationForCardPlay", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(card, null)!).pileType;
 }

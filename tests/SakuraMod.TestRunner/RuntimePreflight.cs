@@ -18,8 +18,9 @@ public sealed record RuntimePrerequisites(
 
 public static class RuntimePreflight
 {
-    public const string ExpectedGameVersion = "0.107.1";
-    public const string ExpectedRitsuVersion = "0.6.12";
+    public const string ExpectedGameVersion = "0.111.1";
+    public const string ExpectedRitsuVersion = "0.6.14";
+    public const string ExpectedRitsuCompatibilityTarget = "0.111.0";
 
     public static RuntimePrerequisites Inspect(string repoRoot)
     {
@@ -57,7 +58,7 @@ public static class RuntimePreflight
         RequireVersion("RitsuLib", ritsuVersion, ExpectedRitsuVersion);
         var compatDir = Directory.Exists(Path.Combine(ritsuRoot, "compat")) ? "compat" : "lib";
         var compatibleRitsuAssembly = RequireFile(
-            Path.Combine(ritsuRoot, compatDir, ExpectedGameVersion, "STS2-RitsuLib.dll"),
+            Path.Combine(ritsuRoot, compatDir, ExpectedRitsuCompatibilityTarget, "STS2-RitsuLib.dll"),
             "RitsuLib compatibility assembly");
         var assemblyVersion = AssemblyName.GetAssemblyName(compatibleRitsuAssembly).Version;
         if (assemblyVersion is null)

@@ -181,6 +181,7 @@ internal sealed class SakuraMemoryRecallCardNodePatch : IPatchMethod
             typeof(CardPileCmd),
             "CreateCardNodeAndUpdateVisuals",
             typeof(CardModel),
+            typeof(PileType?),
             typeof(PileType),
             typeof(bool))
     ];

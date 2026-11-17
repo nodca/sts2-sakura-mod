@@ -32,7 +32,7 @@ public class SpellSeal() : SpellCard(2, CardType.Attack, CardRarity.Basic, Targe
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         SakuraVoicePlayback.TryPlay(this);
-        await DealDamage(choiceContext, RequiredTarget(play), DynamicVars.Damage.IntValue,
+        await DealDamage(choiceContext, play, RequiredTarget(play), DynamicVars.Damage.IntValue,
             hitVfx: SakuraNativeHitFx.Blunt, hitTmpSfx: SakuraNativeHitFx.HeavyTmpSfx,
             keepAttackerAnim: true);
     }

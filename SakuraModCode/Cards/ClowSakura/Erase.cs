@@ -44,10 +44,10 @@ public class ClowErase() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Co
     private async Task ResolveTargets(PlayerChoiceContext choiceContext, CardPlay play, int killHpPercent)
     {
         foreach (var target in PlayTargets(play))
-            await KillOrDamage(choiceContext, target, killHpPercent);
+            await KillOrDamage(choiceContext, play, target, killHpPercent);
     }
 
-    private async Task KillOrDamage(PlayerChoiceContext choiceContext, Creature target, int killHpPercent)
+    private async Task KillOrDamage(PlayerChoiceContext choiceContext, CardPlay play, Creature target, int killHpPercent)
     {
         if (SakuraEnemyRules.IsMinion(target) || (!SakuraEnemyRules.IsEliteOrBossCombat(target) && target.CurrentHp * 100 <= target.MaxHp * killHpPercent))
         {
@@ -56,7 +56,7 @@ public class ClowErase() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Co
             return;
         }
 
-        await DealDamage(choiceContext, target, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.EraseSmoke);
+        await DealDamage(choiceContext, play, target, ReleasedDamage(), hitVfxNode: SakuraNativeHitFx.EraseSmoke);
     }
 }
 

@@ -50,15 +50,14 @@ public class ClassicLightSakuraPower : SakuraLightPowerBase, IMaxHandSizeModifie
         return changed;
     }
 
-    public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
+    public override CardLocation ModifyCardPlayResultLocation(
         CardModel card,
         bool isAutoPlay,
         ResourceInfo resources,
-        PileType pileType,
-        CardPilePosition position) =>
+        CardLocation cardLocation) =>
         IsOwnedStatusOrCurse(card)
-            ? (PileType.Exhaust, position)
-            : (pileType, position);
+            ? cardLocation with { pileType = PileType.Exhaust }
+            : cardLocation;
 
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
     {

@@ -80,6 +80,7 @@ internal static class ClowDefensivePowerFocusedMultiplayerScenario
             OrdinaryDamage,
             ValueProp.Unpowered,
             enemy,
+            null,
             null);
         assertions.Equal("silent_prevents_hp_loss", hpBefore, owner.Creature.CurrentHp);
         assertions.Equal("silent_consumes_one_buffer", 0, owner.Creature.GetPower<BufferPower>()?.Amount ?? 0);

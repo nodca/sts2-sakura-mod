@@ -40,7 +40,7 @@ public class Spiral() : TransparentExtraEffectCard(0, CardType.Attack, CardRarit
     {
         var target = RequiredTarget(play);
         var damage = SpiralRules.ScaledValue(this, DynamicVars.Damage);
-        await DealDamage(choiceContext, target, damage, hitVfx: SakuraNativeHitFx.Slash);
+        await DealDamage(choiceContext, play, target, damage, hitVfx: SakuraNativeHitFx.Slash);
         // Extra only raises the copy count; both paths share the next-turn draw-top rule.
         var copies = activation.IsActive
             ? DynamicVars["ExtraCopies"].IntValue
@@ -100,7 +100,7 @@ internal sealed class SpiralDamageVar(decimal damage, ValueProp props) : DamageV
         }
 
         if (runGlobalHooks)
-            preview = Hook.ModifyDamage(card.Owner.RunState, card.CombatState, target, card.Owner.Creature, baseValue, Props, card, ModifyDamageHookType.All, previewMode, out _);
+            preview = Hook.ModifyDamage(card.Owner.RunState, card.CombatState, target, card.Owner.Creature, baseValue, Props, card, null, ModifyDamageHookType.All, previewMode, out _);
 
         PreviewValue = preview;
     }

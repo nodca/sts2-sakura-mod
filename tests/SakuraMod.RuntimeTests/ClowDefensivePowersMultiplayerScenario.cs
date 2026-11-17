@@ -89,6 +89,7 @@ internal static class ClowDefensivePowersMultiplayerScenario
                 OrdinaryDamage,
                 ValueProp.Unpowered,
                 enemy,
+                null,
                 null);
             await context.SignalAndWaitAsync($"silent-damaged-{player.NetId}");
             assertions.Equal($"silent_prevents_hp_loss_{player.NetId}", hpBefore, player.Creature.CurrentHp);

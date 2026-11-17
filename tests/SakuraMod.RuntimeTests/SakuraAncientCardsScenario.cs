@@ -156,6 +156,7 @@ internal static class SakuraAncientCardsScenario
                     Math.Max(0, target.CurrentHp - 1),
                     ValueProp.Unblockable | ValueProp.Unpowered,
                     null,
+                    null,
                     null);
             });
         await CombatScenarioContext.EnqueueAndWaitAsync(prepareLethal);

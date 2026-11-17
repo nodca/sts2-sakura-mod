@@ -73,7 +73,7 @@
   "SAKURA_MOD_CARD_REPAIR.title": "修理",
   "SAKURA_MOD_CARD_REPAIR.description": "[gold]地[/gold]\n毎ターン初めてカードが[gold]記憶[/gold]から[gold]手札[/gold]に戻ったとき、HPを{Heal:diff()}回復する。",
   "SAKURA_MOD_CARD_REVERSAL.title": "逆転",
-  "SAKURA_MOD_CARD_REVERSAL.description": "[gold]風[/gold]\n[gold]山札[/gold]と[gold]捨て札[/gold]を入れ替える。\n{Damage:diff()}ダメージを与え、入れ替えたカード{PileCardsPerDamage:diff()}枚につきダメージが{PileDamage:diff()}増加する。\n[gold]追加効果：[/gold][gold]手札[/gold]が上限になるまでカードを引く。",
+  "SAKURA_MOD_CARD_REVERSAL.description": "[gold]風[/gold]\n[gold]山札[/gold]と[gold]捨て札[/gold]を入れ替える。\n{Block:diff()}[gold]ブロック[/gold]を得て、{Damage:diff()}ダメージを与える。入れ替えたカード{PileCards:diff()}枚につき、両方が{PileBonus:diff()}増加する。\n[gold]追加効果：[/gold][gold]手札[/gold]が上限の半分になるまでカードを引く。",
   "SAKURA_MOD_CARD_REWIND.title": "逆戻",
   "SAKURA_MOD_CARD_REWIND.description": "[gold]水[/gold]\n[gold]廃棄札[/gold]からカードを{Cards:diff()}枚選び、[gold]手札[/gold]に加える。\n[gold]追加効果：[/gold]それらのカードはこのターン中コストを支払わずにプレイできる。",
   "SAKURA_MOD_CARD_SNOOZE.title": "居眠",

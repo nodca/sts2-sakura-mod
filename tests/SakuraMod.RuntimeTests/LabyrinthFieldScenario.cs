@@ -54,33 +54,33 @@ internal static class LabyrinthFieldScenario
 
         // Actual damage commands prove previews do not consume state, Block does, and hits are tracked per target.
         var lost = target.GetPower<LabyrinthLostPower>()!;
-        var preview1 = lost.ModifyDamageMultiplicative(target, 10, ValueProp.Move, player.Creature, null);
-        var preview2 = lost.ModifyDamageMultiplicative(target, 10, ValueProp.Move, player.Creature, null);
+        var preview1 = lost.ModifyDamageMultiplicative(target, 10, ValueProp.Move, player.Creature, null, null);
+        var preview2 = lost.ModifyDamageMultiplicative(target, 10, ValueProp.Move, player.Creature, null, null);
         assertions.Equal("repeated_preview_keeps_protection", preview1, preview2);
         assertions.Equal("preview_halves_first_hit", 0.5m, preview1);
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
         {
             var earthSource = combat.CreateCard<ClowMaze>(player);
             assertions.Equal("earth_hits_are_also_halved", 0.5m,
-                lost.ModifyDamageMultiplicative(target, 10, ValueProp.Move, player.Creature, earthSource));
-            await CreatureCmd.Damage(choice, other, 2, ValueProp.Unpowered, player.Creature, null);
+                lost.ModifyDamageMultiplicative(target, 10, ValueProp.Move, player.Creature, earthSource, null));
+            await CreatureCmd.Damage(choice, other, 2, ValueProp.Unpowered, player.Creature, null, null);
             assertions.Equal("unpowered_damage_does_not_spend_protection", 0.5m,
-                other.GetPower<LabyrinthLostPower>()!.ModifyDamageMultiplicative(other, 10, ValueProp.Move, player.Creature, null));
+                other.GetPower<LabyrinthLostPower>()!.ModifyDamageMultiplicative(other, 10, ValueProp.Move, player.Creature, null, null));
             await CreatureCmd.GainBlock(target, 10, ValueProp.Unpowered, null, false);
             var hpBefore = target.CurrentHp;
-            await CreatureCmd.Damage(choice, target, 10, ValueProp.Move, player.Creature, null);
+            await CreatureCmd.Damage(choice, target, 10, ValueProp.Move, player.Creature, null, null);
             assertions.Equal("fully_blocked_first_hit", hpBefore, target.CurrentHp);
             assertions.Equal("half_before_block", 5m, target.Block);
-            await CreatureCmd.Damage(choice, target, 6, ValueProp.Move, player.Creature, null);
+            await CreatureCmd.Damage(choice, target, 6, ValueProp.Move, player.Creature, null, null);
             assertions.Equal("blocked_hit_spends_protection", hpBefore - 1, target.CurrentHp);
             var otherHp = other.CurrentHp;
-            await CreatureCmd.Damage(choice, other, 10, ValueProp.Move, player.Creature, null);
-            await CreatureCmd.Damage(choice, other, 2, ValueProp.Move, player.Creature, null);
+            await CreatureCmd.Damage(choice, other, 10, ValueProp.Move, player.Creature, null, null);
+            await CreatureCmd.Damage(choice, other, 2, ValueProp.Move, player.Creature, null, null);
             assertions.Equal("targets_have_independent_first_hits", otherHp - 7, other.CurrentHp);
             var ownHp = player.Creature.CurrentHp;
-            await CreatureCmd.Damage(choice, player.Creature, 10, ValueProp.Move, target, null);
+            await CreatureCmd.Damage(choice, player.Creature, 10, ValueProp.Move, target, null, null);
             assertions.Equal("player_also_protected", ownHp - 5, player.Creature.CurrentHp);
-            await CreatureCmd.Damage(choice, other, 2, ValueProp.Unpowered, player.Creature, null);
+            await CreatureCmd.Damage(choice, other, 2, ValueProp.Unpowered, player.Creature, null, null);
             assertions.Equal("unpowered_damage_unaffected", otherHp - 9, other.CurrentHp);
         }));
 
@@ -102,11 +102,11 @@ internal static class LabyrinthFieldScenario
         var nextEarth = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowMaze>(combat, player);
         assertions.Equal("next_turn_free_reset", 0, nextEarth.EnergyCost.GetWithModifiers(CostModifiers.All));
         assertions.Equal("next_turn_damage_reset", 0.5m,
-            lost.ModifyDamageMultiplicative(target, 10, ValueProp.Move, player.Creature, null));
+            lost.ModifyDamageMultiplicative(target, 10, ValueProp.Move, player.Creature, null, null));
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
         {
             var hpBefore = target.CurrentHp;
-            var attack = DamageCmd.Attack(6).FromCard(combat.CreateCard<ClowSword>(player))
+            var attack = DamageCmd.Attack(6).FromCard(combat.CreateCard<ClowSword>(player), null)
                 .Targeting(target).WithHitCount(2);
             await attack.Execute(choice);
             assertions.Equal("multi_hit_only_first_hit_halved", hpBefore - 9, target.CurrentHp);
@@ -216,7 +216,7 @@ internal static class LabyrinthFieldScenario
         {
             await PowerCmd.Apply<LabyrinthPower>(choice, player.Creature, 1, player.Creature, null);
             foreach (var enemy in nextCombat.HittableEnemies.ToList())
-                await CreatureCmd.Damage(choice, enemy, 9999, ValueProp.Unpowered, player.Creature, null);
+                await CreatureCmd.Damage(choice, enemy, 9999, ValueProp.Unpowered, player.Creature, null, null);
         }));
         await CombatScenarioContext.WaitUntilAsync(() => !CombatManager.Instance.IsInProgress, "Labyrinth combat end");
         assertions.True("combat_end_restores_original_background", nextOriginal.Visible

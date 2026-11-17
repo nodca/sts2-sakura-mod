@@ -37,20 +37,18 @@ public class ClassicNothingMonsterPower : SakuraPowerModel
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Chance", ExhaustChance)];
 
-    public override (PileType, CardPilePosition) ModifyCardPlayResultPileTypeAndPosition(
+    public override CardLocation ModifyCardPlayResultLocation(
         CardModel card,
         bool isAutoPlay,
         ResourceInfo resources,
-        PileType pileType,
-        CardPilePosition position)
+        CardLocation cardLocation)
     {
         if (card.Owner?.Creature != Owner || card is not SakuraSourceCard { IsClassicSourceCard: true })
-            return (pileType, position);
+            return cardLocation;
 
         var roll = Owner.Player?.RunState.Rng.CombatCardSelection.NextInt(100) ?? 100;
         return roll < ExhaustChance
-            ? (PileType.Exhaust, position)
-            : (pileType, position);
+            ? cardLocation with { pileType = PileType.Exhaust }
+            : cardLocation;
     }
 }
-

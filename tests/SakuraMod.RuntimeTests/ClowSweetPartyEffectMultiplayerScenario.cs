@@ -43,6 +43,7 @@ internal static class ClowSweetPartyEffectMultiplayerScenario
                 FixtureDamage,
                 ValueProp.Unpowered,
                 enemy,
+                null,
                 null);
         await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
             normalSweet, PileType.Hand, owner, CardPilePosition.Random);
@@ -119,6 +120,7 @@ internal static class ClowSweetPartyEffectMultiplayerScenario
                 FixtureDamage,
                 ValueProp.Unpowered,
                 enemy,
+                null,
                 null);
         }
         await context.SignalAndWaitAsync("sakura-sweet-ready");

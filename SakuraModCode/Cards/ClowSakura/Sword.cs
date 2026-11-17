@@ -43,18 +43,18 @@ public class ClowSword() : ClowExtraEffectCard(1, CardType.Attack, CardRarity.Ba
     private int CurrentDamage() => SakuraSourceCardValues.EffectiveValue(this, DynamicVars.Damage);
 
     protected override Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
-        Strike(choiceContext, RequiredTarget(play));
+        Strike(choiceContext, play, RequiredTarget(play));
 
     protected override async Task PlayActivatedCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var target = RequiredTarget(play);
-        await Strike(choiceContext, target);
-        await DealDamage(choiceContext, target, ExtraHpLoss, ValueProp.Unblockable);
+        await Strike(choiceContext, play, target);
+        await DealDamage(choiceContext, play, target, ExtraHpLoss, ValueProp.Unblockable);
     }
 
     // Vanilla Strike's hit: the same slash the game's own Strikes spawn.
-    private Task Strike(PlayerChoiceContext choiceContext, Creature target) =>
-        DealDamage(choiceContext, target, CurrentDamage(), hitSfx: StrikeSfx, hitVfx: SakuraNativeHitFx.Slash);
+    private Task Strike(PlayerChoiceContext choiceContext, CardPlay play, Creature target) =>
+        DealDamage(choiceContext, play, target, CurrentDamage(), hitSfx: StrikeSfx, hitVfx: SakuraNativeHitFx.Slash);
 
     protected override void OnUpgrade() => DynamicVars.Damage.UpgradeValueBy(3);
 }
@@ -73,12 +73,14 @@ public class SakuraSword() : SakuraFormCard(1, CardType.Attack, TargetType.AnyEn
         {
             await DealDamage(
                 choiceContext,
+                play,
                 target,
                 ReleasedDamage(),
                 hitSfx: ClowSword.StrikeSfx,
                 hitVfx: SakuraNativeHitFx.Slash);
             await DealDamage(
                 choiceContext,
+                play,
                 target,
                 target.CurrentHp * ReleasedMagic() / 100,
                 ValueProp.Unblockable);

@@ -52,7 +52,7 @@ public class ClowFreeze() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.U
                 foreach (var target in PlayTargets(play))
                 {
                     cues.Shatter(target);
-                    await DealDamage(choiceContext, target, ReleasedDamage());
+                    await DealDamage(choiceContext, play, target, ReleasedDamage());
                     await ApplyPower<SakuraFrostbitePower>(choiceContext, target, ReleasedValue("SakuraFrostbitePower"));
                 }
             });
@@ -75,7 +75,7 @@ public class ClowFreeze() : ClowExtraEffectCard(2, CardType.Attack, CardRarity.U
                 foreach (var target in PlayTargets(play))
                 {
                     cues.Shatter(target);
-                    await DealDamage(choiceContext, target, ReleasedDamage());
+                    await DealDamage(choiceContext, play, target, ReleasedDamage());
                     var frostbite = ReleasedValue("SakuraFrostbitePower");
                     var existingFrostbite = target.GetPower<SakuraFrostbitePower>()?.Amount ?? 0;
                     await ApplyPower<SakuraFrostbitePower>(
@@ -121,7 +121,7 @@ public class SakuraFreeze() : SakuraFormCard(2, CardType.Attack, TargetType.AnyE
                 foreach (var target in PlayTargets(play))
                 {
                     cues.Shatter(target);
-                    await DealDamage(choiceContext, target, ReleasedDamage());
+                    await DealDamage(choiceContext, play, target, ReleasedDamage());
                     var isEliteOrBossTarget = SakuraEnemyRules.IsEliteOrBossTarget(target);
                     var frostbite = SakuraFreezeRules.FrostbiteAmount(
                         ReleasedValue("SakuraFrostbitePower"),
