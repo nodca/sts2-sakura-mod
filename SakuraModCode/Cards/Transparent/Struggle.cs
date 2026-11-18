@@ -16,8 +16,8 @@ public class Struggle() : TransparentExtraEffectCard(2, CardType.Attack, CardRar
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new DamageVar(14, ValueProp.Move),
-        new DamageVar("ExtraDamage", 10, ValueProp.Move)
+        new DamageVar(11, ValueProp.Move),
+        new DamageVar("ExtraDamage", 7, ValueProp.Move)
     ];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)

@@ -53,22 +53,43 @@ public sealed class SakuraRelicParitySuite
             && !ClassicRedCapeRelic.IsEligible(clowWithoutExtraEffect)
             && !ClassicRedCapeRelic.IsEligible(sakuraCard)
             && ClassicRedCapeRelic.CanActivateFreeExtraEffect(
-                activatedThisCombat: false,
+                turnNumber: 1,
+                activatedTurn: 0,
+                turns: 3,
                 ownerMatches: true,
                 isEligible: true)
             && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(
-                activatedThisCombat: true,
+                turnNumber: 1,
+                activatedTurn: 1,
+                turns: 3,
                 ownerMatches: true,
                 isEligible: true)
             && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(
-                activatedThisCombat: false,
+                turnNumber: 1,
+                activatedTurn: 0,
+                turns: 3,
                 ownerMatches: false,
                 isEligible: true)
             && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(
-                activatedThisCombat: false,
+                turnNumber: 1,
+                activatedTurn: 0,
+                turns: 3,
                 ownerMatches: true,
-                isEligible: false),
-            "Expected Red Cape to grant only eligible Clow Cards a free Extra Effect.");
+                isEligible: false)
+            && ClassicRedCapeRelic.CanActivateFreeExtraEffect(
+                turnNumber: 3,
+                activatedTurn: 2,
+                turns: 3,
+                ownerMatches: true,
+                isEligible: true)
+            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(
+                turnNumber: 4,
+                activatedTurn: 3,
+                turns: 3,
+                ownerMatches: true,
+                isEligible: true)
+            && new ClassicRedCapeRelic().DynamicVars["Turns"].IntValue == 3,
+            "Expected Red Cape to grant the first eligible Clow Card of each of the first 3 turns a free Extra Effect.");
         RegressionTestHarness.Require(
             SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: true, hasPinkTransformationCostume: false)
             && !SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: true, hasPinkTransformationCostume: true)
@@ -87,12 +108,30 @@ public sealed class SakuraRelicParitySuite
         RegressionTestHarness.Require(
             relic.DynamicVars.Cards.IntValue == 1
             && relic.DynamicVars["Turns"].IntValue == 3
+            && !relic.DynamicVars.ContainsKey("Energy")
+            && source.Contains("DynamicVars.Cards.IntValue, upgraded: true)", StringComparison.Ordinal)
             && RegressionTestHarness.DeclaresMethod<ClassicFrogRaincoatRelic>("BeforeHandDraw")
             && !RegressionTestHarness.DeclaresMethod<ClassicFrogRaincoatRelic>("AfterCardPlayed")
             && source.Contains("playerCombat.TurnNumber > DynamicVars[\"Turns\"].IntValue", StringComparison.Ordinal)
             && source.Contains("SakuraManifestLoop.Manifest(Owner, choiceContext", StringComparison.Ordinal)
             && source.Contains("HoverTipFactory.FromKeyword(SakuraKeywords.Manifest)", StringComparison.Ordinal),
-            "Expected Frog Raincoat to Manifest 1 at the start of each of the first 3 turns of combat and expose the Manifest tip.");
+            "Expected Frog Raincoat to Manifest 1 upgraded card at the start of each of the first 3 turns of combat and expose the Manifest tip.");
+    }
+
+    [Fact]
+    public void TeddyBearGrantsTwoBlockPerNonEmptySpell()
+    {
+        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Relics/Models/ClassicTeddyBearRelic.cs"));
+        var relic = new ClassicTeddyBearRelic();
+
+        RegressionTestHarness.Require(
+            relic.Rarity == RelicRarity.Common
+            && relic.DynamicVars.Block.IntValue == 2
+            && RegressionTestHarness.DeclaresMethod<ClassicTeddyBearRelic>("AfterCardPlayed")
+            && source.Contains("play.Card is not SpellCard", StringComparison.Ordinal)
+            && source.Contains("play.Card is SpellEmptySpell", StringComparison.Ordinal),
+            "Expected Teddy Bear to be a Common relic granting 2 Block for each non-Empty Spell played.");
     }
 
     [Fact]

@@ -96,6 +96,30 @@ public static class SakuraManifestLoop
         return manifested;
     }
 
+    // A random Transparent card with Forgotten, drawn from the same weighted pool
+    // as Manifest. It is not a Manifest, so Appear grants no Spell for it.
+    public static async Task<IReadOnlyList<CardModel>> AddRandomTransparentCardsToHand(
+        Player owner,
+        PlayerChoiceContext context,
+        int amount)
+    {
+        List<CardModel> added = [];
+        var weightedSources = WeightedManifestAtlasSources();
+        var rng = owner.RunState.Rng.CombatCardSelection;
+        for (var i = 0; i < amount; i++)
+        {
+            var picked = rng.NextItem(weightedSources);
+            if (picked is null)
+                break;
+
+            var card = SakuraGeneratedCardLifecycle.CreateCombatCardFromTemplate(owner, picked);
+            await SakuraGeneratedCardLifecycle.AddTemporaryGeneratedCardToHand(card, freeThisTurn: false, context);
+            added.Add(card);
+        }
+
+        return added;
+    }
+
     private static List<CardModel> ManifestChoices(Player owner, Type? excludedType, ManifestSource source, int choiceCount)
     {
         var weightedSources = source switch

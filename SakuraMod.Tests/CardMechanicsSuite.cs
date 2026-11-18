@@ -1006,7 +1006,7 @@ public sealed class CardMechanicsSuite
 
             const int baseCount = 1;
             SakuraReleaseState.Apply(appear, ClassicSwordJadeRelic.ReleaseRate);
-            Assert.True(appear.DynamicVars.TryGetValue("Spells", out var count));
+            Assert.True(appear.DynamicVars.TryGetValue("Cards", out var count));
             Assert.Equal(baseCount * 2, count.IntValue);
             SakuraReleaseState.Reset(appear);
             Assert.Equal(baseCount, count.IntValue);
@@ -1610,14 +1610,18 @@ public sealed class CardMechanicsSuite
         var breakCard = new Break();
         var upgradedBreak = RegressionTestHarness.MutableForCostTest(new Break());
         upgradedBreak.UpgradeInternal();
+        var breakSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/Transparent/Break.cs"));
         RegressionTestHarness.Require(
-            breakCard.DynamicVars.Damage.IntValue == 8
+            breakSource.Contains("DynamicVars.Damage.IntValue * (target.Block > 0 ? 2 : 1)", StringComparison.Ordinal)
+            && !breakSource.Contains("LoseBlock", StringComparison.Ordinal)
+            && breakCard.DynamicVars.Damage.IntValue == 8
             && breakCard.DynamicVars.Vulnerable.IntValue == 1
             && breakCard.DynamicVars["ExtraVulnerable"].IntValue == 3
             && upgradedBreak.DynamicVars.Damage.IntValue == 10
             && upgradedBreak.DynamicVars.Vulnerable.IntValue == 2
             && upgradedBreak.DynamicVars["ExtraVulnerable"].IntValue == 3,
-            "Expected Break to deal 8 damage and apply 1 Vulnerable (3 more with Extra), upgrading to 10 damage and 2 Vulnerable.");
+            "Expected Break to deal 8 damage (doubled against a Blocking enemy, without stripping Block) and apply 1 Vulnerable (3 more with Extra), upgrading to 10 damage and 2 Vulnerable.");
 
         var upgradedHail = RegressionTestHarness.MutableForCostTest(new Hail());
         upgradedHail.UpgradeInternal();
@@ -1706,11 +1710,11 @@ public sealed class CardMechanicsSuite
             && struggle.Rarity == CardRarity.Uncommon
             && struggle.CanonicalKeywords.SequenceEqual([SakuraKeywords.Fire])
             && TransparentCard.HasMagicChargeExtraEffect(struggle)
-            && struggle.DynamicVars.Damage.IntValue == 14
-            && struggle.DynamicVars["ExtraDamage"] is DamageVar { IntValue: 10 }
+            && struggle.DynamicVars.Damage.IntValue == 11
+            && struggle.DynamicVars["ExtraDamage"] is DamageVar { IntValue: 7 }
             && upgradedStruggle.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
-            && upgradedStruggle.DynamicVars.Damage.IntValue == 18
-            && upgradedStruggle.DynamicVars["ExtraDamage"].IntValue == 10
+            && upgradedStruggle.DynamicVars.Damage.IntValue == 15
+            && upgradedStruggle.DynamicVars["ExtraDamage"].IntValue == 7
             && !StruggleRules.IsOtherAttack(struggle, struggle)
             && StruggleRules.IsOtherAttack(struggle, new Struggle())
             && StruggleRules.IsOtherAttack(struggle, new Hail())
@@ -1721,7 +1725,7 @@ public sealed class CardMechanicsSuite
             && struggleSource.Contains("GetPower<StrengthPower>()?.Amount", StringComparison.Ordinal)
             && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardEnteredCombat")
             && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardPlayed"),
-            "Expected Struggle to cost 2, deal 14 (18) damage with a modifier-aware 10-damage follow-up on Extra, receive Strength twice, and discount for other Attacks this turn.");
+            "Expected Struggle to cost 2, deal 11 (15) damage with a modifier-aware 7-damage follow-up on Extra, receive Strength twice, and discount for other Attacks this turn.");
 
         var blade = new Blade();
         var upgradedBlade = RegressionTestHarness.MutableForCostTest(new Blade());
@@ -1889,6 +1893,8 @@ public sealed class CardMechanicsSuite
             "SakuraModCode/Cards/Transparent/Appear.cs"));
         var manifestLoopSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/SakuraManifestLoop.cs"));
+        var appearPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Powers/Transparent/AppearPower.cs"));
         RegressionTestHarness.Require(
             appear.Rarity == CardRarity.Rare
             && appear.Type == CardType.Power
@@ -1899,9 +1905,9 @@ public sealed class CardMechanicsSuite
             && appear.EnergyCost.Canonical == 2
             && upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
             && !appear.DynamicVars.ContainsKey("ManifestCards")
-            && appear.DynamicVars["Spells"].IntValue == 1
-            && upgradedAppear.DynamicVars["Spells"].IntValue == 1
-            && AppearPower.ManifestCards == 1
+            && appear.DynamicVars.Cards.IntValue == 1
+            && upgradedAppear.DynamicVars.Cards.IntValue == 1
+            && !appear.DynamicVars.ContainsKey("Spells")
             && appearSource.Contains("EnergyCost.UpgradeBy(-1)", StringComparison.Ordinal)
             && new AppearPower().Type == PowerType.Buff
             && new AppearPower().StackType == PowerStackType.Counter
@@ -1911,8 +1917,11 @@ public sealed class CardMechanicsSuite
             && AppearPower.SpellTypeFor(SakuraElement.Wind) == typeof(SpellFengHua)
             && AppearPower.SpellTypeFor(SakuraElement.Water) == typeof(SpellShuiLong)
             && manifestLoopSource.Contains("AppearPower.AfterManifested(owner, copy)", StringComparison.Ordinal)
-            && !manifestLoopSource.Contains("card is Appear", StringComparison.Ordinal),
-            "Expected Appear to be a 2-cost (1 upgraded) Rare Power that always Manifests 1 at turn start and adds 1 matching element Spell per stack for every Manifested card.");
+            && !manifestLoopSource.Contains("card is Appear", StringComparison.Ordinal)
+            && appearPowerSource.Contains("AddRandomTransparentCardsToHand(player, choiceContext, Amount)", StringComparison.Ordinal)
+            && !appearPowerSource.Contains("SakuraManifestLoop.Manifest(", StringComparison.Ordinal)
+            && RandomTransparentHelperSkipsAppearSpells(manifestLoopSource),
+            "Expected Appear to be a 2-cost (1 upgraded) Rare Power that adds 1 random Forgotten Transparent card per stack at turn start (not a Manifest) and adds 1 matching element Spell per stack for every Manifested card.");
 
         var repair = new Repair();
         var upgradedRepair = RegressionTestHarness.MutableForCostTest(new Repair());
@@ -2438,5 +2447,18 @@ public sealed class CardMechanicsSuite
             stormSource.Contains("ReleasedValue(MaxDamageVar)", StringComparison.Ordinal)
             && !stormSource.Contains("ReleasedDamage() + MaxDamageOffset", StringComparison.Ordinal),
             "Expected the Storm roll to read its upper bound from the MaxDamage variable instead of recomputing Damage + offset.");
+    }
+
+    private static bool RandomTransparentHelperSkipsAppearSpells(string manifestLoopSource)
+    {
+        var start = manifestLoopSource.IndexOf("AddRandomTransparentCardsToHand(", StringComparison.Ordinal);
+        var end = manifestLoopSource.IndexOf("private static List<CardModel> ManifestChoices(", StringComparison.Ordinal);
+        if (start < 0 || end <= start)
+            return false;
+
+        var body = manifestLoopSource[start..end];
+        return body.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal)
+            && !body.Contains("AfterManifested", StringComparison.Ordinal)
+            && !body.Contains("CardSelectCmd", StringComparison.Ordinal);
     }
 }
