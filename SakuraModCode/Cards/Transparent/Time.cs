@@ -22,32 +22,21 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Time() : TransparentExtraEffectCard(3, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Time() : TransparentCard(3, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire, CardKeyword.Exhaust];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        await TimeStopVfx.PlayOrResolveAsync(this, Owner.Creature, activation.IsActive, async cues =>
+        await TimeStopVfx.PlayOrResolveAsync(this, Owner.Creature, empowered: false, async cues =>
         {
-            var power = await PowerCmd.Apply<TimeStopPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, true);
-            if (activation.IsActive)
-                power?.PreserveCurrentTurnState();
+            await PowerCmd.Apply<TimeStopPower>(choiceContext, Owner.Creature, 1, Owner.Creature, this, true);
 
             // The turn ends on the second hand's clack; with card VFX off this
             // returns at once.
             await cues.StopAsync();
             PlayerCmd.EndTurn(Owner, canBackOut: false);
         });
-    }
-
-    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay play)
-    {
-        await base.AfterCardPlayed(choiceContext, play);
-
-        if (play.Card == this
-            && Owner.Creature.GetPower<TimeStopPower>() is { PreservesCurrentTurnState: true } power)
-            power.PreserveElementStates();
     }
 
     protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);

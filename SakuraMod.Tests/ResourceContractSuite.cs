@@ -994,22 +994,18 @@ public sealed class ResourceContractSuite
         Assert.Contains("scope.InvokeAsync(\"stop\"", session, StringComparison.Ordinal);
         Assert.True(TimeStopVfx.HoldCap > 0f && TimeStopVfx.Clack > TimeStopVfx.WaveStart);
 
-        // Power and preservation resolve first; only the end turn waits for the clack.
-        var wrapIndex = time.IndexOf("TimeStopVfx.PlayOrResolveAsync(this, Owner.Creature, activation.IsActive", StringComparison.Ordinal);
+        // The power resolves first; only the end turn waits for the clack.
+        var wrapIndex = time.IndexOf("TimeStopVfx.PlayOrResolveAsync(this, Owner.Creature, empowered: false", StringComparison.Ordinal);
         var applyIndex = time.IndexOf("PowerCmd.Apply<TimeStopPower>", StringComparison.Ordinal);
-        var preserveIndex = time.IndexOf("power?.PreserveCurrentTurnState()", StringComparison.Ordinal);
         var stopIndex = time.IndexOf("await cues.StopAsync()", StringComparison.Ordinal);
         var endIndex = time.IndexOf("PlayerCmd.EndTurn(Owner, canBackOut: false)", StringComparison.Ordinal);
-        var afterPlayedIndex = time.IndexOf("AfterCardPlayed", StringComparison.Ordinal);
         Assert.True(
             wrapIndex >= 0
             && applyIndex > wrapIndex
-            && preserveIndex > applyIndex
-            && stopIndex > preserveIndex
-            && endIndex > stopIndex
-            && afterPlayedIndex > endIndex,
-            "Expected Time to apply and preserve, then await the clack, then end the turn.");
-        Assert.Contains("power.PreserveElementStates()", time[afterPlayedIndex..], StringComparison.Ordinal);
+            && stopIndex > applyIndex
+            && endIndex > stopIndex,
+            "Expected Time to apply the extra turn, then await the clack, then end the turn.");
+        Assert.DoesNotContain("PreserveCurrentTurnState", time, StringComparison.Ordinal);
         Assert.DoesNotContain("PlayTime", time, StringComparison.Ordinal);
     }
 

@@ -1,4 +1,5 @@
 using Godot;
+using MegaCrit.Sts2.Core.Audio.Debug;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Cards;
 using MegaCrit.Sts2.Core.Combat;
@@ -288,12 +289,14 @@ public abstract class SakuraCardModel : ModCardTemplate
         }
     }
 
-    protected async Task DealDamageHit(AttackContext attackContext, PlayerChoiceContext choiceContext, CardPlay play, Creature target, int amount, ValueProp props = ValueProp.Move, string? hitVfx = null)
+    protected async Task DealDamageHit(AttackContext attackContext, PlayerChoiceContext choiceContext, CardPlay play, Creature target, int amount, ValueProp props = ValueProp.Move, string? hitVfx = null, string? hitTmpSfx = null)
     {
         if (!target.IsAlive)
             return;
 
-        // This hit bypasses AttackCommand, so it plays the hit VFX the way AttackCommand does.
+        // This hit bypasses AttackCommand.Execute, so it plays its impact feedback here.
+        if (hitTmpSfx != null)
+            NDebugAudioManager.Instance?.Play(hitTmpSfx);
         if (hitVfx != null)
             VfxCmd.PlayOnCreatureCenter(target, hitVfx);
         attackContext.AddHit(await CreatureCmd.Damage(choiceContext, target, amount, props, Owner.Creature, this, play));

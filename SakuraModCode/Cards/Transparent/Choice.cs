@@ -25,8 +25,8 @@ public class Choice() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
         [SakuraMemoryPile.PileId, SakuraCardHoverTips.RemindTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new BlockVar(9, ValueProp.Move),
-        new DamageVar(11, ValueProp.Move),
+        new BlockVar(8, ValueProp.Move),
+        new DamageVar(10, ValueProp.Move),
         new CardsVar("ManifestCards", 1),
         new CardsVar("RemindCards", 1)
     ];

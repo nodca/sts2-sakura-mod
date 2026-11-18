@@ -1,13 +1,16 @@
 using Godot;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Monsters;
+using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
+using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.TestProtocol;
 
@@ -139,10 +142,42 @@ internal static class LabyrinthFieldScenario
         await CombatScenarioContext.PlayCardAsync(exhausted);
         assertions.True("exhaust_still_takes_priority", exhausted.Pile?.Type == PileType.Exhaust);
 
-        // Reapplying Labyrinth must not interfere with Gravitation's own return rules.
+        // Isolate Gravitation from Labyrinth's one-shot cost modifier.
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
         {
             await PowerCmd.Remove(player.Creature.GetPower<LabyrinthPower>()!);
+            await CreatureCmd.GainBlock(other, 100, ValueProp.Unpowered, null, false);
+        }));
+        var struggle = await CombatScenarioContext.AddGeneratedCardToHandAsync<Struggle>(combat, player);
+        var strike = await CombatScenarioContext.AddGeneratedCardToHandAsync<StrikeIronclad>(combat, player);
+        for (var i = 0; i < 3; i++)
+            await CombatScenarioContext.PlayCardAsync(strike, other);
+
+        assertions.Equal("struggle_free_after_three_other_attacks", 0, struggle.EnergyCost.GetAmountToSpend());
+        await CombatScenarioContext.PlayCardAsync(struggle, other);
+        assertions.True("gravitation_returns_struggle", struggle.Pile?.Type == PileType.Hand);
+        assertions.Equal("struggle_first_return_costs_one", 1, struggle.EnergyCost.GetAmountToSpend());
+
+        // The follow-up is a separate hit, but Vigor covers the whole attack.
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
+        {
+            await PowerCmd.Apply<ClassicMagicChargePower>(choice, player.Creature, SakuraMagicCharge.ExtraEffectCost, player.Creature, null);
+            await PowerCmd.Apply<StrengthPower>(choice, player.Creature, 1, player.Creature, null);
+            await PowerCmd.Apply<VigorPower>(choice, player.Creature, 2, player.Creature, null);
+        }));
+        var history = CombatManager.Instance.History;
+        var historyBeforeExtra = history.Entries.Count();
+        await CombatScenarioContext.PlayCardAsync(struggle, other);
+        var extraHits = history.Entries.Skip(historyBeforeExtra).OfType<DamageReceivedEntry>()
+            .Where(entry => entry.CardSource == struggle && entry.Receiver == other)
+            .Select(entry => entry.Result.TotalDamage);
+        assertions.Equal("struggle_extra_hits_with_doubled_strength_and_vigor", "18,14", string.Join(',', extraHits));
+        assertions.True("struggle_extra_consumes_vigor", player.Creature.GetPower<VigorPower>() is null);
+        assertions.Equal("struggle_second_return_costs_two", 2, struggle.EnergyCost.GetAmountToSpend());
+
+        // Reapplying Labyrinth must not interfere with Gravitation's own return rules.
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
+        {
             await PlayerCmd.SetEnergy(0, player);
         }));
         var xWithoutField = await CombatScenarioContext.AddGeneratedCardToHandAsync<Whirlwind>(combat, player);

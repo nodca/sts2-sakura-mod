@@ -26,7 +26,7 @@ public class Appear() : TransparentCard(2, CardType.Power, CardRarity.Rare, Targ
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
         [SakuraCardHoverTips.TemporaryTipKey];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
-        [new CardsVar("ManifestCards", 1)];
+        [new CardsVar("Spells", 1)];
     protected override IEnumerable<IHoverTip> AdditionalHoverTips =>
     [
         HoverTipFactory.FromCard<SpellHuoShen>(),
@@ -40,7 +40,7 @@ public class Appear() : TransparentCard(2, CardType.Power, CardRarity.Rare, Targ
         await PowerCmd.Apply<AppearPower>(
             choiceContext,
             Owner.Creature,
-            DynamicVars["ManifestCards"].IntValue,
+            DynamicVars["Spells"].IntValue,
             Owner.Creature,
             this,
             false);

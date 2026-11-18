@@ -996,7 +996,7 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void SwordJadeReleaseDoublesAppearManifestCount()
+    public void SwordJadeReleaseDoublesAppearSpellCount()
     {
         foreach (var upgraded in new[] { false, true })
         {
@@ -1006,7 +1006,7 @@ public sealed class CardMechanicsSuite
 
             const int baseCount = 1;
             SakuraReleaseState.Apply(appear, ClassicSwordJadeRelic.ReleaseRate);
-            Assert.True(appear.DynamicVars.TryGetValue("ManifestCards", out var count));
+            Assert.True(appear.DynamicVars.TryGetValue("Spells", out var count));
             Assert.Equal(baseCount * 2, count.IntValue);
             SakuraReleaseState.Reset(appear);
             Assert.Equal(baseCount, count.IntValue);
@@ -1707,9 +1707,10 @@ public sealed class CardMechanicsSuite
             && struggle.CanonicalKeywords.SequenceEqual([SakuraKeywords.Fire])
             && TransparentCard.HasMagicChargeExtraEffect(struggle)
             && struggle.DynamicVars.Damage.IntValue == 14
-            && struggle.DynamicVars.ExtraDamage.IntValue == 8
+            && struggle.DynamicVars["ExtraDamage"] is DamageVar { IntValue: 10 }
             && upgradedStruggle.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
             && upgradedStruggle.DynamicVars.Damage.IntValue == 18
+            && upgradedStruggle.DynamicVars["ExtraDamage"].IntValue == 10
             && !StruggleRules.IsOtherAttack(struggle, struggle)
             && StruggleRules.IsOtherAttack(struggle, new Struggle())
             && StruggleRules.IsOtherAttack(struggle, new Hail())
@@ -1720,7 +1721,7 @@ public sealed class CardMechanicsSuite
             && struggleSource.Contains("GetPower<StrengthPower>()?.Amount", StringComparison.Ordinal)
             && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardEnteredCombat")
             && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardPlayed"),
-            "Expected Struggle to cost 2, deal 14 damage plus 8 with Extra, receive Strength twice, discount for other Attacks this turn, and upgrade to 18 damage.");
+            "Expected Struggle to cost 2, deal 14 (18) damage with a modifier-aware 10-damage follow-up on Extra, receive Strength twice, and discount for other Attacks this turn.");
 
         var blade = new Blade();
         var upgradedBlade = RegressionTestHarness.MutableForCostTest(new Blade());
@@ -1897,8 +1898,10 @@ public sealed class CardMechanicsSuite
             && SakuraTransparentCardCatalog.TransparentCardTypes.Contains(typeof(Appear))
             && appear.EnergyCost.Canonical == 2
             && upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
-            && appear.DynamicVars["ManifestCards"].IntValue == 1
-            && upgradedAppear.DynamicVars["ManifestCards"].IntValue == 1
+            && !appear.DynamicVars.ContainsKey("ManifestCards")
+            && appear.DynamicVars["Spells"].IntValue == 1
+            && upgradedAppear.DynamicVars["Spells"].IntValue == 1
+            && AppearPower.ManifestCards == 1
             && appearSource.Contains("EnergyCost.UpgradeBy(-1)", StringComparison.Ordinal)
             && new AppearPower().Type == PowerType.Buff
             && new AppearPower().StackType == PowerStackType.Counter
@@ -1907,8 +1910,9 @@ public sealed class CardMechanicsSuite
             && AppearPower.SpellTypeFor(SakuraElement.Earth) == typeof(SpellLeiDi)
             && AppearPower.SpellTypeFor(SakuraElement.Wind) == typeof(SpellFengHua)
             && AppearPower.SpellTypeFor(SakuraElement.Water) == typeof(SpellShuiLong)
-            && manifestLoopSource.Contains("AppearPower.AfterManifested(owner, copy)", StringComparison.Ordinal),
-            "Expected Appear to be a 2-cost (1 upgraded) Rare Power that Manifests 1 each turn start and adds the matching element Spell for every Manifested card.");
+            && manifestLoopSource.Contains("AppearPower.AfterManifested(owner, copy)", StringComparison.Ordinal)
+            && !manifestLoopSource.Contains("card is Appear", StringComparison.Ordinal),
+            "Expected Appear to be a 2-cost (1 upgraded) Rare Power that always Manifests 1 at turn start and adds 1 matching element Spell per stack for every Manifested card.");
 
         var repair = new Repair();
         var upgradedRepair = RegressionTestHarness.MutableForCostTest(new Repair());
@@ -2038,10 +2042,11 @@ public sealed class CardMechanicsSuite
             && transparentTimeSource.Contains("PlayerCmd.EndTurn", StringComparison.Ordinal)
             && !clowTimeSource.Contains("PlayerCmd.EndTurn", StringComparison.Ordinal)
             && !sakuraTimeSource.Contains("PlayerCmd.EndTurn", StringComparison.Ordinal)
-            && RegressionTestHarness.DeclaresMethod<TimeStopPower>("PreserveCurrentTurnState")
-            && RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldFlush")
-            && RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldClearBlock")
-            && RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldPlayerResetEnergy")
+            && !typeof(TransparentExtraEffectCard).IsAssignableFrom(typeof(Time))
+            && !RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldFlush")
+            && !RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldClearBlock")
+            && !RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldPlayerResetEnergy")
+            && RegressionTestHarness.DeclaresMethod<TimeStopPower>("AfterTakingExtraTurn")
             && RegressionTestHarness.DeclaresMethod<SakuraElementStatePower>("PreserveForNextTurn")
             && new ClassicTimeStasisPower().StackType == PowerStackType.Counter
             && !clowTimeSource.Contains("GetPowerAmount<ClassicTimeStasisPower>()", StringComparison.Ordinal)
@@ -2050,7 +2055,7 @@ public sealed class CardMechanicsSuite
             && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("ShouldPlayerResetEnergy")
             && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("TryModifyPowerAmountReceived")
             && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("BeforeSideTurnEnd"),
-            "Expected only Transparent Time to end the turn; Clow Time should cost 0, apply 1 Freeze Frame (2 upgraded) that stacks, resolve it at turn end, add no Void, draw on Extra, and keep Exhaust without Retain.");
+            "Expected only Transparent Time to end the turn, with no Extra Effect and a plain one-shot extra turn; Clow Time should cost 0, apply 1 Freeze Frame (2 upgraded) that stacks, resolve it at turn end, add no Void, draw on Extra, and keep Exhaust without Retain.");
     }
 
     [Fact]
@@ -2398,12 +2403,12 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             choice.EnergyCost.Canonical == 1
             && choice.Rarity == CardRarity.Uncommon
-            && choice.DynamicVars.Block.IntValue == 9
-            && choice.DynamicVars.Damage.IntValue == 11
+            && choice.DynamicVars.Block.IntValue == 8
+            && choice.DynamicVars.Damage.IntValue == 10
             && choice.DynamicVars["ManifestCards"].IntValue == 1
             && choice.DynamicVars["RemindCards"].IntValue == 1
-            && upgradedChoice.DynamicVars.Block.IntValue == 12
-            && upgradedChoice.DynamicVars.Damage.IntValue == 15
+            && upgradedChoice.DynamicVars.Block.IntValue == 11
+            && upgradedChoice.DynamicVars.Damage.IntValue == 14
             && upgradedChoice.DynamicVars["ManifestCards"].IntValue == 1
             && upgradedChoice.DynamicVars["RemindCards"].IntValue == 1
             && choiceSource.Contains("if (activation.IsActive)", StringComparison.Ordinal)
@@ -2411,7 +2416,7 @@ public sealed class CardMechanicsSuite
             && choiceSource.Contains("upgradeCopies: false", StringComparison.Ordinal)
             && !choiceSource.Contains("Remind.HasRecallChoices(Owner)", StringComparison.Ordinal)
             && !choiceSource.Contains("SetThisCombat", StringComparison.Ordinal),
-            "Expected Choice to cost 1 and offer 9 (12) Block plus Manifest 1 or 11 (15) random-enemy damage plus Remind 1, both on Extra, even with an empty Memory pile.");
+            "Expected Choice to cost 1 and offer 8 (11) Block plus Manifest 1 or 10 (14) random-enemy damage plus Remind 1, both on Extra, even with an empty Memory pile.");
     }
 
     [Fact]
