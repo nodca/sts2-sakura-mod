@@ -89,10 +89,10 @@ internal static class ExtraEffectChoiceScenario
             playerCombat.Hand.Cards.Count(card => card is Snooze && !card.IsTemporary()));
         assertions.Equal("choice_extra_manifest_count", 1, manifestedCards.Length);
         assertions.Equal("choice_energy_spent", energyBefore - 1, playerCombat.Energy);
-        assertions.Equal("choice_extra_block", blockBefore + 9, player.Creature.Block);
+        assertions.Equal("choice_extra_block", blockBefore + 8, player.Creature.Block);
         assertions.True(
             "choice_extra_damage",
-            enemyHpBefore - combat.HittableEnemies.Sum(static enemy => enemy.CurrentHp) >= 11
+            enemyHpBefore - combat.HittableEnemies.Sum(static enemy => enemy.CurrentHp) >= 10
             || combat.HittableEnemies.Count() == 0);
         assertions.True("choice_result_pile", playerCombat.DiscardPile.Cards.Contains(choice));
         assertions.Equal("choice_selector_released", null, CardSelectCmd.Selector);

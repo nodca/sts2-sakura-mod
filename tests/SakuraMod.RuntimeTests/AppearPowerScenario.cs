@@ -11,7 +11,7 @@ using SakuraMod.TestProtocol;
 namespace SakuraMod.RuntimeTests;
 
 // Appear Manifests at the start of each turn, and every Manifested card brings
-// the Spell of its element; a second copy stacks both halves.
+// the Spell of its element; a second copy adds Spells but never more Manifests.
 internal static class AppearPowerScenario
 {
     public static async Task<Dictionary<string, object?>> ExecuteAsync(
@@ -44,9 +44,10 @@ internal static class AppearPowerScenario
 
         selector.OptionCounts.Clear();
         var (stackedManifested, stackedSpells) = await EndTurnAsync();
-        assertions.Equal("stacked_manifest_count", 2, stackedManifested.Length);
+        assertions.True("second_appear_still_offers_three", selector.OptionCounts.SequenceEqual([3]));
+        assertions.Equal("second_appear_manifest_count", 1, stackedManifested.Length);
         assertions.Equal(
-            "stacked_spells_per_manifest",
+            "second_appear_spells_per_manifest",
             stackedManifested.Sum(card => SakuraActions.ElementsOf(card).Count) * 2,
             stackedSpells.Length);
         assertions.Equal("selector_released", null, CardSelectCmd.Selector);
@@ -54,7 +55,7 @@ internal static class AppearPowerScenario
         RuntimeTestHost.WriteCheckpoint(
             request,
             "appear_power_manifest_verified",
-            "Appear Manifested at turn start, added the matching element Spell per Manifested card, and stacked.");
+            "Appear Manifested at turn start, added the matching element Spell per Manifested card, and stacked only the Spell count.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {

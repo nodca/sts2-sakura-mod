@@ -78,18 +78,21 @@ public sealed class SakuraRelicParitySuite
     }
 
     [Fact]
-    public void FrogRaincoatManifestsOnTheFirstClearCardEachTurn()
+    public void FrogRaincoatManifestsAtTheStartOfTheFirstThreeTurns()
     {
         var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Relics/Models/ClassicFrogRaincoatRelic.cs"));
+        var relic = new ClassicFrogRaincoatRelic();
 
         RegressionTestHarness.Require(
-            new ClassicFrogRaincoatRelic().DynamicVars.Cards.IntValue == 1
-            && source.Contains("SakuraTransparentCardCatalog.IsTransparentCard(play.Card)", StringComparison.Ordinal)
+            relic.DynamicVars.Cards.IntValue == 1
+            && relic.DynamicVars["Turns"].IntValue == 3
+            && RegressionTestHarness.DeclaresMethod<ClassicFrogRaincoatRelic>("BeforeHandDraw")
+            && !RegressionTestHarness.DeclaresMethod<ClassicFrogRaincoatRelic>("AfterCardPlayed")
+            && source.Contains("playerCombat.TurnNumber > DynamicVars[\"Turns\"].IntValue", StringComparison.Ordinal)
             && source.Contains("SakuraManifestLoop.Manifest(Owner, choiceContext", StringComparison.Ordinal)
-            && source.Contains("BeforeSideTurnStart", StringComparison.Ordinal)
             && source.Contains("HoverTipFactory.FromKeyword(SakuraKeywords.Manifest)", StringComparison.Ordinal),
-            "Expected Frog Raincoat to Manifest 1 on the first Clear Card played each turn and expose the Manifest tip.");
+            "Expected Frog Raincoat to Manifest 1 at the start of each of the first 3 turns of combat and expose the Manifest tip.");
     }
 
     [Fact]
