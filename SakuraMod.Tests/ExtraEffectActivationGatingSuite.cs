@@ -97,11 +97,13 @@ public sealed class ExtraEffectActivationGatingSuite
             "Expected every reworked Clow card to stay eligible for the Red Cape's free Extra Effect.");
 
         RegressionTestHarness.Require(
-            ClassicRedCapeRelic.CanActivateFreeExtraEffect(activatedThisCombat: false, ownerMatches: true, isEligible: true)
-            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(activatedThisCombat: true, ownerMatches: true, isEligible: true)
-            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(activatedThisCombat: false, ownerMatches: false, isEligible: true)
-            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(activatedThisCombat: false, ownerMatches: true, isEligible: false),
-            "Expected the Red Cape to free-activate exactly the first eligible Clow Card of the combat.");
+            ClassicRedCapeRelic.CanActivateFreeExtraEffect(turnNumber: 1, activatedTurn: 0, turns: 3, ownerMatches: true, isEligible: true)
+            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(turnNumber: 1, activatedTurn: 1, turns: 3, ownerMatches: true, isEligible: true)
+            && ClassicRedCapeRelic.CanActivateFreeExtraEffect(turnNumber: 2, activatedTurn: 1, turns: 3, ownerMatches: true, isEligible: true)
+            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(turnNumber: 4, activatedTurn: 0, turns: 3, ownerMatches: true, isEligible: true)
+            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(turnNumber: 1, activatedTurn: 0, turns: 3, ownerMatches: false, isEligible: true)
+            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(turnNumber: 1, activatedTurn: 0, turns: 3, ownerMatches: true, isEligible: false),
+            "Expected the Red Cape to free-activate the first eligible Clow Card of each of the first 3 turns.");
     }
 
     private static PileType ResultPileForCardPlay(CardModel card) =>

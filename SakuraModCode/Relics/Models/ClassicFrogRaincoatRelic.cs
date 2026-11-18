@@ -1,3 +1,4 @@
+using STS2RitsuLib.Utils;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
@@ -12,6 +13,12 @@ namespace SakuraMod.SakuraModCode.Relics;
 
 public class ClassicFrogRaincoatRelic : SakuraRelicModel
 {
+    // Retired key, kept registered so older saves still serialize: a multiplayer
+    // loaded-run join sends the save over the network, and SavedProperties maps
+    // every stored name to a net id, throwing on names it no longer knows.
+    private static readonly SavedAttachedState<ClassicFrogRaincoatRelic, bool> LegacyManifestedThisTurn =
+        new("SakuraMod_FrogRaincoatManifestedThisTurn", () => false);
+
     protected override string IconFileName => "frog_raincoat.png";
 
     public override RelicRarity Rarity => RelicRarity.Ancient;
@@ -28,8 +35,8 @@ public class ClassicFrogRaincoatRelic : SakuraRelicModel
 
     public override bool IsAllowed(IRunState runState) => false;
 
-    // Like Ring of the Drake, the first few turns are read from TurnNumber; like
-    // Appear, the Manifested card arrives before the hand is drawn.
+    // Like Ring of the Drake, the first few turns are read from TurnNumber; the
+    // Manifest choices arrive upgraded, before the hand is drawn.
     public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
     {
         if (player != Owner
@@ -38,6 +45,6 @@ public class ClassicFrogRaincoatRelic : SakuraRelicModel
             return;
 
         Flash();
-        await SakuraManifestLoop.Manifest(Owner, choiceContext, DynamicVars.Cards.IntValue);
+        await SakuraManifestLoop.Manifest(Owner, choiceContext, DynamicVars.Cards.IntValue, upgraded: true);
     }
 }

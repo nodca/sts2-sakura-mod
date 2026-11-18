@@ -13,19 +13,19 @@ public class AppearPower : SakuraPowerModel
 {
     protected override string IconFileName => "appear.png";
     public override PowerType Type => PowerType.Buff;
-    // Stacks like Infinite Blades, but only the Spell count grows: the turn-start
-    // Manifest stays at 1 so extra copies add Spells, not choice screens.
+    // Stacks like Infinite Blades: each copy adds one random card per turn and
+    // one more Spell per Manifest.
     public override PowerStackType StackType => PowerStackType.Counter;
-    internal const int ManifestCards = 1;
 
-    // Like Infinite Blades, the turn-start card arrives before the hand is drawn.
+    // Like Infinite Blades, the turn-start cards arrive before the hand is drawn.
+    // They are random rather than Manifested, so no choice screen and no Spells.
     public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
     {
         if (player.Creature != Owner)
             return;
 
         Flash();
-        await SakuraManifestLoop.Manifest(player, choiceContext, ManifestCards);
+        await SakuraManifestLoop.AddRandomTransparentCardsToHand(player, choiceContext, Amount);
     }
 
     // Every Manifested card brings the Spell of its own element, so a Manifest

@@ -28,7 +28,7 @@ namespace SakuraMod.SakuraModCode.Relics;
 
 public class ClassicTeddyBearRelic : SakuraRelicModel
 {
-    private const int Block = 3;
+    private const int Block = 2;
 
     protected override string IconFileName => "teddy_bear.png";
     public override RelicRarity Rarity => RelicRarity.Common;

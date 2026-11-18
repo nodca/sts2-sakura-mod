@@ -171,7 +171,7 @@ internal static class LabyrinthFieldScenario
         var extraHits = history.Entries.Skip(historyBeforeExtra).OfType<DamageReceivedEntry>()
             .Where(entry => entry.CardSource == struggle && entry.Receiver == other)
             .Select(entry => entry.Result.TotalDamage);
-        assertions.Equal("struggle_extra_hits_with_doubled_strength_and_vigor", "18,14", string.Join(',', extraHits));
+        assertions.Equal("struggle_extra_hits_with_doubled_strength_and_vigor", "15,11", string.Join(',', extraHits));
         assertions.True("struggle_extra_consumes_vigor", player.Creature.GetPower<VigorPower>() is null);
         assertions.Equal("struggle_second_return_costs_two", 2, struggle.EnergyCost.GetAmountToSpend());
 

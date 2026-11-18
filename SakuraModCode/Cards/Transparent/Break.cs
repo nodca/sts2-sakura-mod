@@ -27,10 +27,10 @@ public class Break() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity
     {
         foreach (var target in PlayTargets(play))
         {
-            if (target.Block > 0)
-                await CreatureCmd.LoseBlock(choiceContext, target, target.Block, Owner.Creature);
-
-            await DealDamage(choiceContext, play, target, DynamicVars.Damage.IntValue, hitVfx: SakuraNativeHitFx.RockShatter, hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx);
+            // Doubled instead of stripping Block, so the payoff is capped by the
+            // card's own damage rather than by how much Block the enemy stacked.
+            var damage = DynamicVars.Damage.IntValue * (target.Block > 0 ? 2 : 1);
+            await DealDamage(choiceContext, play, target, damage, hitVfx: SakuraNativeHitFx.RockShatter, hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx);
             var vulnerable = DynamicVars.Vulnerable.IntValue + (activation.IsActive ? DynamicVars["ExtraVulnerable"].IntValue : 0);
             await PowerCmd.Apply<VulnerablePower>(choiceContext, target, vulnerable, Owner.Creature, this, false);
         }
