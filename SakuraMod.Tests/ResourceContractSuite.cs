@@ -3200,9 +3200,6 @@ public sealed class ResourceContractSuite
             ? card.IndexOf("if (power is not null)", excludeIndex, StringComparison.Ordinal)
             : -1;
         var openWellIndex = card.IndexOf("cues.OpenWell()", StringComparison.Ordinal);
-        var extraIndex = card.IndexOf("ApplyExtraEffect(choiceContext, cues)", StringComparison.Ordinal);
-        var moveIndex = card.IndexOf("MoveExistingCardToHand", StringComparison.Ordinal);
-        var pullIndex = card.IndexOf("cues.PullFromPile", StringComparison.Ordinal);
         var energyIndex = power.IndexOf("InvokeEnergyCostChanged()", StringComparison.Ordinal);
         var returnedIndex = power.IndexOf("GravitationHoldVisual.NotifyReturned", StringComparison.Ordinal);
 
@@ -3231,7 +3228,7 @@ public sealed class ResourceContractSuite
             && !hold.Contains("ResourceLoader.Load", StringComparison.Ordinal)
             && !card.Contains("skipVisuals", StringComparison.Ordinal)
             && !power.Contains("skipVisuals", StringComparison.Ordinal)
-            && card.Contains("MoveExistingCardToHand", StringComparison.Ordinal)
+            && !card.Contains("ApplyExtraEffect", StringComparison.Ordinal)
             && card.Contains("GravitationVfx.PlayOrResolveAsync", StringComparison.Ordinal)
             && !card.Contains("PlayGravitation", StringComparison.Ordinal)
             && power.Contains("GravitationHoldVisual.Mount(Owner)", StringComparison.Ordinal)
@@ -3240,9 +3237,6 @@ public sealed class ResourceContractSuite
             && excludeIndex > applyIndex
             && powerGuardIndex > excludeIndex
             && openWellIndex > powerGuardIndex
-            && extraIndex > openWellIndex
-            && moveIndex >= 0
-            && pullIndex > moveIndex
             && energyIndex >= 0
             && returnedIndex > energyIndex,
             "Expected Gravitation to open a caster-foot well through a short cel session and a Power-tied persist owner, and overlay native hand motion.");
