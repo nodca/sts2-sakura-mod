@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Hooks;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
@@ -22,19 +23,24 @@ public class Break() : TransparentExtraEffectCard(1, CardType.Attack, CardRarity
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DamageVar(8, ValueProp.Move), new PowerVar<VulnerablePower>(1), new DynamicVar("ExtraVulnerable", 3)];
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [HoverTipFactory.FromPower<ArtifactPower>()];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         foreach (var target in PlayTargets(play))
         {
             // Doubled instead of stripping Block, so the payoff is capped by the
-            // card's own damage rather than by how much Block the enemy stacked.
-            var damage = DynamicVars.Damage.IntValue * (target.Block > 0 ? 2 : 1);
+            // card's own damage. Artifact counts too: it would cancel this card's
+            // Vulnerable, so the hit makes up for it.
+            var damage = DynamicVars.Damage.IntValue * (IsGuarded(target) ? 2 : 1);
             await DealDamage(choiceContext, play, target, damage, hitVfx: SakuraNativeHitFx.RockShatter, hitTmpSfx: SakuraNativeHitFx.BluntTmpSfx);
             var vulnerable = DynamicVars.Vulnerable.IntValue + (activation.IsActive ? DynamicVars["ExtraVulnerable"].IntValue : 0);
             await PowerCmd.Apply<VulnerablePower>(choiceContext, target, vulnerable, Owner.Creature, this, false);
         }
     }
+
+    internal static bool IsGuarded(Creature target) =>
+        target.Block > 0 || target.HasPower<ArtifactPower>();
 
     protected override void OnUpgrade()
     {

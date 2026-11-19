@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Cards;
 
@@ -17,6 +18,19 @@ public class AppearPower : SakuraPowerModel
     // one more Spell per Manifest.
     public override PowerStackType StackType => PowerStackType.Counter;
 
+    // Stacks from upgraded Appear add upgraded cards; the rest stay unupgraded.
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar(UpgradedVar, 0)];
+
+    internal const string UpgradedVar = "Upgraded";
+
+    internal int UpgradedStacks => Math.Min(DynamicVars[UpgradedVar].IntValue, Amount);
+
+    public void AddUpgradedStacks(int stacks)
+    {
+        DynamicVars[UpgradedVar].BaseValue += stacks;
+        InvokeDisplayAmountChanged();
+    }
+
     // Like Infinite Blades, the turn-start cards arrive before the hand is drawn.
     // They are random rather than Manifested, so no choice screen and no Spells.
     public override async Task BeforeHandDraw(Player player, PlayerChoiceContext choiceContext, ICombatState combatState)
@@ -25,7 +39,7 @@ public class AppearPower : SakuraPowerModel
             return;
 
         Flash();
-        await SakuraManifestLoop.AddRandomTransparentCardsToHand(player, choiceContext, Amount);
+        await SakuraManifestLoop.AddRandomTransparentCardsToHand(player, choiceContext, Amount, UpgradedStacks);
     }
 
     // Every Manifested card brings the Spell of its own element, so a Manifest

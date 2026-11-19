@@ -129,16 +129,12 @@ internal static class LabyrinthFieldScenario
         assertions.True("gravitation_after_labyrinth_returns_to_hand", returned.Pile?.Type == PileType.Hand);
         assertions.Equal("gravitation_return_cost_still_increases", returnCost + 1, returned.EnergyCost.GetWithModifiers(CostModifiers.All));
 
-        var excluded = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowMaze>(combat, player);
         var exhausted = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowMaze>(combat, player);
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, choice =>
         {
-            player.Creature.GetPower<GravitationHoldPower>()!.ExcludeSource(excluded);
             exhausted.AddKeyword(CardKeyword.Exhaust);
             return Task.CompletedTask;
         }));
-        await CombatScenarioContext.PlayCardAsync(excluded);
-        assertions.True("gravitation_excluded_card_normally_discards", excluded.Pile?.Type == PileType.Discard);
         await CombatScenarioContext.PlayCardAsync(exhausted);
         assertions.True("exhaust_still_takes_priority", exhausted.Pile?.Type == PileType.Exhaust);
 
@@ -146,6 +142,30 @@ internal static class LabyrinthFieldScenario
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
         {
             await PowerCmd.Remove(player.Creature.GetPower<LabyrinthPower>()!);
+            foreach (var enemy in combat.HittableEnemies)
+                await CreatureCmd.GainBlock(enemy, 100, ValueProp.Unpowered, null, false);
+        }));
+        // A Gravitation played into an active field stacks its damage and returns itself,
+        // so each replay hits harder: 3, then 6.
+        var enemies = combat.HittableEnemies.ToArray();
+        var durabilityBefore = enemies.Select(enemy => enemy.CurrentHp + enemy.Block).ToArray();
+        var gravitation = await CombatScenarioContext.AddGeneratedCardToHandAsync<Gravitation>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(gravitation);
+        assertions.True("second_gravitation_returns_to_hand", gravitation.Pile?.Type == PileType.Hand);
+        await CombatScenarioContext.PlayCardAsync(gravitation);
+        assertions.True("replayed_gravitation_returns_again", gravitation.Pile?.Type == PileType.Hand);
+        assertions.Equal(
+            "gravitation_damage_stacks",
+            6,
+            player.Creature.GetPower<GravitationHoldPower>()!.DynamicVars[GravitationHoldPower.ReturnDamageVar].IntValue);
+        assertions.True(
+            "gravitation_returns_hit_all_enemies_with_stacked_damage",
+            enemies.Select((enemy, i) => durabilityBefore[i] - (enemy.CurrentHp + enemy.Block)).All(lost => lost == 3 + 6));
+        // Turn the return damage off and clear Gravitation so later returns keep hand space.
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
+        {
+            player.Creature.GetPower<GravitationHoldPower>()!.DynamicVars[GravitationHoldPower.ReturnDamageVar].BaseValue = 0;
+            await CardCmd.Exhaust(choice, gravitation, skipVisuals: true);
             await CreatureCmd.GainBlock(other, 100, ValueProp.Unpowered, null, false);
         }));
         var struggle = await CombatScenarioContext.AddGeneratedCardToHandAsync<Struggle>(combat, player);

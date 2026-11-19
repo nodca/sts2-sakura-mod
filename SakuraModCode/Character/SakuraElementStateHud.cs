@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.HoverTips;
@@ -47,16 +48,21 @@ internal static class SakuraElementFacetProjection
 /// <summary>
 /// Syaoran's Lasin board above Kinomoto Sakura's energy counter: the one persistent
 /// presentation of the four element states. Each medallion shows whether its state
-/// is up, how many turns it has left or that it is permanent, and whether a
-/// sovereignty locks it. Trigger beams on the stage leave from these medallions.
+/// is up, that it is permanent or that it was stacked to last more than one turn,
+/// and whether a sovereignty locks it. Trigger beams on the stage leave from these medallions.
 /// </summary>
 internal static class SakuraElementStateHud
 {
     internal const string ScenePath = MainFile.ResPath + "/scenes/combat/sakura_element_state_hud.tscn";
+    /// <summary>On-screen scale of the board; layout, art and hover stay authored at full size.</summary>
+    internal const float MountScale = 0.8f;
     private const float MountHorizontalOffset = 8f;
     private const float MountGap = 12f;
     /// <summary>Transparent margin around the board that only holds medallion glow.</summary>
     private const float BoardMargin = 16f;
+    /// <summary>Board opacity while a card or potion picks a single target, so bars beneath read through.</summary>
+    internal const float TargetingAlpha = 0.25f;
+    private const float TargetingFadeDuration = 0.12f;
     private const float LightUpDuration = 0.45f;
     private const float FlashDuration = 0.36f;
     private static readonly Color LockedPlateTint = new(0.62f, 0.64f, 0.66f, 1f);
@@ -82,10 +88,11 @@ internal static class SakuraElementStateHud
         var scene = ResourceLoader.Load<PackedScene>(ScenePath)
             ?? throw new InvalidOperationException($"Could not load Kinomoto Sakura element HUD scene: {ScenePath}");
         var root = scene.Instantiate<Control>();
+        root.Scale = Vector2.One * MountScale;
         // The gap is measured from the visible board, not from the glow margin around it.
         root.Position = new Vector2(
-            ((energyCounter.Size.X - root.Size.X) * 0.5f) + MountHorizontalOffset,
-            -root.Size.Y + BoardMargin - MountGap);
+            ((energyCounter.Size.X - (root.Size.X * MountScale)) * 0.5f) + MountHorizontalOffset,
+            -((root.Size.Y - BoardMargin) * MountScale) - MountGap);
         energyCounter.AddChildSafely(root);
 
         var state = new HudState(player, combatState, root);
@@ -144,6 +151,13 @@ internal static class SakuraElementStateHud
             && state.TryGetMedallionCenter(element, out globalPosition);
     }
 
+    /// <summary>
+    /// A single-turn state is the norm, so its "1" adds nothing; the count shows only
+    /// when a replayed element card stacked the state past one turn.
+    /// </summary>
+    internal static bool ShowsTurnCount(bool isActive, bool isPermanent, int turns) =>
+        isActive && !isPermanent && turns >= 2;
+
     private sealed class HudState : IDisposable
     {
         private readonly Player _player;
@@ -156,6 +170,8 @@ internal static class SakuraElementStateHud
         private SakuraElementSet _lockedStates;
         private SakuraElement? _hoveredFacet;
         private Tween? _dialTween;
+        private Tween? _fadeTween;
+        private readonly NTargetManager? _targetManager;
         private bool _disposed;
 
         public HudState(Player player, CombatState combatState, Control root)
@@ -184,6 +200,13 @@ internal static class SakuraElementStateHud
             _creature.PowerRemoved += OnPowerRemoved;
             _combatState.CreaturesChanged += OnCreaturesChanged;
             RebindEnemies();
+            _targetManager = NRun.Instance?.GlobalUi?.TargetManager;
+            if (_targetManager is not null)
+            {
+                _targetManager.TargetingBegan += OnTargetingBegan;
+                _targetManager.TargetingEnded += OnTargetingEnded;
+                SetTargetingFade(_targetManager.IsInSelection, animate: false);
+            }
         }
 
         public Control Root { get; }
@@ -317,10 +340,48 @@ internal static class SakuraElementStateHud
             _observedEnemies.Clear();
             Root.GuiInput -= OnGuiInput;
             Root.MouseExited -= OnMouseExited;
+            if (_targetManager is not null && GodotObject.IsInstanceValid(_targetManager))
+            {
+                _targetManager.TargetingBegan -= OnTargetingBegan;
+                _targetManager.TargetingEnded -= OnTargetingEnded;
+            }
             HideHoverTip();
             KillTween(ref _dialTween);
+            KillTween(ref _fadeTween);
             foreach (var slot in _slots)
                 slot.Dispose();
+        }
+
+        private void OnTargetingBegan() => SetTargetingFade(true, animate: true);
+
+        private void OnTargetingEnded() => SetTargetingFade(false, animate: true);
+
+        /// <summary>
+        /// While a single target is being picked the board fades and lets the pointer
+        /// through, so a health bar or Block under it can be read and hovered.
+        /// </summary>
+        private void SetTargetingFade(bool targeting, bool animate)
+        {
+            if (_disposed)
+                return;
+
+            Root.MouseFilter = targeting ? Control.MouseFilterEnum.Ignore : Control.MouseFilterEnum.Stop;
+            if (targeting)
+            {
+                _hoveredFacet = null;
+                HideHoverTip();
+            }
+
+            KillTween(ref _fadeTween);
+            var alpha = targeting ? TargetingAlpha : 1f;
+            if (!animate || !Root.IsInsideTree() || !SakuraModConfig.IsCardVfxEnabled())
+            {
+                Root.Modulate = Root.Modulate with { A = alpha };
+                return;
+            }
+
+            _fadeTween = Root.CreateTween();
+            _fadeTween.TweenProperty(Root, "modulate:a", alpha, TargetingFadeDuration);
         }
 
         private void OnGuiInput(InputEvent inputEvent)
@@ -444,7 +505,7 @@ internal static class SakuraElementStateHud
             _lit.Visible = isActive;
             _glow.Visible = isActive;
             _permanentRing.Visible = isActive && isPermanent;
-            _turns.Visible = isActive && !isPermanent;
+            _turns.Visible = ShowsTurnCount(isActive, isPermanent, turns);
             _turns.Text = turns.ToString();
             _crack.Visible = isLocked;
             _plate.Modulate = isLocked && !isActive ? LockedPlateTint : Colors.White;

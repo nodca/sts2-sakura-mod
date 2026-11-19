@@ -928,27 +928,36 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void TrueOrFalseUpgradeRemovesExhaustWithoutIncreasingValues()
+    public void TrueOrFalseIsAForgottenDamageAndRecallBlockPower()
     {
         var baseCard = new TrueOrFalse();
         var upgradedCard = RegressionTestHarness.MutableForCostTest(new TrueOrFalse());
         upgradedCard.UpgradeInternal();
-        var upgradedDrawChoice = RegressionTestHarness.MutableForCostTest(new TrueOrFalseDrawChoice());
-        upgradedDrawChoice.UpgradeInternal();
-        var upgradedEnergyChoice = RegressionTestHarness.MutableForCostTest(new TrueOrFalseEnergyChoice());
-        upgradedEnergyChoice.UpgradeInternal();
+        var lifecycleSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraGeneratedCardLifecycle.cs"));
+        var forgottenSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraForgotten.cs"));
+        var memorySource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Cards/SakuraMemoryPile.cs"));
 
         RegressionTestHarness.Require(
-            baseCard.Keywords.Contains(CardKeyword.Exhaust)
-            && !upgradedCard.Keywords.Contains(CardKeyword.Exhaust)
-            && baseCard.DynamicVars.Cards.IntValue == 2
-            && upgradedCard.DynamicVars.Cards.IntValue == 2
-            && baseCard.DynamicVars.Energy.IntValue == 1
-            && upgradedCard.DynamicVars.Energy.IntValue == 1
-            && upgradedDrawChoice.DynamicVars.Cards.IntValue == 2
-            && upgradedEnergyChoice.DynamicVars.Energy.IntValue == 1
-            && upgradedEnergyChoice.CanonicalKeywords.Contains(SakuraKeywords.Stabilize),
-            "Expected True or False to Exhaust only before upgrading and keep its 2-card/1-Energy values after upgrading.");
+            baseCard.Type == CardType.Power
+            && baseCard.Rarity == CardRarity.Rare
+            && baseCard.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
+            && upgradedCard.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
+            && !baseCard.Keywords.Contains(CardKeyword.Exhaust)
+            && !baseCard.CanonicalKeywords.Contains(SakuraKeywords.Stabilize)
+            && baseCard.DynamicVars[TrueOrFalse.DamageVar].IntValue == 8
+            && upgradedCard.DynamicVars[TrueOrFalse.DamageVar].IntValue == 10
+            && baseCard.DynamicVars[TrueOrFalse.BlockVar].IntValue == 5
+            && upgradedCard.DynamicVars[TrueOrFalse.BlockVar].IntValue == 7
+            && new TrueOrFalsePower().StackType == PowerStackType.Counter
+            && new TrueOrFalsePower().DynamicVars.ContainsKey(TrueOrFalsePower.BlockVar)
+            && RegressionTestHarness.DeclaresMethod<TrueOrFalsePower>("AfterCardDrawn")
+            && lifecycleSource.Contains("TrueOrFalsePower.AfterForgottenCardInHand(card)", StringComparison.Ordinal)
+            && forgottenSource.Contains("TrueOrFalsePower.AfterForgottenCardInHand(card)", StringComparison.Ordinal)
+            && memorySource.Contains("TrueOrFalsePower.AfterRecalledFromMemory(player, recalled.Count)", StringComparison.Ordinal),
+            "Expected True or False to be a 1-cost rare Power: 8 (10) damage to a random enemy whenever a Forgotten card appears in hand, and 5 (7) Block per card recalled from Memory.");
     }
 
     [Fact]
@@ -1001,8 +1010,8 @@ public sealed class CardMechanicsSuite
             && gale.DynamicVars["Cards"].IntValue == 3
             && gale.DynamicVars["ExtraCopies"].IntValue == 3
             && reflect.DynamicVars.Block.IntValue == 7
-            && trueOrFalse.DynamicVars.Cards.IntValue == 3
-            && trueOrFalse.DynamicVars.Energy.IntValue == 1
+            && trueOrFalse.DynamicVars[TrueOrFalse.DamageVar].IntValue == 12
+            && trueOrFalse.DynamicVars[TrueOrFalse.BlockVar].IntValue == 7
             && gale.Keywords.Contains(CardKeyword.Exhaust)
             && gale.Keywords.Contains(CardKeyword.Ethereal),
             "Expected Release to scale every Transparent Card dynamic value using the existing floor rule.");
@@ -1021,8 +1030,8 @@ public sealed class CardMechanicsSuite
             && gale.DynamicVars["Cards"].IntValue == 2
             && gale.DynamicVars["ExtraCopies"].IntValue == 2
             && reflect.DynamicVars.Block.IntValue == 5
-            && trueOrFalse.DynamicVars.Cards.IntValue == 2
-            && trueOrFalse.DynamicVars.Energy.IntValue == 1
+            && trueOrFalse.DynamicVars[TrueOrFalse.DamageVar].IntValue == 8
+            && trueOrFalse.DynamicVars[TrueOrFalse.BlockVar].IntValue == 5
             && !gale.Keywords.Contains(CardKeyword.Exhaust)
             && !gale.Keywords.Contains(CardKeyword.Ethereal),
             "Expected Release reset to restore Transparent Card values and temporary keywords.");
@@ -1178,11 +1187,11 @@ public sealed class CardMechanicsSuite
             System.Text.RegularExpressions.Regex.Matches(
                 powerSources,
                 "CreatureCmd\\.GainBlock\\([^;]*SakuraPowerValueProps\\.Block",
-                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 8
+                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 9
             && System.Text.RegularExpressions.Regex.Matches(
                 powerSources,
                 "CreatureCmd\\.GainBlock\\(",
-                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 8,
+                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 9,
             "Expected every SakuraMod power-generated Block call to use the shared unpowered Block contract without a card source.");
         RegressionTestHarness.Require(
             transparentPowersSource.Contains("SakuraPowerValueProps.Damage", StringComparison.Ordinal)
@@ -1255,8 +1264,15 @@ public sealed class CardMechanicsSuite
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("TryModifyEnergyCostInCombat")
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterSideTurnEnd")
             && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterApplied")
-            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterRemoved"),
-            "Expected Gravitation to be a 0-cost rare Wind replay engine whose returned cards cost 1 more each time and which gains Retain on upgrade.");
+            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterRemoved")
+            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterCardPlayed")
+            && gravitation.DynamicVars[GravitationHoldPower.ReturnDamageVar].IntValue == 3
+            && upgradedGravitation.DynamicVars[GravitationHoldPower.ReturnDamageVar].IntValue == 4
+            && new GravitationHoldPower().DynamicVars.ContainsKey(GravitationHoldPower.ReturnDamageVar)
+            && GravitationHoldPower.IsLastPlay(0, 1)
+            && !GravitationHoldPower.IsLastPlay(0, 2)
+            && GravitationHoldPower.IsLastPlay(1, 2),
+            "Expected Gravitation to be a 0-cost rare Wind replay engine whose returned cards cost 1 more each time and deal 3 (4 upgraded) damage to all enemies once per return, and which gains Retain on upgrade.");
 
         RegressionTestHarness.Require(
             SakuraActions.ElementSetOf(new Gale()) == SakuraElementSet.Wind
@@ -1551,7 +1567,9 @@ public sealed class CardMechanicsSuite
         var breakSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
             "SakuraModCode/Cards/Transparent/Break.cs"));
         RegressionTestHarness.Require(
-            breakSource.Contains("DynamicVars.Damage.IntValue * (target.Block > 0 ? 2 : 1)", StringComparison.Ordinal)
+            breakSource.Contains("DynamicVars.Damage.IntValue * (IsGuarded(target) ? 2 : 1)", StringComparison.Ordinal)
+            && breakSource.Contains("target.Block > 0 || target.HasPower<ArtifactPower>()", StringComparison.Ordinal)
+            && breakSource.Contains("HoverTipFactory.FromPower<ArtifactPower>()", StringComparison.Ordinal)
             && !breakSource.Contains("LoseBlock", StringComparison.Ordinal)
             && breakCard.DynamicVars.Damage.IntValue == 8
             && breakCard.DynamicVars.Vulnerable.IntValue == 1
@@ -1559,7 +1577,7 @@ public sealed class CardMechanicsSuite
             && upgradedBreak.DynamicVars.Damage.IntValue == 10
             && upgradedBreak.DynamicVars.Vulnerable.IntValue == 2
             && upgradedBreak.DynamicVars["ExtraVulnerable"].IntValue == 3,
-            "Expected Break to deal 8 damage (doubled against a Blocking enemy, without stripping Block) and apply 1 Vulnerable (3 more with Extra), upgrading to 10 damage and 2 Vulnerable.");
+            "Expected Break to deal 8 damage (doubled against an enemy with Block or Artifact, without stripping Block) and apply 1 Vulnerable (3 more with Extra), upgrading to 10 damage and 2 Vulnerable.");
 
         var upgradedHail = RegressionTestHarness.MutableForCostTest(new Hail());
         upgradedHail.UpgradeInternal();
@@ -1841,12 +1859,14 @@ public sealed class CardMechanicsSuite
             && SakuraTransparentCardCatalog.TransparentCardTypes.Count == 36
             && SakuraTransparentCardCatalog.TransparentCardTypes.Contains(typeof(Appear))
             && appear.EnergyCost.Canonical == 2
-            && upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
+            && upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
             && !appear.DynamicVars.ContainsKey("ManifestCards")
             && appear.DynamicVars.Cards.IntValue == 1
             && upgradedAppear.DynamicVars.Cards.IntValue == 1
             && !appear.DynamicVars.ContainsKey("Spells")
-            && appearSource.Contains("EnergyCost.UpgradeBy(-1)", StringComparison.Ordinal)
+            && !appearSource.Contains("EnergyCost.UpgradeBy", StringComparison.Ordinal)
+            && appearSource.Contains("power?.AddUpgradedStacks(DynamicVars.Cards.IntValue)", StringComparison.Ordinal)
+            && new AppearPower().DynamicVars.ContainsKey(AppearPower.UpgradedVar)
             && new AppearPower().Type == PowerType.Buff
             && new AppearPower().StackType == PowerStackType.Counter
             && RegressionTestHarness.DeclaresMethod<AppearPower>("BeforeHandDraw")
@@ -1856,10 +1876,11 @@ public sealed class CardMechanicsSuite
             && AppearPower.SpellTypeFor(SakuraElement.Water) == typeof(SpellShuiLong)
             && manifestLoopSource.Contains("AppearPower.AfterManifested(owner, copy)", StringComparison.Ordinal)
             && !manifestLoopSource.Contains("card is Appear", StringComparison.Ordinal)
-            && appearPowerSource.Contains("AddRandomTransparentCardsToHand(player, choiceContext, Amount)", StringComparison.Ordinal)
+            && appearPowerSource.Contains("AddRandomTransparentCardsToHand(player, choiceContext, Amount, UpgradedStacks)", StringComparison.Ordinal)
             && !appearPowerSource.Contains("SakuraManifestLoop.Manifest(", StringComparison.Ordinal)
-            && RandomTransparentHelperSkipsAppearSpells(manifestLoopSource),
-            "Expected Appear to be a 2-cost (1 upgraded) Rare Power that adds 1 random Forgotten Transparent card per stack at turn start (not a Manifest) and adds 1 matching element Spell per stack for every Manifested card.");
+            && RandomTransparentHelperSkipsAppearSpells(manifestLoopSource)
+            && manifestLoopSource.Contains("if (i < upgradedCount)", StringComparison.Ordinal),
+            "Expected Appear to be a 2-cost Rare Power (upgrade: its stacks add upgraded cards) that adds 1 random Forgotten Transparent card per stack at turn start (not a Manifest) and adds 1 matching element Spell per stack for every Manifested card.");
 
         var repair = new Repair();
         var upgradedRepair = RegressionTestHarness.MutableForCostTest(new Repair());

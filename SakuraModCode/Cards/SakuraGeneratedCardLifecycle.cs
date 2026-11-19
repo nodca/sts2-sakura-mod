@@ -262,6 +262,9 @@ internal static class SakuraGeneratedCardLifecycle
         if (temporaryGranted && context is not null)
             await TriggerTemporaryGranted(context, card);
 
+        if (card.IsTemporary() && card.Pile?.Type == PileType.Hand)
+            await TrueOrFalsePower.AfterForgottenCardInHand(card);
+
         if (refreshGeneratedTransparentHandVisual)
             RefreshGeneratedTransparentHandVisual(card);
     }

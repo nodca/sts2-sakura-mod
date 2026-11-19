@@ -41,6 +41,8 @@ public class Mirror() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
         if (activation.IsActive)
             amount += DynamicVars["ExtraRepeat"].IntValue;
         card.BaseReplayCount += amount;
+        // The hand card ripples so it can be found in a crowded hand; presentation only.
+        SakuraMirrorArrivalOverlay.Play(card);
         CardCmd.Preview(card);
     }
 
