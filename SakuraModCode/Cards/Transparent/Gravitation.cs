@@ -22,7 +22,7 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class Gravitation() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class Gravitation() : TransparentCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
@@ -43,37 +43,12 @@ public class Gravitation() : TransparentExtraEffectCard(0, CardType.Skill, CardR
             power?.AddReturnDamage(DynamicVars[GravitationHoldPower.ReturnDamageVar].IntValue);
             if (power is not null)
                 cues.OpenWell();
-            if (activation.IsActive)
-                await ApplyExtraEffect(choiceContext, cues);
         });
-    }
-
-    private async Task ApplyExtraEffect(PlayerChoiceContext choiceContext, GravitationVfx.Cues cues)
-    {
-        await ChooseFromPileToHand(choiceContext, PileType.Discard, cues);
-        await ChooseFromPileToHand(choiceContext, PileType.Draw, cues);
     }
 
     protected override void OnUpgrade()
     {
         AddKeywordIfMissing(CardKeyword.Retain);
         DynamicVars[GravitationHoldPower.ReturnDamageVar].UpgradeValueBy(1);
-    }
-
-    private async Task ChooseFromPileToHand(
-        PlayerChoiceContext choiceContext,
-        PileType pileType,
-        GravitationVfx.Cues cues)
-    {
-        var card = await SakuraActions.SelectFromCards(
-            this,
-            choiceContext,
-            CardPile.Get(pileType, Owner)!.Cards,
-            cancelable: false);
-        if (card is not null)
-        {
-            await SakuraActions.MoveExistingCardToHand(this, card);
-            cues.PullFromPile(pileType, card);
-        }
     }
 }

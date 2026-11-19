@@ -1306,7 +1306,7 @@ public sealed class CardMechanicsSuite
             && gravitation.Type == CardType.Skill
             && gravitation.TargetType == TargetType.Self
             && gravitation.CanonicalKeywords.SequenceEqual([SakuraKeywords.Wind])
-            && TransparentCard.HasMagicChargeExtraEffect(gravitation)
+            && !TransparentCard.HasMagicChargeExtraEffect(gravitation)
             && upgradedGravitation.Keywords.Contains(CardKeyword.Retain)
             && new GravitationHoldPower().StackType == PowerStackType.Single
             && GravitationHoldPower.TryIncreaseReturnedCardCost(gravitation, 1, 0, out var firstReturnCost)
@@ -1332,7 +1332,7 @@ public sealed class CardMechanicsSuite
             && File.ReadAllText(RegressionTestHarness.FindRepoFile(
                     "SakuraModCode/Powers/Transparent/GravitationHoldPower.cs"))
                 .Contains("&& card is not Gravitation;", StringComparison.Ordinal),
-            "Expected Gravitation to be a 0-cost rare Wind replay engine (Gravitation itself never returns) whose returned cards cost 1 more each time and deal 3 (4 upgraded) damage times that card's return count this turn to all enemies, and which gains Retain on upgrade.");
+            "Expected Gravitation to be a 0-cost rare Wind replay engine (Gravitation itself never returns) whose returned cards cost 1 more each time and deal 3 (4 upgraded) damage times that card's return count this turn to all enemies, has no Extra Effect, and gains Retain on upgrade.");
 
         RegressionTestHarness.Require(
             SakuraActions.ElementSetOf(new Gale()) == SakuraElementSet.Wind

@@ -17,7 +17,6 @@ public sealed class ExtraEffectTransactionSuite
         typeof(Exchange),
         typeof(Flight),
         typeof(Gale),
-        typeof(Gravitation),
         typeof(Lucid),
         typeof(Mirage),
         typeof(Mirror),
