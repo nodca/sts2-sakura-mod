@@ -145,27 +145,32 @@ internal static class LabyrinthFieldScenario
             foreach (var enemy in combat.HittableEnemies)
                 await CreatureCmd.GainBlock(enemy, 100, ValueProp.Unpowered, null, false);
         }));
-        // A Gravitation played into an active field stacks its damage and returns itself,
-        // so each replay hits harder: 3, then 6.
+        // A Gravitation played into an active field stacks its base damage but never returns itself;
+        // a card returned twice hits for 1x then 2x that base.
         var enemies = combat.HittableEnemies.ToArray();
-        var durabilityBefore = enemies.Select(enemy => enemy.CurrentHp + enemy.Block).ToArray();
         var gravitation = await CombatScenarioContext.AddGeneratedCardToHandAsync<Gravitation>(combat, player);
         await CombatScenarioContext.PlayCardAsync(gravitation);
-        assertions.True("second_gravitation_returns_to_hand", gravitation.Pile?.Type == PileType.Hand);
-        await CombatScenarioContext.PlayCardAsync(gravitation);
-        assertions.True("replayed_gravitation_returns_again", gravitation.Pile?.Type == PileType.Hand);
+        assertions.True("gravitation_never_returns_itself", gravitation.Pile?.Type == PileType.Discard);
         assertions.Equal(
-            "gravitation_damage_stacks",
-            6,
+            "gravitation_base_damage_stacks",
+            3,
             player.Creature.GetPower<GravitationHoldPower>()!.DynamicVars[GravitationHoldPower.ReturnDamageVar].IntValue);
+        var durabilityBefore = enemies.Select(enemy => enemy.CurrentHp + enemy.Block).ToArray();
+        var looped = await CombatScenarioContext.AddGeneratedCardToHandAsync<DefendIronclad>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(looped);
+        assertions.True("looped_card_returns", looped.Pile?.Type == PileType.Hand);
         assertions.True(
-            "gravitation_returns_hit_all_enemies_with_stacked_damage",
+            "first_return_hits_for_base",
+            enemies.Select((enemy, i) => durabilityBefore[i] - (enemy.CurrentHp + enemy.Block)).All(lost => lost == 3));
+        await CombatScenarioContext.PlayCardAsync(looped);
+        assertions.True(
+            "second_return_hits_for_double_base",
             enemies.Select((enemy, i) => durabilityBefore[i] - (enemy.CurrentHp + enemy.Block)).All(lost => lost == 3 + 6));
-        // Turn the return damage off and clear Gravitation so later returns keep hand space.
+        // Turn the return damage off and clear the looped card so later returns keep hand space.
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
         {
             player.Creature.GetPower<GravitationHoldPower>()!.DynamicVars[GravitationHoldPower.ReturnDamageVar].BaseValue = 0;
-            await CardCmd.Exhaust(choice, gravitation, skipVisuals: true);
+            await CardCmd.Exhaust(choice, looped, skipVisuals: true);
             await CreatureCmd.GainBlock(other, 100, ValueProp.Unpowered, null, false);
         }));
         var struggle = await CombatScenarioContext.AddGeneratedCardToHandAsync<Struggle>(combat, player);

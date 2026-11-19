@@ -45,8 +45,10 @@ public class GravitationHoldPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
+    // Gravitation never returns itself: its copies only add base damage, so the
+    // per-return multiplier cannot compound with a self-replaying field.
     internal bool CanReturnPlayedCard(CardModel card) =>
-        Amount > 0 && card.Owner?.Creature == Owner && !card.EnergyCost.CostsX;
+        Amount > 0 && card.Owner?.Creature == Owner && !card.EnergyCost.CostsX && card is not Gravitation;
 
     public override Task AfterApplied(Creature? applier, CardModel? cardSource)
     {
@@ -124,7 +126,7 @@ public class GravitationHoldPower : SakuraPowerModel
         if (!IsLastPlay(cardPlay.PlayIndex, cardPlay.PlayCount) || !_pendingReturnDamage.Remove(cardPlay.Card))
             return;
 
-        var damage = DynamicVars[ReturnDamageVar].IntValue;
+        var damage = ReturnDamage(DynamicVars[ReturnDamageVar].IntValue, _returnCounts.GetValueOrDefault(cardPlay.Card));
         if (damage <= 0 || CombatState is not { } combatState)
             return;
 
@@ -133,6 +135,9 @@ public class GravitationHoldPower : SakuraPowerModel
     }
 
     internal static bool IsLastPlay(int playIndex, int playCount) => playIndex >= playCount - 1;
+
+    // The n-th return of the same card this turn deals n times the base damage.
+    internal static int ReturnDamage(int baseDamage, int returnCount) => baseDamage * Math.Max(0, returnCount);
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
