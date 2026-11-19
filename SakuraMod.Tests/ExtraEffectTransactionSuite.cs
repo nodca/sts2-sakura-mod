@@ -33,8 +33,7 @@ public sealed class ExtraEffectTransactionSuite
         typeof(Spiral),
         typeof(Struggle),
         typeof(Swing),
-        typeof(Transfer),
-        typeof(TrueOrFalse)
+        typeof(Transfer)
     };
 
     [Fact]

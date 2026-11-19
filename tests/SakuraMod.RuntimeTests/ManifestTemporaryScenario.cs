@@ -1,9 +1,13 @@
-using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Runs;
 using MegaCrit.Sts2.Core.TestSupport;
+using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
+using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.TestProtocol;
 
 namespace SakuraMod.RuntimeTests;
@@ -53,106 +57,84 @@ internal static class ManifestTemporaryScenario
             "manifest_generated",
             $"Manifest generated {manifestedType.Name} into the live hand.");
 
-        var trueOrFalse = await CombatScenarioContext.AddGeneratedCardToHandAsync<TrueOrFalse>(combat, player);
-        trueOrFalse.UpgradeInternal();
-        var energyBefore = playerCombat.Energy;
-        var stabilizeSelector = new TestCardSelector();
-        stabilizeSelector.PrepareToSelect([1]);
-        stabilizeSelector.PrepareToSelect([0]);
-        using (RunManager.Instance.CardSelectorStack.UseSelector(player, stabilizeSelector))
-        {
-            await CombatScenarioContext.PlayCardAsync(trueOrFalse);
-        }
-
+        // Stabilize keeps its own contract even though no card offers it now.
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(
+            player,
+            choiceContext => manifested.Stabilize(choiceContext)));
         assertions.True("stabilized_same_card_owner", ReferenceEquals(manifested.Owner, player));
         assertions.True("stabilized_same_combat_identity", combat.ContainsCard(manifested));
         assertions.Equal("stabilized_temporary_removed", false, manifested.IsTemporary());
         assertions.True("stabilized_card_stays_in_hand", playerCombat.Hand.Cards.Contains(manifested));
-        assertions.Equal("stabilize_energy_gain", energyBefore + 1, playerCombat.Energy);
-        assertions.True(
-            "true_or_false_result_pile",
-            playerCombat.DiscardPile.Cards.Contains(trueOrFalse));
+
+        // True or False: Forgotten cards appearing in hand hit a random enemy,
+        // cards recalled from Memory grant Block.
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async _ =>
+        {
+            await PlayerCmd.GainEnergy(10, player);
+            foreach (var enemy in combat.HittableEnemies)
+                await CreatureCmd.GainBlock(enemy, 100, ValueProp.Unpowered, null, false);
+        }));
+        var trueOrFalse = await CombatScenarioContext.AddGeneratedCardToHandAsync<TrueOrFalse>(combat, player);
+        await CombatScenarioContext.PlayCardAsync(trueOrFalse);
+        var power = player.Creature.GetPower<TrueOrFalsePower>();
+        assertions.Equal("true_or_false_power_damage", 8, power?.Amount ?? 0);
+        assertions.Equal("true_or_false_power_block", 5, power?.DynamicVars[TrueOrFalsePower.BlockVar].IntValue ?? 0);
+
+        int EnemyDurability() => combat.HittableEnemies.Sum(enemy => enemy.CurrentHp + enemy.Block);
+
+        var durabilityBeforeManifest = EnemyDurability();
+        var secondChoice = await CombatScenarioContext.AddGeneratedCardToHandAsync<Choice>(combat, player);
+        var secondManifestSelector = new TestCardSelector();
+        secondManifestSelector.PrepareToSelect([0]);
+        secondManifestSelector.PrepareToSelect([0]);
+        using (RunManager.Instance.CardSelectorStack.UseSelector(player, secondManifestSelector))
+        {
+            await CombatScenarioContext.PlayCardAsync(secondChoice);
+        }
+        assertions.Equal("manifest_into_hand_hits_random_enemy", 8, durabilityBeforeManifest - EnemyDurability());
+
+        var forgottenTarget = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowSword>(combat, player);
+        var durabilityBeforeGrant = EnemyDurability();
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(
+            player,
+            async choiceContext => await SakuraForgotten.GrantTemporary(choiceContext, forgottenTarget)));
+        assertions.Equal("forgotten_granted_in_hand_hits_random_enemy", 8, durabilityBeforeGrant - EnemyDurability());
+
+        // Spiral's next-turn copies sit Forgotten on top of the Draw Pile; drawing one counts.
+        var durabilityBeforeDraw = EnemyDurability();
+        CardModel? drawnSpiral = null;
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choiceContext =>
+        {
+            drawnSpiral = combat.CreateCard<Spiral>(player);
+            await SakuraGeneratedCardLifecycle.AddGeneratedCardToCombat(
+                drawnSpiral,
+                new GeneratedCardOptions
+                {
+                    Pile = PileType.Draw,
+                    Position = CardPilePosition.Top,
+                    AddTemporary = true
+                },
+                choiceContext);
+            assertions.Equal("forgotten_in_draw_pile_does_not_hit", durabilityBeforeDraw, EnemyDurability());
+            await CardPileCmd.Draw(choiceContext, 1, player, false);
+        }));
+        assertions.True("forgotten_spiral_drawn", drawnSpiral?.Pile?.Type == PileType.Hand && drawnSpiral.IsTemporary());
+        assertions.Equal("drawn_forgotten_card_hits_random_enemy", 8, durabilityBeforeDraw - EnemyDurability());
+
+        var blockBeforeRecall = player.Creature.Block;
+        IReadOnlyList<CardModel> recalled = [];
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async _ =>
+        {
+            await SakuraMemoryPile.MoveTemporaryCardIntoMemory(forgottenTarget);
+            recalled = await SakuraMemoryPile.RecallToHand(player, [forgottenTarget], freeThisTurn: false);
+        }));
+        assertions.Equal("recall_returned_card", 1, recalled.Count);
+        assertions.Equal("recall_grants_block_per_card", 5, player.Creature.Block - blockBeforeRecall);
         assertions.Equal("manifest_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
-
-        var virtualOnly = await CombatScenarioContext.AddGeneratedCardToHandAsync<TrueOrFalse>(combat, player);
-        var energyBeforeVirtual = playerCombat.Energy;
-        var temporaryCountBeforeVirtual = playerCombat.Hand.Cards.Count(card => card.IsTemporary());
-        assertions.True("virtual_only_is_playable", virtualOnly.CanPlay());
-        var virtualSelector = new TestCardSelector();
-        virtualSelector.PrepareToSelect([0]);
-        using (RunManager.Instance.CardSelectorStack.UseSelector(player, virtualSelector))
-        {
-            await CombatScenarioContext.PlayCardAsync(virtualOnly);
-        }
-
-        assertions.Equal(
-            "virtual_only_grants_temporary",
-            temporaryCountBeforeVirtual + 1,
-            playerCombat.Hand.Cards.Count(card => card.IsTemporary()));
-        assertions.Equal("virtual_only_does_not_gain_energy", energyBeforeVirtual, playerCombat.Energy);
-        assertions.True("virtual_only_exhausts", playerCombat.ExhaustPile.Cards.Contains(virtualOnly));
-        assertions.Equal("virtual_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
-
-        var classicTemporary = await CombatScenarioContext.AddGeneratedCardToHandAsync<ClowSword>(combat, player);
-        var isolateClassicTemporaryAction = new RuntimeFixtureAction(
-            player,
-            async choiceContext =>
-            {
-                foreach (var card in playerCombat.Hand.Cards.Where(card => card != classicTemporary).ToArray())
-                {
-                    await SakuraActions.MoveExistingCardToPileWithoutVisuals(
-                        null,
-                        card,
-                        PileType.Exhaust,
-                        CardPilePosition.Bottom);
-                }
-                await SakuraForgotten.GrantTemporary(choiceContext, classicTemporary);
-            });
-        await CombatScenarioContext.EnqueueAndWaitAsync(isolateClassicTemporaryAction);
-
-        var realOnly = await CombatScenarioContext.AddGeneratedCardToHandAsync<TrueOrFalse>(combat, player);
-        var energyBeforeClassicStabilize = playerCombat.Energy;
-        assertions.True("classic_temporary_real_only_is_playable", realOnly.CanPlay());
-        var classicStabilizeSelector = new TestCardSelector();
-        classicStabilizeSelector.PrepareToSelect([0]);
-        using (RunManager.Instance.CardSelectorStack.UseSelector(player, classicStabilizeSelector))
-        {
-            await CombatScenarioContext.PlayCardAsync(realOnly);
-        }
-
-        assertions.Equal("classic_temporary_stabilized", false, classicTemporary.IsTemporary());
-        assertions.Equal(
-            "classic_temporary_stabilize_energy_gain",
-            energyBeforeClassicStabilize + 1,
-            playerCombat.Energy);
-        assertions.True("classic_real_only_exhausts", playerCombat.ExhaustPile.Cards.Contains(realOnly));
-        assertions.Equal("classic_stabilize_selector_released", null, RunManager.Instance.CardSelectorStack.GetSelector(player));
-
-        var noTarget = await CombatScenarioContext.AddGeneratedCardToHandAsync<TrueOrFalse>(combat, player);
-        var isolateNoTargetAction = new RuntimeFixtureAction(
-            player,
-            async _ =>
-            {
-                foreach (var card in playerCombat.Hand.Cards.Where(card => card != noTarget).ToArray())
-                {
-                    await SakuraActions.MoveExistingCardToPileWithoutVisuals(
-                        null,
-                        card,
-                        PileType.Exhaust,
-                        CardPilePosition.Bottom);
-                }
-            });
-        await CombatScenarioContext.EnqueueAndWaitAsync(isolateNoTargetAction);
-
-        var canPlayWithoutTarget = noTarget.CanPlay(out var unplayableReason, out _);
-        assertions.Equal("no_target_is_unplayable", false, canPlayWithoutTarget);
-        assertions.True(
-            "no_target_uses_card_logic_reason",
-            unplayableReason.HasFlag(UnplayableReason.BlockedByCardLogic));
         RuntimeTestHost.WriteCheckpoint(
             request,
-            "manifest_stabilized",
-            "TrueOrFalse stabilized one target, then required another target before granting Temporary.");
+            "true_or_false_verified",
+            "Stabilize removed Temporary; True or False hit a random enemy per Forgotten card in hand and granted Block per recalled card.");
 
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -160,22 +142,8 @@ internal static class ManifestTemporaryScenario
             {
                 seed = request.Seed.ToString("X16"),
                 source_card = typeof(Choice).FullName,
-                stabilizer_card = typeof(TrueOrFalse).FullName,
-                selected_manifest_type = manifestedType.FullName,
-                setup_mutations = new[]
-                {
-                    "Generated Choice -> hand",
-                    "TestCardSelector index 0 -> ChoiceManifestChoice",
-                    "TestCardSelector index 0 -> first fixed-seed Manifest option",
-                    "Generated upgraded TrueOrFalse -> hand",
-                    "TestCardSelector index 1 -> TrueOrFalseEnergyChoice",
-                    $"TestCardSelector card -> {manifestedType.Name}",
-                    "Generated base TrueOrFalse -> hand with no Stabilize candidate",
-                    "TestCardSelector index 0 -> first non-Temporary hand card",
-                    "Generated Temporary ClowSword as the only non-TrueOrFalse hand card",
-                    "TrueOrFalse directly selected Real and Stabilized ClowSword",
-                    "Moved all other hand cards to Exhaust for no-target playability check"
-                }
+                power_card = typeof(TrueOrFalse).FullName,
+                selected_manifest_type = manifestedType.FullName
             },
             ["manifested"] = new
             {
@@ -185,12 +153,7 @@ internal static class ManifestTemporaryScenario
                 pile = manifested.Pile?.Type,
                 temporary = manifested.IsTemporary()
             },
-            ["stabilizer"] = new
-            {
-                result_pile = trueOrFalse.Pile?.Type,
-                energy_before = energyBefore,
-                energy_after = playerCombat.Energy
-            }
+            ["recalled"] = recalled.Count
         };
     }
 }

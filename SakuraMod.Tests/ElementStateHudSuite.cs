@@ -41,6 +41,59 @@ public sealed class ElementStateHudSuite
     }
 
     [Fact]
+    public void TurnCountShowsOnlyForStackedTimedStates()
+    {
+        RegressionTestHarness.Require(
+            !SakuraElementStateHud.ShowsTurnCount(isActive: false, isPermanent: false, turns: 0)
+            && !SakuraElementStateHud.ShowsTurnCount(isActive: true, isPermanent: false, turns: 1)
+            && SakuraElementStateHud.ShowsTurnCount(isActive: true, isPermanent: false, turns: 2)
+            && SakuraElementStateHud.ShowsTurnCount(isActive: true, isPermanent: false, turns: 3),
+            "Expected the turn count to stay hidden for the usual single turn and show once stacked.");
+
+        RegressionTestHarness.Require(
+            !SakuraElementStateHud.ShowsTurnCount(isActive: true, isPermanent: true, turns: 2),
+            "Expected a permanent state to show its gold ring instead of a count.");
+    }
+
+    [Fact]
+    public void HudMountsAtReducedScale()
+    {
+        RegressionTestHarness.Require(
+            Math.Abs(SakuraElementStateHud.MountScale - 0.8f) < 0.0001f,
+            "Expected the Lasin board to mount at 0.8 scale.");
+
+        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraElementStateHud.cs"));
+        RegressionTestHarness.Require(
+            source.Contains("root.Scale = Vector2.One * MountScale", StringComparison.Ordinal)
+            && source.Contains("(root.Size.Y - BoardMargin) * MountScale", StringComparison.Ordinal),
+            "Expected the root to scale as a whole and keep the energy-counter gap at the scaled size.");
+    }
+
+    [Fact]
+    public void HudFadesAndPassesPointerWhileTargeting()
+    {
+        RegressionTestHarness.Require(
+            SakuraElementStateHud.TargetingAlpha is > 0f and < 0.5f,
+            "Expected the board to fade well down while a target is picked.");
+
+        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
+            "SakuraModCode/Character/SakuraElementStateHud.cs"));
+        RegressionTestHarness.Require(
+            source.Contains("_targetManager.TargetingBegan += OnTargetingBegan", StringComparison.Ordinal)
+            && source.Contains("_targetManager.TargetingEnded += OnTargetingEnded", StringComparison.Ordinal)
+            && source.Contains("_targetManager.TargetingBegan -= OnTargetingBegan", StringComparison.Ordinal)
+            && source.Contains("_targetManager.TargetingEnded -= OnTargetingEnded", StringComparison.Ordinal),
+            "Expected the fade to follow the native targeting signals and unsubscribe on unmount.");
+
+        RegressionTestHarness.Require(
+            source.Contains("SetTargetingFade(_targetManager.IsInSelection, animate: false)", StringComparison.Ordinal)
+            && source.Contains("Control.MouseFilterEnum.Ignore : Control.MouseFilterEnum.Stop", StringComparison.Ordinal)
+            && source.Contains("KillTween(ref _fadeTween)", StringComparison.Ordinal),
+            "Expected a mid-targeting mount to start faded, the pointer to pass through while faded, and the fade tween to be killed.");
+    }
+
+    [Fact]
     public void ActiveElementProjectionTracksStateAndNewTransitions()
     {
         var earth = SakuraElementSet.Earth;

@@ -232,7 +232,8 @@ public sealed class ResourceContractSuite
                      (new KindnessPower(), "kindness.png"),
                      (new GravitationHoldPower(), "gravitation_hold.png"),
                      (new AppearPower(), "appear.png"),
-                     (new RepairPower(), "repair.png")
+                     (new RepairPower(), "repair.png"),
+                     (new TrueOrFalsePower(), "true_or_false.png")
                  })
         {
             Assert.True(power.IsVisible);
@@ -3194,7 +3195,7 @@ public sealed class ResourceContractSuite
             "SakuraModCode/Cards/PileExchangeVfx.cs"));
 
         var applyIndex = card.IndexOf("PowerCmd.Apply<GravitationHoldPower>", StringComparison.Ordinal);
-        var excludeIndex = card.IndexOf("power?.ExcludeSource(this)", StringComparison.Ordinal);
+        var excludeIndex = card.IndexOf("power?.AddReturnDamage(", StringComparison.Ordinal);
         var powerGuardIndex = excludeIndex >= 0
             ? card.IndexOf("if (power is not null)", excludeIndex, StringComparison.Ordinal)
             : -1;

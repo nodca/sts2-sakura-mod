@@ -34,6 +34,7 @@ internal static class AppearPowerScenario
         assertions.True("turn_start_has_no_choice_screen", selector.OptionCounts.Count == 0);
         assertions.Equal("turn_start_random_card_reaches_hand", 1, firstRandom.Length);
         assertions.Equal("turn_start_random_card_grants_no_spell", 0, firstSpells.Length);
+        assertions.True("unupgraded_appear_card_not_upgraded", firstRandom.All(card => !card.IsUpgraded));
 
         var handBeforeManifest = playerCombat.Hand.Cards.ToHashSet();
         IReadOnlyList<CardModel> manifested;
@@ -53,7 +54,7 @@ internal static class AppearPowerScenario
 
         var upgradedAppear = await CombatScenarioContext.AddGeneratedCardToHandAsync<Appear>(combat, player);
         upgradedAppear.UpgradeInternal();
-        assertions.Equal("upgraded_appear_costs_one", 1, upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local));
+        assertions.Equal("upgraded_appear_keeps_cost_two", 2, upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local));
         await CombatScenarioContext.PlayCardAsync(upgradedAppear);
         assertions.Equal("stacked_appear_power_amount", 2, player.Creature.GetPower<AppearPower>()?.Amount ?? 0);
 
@@ -62,6 +63,7 @@ internal static class AppearPowerScenario
         assertions.True("stacked_turn_start_has_no_choice_screen", selector.OptionCounts.Count == 0);
         assertions.Equal("stacked_turn_start_random_cards", 2, stackedRandom.Length);
         assertions.Equal("stacked_turn_start_grants_no_spell", 0, stackedTurnSpells.Length);
+        assertions.Equal("stacked_turn_start_one_upgraded", 1, stackedRandom.Count(card => card.IsUpgraded));
 
         var handBeforeStackedManifest = playerCombat.Hand.Cards.ToHashSet();
         IReadOnlyList<CardModel> stackedManifested;

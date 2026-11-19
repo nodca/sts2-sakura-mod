@@ -116,6 +116,7 @@ internal static class SakuraMemoryPile
         }
 
         await RepairPower.AfterRecalledFromMemory(player);
+        await TrueOrFalsePower.AfterRecalledFromMemory(player, recalled.Count);
         return recalled;
     }
 

@@ -25,6 +25,8 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class Gravitation() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Wind];
+    protected override IEnumerable<DynamicVar> CanonicalVars =>
+        [new DynamicVar(GravitationHoldPower.ReturnDamageVar, 3)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
@@ -37,7 +39,9 @@ public class Gravitation() : TransparentExtraEffectCard(0, CardType.Skill, CardR
                 Owner.Creature,
                 this,
                 false);
-            power?.ExcludeSource(this);
+            // Every Gravitation, this one included, stacks its damage; a later copy
+            // played into an active field returns like any other card.
+            power?.AddReturnDamage(DynamicVars[GravitationHoldPower.ReturnDamageVar].IntValue);
             if (power is not null)
                 cues.OpenWell();
             if (activation.IsActive)
@@ -51,7 +55,11 @@ public class Gravitation() : TransparentExtraEffectCard(0, CardType.Skill, CardR
         await ChooseFromPileToHand(choiceContext, PileType.Draw, cues);
     }
 
-    protected override void OnUpgrade() => AddKeywordIfMissing(CardKeyword.Retain);
+    protected override void OnUpgrade()
+    {
+        AddKeywordIfMissing(CardKeyword.Retain);
+        DynamicVars[GravitationHoldPower.ReturnDamageVar].UpgradeValueBy(1);
+    }
 
     private async Task ChooseFromPileToHand(
         PlayerChoiceContext choiceContext,

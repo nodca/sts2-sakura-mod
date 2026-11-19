@@ -22,86 +22,35 @@ using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class TrueOrFalse() : TransparentExtraEffectCard(0, CardType.Skill, CardRarity.Rare, TargetType.Self)
+public class TrueOrFalse() : TransparentCard(1, CardType.Power, CardRarity.Rare, TargetType.Self)
 {
-    public override IEnumerable<CardKeyword> CanonicalKeywords => IsUpgraded
-        ? [SakuraKeywords.Fire, SakuraKeywords.Stabilize]
-        : [SakuraKeywords.Fire, CardKeyword.Exhaust, SakuraKeywords.Stabilize];
+    internal const string DamageVar = "ForgottenDamage";
+    internal const string BlockVar = "RecallBlock";
+
+    public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
-        [SakuraCardHoverTips.TemporaryTipKey];
+        [SakuraCardHoverTips.TemporaryTipKey, SakuraMemoryPile.PileId];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new CardsVar(2),
-        new EnergyVar(1)
+        new DynamicVar(DamageVar, 8),
+        new DynamicVar(BlockVar, 5)
     ];
-    protected override bool IsPlayable => TransparentCard.UsesMagicChargeExtraEffect(this)
-        ? CanCompleteExtraEffect()
-        : CanUseVirtual() || CanUseReal();
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        if (activation.IsActive)
-        {
-            if (await Virtual(choiceContext))
-                await Real(choiceContext);
-            return;
-        }
-
-        List<CardModel> choices = [];
-        if (CanUseVirtual())
-        {
-            var virtualChoice = SakuraActions.CloneWithCurrentUpgrade<TrueOrFalseDrawChoice>(this);
-            virtualChoice.DynamicVars.Cards.BaseValue = DynamicVars.Cards.IntValue;
-            choices.Add(virtualChoice);
-        }
-        if (CanUseReal())
-        {
-            var realChoice = SakuraActions.CloneWithCurrentUpgrade<TrueOrFalseEnergyChoice>(this);
-            realChoice.DynamicVars.Energy.BaseValue = DynamicVars.Energy.IntValue;
-            choices.Add(realChoice);
-        }
-
-        var choice = choices.Count == 1
-            ? choices[0]
-            : await SakuraActions.SelectFromCards(this, choiceContext, choices, cancelable: false);
-        if (choice is TrueOrFalseDrawChoice)
-            await Virtual(choiceContext);
-        else if (choice is TrueOrFalseEnergyChoice)
-            await Real(choiceContext);
+        var power = await PowerCmd.Apply<TrueOrFalsePower>(
+            choiceContext,
+            Owner.Creature,
+            DynamicVars[DamageVar].IntValue,
+            Owner.Creature,
+            this,
+            false);
+        power?.AddBlock(DynamicVars[BlockVar].IntValue);
     }
 
-    private bool CanUseVirtual() => SakuraActions.Hand(this).Any(CanBecomeTemporary);
-
-    private bool CanUseReal() => SakuraActions.StabilizeCandidates(this).Count > 0;
-
-    private bool CanCompleteExtraEffect() => CanUseVirtual();
-
-    private async Task<bool> Virtual(PlayerChoiceContext choiceContext)
+    protected override void OnUpgrade()
     {
-        var card = await SakuraActions.SelectHandCard(this, choiceContext, CanBecomeTemporary, cancelable: false);
-        if (card is null || !await SakuraForgotten.GrantTemporary(choiceContext, card))
-            return false;
-
-        await CardPileCmd.Draw(choiceContext, DynamicVars.Cards.IntValue, Owner, false);
-        return true;
+        DynamicVars[DamageVar].UpgradeValueBy(2);
+        DynamicVars[BlockVar].UpgradeValueBy(2);
     }
-
-    private bool CanBecomeTemporary(CardModel card) =>
-        card != this && !card.IsTemporary();
-
-    private async Task<bool> Real(PlayerChoiceContext choiceContext)
-    {
-        var card = await SakuraActions.SelectStabilizeCandidate(this, choiceContext, cancelable: false);
-        if (card is null)
-            return false;
-
-        await card.Stabilize(choiceContext);
-        if (card.IsTemporary())
-            return false;
-
-        await PlayerCmd.GainEnergy(DynamicVars.Energy.IntValue, Owner);
-        return true;
-    }
-
-    protected override void OnUpgrade() => RemoveKeywordIfPresent(CardKeyword.Exhaust);
 }

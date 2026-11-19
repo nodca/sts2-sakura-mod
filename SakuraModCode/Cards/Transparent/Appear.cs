@@ -37,14 +37,17 @@ public class Appear() : TransparentCard(2, CardType.Power, CardRarity.Rare, Targ
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
-        await PowerCmd.Apply<AppearPower>(
+        var power = await PowerCmd.Apply<AppearPower>(
             choiceContext,
             Owner.Creature,
             DynamicVars.Cards.IntValue,
             Owner.Creature,
             this,
             false);
+        if (IsUpgraded)
+            power?.AddUpgradedStacks(DynamicVars.Cards.IntValue);
     }
 
-    protected override void OnUpgrade() => EnergyCost.UpgradeBy(-1);
+    // The upgrade keeps the cost and upgrades this copy's random card each turn instead.
+    protected override void OnUpgrade() { }
 }

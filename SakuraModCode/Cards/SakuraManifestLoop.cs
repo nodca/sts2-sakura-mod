@@ -98,10 +98,12 @@ public static class SakuraManifestLoop
 
     // A random Transparent card with Forgotten, drawn from the same weighted pool
     // as Manifest. It is not a Manifest, so Appear grants no Spell for it.
+    // The first upgradedCount cards are upgraded.
     public static async Task<IReadOnlyList<CardModel>> AddRandomTransparentCardsToHand(
         Player owner,
         PlayerChoiceContext context,
-        int amount)
+        int amount,
+        int upgradedCount = 0)
     {
         List<CardModel> added = [];
         var weightedSources = WeightedManifestAtlasSources();
@@ -113,6 +115,8 @@ public static class SakuraManifestLoop
                 break;
 
             var card = SakuraGeneratedCardLifecycle.CreateCombatCardFromTemplate(owner, picked);
+            if (i < upgradedCount)
+                SakuraGeneratedCardLifecycle.UpgradeToLevel(card, 1);
             await SakuraGeneratedCardLifecycle.AddTemporaryGeneratedCardToHand(card, freeThisTurn: false, context);
             added.Add(card);
         }

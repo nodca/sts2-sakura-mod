@@ -24,17 +24,29 @@ public class GravitationHoldPower : SakuraPowerModel
 {
     protected override string IconFileName => "gravitation_hold.png";
 
-    private readonly HashSet<CardModel> _excludedSources = [];
     private readonly HashSet<CardModel> _pendingReturns = [];
     private readonly Dictionary<CardModel, int> _returnCounts = [];
+    private readonly HashSet<CardModel> _pendingReturnDamage = [];
+
+    internal const string ReturnDamageVar = "ReturnDamage";
+
+    protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar(ReturnDamageVar, 0)];
+
+    // Each Gravitation played this turn adds its damage.
+    public void AddReturnDamage(int damage)
+    {
+        if (damage <= 0)
+            return;
+
+        DynamicVars[ReturnDamageVar].BaseValue += damage;
+        InvokeDisplayAmountChanged();
+    }
 
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
-    public void ExcludeSource(CardModel card) => _excludedSources.Add(card);
-
     internal bool CanReturnPlayedCard(CardModel card) =>
-        Amount > 0 && card.Owner?.Creature == Owner && !card.EnergyCost.CostsX && !_excludedSources.Contains(card);
+        Amount > 0 && card.Owner?.Creature == Owner && !card.EnergyCost.CostsX;
 
     public override Task AfterApplied(Creature? applier, CardModel? cardSource)
     {
@@ -68,6 +80,7 @@ public class GravitationHoldPower : SakuraPowerModel
 
         PreservePlayedLocalCost(card);
         _returnCounts[card] = _returnCounts.GetValueOrDefault(card) + 1;
+        _pendingReturnDamage.Add(card);
         card.InvokeEnergyCostChanged();
         GravitationHoldVisual.NotifyReturned(Owner, card);
         return Task.CompletedTask;
@@ -104,6 +117,23 @@ public class GravitationHoldPower : SakuraPowerModel
         return true;
     }
 
+    // The return is decided before the card resolves, so hit once after its last
+    // play (Replay included), like Panache's Unpowered damage to all enemies.
+    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    {
+        if (!IsLastPlay(cardPlay.PlayIndex, cardPlay.PlayCount) || !_pendingReturnDamage.Remove(cardPlay.Card))
+            return;
+
+        var damage = DynamicVars[ReturnDamageVar].IntValue;
+        if (damage <= 0 || CombatState is not { } combatState)
+            return;
+
+        Flash();
+        await CreatureCmd.Damage(choiceContext, combatState.HittableEnemies, damage, SakuraPowerValueProps.Damage, Owner);
+    }
+
+    internal static bool IsLastPlay(int playIndex, int playCount) => playIndex >= playCount - 1;
+
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
         if (side == Owner.Side && participants.Contains(Owner))
@@ -115,9 +145,9 @@ public class GravitationHoldPower : SakuraPowerModel
         foreach (var card in _returnCounts.Keys)
             card.InvokeEnergyCostChanged();
 
-        _excludedSources.Clear();
         _pendingReturns.Clear();
         _returnCounts.Clear();
+        _pendingReturnDamage.Clear();
         GravitationHoldVisual.NotifyRemoved(oldOwner);
         return Task.CompletedTask;
     }

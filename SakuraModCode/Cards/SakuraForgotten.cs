@@ -1,6 +1,7 @@
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Models;
+using SakuraMod.SakuraModCode.Powers;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
@@ -21,13 +22,15 @@ internal static class SakuraForgotten
             ClearedObservers.Add(observer);
     }
 
-    internal static Task<bool> GrantTemporary(PlayerChoiceContext context, CardModel card)
+    internal static async Task<bool> GrantTemporary(PlayerChoiceContext context, CardModel card)
     {
         if (card.IsTemporary() || card is ISakuraForgottenImmune)
-            return Task.FromResult(false);
+            return false;
 
         card.MakeTemporary();
-        return Task.FromResult(true);
+        if (card.Pile?.Type == PileType.Hand)
+            await TrueOrFalsePower.AfterForgottenCardInHand(card);
+        return true;
     }
 
     internal static async Task NotifyStabilized(PlayerChoiceContext context, CardModel card)
