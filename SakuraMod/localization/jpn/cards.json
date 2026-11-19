@@ -50,7 +50,7 @@
   "SAKURA_MOD_CARD_DREAMING.title": "夢見",
   "SAKURA_MOD_CARD_DREAMING.description": "[gold]水[/gold]\n毎ターン、ドロー前に[gold]山札[/gold]または[gold]記憶[/gold]からカード1枚を選び[gold]手札[/gold]に加える。[gold]山札[/gold]から選んだ場合、そのカードはこのターン中コストを支払わずにプレイでき、[red]忘却[/red]を得る。",
   "SAKURA_MOD_CARD_GRAVITATION.title": "引力",
-  "SAKURA_MOD_CARD_GRAVITATION.description": "[gold]風[/gold]\nこのターン中、プレイしたカード（Xコストのカードを除く）は[gold]捨て札[/gold]に行かず[gold]手札[/gold]に戻り、手札に戻るたびコストが{energyPrefix:energyIcons(1)}増加し、敵全体に{ReturnDamage:diff()}ダメージを与える。\n[gold]追加効果：[/gold][gold]捨て札[/gold]と[gold]山札[/gold]からそれぞれカード1枚を選び、[gold]手札[/gold]に加える。",
+  "SAKURA_MOD_CARD_GRAVITATION.description": "[gold]風[/gold]\nこのターン中、プレイしたカード（Xコストのカードと[gold]引力[/gold]を除く）は[gold]捨て札[/gold]に行かず[gold]手札[/gold]に戻り、手札に戻るたびコストが{energyPrefix:energyIcons(1)}増加し、敵全体に{ReturnDamage:diff()}ダメージを与える。このターンにそのカードが既に戻った回数1回につき、ダメージが{ReturnDamage:diff()}増加する。\n[gold]追加効果：[/gold][gold]捨て札[/gold]と[gold]山札[/gold]からそれぞれカード1枚を選び、[gold]手札[/gold]に加える。",
   "SAKURA_MOD_CARD_MIRAGE.title": "幻影",
   "SAKURA_MOD_CARD_MIRAGE.description": "[gold]水[/gold]\n敵を1体選ぶ。\nその敵が次のターンに与えるアタックダメージは0になる。\n[gold]追加効果：[/gold]代わりに敵全体に効果を与える。",
   "SAKURA_MOD_CARD_RECORD.title": "記録",
