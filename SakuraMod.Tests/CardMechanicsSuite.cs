@@ -247,7 +247,7 @@ public sealed class CardMechanicsSuite
         var discounted = RegressionTestHarness.MutableForCostTest(new Transfer());
         var canonical = discounted.EnergyCost.Canonical;
         discounted.EnergyCost.SetThisTurnOrUntilPlayed(0, true);
-        GravitationHoldPower.PreservePlayedLocalCost(discounted);
+        GravitationHoldPower.PreservePlayedLocalCost(discounted, discounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
         discounted.EnergyCost.AfterCardPlayedCleanup();
         var localCost = discounted.EnergyCost.GetWithModifiers(CostModifiers.Local);
 
@@ -258,7 +258,7 @@ public sealed class CardMechanicsSuite
         Assert.Equal(canonical, discounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
 
         var undiscounted = RegressionTestHarness.MutableForCostTest(new Transfer());
-        GravitationHoldPower.PreservePlayedLocalCost(undiscounted);
+        GravitationHoldPower.PreservePlayedLocalCost(undiscounted, undiscounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
         undiscounted.EnergyCost.AfterCardPlayedCleanup();
         Assert.Equal(canonical, undiscounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
         undiscounted.EnergyCost.UpgradeBy(-1);

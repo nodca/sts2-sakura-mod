@@ -2,21 +2,11 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
-using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Powers;
-using MegaCrit.Sts2.Core.ValueProps;
-using SakuraMod.SakuraModCode;
 using SakuraMod.SakuraModCode.Cards;
-using SakuraMod.SakuraModCode.Character;
-using SakuraMod.SakuraModCode.Powers;
-using SakuraMod.SakuraModCode.Extensions;
-using STS2RitsuLib.Combat.HandSize;
-using STS2RitsuLib.Scaffolding.Content;
-using STS2RitsuLib.Scaffolding.Content.Patches;
 
 namespace SakuraMod.SakuraModCode.Powers;
 
@@ -24,10 +14,19 @@ public class GravitationHoldPower : SakuraPowerModel
 {
     protected override string IconFileName => "gravitation_hold.png";
 
-    private readonly HashSet<CardModel> _pendingReturns = [];
-    private readonly Dictionary<CardModel, int> _returnCounts = [];
-    private readonly HashSet<CardModel> _pendingReturnDamage = [];
-    private readonly HashSet<CardModel> _leftHandForDiscard = [];
+    private sealed class Data
+    {
+        public readonly Dictionary<uint, PendingPlayReturn> PendingPlays = [];
+        public readonly Dictionary<uint, int> ReturnCounts = [];
+        public readonly HashSet<uint> LeftHandForDiscard = [];
+    }
+
+    private readonly record struct PendingPlayReturn(
+        int PlayedLocalCost, PlayerChoiceContext? ChoiceContext = null);
+
+    protected override object InitInternalData() => new Data();
+
+    private Data State => GetInternalData<Data>();
 
     internal const string ReturnDamageVar = "ReturnDamage";
 
@@ -61,10 +60,11 @@ public class GravitationHoldPower : SakuraPowerModel
         ResourceInfo resources,
         CardLocation cardLocation)
     {
-        if (!CanReturnPlayedCard(card) || cardLocation.pileType != PileType.Discard)
+        if (cardLocation.pileType != PileType.Discard
+            || cardLocation.player != card.Owner
+            || !CanReturnPlayedCard(card))
             return cardLocation;
 
-        _pendingReturns.Add(card);
         return cardLocation with
         {
             pileType = PileType.Hand,
@@ -76,28 +76,35 @@ public class GravitationHoldPower : SakuraPowerModel
         CardModel card,
         CardLocation cardLocation)
     {
-        if (!_pendingReturns.Remove(card) || cardLocation.pileType != PileType.Hand)
-            return Task.CompletedTask;
-
-        PreservePlayedLocalCost(card);
-        _returnCounts[card] = _returnCounts.GetValueOrDefault(card) + 1;
-        _pendingReturnDamage.Add(card);
-        card.InvokeEnergyCostChanged();
-        GravitationHoldVisual.NotifyReturned(Owner, card);
+        if (cardLocation.pileType == PileType.Hand
+            && cardLocation.player == card.Owner
+            && CanReturnPlayedCard(card)
+            && NetCombatCardDb.Instance.TryGetCardId(card, out var id))
+        {
+            State.PendingPlays[id] = new PendingPlayReturn(card.EnergyCost.GetWithModifiers(CostModifiers.Local));
+        }
         return Task.CompletedTask;
     }
 
     public override bool TryModifyEnergyCostInCombat(
         CardModel card,
         decimal currentCost,
-        out decimal newCost) =>
-        TryIncreaseReturnedCardCost(card, _returnCounts.GetValueOrDefault(card), currentCost, out newCost);
+        out decimal newCost)
+    {
+        if (card.IsMutable && card.Owner?.Creature == Owner
+            && NetCombatCardDb.Instance.TryGetCardId(card, out var id))
+        {
+            return TryIncreaseReturnedCardCost(card, State.ReturnCounts.GetValueOrDefault(id), currentCost, out newCost);
+        }
+
+        newCost = currentCost;
+        return false;
+    }
 
     // Native play cleanup drops "this turn or until played" discounts after the card
     // lands in Hand, so pin the local cost it was played at for the rest of the turn.
-    internal static void PreservePlayedLocalCost(CardModel card)
+    internal static void PreservePlayedLocalCost(CardModel card, int playedCost)
     {
-        var playedCost = card.EnergyCost.GetWithModifiers(CostModifiers.Local);
         if (playedCost >= 0)
             card.EnergyCost.SetThisTurn(playedCost, reduceOnly: true);
     }
@@ -118,24 +125,39 @@ public class GravitationHoldPower : SakuraPowerModel
         return true;
     }
 
-    // Discard follows native Sly: only CardCmd.Discard counts (AfterCardDiscarded), never the
-    // end-of-turn hand flush, and only for cards that left the Hand (not Sakura Arrow's Draw Pile).
     public override Task AfterCardChangedPiles(CardModel card, PileType oldPileType, AbstractModel? clonedBy)
     {
-        // Only the latest move counts: a hand-to-discard move that was not a discard (Clow Change's
-        // swap, the end-of-turn flush) is forgotten once the card moves again, e.g. shuffled into
-        // the Draw Pile and later discarded from there by Sakura Arrow.
+        if (card.Owner?.Creature != Owner || !NetCombatCardDb.Instance.TryGetCardId(card, out var id))
+            return Task.CompletedTask;
+
+        // Only the latest move can pair with AfterCardDiscarded. Swaps and the hand flush
+        // have no discard hook, and shuffling the card away invalidates the record.
         if (oldPileType == PileType.Hand && card.Pile?.Type == PileType.Discard && CanReturnPlayedCard(card))
-            _leftHandForDiscard.Add(card);
+            State.LeftHandForDiscard.Add(id);
         else
-            _leftHandForDiscard.Remove(card);
+            State.LeftHandForDiscard.Remove(id);
+
+        // The result location is only a request: native Add sends the card to Discard
+        // if its effect filled the Hand. Charge and damage only after a real return.
+        if (oldPileType == PileType.Play
+            && State.PendingPlays.Remove(id, out var pending)
+            && pending.ChoiceContext is { } choiceContext
+            && card.Pile?.Type == PileType.Hand)
+        {
+            PreservePlayedLocalCost(card, pending.PlayedLocalCost);
+            CountReturn(id, card);
+            return DealPlayedReturnDamage(choiceContext);
+        }
+
         return Task.CompletedTask;
     }
 
     // Sly cards are skipped: native Sly autoplays them, and they then return as played cards.
     public override async Task AfterCardDiscarded(PlayerChoiceContext choiceContext, CardModel card)
     {
-        if (!_leftHandForDiscard.Remove(card)
+        if (card.Owner?.Creature != Owner
+            || !NetCombatCardDb.Instance.TryGetCardId(card, out var id)
+            || !State.LeftHandForDiscard.Remove(id)
             || card.IsSlyThisTurn
             || !CanReturnPlayedCard(card)
             || card.Pile?.Type != PileType.Discard)
@@ -145,20 +167,43 @@ public class GravitationHoldPower : SakuraPowerModel
         if (card.Pile?.Type != PileType.Hand)
             return;
 
-        _returnCounts[card] = _returnCounts.GetValueOrDefault(card) + 1;
-        card.InvokeEnergyCostChanged();
-        GravitationHoldVisual.NotifyReturned(Owner, card);
+        CountReturn(id, card);
         await DealReturnDamage(choiceContext);
     }
 
-    // The return is decided before the card resolves, so hit once after its last
-    // play (Replay included), like Panache's Unpowered damage to all enemies.
-    public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay cardPlay)
+    public override Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay cardPlay)
     {
-        if (!IsLastPlay(cardPlay.PlayIndex, cardPlay.PlayCount) || !_pendingReturnDamage.Remove(cardPlay.Card))
-            return;
+        // The pile-change hook has no choice context. Carry the one from the
+        // last play in the series to the native move that follows it.
+        if (cardPlay.IsLastInSeries && cardPlay.ResultPile == PileType.Hand
+            && cardPlay.Card.Owner?.Creature == Owner
+            && NetCombatCardDb.Instance.TryGetCardId(cardPlay.Card, out var id)
+            && State.PendingPlays.TryGetValue(id, out var pending))
+        {
+            State.PendingPlays[id] = pending with { ChoiceContext = choiceContext };
+        }
 
-        await DealReturnDamage(choiceContext);
+        return Task.CompletedTask;
+    }
+
+    private void CountReturn(uint id, CardModel card)
+    {
+        State.ReturnCounts[id] = State.ReturnCounts.GetValueOrDefault(id) + 1;
+        card.InvokeEnergyCostChanged();
+        GravitationHoldVisual.NotifyReturned(Owner, card);
+    }
+
+    private async Task DealPlayedReturnDamage(PlayerChoiceContext choiceContext)
+    {
+        choiceContext.PushModel(this);
+        try
+        {
+            await DealReturnDamage(choiceContext);
+        }
+        finally
+        {
+            choiceContext.PopModel(this);
+        }
     }
 
     private async Task DealReturnDamage(PlayerChoiceContext choiceContext)
@@ -171,8 +216,6 @@ public class GravitationHoldPower : SakuraPowerModel
         await CreatureCmd.Damage(choiceContext, combatState.HittableEnemies, damage, SakuraPowerValueProps.Damage, Owner);
     }
 
-    internal static bool IsLastPlay(int playIndex, int playCount) => playIndex >= playCount - 1;
-
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
         if (side == Owner.Side && participants.Contains(Owner))
@@ -181,13 +224,13 @@ public class GravitationHoldPower : SakuraPowerModel
 
     public override Task AfterRemoved(Creature oldOwner)
     {
-        foreach (var card in _returnCounts.Keys)
-            card.InvokeEnergyCostChanged();
+        foreach (var id in State.ReturnCounts.Keys)
+            if (NetCombatCardDb.Instance.TryGetCard(id, out var card))
+                card!.InvokeEnergyCostChanged();
 
-        _pendingReturns.Clear();
-        _returnCounts.Clear();
-        _pendingReturnDamage.Clear();
-        _leftHandForDiscard.Clear();
+        State.PendingPlays.Clear();
+        State.ReturnCounts.Clear();
+        State.LeftHandForDiscard.Clear();
         GravitationHoldVisual.NotifyRemoved(oldOwner);
         return Task.CompletedTask;
     }
