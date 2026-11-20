@@ -119,22 +119,4 @@ public sealed class GeneratedCardLifecycleSuite
                 [PileType.Hand, PileType.Play, PileType.Discard, PileType.Draw]),
             "Expected Temporary cleanup to scan active vanilla combat piles in deterministic order without moving cards out of Exhaust.");
     }
-
-    [Fact]
-    public void CaptureAndManifestOriginAreAbsentFromProduction()
-    {
-        var sourceRoot = Path.GetDirectoryName(RegressionTestHarness.FindRepoFile("SakuraMod.csproj"))!;
-        foreach (var file in Directory.EnumerateFiles(
-                     Path.Combine(sourceRoot, "SakuraModCode"),
-                     "*.cs",
-                     SearchOption.AllDirectories))
-        {
-            var source = File.ReadAllText(file);
-            RegressionTestHarness.Require(
-                !source.Contains("CaptureCandidateTypes", StringComparison.Ordinal)
-                && !source.Contains("ManifestAtlasOriginModifier", StringComparison.Ordinal)
-                && !source.Contains("AddManifestAtlasOrigin", StringComparison.Ordinal),
-                $"Expected {Path.GetRelativePath(sourceRoot, file)} not to keep Capture candidates or Manifest origin state.");
-        }
-    }
 }

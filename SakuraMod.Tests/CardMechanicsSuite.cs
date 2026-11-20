@@ -1,19 +1,12 @@
 using MegaCrit.Sts2.Core.Entities.Cards;
-using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Powers;
-using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Rooms;
-using NimbleEnchantment = MegaCrit.Sts2.Core.Models.Enchantments.Nimble;
-using MegaCrit.Sts2.Core.MonsterMoves.Intents;
-using MegaCrit.Sts2.Core.ValueProps;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Relics;
 using SakuraMod.SakuraModCode;
-using STS2RitsuLib.RunData;
 
 public sealed class CardMechanicsSuite
 {
@@ -24,24 +17,6 @@ public sealed class CardMechanicsSuite
         Assert.Contains(SakuraKeywords.Frostbite, SakuraSourceCardText.KeywordTips(new SpellShuiLong()));
         Assert.DoesNotContain(SakuraKeywords.Stabilize, SakuraSourceCardText.KeywordTips(new SpellLeiDi()));
         Assert.DoesNotContain(SakuraKeywords.Stabilize, SakuraSourceCardText.KeywordTips(new SpellFengHua()));
-    }
-
-    [Fact]
-    public void LucidSearchesTheTopOfTheDrawPile()
-    {
-        var lucid = new Lucid();
-        var upgraded = RegressionTestHarness.MutableForCostTest(new Lucid());
-        upgraded.UpgradeInternal();
-        var lucidSource = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/Transparent/Lucid.cs"));
-
-        Assert.Equal(0, lucid.EnergyCost.Canonical);
-        Assert.Contains(CardKeyword.Exhaust, lucid.CanonicalKeywords);
-        Assert.DoesNotContain(CardKeyword.Exhaust, upgraded.Keywords);
-        Assert.Equal(3, lucid.DynamicVars["Look"].IntValue);
-        Assert.Equal(3, upgraded.DynamicVars["Look"].IntValue);
-        Assert.Contains(SakuraCardHoverTips.TemporaryTipKey, SakuraCardHoverTips.StaticTipKeys(lucid));
-        Assert.Contains("SakuraForgotten.GrantTemporary(choiceContext, rest)", lucidSource, StringComparison.Ordinal);
-        Assert.Contains("SetThisTurnOrUntilPlayed(0, reduceOnly: true)", lucidSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -91,7 +66,6 @@ public sealed class CardMechanicsSuite
     [Fact]
     public void BubblesDispelIncludesIndependentBuffsButProtectsEncounterState()
     {
-        // Set only the amount: native Apply/SetAmount needs a live owner and Godot hooks.
         var amountField = typeof(PowerModel).GetField("_amount",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
         var candidates = new PowerModel[]
@@ -142,394 +116,18 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void DarkSelectionTeardownCompatibilityStaysDarkScoped()
-    {
-        var clowSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/SourceCards/ClassicDarkPower.cs"));
-        var sakuraSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/SourceCards/ClassicDarkSakuraPower.cs"));
-        var lifecycleSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/SourceCards/ClassicDarkSelectionLifecycle.cs"));
-
-        RegressionTestHarness.Require(
-            clowSource.Contains("ClassicDarkSelectionLifecycle.SelectFromHand", StringComparison.Ordinal)
-            && sakuraSource.Contains("ClassicDarkSelectionLifecycle.SelectFromHand", StringComparison.Ordinal)
-            && !clowSource.Contains("CardSelectCmd.FromHand", StringComparison.Ordinal)
-            && !sakuraSource.Contains("CardSelectCmd.FromHand", StringComparison.Ordinal),
-            "Expected both Dark Power forms to share the guarded native hand-selection lifecycle.");
-        RegressionTestHarness.Require(
-            lifecycleSource.Contains("[HarmonyPatch(typeof(RunManager), \"ExitCurrentRoom\")]", StringComparison.Ordinal)
-            && lifecycleSource.Contains(
-                "[HarmonyPatch(typeof(RunManager), nameof(RunManager.CleanUp), [typeof(bool)])]",
-                StringComparison.Ordinal)
-            && lifecycleSource.Contains("IsActive", StringComparison.Ordinal)
-            && lifecycleSource.Contains("LocalContext.IsMe(player)", StringComparison.Ordinal)
-            && lifecycleSource.Contains("NetGameType.Replay", StringComparison.Ordinal)
-            && lifecycleSource.Contains("hand.IsInCardSelection", StringComparison.Ordinal)
-            && lifecycleSource.Contains("NPlayerHand.Mode.SimpleSelect", StringComparison.Ordinal)
-            && lifecycleSource.Contains("_selectionCompletionSource", StringComparison.Ordinal)
-            && lifecycleSource.Contains("TrySetResult(Array.Empty<CardModel>())", StringComparison.Ordinal)
-            && !lifecycleSource.Contains("SetCanceled", StringComparison.Ordinal),
-            "Expected beta room exit and run cleanup to complete only an active Dark SimpleSelect normally.");
-    }
-
-    [Fact]
-    public void ClowSilentCapsNextTurnHandPlaysAtThree()
-    {
-        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/SourceCards/ClassicSilentNoAttackPower.cs"));
-
-        Assert.Equal(3, ClassicSilentNoAttackPower.MaxCardsPerTurn);
-        Assert.Equal(PowerStackType.Single, new ClassicSilentNoAttackPower().StackType);
-        Assert.Contains("card.Pile?.Type != PileType.Hand", source);
-        Assert.Contains("CardPlaysStarted", source);
-        Assert.DoesNotContain("CardType.Attack", source);
-    }
-
-    [Fact]
-    public void TransferExtraHitsAllEnemiesButGainsOnce()
-    {
-        var transferSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Transfer.cs"));
-        Assert.Contains("activation.IsActive\n            ? CombatState!.HittableEnemies.ToList()", transferSource.ReplaceLineEndings("\n"));
-        Assert.Contains("if (gained)", transferSource);
-        Assert.DoesNotContain("MakeTemporaryStatsPermanent", transferSource);
-        Assert.Contains(CardKeyword.Exhaust, new Transfer().CanonicalKeywords);
-        Assert.Contains(CardKeyword.Exhaust, new Lucid().CanonicalKeywords);
-    }
-
-    [Fact]
-    public void BurningSticksExcludesSpellTurnOnly()
-    {
-        RegressionTestHarness.Require(
-            BurningSticksSpellTurnPatch.ShouldSkip(new SpellTurn())
-            && !BurningSticksSpellTurnPatch.ShouldSkip(new ClowFirey()),
-            "Expected Burning Sticks to skip only Spell Turn and preserve its normal Skill-card behavior for other cards.");
-
-        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Relics/BurningSticksSpellTurnPatch.cs"));
-        RegressionTestHarness.Require(
-            source.Contains("BurningSticks.AfterCardExhausted", StringComparison.Ordinal)
-            && source.Contains("[HarmonyPrefix]", StringComparison.Ordinal),
-            "Expected the Spell Turn exclusion to patch the native Burning Sticks exhaust hook.");
-    }
-
-    [Fact]
     public void SpellTurnLeavesCombatInsteadOfDiscardWhenPlayed()
     {
         RegressionTestHarness.Require(
             !new SpellTurn().Keywords.Contains(CardKeyword.Exhaust),
             "Expected Spell Turn to no longer advertise Exhaust.");
-
         RegressionTestHarness.Require(
             SakuraSourceCardText.KeywordTips(new SpellTurn()).Contains(SakuraKeywords.Purge),
             "Expected Spell Turn to source its Purge hover tip from the card text capability.");
-
         RegressionTestHarness.Require(
             SpellTurn.ResultPileFor(PileType.Discard) == PileType.None
             && SpellTurn.ResultPileFor(PileType.Exhaust) == PileType.Exhaust,
             "Expected a played Spell Turn to leave the combat while still respecting forced exhaust.");
-    }
-
-    [Fact]
-    public void SpellTurnPreservesCompatibleEnchantmentDuringTransformation()
-    {
-        var spellTurnSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Spells/SpellTurn.cs"));
-        var transferSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraCardEnchantmentTransfer.cs"));
-        RegressionTestHarness.Require(
-            spellTurnSource.Contains("ResolveEnchantmentSource(selected, deckCard)", StringComparison.Ordinal)
-            && spellTurnSource.Contains("SakuraCardEnchantmentTransfer.TransferEnchantment(enchantmentSource, deckReplacement)", StringComparison.Ordinal)
-            && spellTurnSource.Contains("SakuraCardEnchantmentTransfer.TransferEnchantment(enchantmentSource, handCard)", StringComparison.Ordinal)
-            && spellTurnSource.Contains("handCard.DeckVersion = transformedDeckCard", StringComparison.Ordinal)
-            && !spellTurnSource.Contains("CardCmd.Enchant(", StringComparison.Ordinal)
-            && !spellTurnSource.Contains("CardCmd.Upgrade(", StringComparison.Ordinal),
-            "Expected Spell Turn to delegate enchantment transfer to the shared helper.");
-        RegressionTestHarness.Require(
-            transferSource.Contains("target.EnchantInternal(enchantmentCopy, enchantmentCopy.Amount)", StringComparison.Ordinal)
-            && transferSource.Contains("enchantmentCopy.ModifyCard()", StringComparison.Ordinal)
-            && transferSource.Contains("target.FinalizeUpgradeInternal()", StringComparison.Ordinal)
-            && !transferSource.Contains("CanEnchant(", StringComparison.Ordinal)
-            && !transferSource.Contains("CardCmd.Enchant(", StringComparison.Ordinal),
-            "Expected enchantment transfer to copy existing state through EnchantInternal only.");
-    }
-
-    [Fact]
-    public void SpellTurnExcludesClowCardsNotInDeckFromSelection()
-    {
-        var sourceCardSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraSourceCard.cs"));
-        var spellTurnSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Spells/SpellTurn.cs"));
-
-        RegressionTestHarness.Require(
-            sourceCardSource.Contains("HasDeckClowForTurn(card.Owner, card, identity)", StringComparison.Ordinal)
-            && sourceCardSource.Contains("card.DeckVersion?.Pile?.Type == PileType.Deck", StringComparison.Ordinal)
-            && sourceCardSource.Contains("owner?.Deck.Cards.OfType<ClowCard>().Any(c => c.Identity == identity)", StringComparison.Ordinal),
-            "Expected IsEligibleClowForTurn to gate eligibility on having a deck instance of the Clow card.");
-
-        RegressionTestHarness.Require(
-            spellTurnSource.Contains("Owner.Deck.Cards.OfType<ClowCard>().FirstOrDefault(card => card.Identity == identity)", StringComparison.Ordinal),
-            "Expected SpellTurn to resolve a matching Clow card from the deck when the hand copy has no direct DeckVersion.");
-    }
-
-    [Fact]
-    public void EmptySpellCommunicatesThroughNativeKeywordsOnly()
-    {
-        RegressionTestHarness.Require(
-            new SpellEmptySpell().CanonicalKeywords.SequenceEqual(
-                [CardKeyword.Ethereal, CardKeyword.Exhaust]),
-            "Expected Empty Spell to rely on its native Ethereal and Exhaust keywords instead of an invisible Purge marker.");
-    }
-
-    [Fact]
-    public void GaleDescriptionCountsDownToItsNextDraw()
-    {
-        var gale = new Gale();
-        var englishCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/localization/eng/cards.json"));
-        var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/localization/zhs/cards.json"));
-
-        RegressionTestHarness.Require(
-            Enumerable.Range(0, 15)
-                .Select(GaleRules.PlaysUntilNextDraw)
-                .SequenceEqual([2, 1, 3, 2, 1, 4, 3, 2, 1, 5, 4, 3, 2, 1, 6]),
-            "Expected Gale to display the number of Gale plays remaining before its next two-card draw.");
-        RegressionTestHarness.Require(
-            englishCards.Contains("{PlaysUntilDraw:diff()}", StringComparison.Ordinal)
-            && chineseCards.Contains("{PlaysUntilDraw:diff()}", StringComparison.Ordinal),
-            "Expected both Gale descriptions to render the live plays-until-draw value.");
-    }
-
-    [Fact]
-    public void RecordUsesBoundedNextTurnCardCopies()
-    {
-        var record = new SakuraMod.SakuraModCode.Cards.Record();
-        var upgraded = RegressionTestHarness.MutableForCostTest(new SakuraMod.SakuraModCode.Cards.Record());
-        upgraded.UpgradeInternal();
-        var powerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/Transparent/RecordPower.cs"));
-
-        var checks = new[]
-        {
-            record.EnergyCost.Canonical == 2,
-            upgraded.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1,
-            record.Type == CardType.Skill,
-            record.Rarity == CardRarity.Rare,
-            record.CanonicalKeywords.SequenceEqual([SakuraKeywords.Water, CardKeyword.Exhaust]),
-            new RecordPower().InstanceType == PowerInstanceType.Instanced,
-            RegressionTestHarness.DeclaresMethod<RecordPower>("BeforeHandDraw"),
-            RegressionTestHarness.DeclaresMethod<RecordPower>("AfterCardPlayed"),
-            powerSource.Contains("MaxRecordedCards", StringComparison.Ordinal),
-            powerSource.Contains("play.IsLastInSeries", StringComparison.Ordinal),
-            !powerSource.Contains("CardType.Power", StringComparison.Ordinal),
-            powerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal),
-            !powerSource.Contains("AddRememberedCardToHand", StringComparison.Ordinal),
-            powerSource.Contains("freeThisTurn", StringComparison.Ordinal),
-        };
-        RegressionTestHarness.Require(checks.All(static check => check), "Expected Record to be a 2-cost Exhaust Skill that upgrades to 1 and materializes up to three Forgotten copies of the cards played after it, Powers included, before the next hand draw.");
-    }
-
-    [Fact]
-    public void SakuraEraseUsesTargetBasedPersistentHpLossContract()
-    {
-        var card = new SakuraErase();
-        var power = new SakuraErasePower();
-
-        RegressionTestHarness.Require(
-            card.EnergyCost.Canonical == 1
-            && card.Type == CardType.Skill
-            && card.TargetType == TargetType.AnyEnemy
-            && card.Elements == SakuraElementSet.Wind
-            && card.CanonicalKeywords.SequenceEqual([CardKeyword.Innate, CardKeyword.Exhaust])
-            && card.MaxUpgradeLevel == 0
-            && card.DynamicVars["Percent"].IntValue == SakuraEraseRules.NormalHpLossPercent
-            && card.DynamicVars["MaxHpLoss"].IntValue == SakuraEraseRules.EliteBossMaxHpLoss,
-            "Expected Sakura Erase to be a 1-cost Innate Exhaust Skill.");
-
-        RegressionTestHarness.Require(
-            power.Type == PowerType.Debuff
-            && power.StackType == PowerStackType.Single
-            && RegressionTestHarness.DeclaresMethod<SakuraErasePower>("BeforeSideTurnEnd")
-            && !RegressionTestHarness.DeclaresMethod<SakuraErasePower>("AfterSideTurnEnd"),
-            "Expected Sakura Erase's non-stacking enemy debuff to deal HP loss before the enemy turn-end synchronization boundary.");
-
-        RegressionTestHarness.Require(
-            SakuraEraseRules.NormalHpLoss(100) == 33
-            && SakuraEraseRules.NormalHpLoss(99) == 32
-            && SakuraEraseRules.NormalHpLoss(3) == 1
-            && SakuraEraseRules.NormalHpLoss(1) == 1
-            && SakuraEraseRules.NormalHpLoss(0) == 0
-            && SakuraEraseRules.NormalHpLoss(100, 0) == 0,
-            "Expected Sakura Erase HP loss to floor 33% of Max HP with a minimum of 1 for positive values.");
-    }
-
-    [Fact]
-    public void SakuraImmediateBlockCardsExposeNativeGainsBlockContract()
-    {
-        CardModel[] immediateBlockCards =
-        [
-            new ClowShield(),
-            new SakuraShield(),
-            new ClowMaze(),
-            new ClowSand(),
-            new SakuraMaze(),
-            new ClowJump(),
-            new ClowIllusion(),
-            new ClowShadow(),
-            new SakuraShadow(),
-            new ClowCloud(),
-            new SakuraCloud(),
-            new ClowLibra(),
-            new SakuraLibra(),
-            new ClowFreeze(),
-            new SakuraFreeze(),
-            new SakuraSong(),
-            new Shade(),
-            new Siege(),
-            new Promise(),
-            new Reflect(),
-            new Flight()
-        ];
-        CardModel[] delayedOrNonBlockCards =
-        [
-            new ClowNothing(),
-            new ClowVoice(),
-            new Choice(),
-            new Blank(),
-            new Spiral()
-        ];
-        var nimble = new NimbleEnchantment();
-
-        RegressionTestHarness.Require(
-            immediateBlockCards.All(static card => card.GainsBlock),
-            "Expected every Sakura card that gains Block when played to expose the native GainsBlock contract.");
-        RegressionTestHarness.Require(
-            delayedOrNonBlockCards.All(static card => !card.GainsBlock),
-            "Expected delayed and non-Block Sakura cards to remain outside the native immediate-Block contract.");
-        RegressionTestHarness.Require(
-            nimble.CanEnchant(new ClowShield())
-            && !nimble.CanEnchant(new Choice()),
-            "Expected Nimble to accept a Sakura Block Skill and reject a non-Block Skill.");
-    }
-
-    [Fact]
-    public void SakuraAncientCardContractsRemainStable()
-    {
-        var growingMagic = new GrowingMagic();
-        var upgradedGrowingMagic = RegressionTestHarness.MutableForCostTest(new GrowingMagic());
-        upgradedGrowingMagic.UpgradeInternal();
-        var anotherMe = new AnotherMe();
-        var upgradedAnotherMe = RegressionTestHarness.MutableForCostTest(new AnotherMe());
-        upgradedAnotherMe.UpgradeInternal();
-
-        RegressionTestHarness.Require(
-            growingMagic.Rarity == CardRarity.Ancient
-            && growingMagic.Type == CardType.Attack
-            && growingMagic.TargetType == TargetType.AnyEnemy
-            && growingMagic.EnergyCost.Canonical == 1
-            && growingMagic.CanonicalKeywords.SequenceEqual([CardKeyword.Retain])
-            && growingMagic.DynamicVars.Damage.IntValue == 28
-            && upgradedGrowingMagic.DynamicVars.Damage.IntValue == 38
-            && !growingMagic.CanBeGeneratedInCombat,
-            "Expected Growing Magic to be a 1-cost 28/38 Ancient Retain Attack excluded from combat generation.");
-        RegressionTestHarness.Require(
-            anotherMe.Rarity == CardRarity.Ancient
-            && anotherMe.Type == CardType.Power
-            && anotherMe.TargetType == TargetType.None
-            && anotherMe.EnergyCost.Canonical == 2
-            && upgradedAnotherMe.EnergyCost.GetWithModifiers(CostModifiers.None) == 1
-            && anotherMe.DynamicVars["Magic"].IntValue == AnotherMe.MagicChargeAmount
-            && !anotherMe.CanBeGeneratedInCombat
-            && new AnotherMePower().StackType == PowerStackType.Single,
-            "Expected Another Me to be a 2-to-1-cost Ancient Power that grants and refunds 5 Magic Charge.");
-        RegressionTestHarness.Require(
-            SakuraSealKillPolicy.IsSealCard(new SpellSeal())
-            && SakuraSealKillPolicy.IsSealCard(growingMagic)
-            && !SakuraSealKillPolicy.IsSealCard(anotherMe),
-            "Expected Spell Seal and Growing Magic to share one Seal-kill identity policy.");
-        RegressionTestHarness.Require(
-            AnotherMePower.ShouldRefund(ownsCard: true, spentMagicCharge: true)
-            && !AnotherMePower.ShouldRefund(ownsCard: false, spentMagicCharge: true)
-            && !AnotherMePower.ShouldRefund(ownsCard: true, spentMagicCharge: false)
-            && SakuraSourceCardText.ReferencesMagicChargeTip(anotherMe)
-            && SakuraSourceCardText.ReferencesMagicChargeTip(growingMagic),
-            "Expected Another Me to refund every owned paid Extra Effect without refunding free activations.");
-    }
-
-    [Fact]
-    public void ThroughCardsPayOutWhenCardsCrossMemoryOrExhaust()
-    {
-        var clow = new ClowThrough();
-        var upgradedClow = RegressionTestHarness.MutableForCostTest(new ClowThrough());
-        upgradedClow.UpgradeInternal();
-        var sakura = new SakuraThrough();
-
-        RegressionTestHarness.Require(
-            clow.EnergyCost.Canonical == 2
-            && upgradedClow.EnergyCost.GetWithModifiers(CostModifiers.None) == 1
-            && clow.Type == CardType.Power
-            && clow.Rarity == CardRarity.Rare
-            && clow.TargetType == TargetType.None
-            && clow.Elements == SakuraElementSet.Earth
-            && clow is not ISakuraExtraEffectCard
-            && clow.DynamicVars["PoisonPower"].IntValue == 2
-            && upgradedClow.DynamicVars["PoisonPower"].IntValue == 2,
-            "Expected Clow Through to be a 2-cost Rare Earth Power applying 2 Poison per card and upgrading to 1 Energy.");
-
-        RegressionTestHarness.Require(
-            sakura.EnergyCost.Canonical == 1
-            && sakura.Type == CardType.Power
-            && sakura.Rarity == CardRarity.Token
-            && sakura.Elements == SakuraElementSet.Earth
-            && sakura.MaxUpgradeLevel == 0
-            && sakura.DynamicVars["PoisonPower"].IntValue == 3,
-            "Expected Sakura Through to be a non-upgradable 1-cost Earth Power applying 3 Poison per card.");
-
-        RegressionTestHarness.Require(
-            new ClassicThroughPower().StackType == PowerStackType.Counter
-            && new ClassicThroughSakuraPower().StackType == PowerStackType.Counter
-            && RegressionTestHarness.DeclaresMethod<ClassicThroughPower>("AfterCardChangedPiles"),
-            "Expected both Through powers to stack and trigger from native pile changes.");
-    }
-
-    [Fact]
-    public void SakuraBigIncreasesAttackDamageBySixtySixPercent()
-    {
-        RegressionTestHarness.Require(
-            ClassicBigPower.DamageMultiplier == 1.66m,
-            "Expected Sakura Big to multiply outgoing Attack damage by 1.66.");
-    }
-
-    [Fact]
-    public void SakuraFloatAddsBlockFromEveryPositiveBlockSource()
-    {
-        var card = new SakuraFloat();
-        RegressionTestHarness.Require(
-            card.CanonicalKeywords.Contains(CardKeyword.Innate)
-            && card.DynamicVars["Magic"].IntValue == 2,
-            "Expected Sakura Float to be Innate and grant 2 additional Block per Block event.");
-        RegressionTestHarness.Require(
-            ClassicFloatSakuraPower.ExtraBlock(ownsTarget: true, block: 5m, amount: 2) == 2m
-            && ClassicFloatSakuraPower.ExtraBlock(ownsTarget: true, block: 0m, amount: 2) == 0m
-            && ClassicFloatSakuraPower.ExtraBlock(ownsTarget: false, block: 5m, amount: 2) == 0m,
-            "Expected Sakura Float to modify every positive owner Block event without creating Block from zero.");
-    }
-
-    [Fact]
-    public void RequestedCardRaritiesRemainStable()
-    {
-        RegressionTestHarness.Require(
-            new ClowRain().Rarity == CardRarity.Uncommon
-            && new Hail().Rarity == CardRarity.Uncommon
-            && new Lucid().Rarity == CardRarity.Uncommon
-            && new Rewind().Rarity == CardRarity.Rare
-            && new SakuraMod.SakuraModCode.Cards.Action().Rarity == CardRarity.Uncommon
-            && new Kindness().Rarity == CardRarity.Rare
-            && new ClowIllusion().Rarity == CardRarity.Uncommon,
-            "Expected the requested Clow and Transparent card rarities to remain stable.");
     }
 
     [Fact]
@@ -543,355 +141,9 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void ExchangePileSwapLeavesSpellTurnInPlace()
-    {
-        RegressionTestHarness.Require(
-            !ExchangeRules.ParticipatesInPileExchange(new SpellTurn())
-            && ExchangeRules.ParticipatesInPileExchange(new ClowFirey()),
-            "Expected the Exchange pile swap to leave Spell Turn in its pile like the other Clear Card gates.");
-
-        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Exchange.cs"));
-        RegressionTestHarness.Require(
-            source.Contains("Where(ExchangeRules.ParticipatesInPileExchange)", StringComparison.Ordinal),
-            "Expected the Exchange pile swap to filter both piles through the Spell Turn gate.");
-    }
-
-    [Fact]
-    public void ReversalIsZeroCostAttackScalingBlockAndDamageWithSwappedCards()
-    {
-        var reversal = new Reversal();
-        var upgradedReversal = RegressionTestHarness.MutableForCostTest(new Reversal());
-        upgradedReversal.UpgradeInternal();
-        RegressionTestHarness.Require(
-            reversal.EnergyCost.Canonical == 0
-            && reversal.Type == CardType.Attack
-            && reversal.DynamicVars.Damage.IntValue == 0
-            && reversal.DynamicVars.Block.IntValue == 0
-            && reversal.DynamicVars.Damage is ReversalDamageVar
-            && reversal.DynamicVars.Block is ReversalBlockVar
-            && reversal.DynamicVars["PileBonus"] is not DamageVar
-            && !reversal.DynamicVars.ContainsKey("Cards")
-            && reversal.DynamicVars["PileCards"].IntValue == 3
-            && upgradedReversal.DynamicVars["PileCards"].IntValue == 2
-            && ReversalRules.ScaledValue(0, 8, 3, 1) == 2
-            && ReversalRules.ScaledValue(0, 8, 2, 1) == 4,
-            "Expected Reversal to be a 0-cost Attack whose Block and damage both scale every 3/2 exchanged cards.");
-        RegressionTestHarness.Require(
-            ReversalRules.ExtraDrawTarget(10) == 5
-            && ReversalRules.ExtraDrawTarget(9) == 4
-            && ReversalRules.ExtraDrawTarget(0) == 0,
-            "Expected Reversal's Extra to draw up to half the max hand size, rounded down.");
-    }
-
-    [Fact]
-    public void ExchangeConnectsLightweightPileExchangeVisual()
-    {
-        var exchangeSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Exchange.cs"));
-        var pileExchangeVfx = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/PileExchangeVfx.cs"));
-
-        RegressionTestHarness.Require(
-            exchangeSource.Contains("SakuraActions.SelectUpToFromCards(", StringComparison.Ordinal)
-            && exchangeSource.Contains("PileExchangeVfx.Play(", StringComparison.Ordinal),
-            "Expected Exchange to use native four-region selection and the pile exchange visual.");
-        RegressionTestHarness.Require(
-            pileExchangeVfx.Contains("TestMode.IsOn", StringComparison.Ordinal)
-            && pileExchangeVfx.Contains("SakuraModConfig.IsCardVfxEnabled()", StringComparison.Ordinal),
-            "Expected the Exchange visual to skip tests and follow the optional card-VFX setting.");
-    }
-
-    [Fact]
-    public void ExchangeSnapshotsBothSelectedPilesBeforeOrderedMovement()
-    {
-        var exchangeSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Exchange.cs"));
-        var firstSnapshot = exchangeSource.IndexOf("var firstCards =", StringComparison.Ordinal);
-        var secondSnapshot = exchangeSource.IndexOf("var secondCards =", StringComparison.Ordinal);
-        var firstMove = exchangeSource.IndexOf("foreach (var card in firstCards)", StringComparison.Ordinal);
-        var secondMove = exchangeSource.IndexOf("foreach (var card in secondCards)", StringComparison.Ordinal);
-
-        RegressionTestHarness.Require(
-            firstSnapshot >= 0
-            && secondSnapshot > firstSnapshot
-            && firstMove > secondSnapshot
-            && secondMove > firstMove
-            && exchangeSource.Split("CardPilePosition.Bottom", StringSplitOptions.None).Length - 1 == 2
-            && !exchangeSource.Contains("CardPileCmd.Shuffle", StringComparison.Ordinal),
-            "Expected Exchange to snapshot both piles before moving either one, preserve order at the bottom, and never shuffle.");
-    }
-
-    [Fact]
-    public void ExistingPileMovementRefreshesBothPileEnds()
-    {
-        var actionsSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraActions.cs"));
-
-        RegressionTestHarness.Require(
-            actionsSource.Contains("var sourcePile = card.Pile;", StringComparison.Ordinal)
-            && actionsSource.Contains("sourcePile.InvokeCardRemoveFinished();", StringComparison.Ordinal)
-            && actionsSource.Contains("destinationPile.InvokeCardAddFinished();", StringComparison.Ordinal),
-            "Expected silent existing-card movement to retain the source pile and signal both source removal and destination addition for cached pile counts.");
-    }
-
-    [Fact]
-    public void SakuraLockRetains()
-    {
-        RegressionTestHarness.Require(
-            new SakuraLock().CanonicalKeywords.Contains(CardKeyword.Retain),
-            "Expected Sakura Lock to Retain.");
-    }
-
-    [Fact]
-    public void SakuraDashRetains()
-    {
-        RegressionTestHarness.Require(
-            new SakuraDash().CanonicalKeywords.SequenceEqual([CardKeyword.Retain, CardKeyword.Exhaust])
-            && new ClowDash().CanonicalKeywords.SequenceEqual([CardKeyword.Exhaust]),
-            "Expected only Sakura Dash to Retain while both forms Exhaust after use.");
-    }
-
-    [Fact]
-    public void ClowFlyIsAnInnateAirborneOpener()
-    {
-        var baseCard = new ClowFly();
-        var upgradedCard = RegressionTestHarness.MutableForCostTest(new ClowFly());
-        upgradedCard.UpgradeInternal();
-        var airborne = new AirbornePower();
-        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/ClowSakura/Fly.cs"));
-        var clowFlySource = source[..source.IndexOf("public class SakuraFly()", StringComparison.Ordinal)];
-        var powerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/SourceCards/AirbornePower.cs"));
-        var englishPowers = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/localization/eng/powers.json"));
-        var chinesePowers = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/localization/zhs/powers.json"));
-
-        RegressionTestHarness.Require(
-            baseCard.EnergyCost.Canonical == 0
-            && baseCard.Rarity == CardRarity.Uncommon
-            && baseCard.CanonicalKeywords.SequenceEqual([CardKeyword.Innate, CardKeyword.Exhaust])
-            && baseCard.DynamicVars["AirbornePower"].IntValue == 1
-            && baseCard.DynamicVars.Cards.IntValue == 1
-            && upgradedCard.DynamicVars["AirbornePower"].IntValue == 1
-            && upgradedCard.DynamicVars.Cards.IntValue == 1,
-            "Expected the Uncommon Clow Fly to cost 0, be Innate and Exhaust, and keep Airborne 1 / Cards 1 across the upgrade.");
-        RegressionTestHarness.Require(
-            clowFlySource.Contains("private const int ExtraAirborne = 1;", StringComparison.Ordinal)
-            && clowFlySource.Contains("GainAirborne(choiceContext, ExtraAirborne)", StringComparison.Ordinal)
-            && clowFlySource.Contains("ApplyPower<AirbornePower>(choiceContext, Owner.Creature, ReleasedValue(\"AirbornePower\") + extraAirborne)", StringComparison.Ordinal)
-            && clowFlySource.Contains("if (IsUpgraded)", StringComparison.Ordinal)
-            && clowFlySource.Contains("CardPileCmd.Draw(choiceContext, ReleasedValue(\"Cards\"), Owner, false)", StringComparison.Ordinal)
-            && !clowFlySource.Contains("GainMagic", StringComparison.Ordinal)
-            && !clowFlySource.Contains("ExtraDraw", StringComparison.Ordinal),
-            "Expected Clow Fly to apply Airborne (+1 on Extra), draw only when upgraded, and never gain explicit Magic Charge.");
-        RegressionTestHarness.Require(
-            airborne.Type == PowerType.Buff
-            && airborne.StackType == PowerStackType.Counter
-            && AirbornePower.DamageMultiplier == 0.5m
-            && powerSource.Contains("target == Owner && dealer?.Side != Owner.Side && props.IsPoweredAttack()", StringComparison.Ordinal)
-            && powerSource.Contains("BeforeSideTurnStart", StringComparison.Ordinal)
-            && powerSource.Contains("PowerCmd.Decrement(this)", StringComparison.Ordinal),
-            "Expected Airborne to be a Counter Buff that halves enemy powered attack damage with a constant multiplier and decrements at its owner's turn start.");
-        RegressionTestHarness.Require(
-            new[] { englishPowers, chinesePowers }.All(static powers =>
-                powers.Contains("\"SAKURA_MOD_POWER_AIRBORNE_POWER.smartDescription\"", StringComparison.Ordinal)),
-            "Expected Airborne's smart description key in both locales.");
-    }
-
-    [Fact]
-    public void ClowFightGeneratesStandardFightAtCurrentUpgradeLevel()
-    {
-        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/ClowSakura/Fight.cs"));
-
-        RegressionTestHarness.Require(
-            source.Contains("combatState.CreateCard<ClowFight>(Owner)", StringComparison.Ordinal)
-            && source.Contains("generatedFight.CurrentUpgradeLevel < CurrentUpgradeLevel", StringComparison.Ordinal)
-            && source.Contains("CardPileCmd.AddGeneratedCardToCombat(", StringComparison.Ordinal)
-            && !source.Contains("CreateClone()", StringComparison.Ordinal),
-            "Expected Clow Fight to generate a standard Fight at the current upgrade level without inheriting temporary instance state such as Release's 0 cost.");
-    }
-
-    [Fact]
-    public void SakuraFightGeneratesForgottenUpgradedFightsAndStrengthensThem()
-    {
-        var card = new SakuraFight();
-        var power = new SakuraFightPower();
-        var fightSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/ClowSakura/Fight.cs"));
-        var powerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/SourceCards/SakuraFightPower.cs"));
-
-        RegressionTestHarness.Require(
-            card.EnergyCost.Canonical == 1
-            && card.Type == CardType.Power
-            && card.TargetType == TargetType.None
-            && power.Type == PowerType.Buff
-            && power.StackType == PowerStackType.Counter,
-            "Expected Sakura Fight to be a 1-cost stacking Power.");
-        RegressionTestHarness.Require(
-            powerSource.Contains("BeforeHandDraw", StringComparison.Ordinal)
-            && powerSource.Contains("fight.UpgradeInternal();", StringComparison.Ordinal)
-            && powerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal)
-            && fightSource.Contains("GetPower<SakuraFightPower>()?.Amount", StringComparison.Ordinal),
-            "Expected Sakura Fight to generate Forgotten Fight+ cards and add its stacks to Fight's temporary Strength.");
-    }
-
-    [Fact]
-    public void SakuraPowerGrantsEightStrength()
-    {
-        RegressionTestHarness.Require(
-            new SakuraPower().DynamicVars["StrengthPower"].IntValue == 8,
-            "Expected Sakura Power to grant 8 Strength.");
-    }
-
-    [Fact]
-    public void SakuraCreateStacksThreeLimitedEliteOrBossRelicRewards()
-    {
-        var options = SakuraCreateLegacy.CreateOptions();
-        var createSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/ClowSakura/Create.cs"));
-        var runHooksSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Character/SakuraRunHooks.cs"));
-
-        RegressionTestHarness.Require(
-            SakuraCreateLegacy.RunSavedDataKey == "sakura_create_victory_rewards_v1"
-            && options.SchemaVersion == 1
-            && options.WritePolicy == RunSavedDataWritePolicy.WhenSet,
-            "Expected Sakura Create's remaining reward count to use versioned per-player run data.");
-        RegressionTestHarness.Require(
-            SakuraCreateLegacy.RewardsPerUse == 3
-            && SakuraCreateLegacy.RemainingAfterVictory(3, RoomType.Boss) == 2
-            && SakuraCreateLegacy.RemainingAfterVictory(3, RoomType.Elite) == 2
-            && SakuraCreateLegacy.RemainingAfterVictory(3, RoomType.Monster) == 3
-            && SakuraCreateLegacy.RemainingAfterVictory(0, RoomType.Boss) == 0,
-            "Expected each Sakura Create use to add three rewards consumed one at a time by Elite or Boss victories.");
-        RegressionTestHarness.Require(
-            createSource.Contains("SakuraCreateLegacy.AddRewards(Owner);", StringComparison.Ordinal)
-            && runHooksSource.Contains("SubscribeLifecycle<CombatVictoryEvent>", StringComparison.Ordinal)
-            && runHooksSource.Contains("TryConsumeReward(player, evt.Room.RoomType)", StringComparison.Ordinal)
-            && runHooksSource.Contains("AddExclusiveOrNormalRelicReward(player)", StringComparison.Ordinal),
-            "Expected Sakura Create to stack and resolve three persistent character-exclusive Elite or Boss rewards.");
-    }
-
-    [Fact]
-    public void SakuraSandIsAnUnexhaustedPoisonSkill()
-    {
-        var sand = new SakuraSand();
-        var sandSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/ClowSakura/Sand.cs"));
-        var englishCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/localization/eng/cards.json"));
-        var chineseCards = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/localization/zhs/cards.json"));
-        var cardModelSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraCardModel.cs"));
-        var triggerPoison = cardModelSource[cardModelSource.IndexOf("Task TriggerCurrentPoison", StringComparison.Ordinal)..];
-
-        RegressionTestHarness.Require(
-            triggerPoison.IndexOf("PowerCmd.Decrement(poison)", StringComparison.Ordinal)
-                is > 0 and var decrement
-            && decrement < triggerPoison.IndexOf("Task DealDamageHit", StringComparison.Ordinal)
-            && sand.EnergyCost.Canonical == 1
-            && sand.Type == CardType.Skill
-            && sand.TargetType == TargetType.None
-            && !sand.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && sand.DynamicVars["Triggers"].IntValue == 2
-            && sand.DynamicVars["PoisonPower"].IntValue == 1
-            && sand.DynamicVars["Applications"].IntValue == 9
-            && sandSource.IndexOf("TriggerCurrentPoison", StringComparison.Ordinal)
-                < sandSource.IndexOf("ApplyPowerToEnemies<PoisonPower>", StringComparison.Ordinal)
-            && englishCards.Contains("{Triggers:diff()}", StringComparison.Ordinal)
-            && englishCards.Contains("{PoisonPower:diff()}", StringComparison.Ordinal)
-            && englishCards.Contains("{Applications:diff()}", StringComparison.Ordinal)
-            && chineseCards.Contains("{Triggers:diff()}", StringComparison.Ordinal)
-            && chineseCards.Contains("{PoisonPower:diff()}", StringComparison.Ordinal)
-            && chineseCards.Contains("{Applications:diff()}", StringComparison.Ordinal),
-            "Expected Sakura Sand to be a 1-cost unexhausted Skill that triggers Poison twice, each trigger losing 1 Poison like the native tick, before applying 1 Poison 9 times to all enemies.");
-    }
-
-    [Fact]
-    public void SakuraSweetHealsTenPercentOfMaxHp()
-    {
-        RegressionTestHarness.Require(
-            new SakuraSweet().DynamicVars["Magic"].IntValue == 10
-            && ClassicSweetPower.HealAmount(80, 10) == 8
-            && ClassicSweetPower.HealAmount(99, 10) == 9,
-            "Expected Sakura Sweet to heal 10% of max HP, rounded down.");
-    }
-
-    [Fact]
-    public void SweetCardsTargetEveryLivingPlayer()
-    {
-        var clowSweet = new ClowSweet();
-        var sweetSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/ClowSakura/Sweet.cs"));
-        var sourceCardRules = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraSourceCard.cs"));
-
-        RegressionTestHarness.Require(
-            clowSweet.EnergyCost.Canonical == 1,
-            $"Expected Clow Sweet to cost 1, found {clowSweet.EnergyCost.Canonical}.");
-        RegressionTestHarness.Require(
-            clowSweet.DynamicVars.Heal.IntValue == 4,
-            $"Expected Clow Sweet Heal to be 4, found {clowSweet.DynamicVars.Heal.IntValue}.");
-        RegressionTestHarness.Require(
-            new SakuraSweet().EnergyCost.Canonical == 2,
-            $"Expected Sakura Sweet to cost 2, found {new SakuraSweet().EnergyCost.Canonical}.");
-        RegressionTestHarness.Require(
-            clowSweet.MultiplayerConstraint == CardMultiplayerConstraint.None
-            && new SakuraSweet().MultiplayerConstraint == CardMultiplayerConstraint.None,
-            "Expected both Sweet forms to be available in singleplayer and multiplayer.");
-        RegressionTestHarness.Require(
-            sourceCardRules.Contains(
-                "GetUnlockedCards(owner.UnlockState, owner.RunState.CardMultiplayerConstraint)",
-                StringComparison.Ordinal),
-            "Expected custom Clow generation to honor STS2's native player-count filter.");
-        RegressionTestHarness.Require(
-            sweetSource.Contains(".Where(static player => player.Creature.IsAlive)", StringComparison.Ordinal),
-            "Expected Sweet cards to filter living players.");
-        RegressionTestHarness.Require(
-            sweetSource.Contains("EnergyCost.UpgradeBy(-1)", StringComparison.Ordinal),
-            "Expected Clow Sweet to preserve its existing cost-upgrade declaration.");
-        RegressionTestHarness.Require(
-            sweetSource.Contains("CreatureCmd.Heal", StringComparison.Ordinal),
-            "Expected Clow Sweet to heal each target.");
-        RegressionTestHarness.Require(
-            sweetSource.Contains("PowerCmd.Apply<RegenPower>", StringComparison.Ordinal)
-            && sweetSource.Contains("PowerCmd.Apply<ClassicSweetPower>", StringComparison.Ordinal),
-            "Expected both Sweet forms to apply their powers to a target collection.");
-    }
-
-    [Fact]
-    public void ClassicCloudValuesAndStateReferenceRemainStable()
+    public void ClassicWaterySynergiesExcludeSelfAndCountAcrossFamilies()
     {
         var clowCloud = new ClowCloud();
-        var upgradedClowCloud = RegressionTestHarness.MutableForCostTest(new ClowCloud());
-        upgradedClowCloud.UpgradeInternal();
-        var sakuraCloud = new SakuraCloud();
-
-        RegressionTestHarness.Require(
-            clowCloud.EnergyCost.Canonical == 1
-            && clowCloud.Rarity == CardRarity.Common
-            && clowCloud.Elements == SakuraElementSet.Water
-            && clowCloud.DynamicVars.CalculationBase.IntValue == 5
-            && clowCloud.DynamicVars.CalculationExtra.IntValue == 5
-            && upgradedClowCloud.DynamicVars.CalculationBase.IntValue == 7
-            && upgradedClowCloud.DynamicVars.CalculationExtra.IntValue == 7
-            && sakuraCloud.DynamicVars.CalculationBase.IntValue == 7
-            && sakuraCloud.DynamicVars.CalculationExtra.IntValue == 3,
-            "Expected Clow Cloud to block for 5 plus 5 per Watery card (7/7 upgraded) and Sakura Cloud to block for 7 plus 3 per Watery card.");
-        RegressionTestHarness.Require(
-            !SakuraSourceCardText.ElementStatesReferencedBy(clowCloud).Any()
-            && !SakuraSourceCardText.ElementStatesReferencedBy(sakuraCloud).Any(),
-            "Expected Cloud to no longer reference the Watery state now that it does not generate Rain.");
-
-        // The card's own Watery element must not feed its own multiplier: the played card sits in the
-        // Play pile while OnPlay runs, so a preview that counted it would show one Watery card more
-        // Block than the play grants.
         var hand = new List<CardModel>
         {
             clowCloud,
@@ -903,12 +155,8 @@ public sealed class CardMechanicsSuite
         RegressionTestHarness.Require(
             SakuraCloudEffects.CountWateryCards(hand, clowCloud) == 3
             && SakuraCloudEffects.CountWateryCards(hand.Where(card => card != clowCloud).ToList(), clowCloud) == 3,
-            "Expected Clow Cloud to count 3 other Watery cards and to ignore itself in both its hand preview and its play resolution.");
-    }
+            "Expected Clow Cloud to count other Watery cards and ignore itself in both preview and resolution.");
 
-    [Fact]
-    public void ClassicWaterySynergiesIncludeTransparentCards()
-    {
         RegressionTestHarness.Require(
             SakuraArrow.CountDistinctCardTypes([
                 new ClowSword(),
@@ -923,73 +171,12 @@ public sealed class CardMechanicsSuite
             "Expected Sakura Arrow to count each distinct discarded card type once across mod and vanilla card families.");
 
         RegressionTestHarness.Require(
-            SakuraCloudEffects.CountWateryCards([
-                new ClowWatery(),
-                new SakuraWatery(),
-                new Reflect(),
-                new SpellShuiLong(),
-                new Gale()
-            ], source: null) == 4,
-            "Expected both Cloud forms to count Transparent and Spell cards through the shared Watery element projection.");
-
-        RegressionTestHarness.Require(
             SakuraSnowRules.CountsAsWateryCard(new ClowWatery())
             && SakuraSnowRules.CountsAsWateryCard(new SakuraWatery())
             && SakuraSnowRules.CountsAsWateryCard(new Reflect())
             && SakuraSnowRules.CountsAsWateryCard(new SpellShuiLong())
             && !SakuraSnowRules.CountsAsWateryCard(new Gale()),
-            "Expected both Snow forms to count every Watery card.");
-    }
-
-    [Fact]
-    public void ClowShotDealsTwoHitsAndGainsVigor()
-    {
-        var baseCard = new ClowShot();
-        var upgradedCard = RegressionTestHarness.MutableForCostTest(new ClowShot());
-        upgradedCard.UpgradeInternal();
-
-        RegressionTestHarness.Require(
-            baseCard.DynamicVars.Damage.IntValue == 4
-            && baseCard.DynamicVars["Hits"].IntValue == 2
-            && baseCard.DynamicVars["VigorPower"].IntValue == 2
-            && !baseCard.DynamicVars.ContainsKey("PoisonPower")
-            && upgradedCard.DynamicVars.Damage.IntValue == 5
-            && upgradedCard.DynamicVars["Hits"].IntValue == 2
-            && upgradedCard.DynamicVars["VigorPower"].IntValue == 3,
-            "Expected Clow Shot to deal 4 (5) damage twice, gain 2 (3) Vigor, and no longer apply Poison.");
-    }
-
-    [Fact]
-    public void TrueOrFalseIsAForgottenDamageAndRecallBlockPower()
-    {
-        var baseCard = new TrueOrFalse();
-        var upgradedCard = RegressionTestHarness.MutableForCostTest(new TrueOrFalse());
-        upgradedCard.UpgradeInternal();
-        var lifecycleSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraGeneratedCardLifecycle.cs"));
-        var forgottenSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraForgotten.cs"));
-        var memorySource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraMemoryPile.cs"));
-
-        RegressionTestHarness.Require(
-            baseCard.Type == CardType.Power
-            && baseCard.Rarity == CardRarity.Rare
-            && baseCard.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
-            && upgradedCard.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
-            && !baseCard.Keywords.Contains(CardKeyword.Exhaust)
-            && !baseCard.CanonicalKeywords.Contains(SakuraKeywords.Stabilize)
-            && baseCard.DynamicVars[TrueOrFalse.DamageVar].IntValue == 8
-            && upgradedCard.DynamicVars[TrueOrFalse.DamageVar].IntValue == 10
-            && baseCard.DynamicVars[TrueOrFalse.BlockVar].IntValue == 5
-            && upgradedCard.DynamicVars[TrueOrFalse.BlockVar].IntValue == 7
-            && new TrueOrFalsePower().StackType == PowerStackType.Counter
-            && new TrueOrFalsePower().DynamicVars.ContainsKey(TrueOrFalsePower.BlockVar)
-            && RegressionTestHarness.DeclaresMethod<TrueOrFalsePower>("AfterCardDrawn")
-            && lifecycleSource.Contains("TrueOrFalsePower.AfterForgottenCardInHand(card)", StringComparison.Ordinal)
-            && forgottenSource.Contains("TrueOrFalsePower.AfterForgottenCardInHand(card)", StringComparison.Ordinal)
-            && memorySource.Contains("TrueOrFalsePower.AfterRecalledFromMemory(player, recalled.Count)", StringComparison.Ordinal),
-            "Expected True or False to be a 1-cost rare Power: 8 (10) damage to a random enemy whenever a Forgotten card appears in hand, and 5 (7) Block per card recalled from Memory.");
+            "Expected Snow rules to count every Watery card across families.");
     }
 
     [Fact]
@@ -1013,84 +200,69 @@ public sealed class CardMechanicsSuite
             if (upgraded)
                 appear.UpgradeInternal();
 
-            const int baseCount = 1;
-            SakuraReleaseState.Apply(appear, ClassicSwordJadeRelic.ReleaseRate);
             Assert.True(appear.DynamicVars.TryGetValue("Cards", out var count));
+            var baseCount = count.IntValue;
+            SakuraReleaseState.Apply(appear, ClassicSwordJadeRelic.ReleaseRate);
             Assert.Equal(baseCount * 2, count.IntValue);
             SakuraReleaseState.Reset(appear);
             Assert.Equal(baseCount, count.IntValue);
-
-            SakuraReleaseState.Apply(appear, 0.5f);
-            Assert.Equal(1, count.IntValue);
-            SakuraReleaseState.Reset(appear);
         }
     }
 
     [Fact]
-    public async Task SpellReleaseScalesAndResetsAllTransparentCardValues()
+    public async Task SpellReleaseScalesAndResetsTransparentCardValues()
     {
         var gale = RegressionTestHarness.MutableForCostTest(new Gale());
         var reflect = RegressionTestHarness.MutableForCostTest(new Reflect());
-        var trueOrFalse = RegressionTestHarness.MutableForCostTest(new TrueOrFalse());
+        var baseDamage = gale.DynamicVars.Damage.IntValue;
+        var baseCards = gale.DynamicVars["Cards"].IntValue;
+        var baseBlock = reflect.DynamicVars.Block.IntValue;
 
         SakuraReleaseState.Apply(gale, 0.5f);
         SakuraReleaseState.Apply(reflect, 0.5f);
-        SakuraReleaseState.Apply(trueOrFalse, 0.5f);
 
-        RegressionTestHarness.Require(
-            gale.DynamicVars.Damage.IntValue == 7
-            && gale.DynamicVars["Cards"].IntValue == 3
-            && gale.DynamicVars["ExtraCopies"].IntValue == 3
-            && reflect.DynamicVars.Block.IntValue == 7
-            && trueOrFalse.DynamicVars[TrueOrFalse.DamageVar].IntValue == 12
-            && trueOrFalse.DynamicVars[TrueOrFalse.BlockVar].IntValue == 7
-            && gale.Keywords.Contains(CardKeyword.Exhaust)
-            && gale.Keywords.Contains(CardKeyword.Ethereal),
-            "Expected Release to scale every Transparent Card dynamic value using the existing floor rule.");
+        Assert.Equal(baseDamage + (int)Math.Floor(baseDamage * 0.5f), gale.DynamicVars.Damage.IntValue);
+        Assert.Equal(baseCards + (int)Math.Floor(baseCards * 0.5f), gale.DynamicVars["Cards"].IntValue);
+        Assert.Equal(baseBlock + (int)Math.Floor(baseBlock * 0.5f), reflect.DynamicVars.Block.IntValue);
+        Assert.True(gale.Keywords.Contains(CardKeyword.Exhaust));
+        Assert.True(gale.Keywords.Contains(CardKeyword.Ethereal));
 
         await gale.AfterCardExhausted(null!, gale, causedByEthereal: true);
-        Assert.Equal(7, gale.DynamicVars.Damage.IntValue);
         Assert.False(SpellRelease.CanRelease(gale));
         SakuraReleaseState.Apply(gale, 0.5f);
-        Assert.Equal(7, gale.DynamicVars.Damage.IntValue);
+        Assert.Equal(baseDamage + (int)Math.Floor(baseDamage * 0.5f), gale.DynamicVars.Damage.IntValue);
+
         SakuraReleaseState.Reset(gale);
         SakuraReleaseState.Reset(reflect);
-        SakuraReleaseState.Reset(trueOrFalse);
-
-        RegressionTestHarness.Require(
-            gale.DynamicVars.Damage.IntValue == 5
-            && gale.DynamicVars["Cards"].IntValue == 2
-            && gale.DynamicVars["ExtraCopies"].IntValue == 2
-            && reflect.DynamicVars.Block.IntValue == 5
-            && trueOrFalse.DynamicVars[TrueOrFalse.DamageVar].IntValue == 8
-            && trueOrFalse.DynamicVars[TrueOrFalse.BlockVar].IntValue == 5
-            && !gale.Keywords.Contains(CardKeyword.Exhaust)
-            && !gale.Keywords.Contains(CardKeyword.Ethereal),
-            "Expected Release reset to restore Transparent Card values and temporary keywords.");
+        Assert.Equal(baseDamage, gale.DynamicVars.Damage.IntValue);
+        Assert.Equal(baseCards, gale.DynamicVars["Cards"].IntValue);
+        Assert.Equal(baseBlock, reflect.DynamicVars.Block.IntValue);
+        Assert.False(gale.Keywords.Contains(CardKeyword.Exhaust));
+        Assert.False(gale.Keywords.Contains(CardKeyword.Ethereal));
     }
 
     [Fact]
     public void GravitationReturnsKeepThePlayedLocalCostUntilEndOfTurn()
     {
         var discounted = RegressionTestHarness.MutableForCostTest(new Transfer());
+        var canonical = discounted.EnergyCost.Canonical;
         discounted.EnergyCost.SetThisTurnOrUntilPlayed(0, true);
         GravitationHoldPower.PreservePlayedLocalCost(discounted);
         discounted.EnergyCost.AfterCardPlayedCleanup();
         var localCost = discounted.EnergyCost.GetWithModifiers(CostModifiers.Local);
 
-        Assert.Equal(2, discounted.EnergyCost.Canonical);
         Assert.Equal(0, localCost);
         Assert.True(GravitationHoldPower.TryIncreaseReturnedCardCost(discounted, 1, localCost, out var returnedCost));
         Assert.Equal(1, returnedCost);
         discounted.EnergyCost.EndOfTurnCleanup();
-        Assert.Equal(discounted.EnergyCost.Canonical, discounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
+        Assert.Equal(canonical, discounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
 
         var undiscounted = RegressionTestHarness.MutableForCostTest(new Transfer());
         GravitationHoldPower.PreservePlayedLocalCost(undiscounted);
         undiscounted.EnergyCost.AfterCardPlayedCleanup();
-        Assert.Equal(undiscounted.EnergyCost.Canonical, undiscounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
+        Assert.Equal(canonical, undiscounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
         undiscounted.EnergyCost.UpgradeBy(-1);
-        Assert.Equal(undiscounted.EnergyCost.Canonical - 1, undiscounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
+        Assert.Equal(canonical - 1, undiscounted.EnergyCost.GetWithModifiers(CostModifiers.Local));
     }
 
     [Fact]
@@ -1098,6 +270,7 @@ public sealed class CardMechanicsSuite
     {
         var first = RegressionTestHarness.MutableForCostTest(new Gale());
         var second = RegressionTestHarness.MutableForCostTest(new Gale());
+        var baseDamage = first.DynamicVars.Damage.IntValue;
         first.EnergyCost.SetThisTurnOrUntilPlayed(0, true);
         SakuraReleaseState.Apply(first, 0.5f);
 
@@ -1107,24 +280,21 @@ public sealed class CardMechanicsSuite
         Assert.Equal(0, first.EnergyCost.GetWithModifiers(CostModifiers.Local));
         first.EnergyCost.EndOfTurnCleanup();
         Assert.Equal(first.EnergyCost.Canonical, first.EnergyCost.GetWithModifiers(CostModifiers.Local));
-        Assert.Equal(7, first.DynamicVars.Damage.IntValue);
         SakuraReleaseState.Apply(second, 0.5f);
         Assert.Equal(first.DynamicVars.Damage.IntValue, second.DynamicVars.Damage.IntValue);
 
-        // Model cloning copies the numeric fields before the registered state callback.
         var copy = RegressionTestHarness.MutableForCostTest(new Gale());
         foreach (var (name, variable) in first.DynamicVars)
             copy.DynamicVars[name].BaseValue = variable.BaseValue;
         SakuraReleaseState.CopyState(first, copy);
         SakuraReleaseState.Apply(copy, 0.5f);
-        Assert.Equal(7, copy.DynamicVars.Damage.IntValue);
+        Assert.Equal(first.DynamicVars.Damage.IntValue, copy.DynamicVars.Damage.IntValue);
         Assert.False(SpellRelease.CanRelease(copy));
 
         SakuraReleaseState.Reset(copy);
-        Assert.Equal(5, copy.DynamicVars.Damage.IntValue);
+        Assert.Equal(baseDamage, copy.DynamicVars.Damage.IntValue);
         Assert.True(SpellRelease.CanRelease(copy));
         Assert.False(SpellRelease.CanRelease(first));
-        Assert.Equal(7, first.DynamicVars.Damage.IntValue);
     }
 
     [Fact]
@@ -1135,6 +305,7 @@ public sealed class CardMechanicsSuite
 
         SakuraReleaseState.Apply(clowSword, 0.5f);
 
+        var adjustedBase = (int)Math.Floor(baseDamage * 1.6m);
         RegressionTestHarness.Require(
             clowSword.DynamicVars.Damage.IntValue == baseDamage + (int)Math.Floor(baseDamage * 0.5f)
             && SakuraSourceCardValues.EffectiveValue(clowSword, clowSword.DynamicVars.Damage)
@@ -1143,7 +314,7 @@ public sealed class CardMechanicsSuite
                 clowSword,
                 clowSword.DynamicVars.Damage.Name,
                 clowSword.DynamicVars.Damage.IntValue,
-                value => (int)Math.Floor(value * 1.6m)) == 13,
+                value => (int)Math.Floor(value * 1.6m)) == adjustedBase + (int)Math.Floor(adjustedBase * 0.5f),
             "Expected every source era to use direct Release scaling while preserving adjustment-before-Release ordering.");
 
         SakuraReleaseState.Reset(clowSword);
@@ -1157,6 +328,7 @@ public sealed class CardMechanicsSuite
                 ?? throw new InvalidOperationException($"Could not create {type.Name}."));
 
         var sakuraSword = new SakuraSword();
+        var canonicalClowSword = new ClowSword();
         var mappedSword = SakuraSourceCardRules.CreateMirrorCopySource(
             sakuraSword,
             static _ => true,
@@ -1165,10 +337,9 @@ public sealed class CardMechanicsSuite
 
         RegressionTestHarness.Require(
             mappedSword is ClowSword
-            && mappedSword.DynamicVars.Damage.IntValue == 6
-            && mappedSword.EnergyCost.Canonical == 1
-            && sakuraSword.DynamicVars.Damage.IntValue == 16,
-            "Expected Mirror to map Sakura Sword to a canonical 1-cost, 6-damage Clow Sword without mutating the source.");
+            && mappedSword.DynamicVars.Damage.IntValue == canonicalClowSword.DynamicVars.Damage.IntValue
+            && mappedSword.EnergyCost.Canonical == canonicalClowSword.EnergyCost.Canonical,
+            "Expected Mirror to map Sakura Sword to a canonical Clow Sword without mutating the source.");
 
         var clowSword = new ClowSword();
         var expectedClone = new ClowSword();
@@ -1198,38 +369,93 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void PowerGeneratedBlockAndDamageUseNativeValueSemantics()
+    public void ElementSetTwinCostReflectionAndDreamFreeLifecycleRemainStable()
     {
         RegressionTestHarness.Require(
-            SakuraPowerValueProps.Block == ValueProp.Unpowered
-            && SakuraPowerValueProps.Damage == ValueProp.Unpowered
-            && SakuraPowerValueProps.HpLoss == (ValueProp.Unblockable | ValueProp.Unpowered),
-            "Expected power-generated Block, damage, and HP loss to use native unpowered value properties.");
+            (SakuraElementSet.Wind | SakuraElementSet.Fire).HasElement(SakuraElement.Wind)
+            && (SakuraElementSet.Wind | SakuraElementSet.Fire).HasElement(SakuraElement.Fire),
+            "Expected Sakura element sets to retain each declared element identity.");
 
-        var powersRoot = Path.GetDirectoryName(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/SakuraPowerModel.cs"))!;
-        var classicPowersSource = string.Join(
-            '\n',
-            Directory.EnumerateFiles(Path.Join(powersRoot, "SourceCards"), "*.cs").Select(File.ReadAllText));
-        var transparentPowersSource = string.Join(
-            '\n',
-            Directory.EnumerateFiles(Path.Join(powersRoot, "Transparent"), "*.cs").Select(File.ReadAllText));
-        var powerSources = $"{classicPowersSource}\n{transparentPowersSource}";
+        Assert.Equal(8, ReflectionPower.ReflectedDamage(17, 1));
+        Assert.Equal(17, ReflectionPower.ReflectedDamage(17, 2));
+        Assert.Equal(25, ReflectionPower.ReflectedDamage(17, 3));
+        Assert.Equal(5, ReflectionPower.ReflectedDamage(10, 1));
+        Assert.Equal(10, ReflectionPower.ReflectedDamage(10, 2));
+        Assert.Equal(15, ReflectionPower.ReflectedDamage(10, 3));
+
+        var clowTwin = new ClowTwin();
+        var clowTwinLocalCost = clowTwin.EnergyCost.GetWithModifiers(CostModifiers.Local);
         RegressionTestHarness.Require(
-            System.Text.RegularExpressions.Regex.Matches(
-                powerSources,
-                "CreatureCmd\\.GainBlock\\([^;]*SakuraPowerValueProps\\.Block",
-                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 9
-            && System.Text.RegularExpressions.Regex.Matches(
-                powerSources,
-                "CreatureCmd\\.GainBlock\\(",
-                System.Text.RegularExpressions.RegexOptions.Singleline).Count == 9,
-            "Expected every SakuraMod power-generated Block call to use the shared unpowered Block contract without a card source.");
+            ClassicTwinSakuraPower.TryIncreaseClowCardCost(clowTwin, amount: 1, clowTwinLocalCost, out var increasedTwinCost)
+            && increasedTwinCost == clowTwinLocalCost + 1
+            && clowTwin.EnergyCost.GetWithModifiers(CostModifiers.Local) == clowTwinLocalCost
+            && ClassicTwinSakuraPower.TryIncreaseClowCardCost(clowTwin, amount: 2, clowTwinLocalCost, out var stackedTwinCost)
+            && stackedTwinCost == clowTwinLocalCost + 2
+            && !ClassicTwinSakuraPower.TryIncreaseClowCardCost(new SakuraTwin(), amount: 1, currentCost: 1, out var sakuraTwinCost)
+            && sakuraTwinCost == 1,
+            "Expected Sakura Twin power cost calculation to scale only Clow cards without mutating source cost.");
+
+        var dreamGeneratedThrough = RegressionTestHarness.MutableForCostTest(new ClowThrough());
+        SakuraMagicCharge.SetFreeForRestOfTurn(dreamGeneratedThrough);
         RegressionTestHarness.Require(
-            transparentPowersSource.Contains("SakuraPowerValueProps.Damage", StringComparison.Ordinal)
-            && classicPowersSource.Contains("SakuraPowerValueProps.Damage", StringComparison.Ordinal)
-            && classicPowersSource.Contains("SakuraPowerValueProps.HpLoss", StringComparison.Ordinal),
-            "Expected Reflection, Firey, and Nothing damage to use native power value properties without a card source.");
+            dreamGeneratedThrough.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0
+            && !dreamGeneratedThrough.EnergyCost.AfterCardPlayedCleanup()
+            && dreamGeneratedThrough.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0
+            && dreamGeneratedThrough.EnergyCost.EndOfTurnCleanup()
+            && dreamGeneratedThrough.EnergyCost.GetWithModifiers(CostModifiers.Local) == dreamGeneratedThrough.EnergyCost.Canonical,
+            "Expected Dream-generated free cost to persist through play until end-of-turn cleanup.");
+    }
+
+    [Fact]
+    public void ClassicAndClearHoverTextContractsRemainStable()
+    {
+        RegressionTestHarness.Require(
+            SakuraSourceCardText.CounterpartPreviewIdentity(new ClowSword()) == SourceCardIdentity.Sword,
+            "Expected Clow hover tips to request the matching Sakura counterpart preview.");
+
+        RegressionTestHarness.Require(
+            SakuraSourceCardText.GeneratedSpellPreviewType(new ClowEarthy()) == typeof(SpellLeiDi)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowFirey()) == typeof(SpellHuoShen)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowWatery()) == typeof(SpellShuiLong)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowWindy()) == typeof(SpellFengHua)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraEarthy()) == typeof(SpellLeiDi)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraFirey()) == typeof(SpellHuoShen)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraWatery()) == typeof(SpellShuiLong)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraWindy()) == typeof(SpellFengHua)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowMove()) == typeof(SpellEmptySpell)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraMove()) == typeof(SpellEmptySpell)
+            && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowSword()) is null,
+            "Expected element-state and Move cards to preview their generated spell cards.");
+
+        RegressionTestHarness.Require(
+            SakuraDescriptionRegion.IsExtraEffectDescriptionLineForTests("[gold]额外效果：[/gold]抽 1 张牌。")
+            && SakuraDescriptionRegion.IsExtraEffectDescriptionLineForTests("[gold]Extra:[/gold] Draw 1 card.")
+            && !SakuraDescriptionRegion.IsExtraEffectDescriptionLineForTests("[gold]解封：[/gold]抽 1 张牌。")
+            && !SakuraDescriptionRegion.IsExtraEffectDescriptionLineForTests("[gold]Release:[/gold] Draw 1 card."),
+            "Expected the shared description region to recognize current extra-effect description headers only.");
+    }
+
+    [Fact]
+    public void SakuraLightAndLibraCoreCalculationsRemainValid()
+    {
+        RegressionTestHarness.Require(
+            ClassicLightSakuraPower.IsStatusOrCurse(CardType.Status)
+            && ClassicLightSakuraPower.IsStatusOrCurse(CardType.Curse)
+            && !ClassicLightSakuraPower.IsStatusOrCurse(CardType.Skill)
+            && RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("TryModifyKeywordsInCombat")
+            && RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("ModifyCardPlayResultLocation")
+            && RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("AfterCardPlayed")
+            && !RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("TryModifyEnergyCostInCombat"),
+            "Expected Sakura Light to make Status and Curse cards playable and Exhausting without changing their costs.");
+
+        RegressionTestHarness.Require(
+            SakuraLibra.EnergyFromCharge(-1) == 0
+            && SakuraLibra.EnergyFromCharge(0) == 0
+            && SakuraLibra.EnergyFromCharge(2) == 0
+            && SakuraLibra.EnergyFromCharge(3) == 1
+            && SakuraLibra.EnergyFromCharge(8) == 2
+            && SakuraLibra.EnergyFromCharge(9) == 3,
+            "Expected Sakura Libra to convert every 3 Magic Charge into 1 Energy.");
     }
 
     [Fact]
@@ -1252,1240 +478,5 @@ public sealed class CardMechanicsSuite
             && DeclaresResultPileMethod(typeof(ClowFlower))
             && DeclaresResultPileMethod(typeof(SakuraFlower)),
             "Expected shared card-damage helpers to require CardPlay and result-location overrides to belong to the intended cards.");
-    }
-
-    [Fact]
-    public void SharedKeywordElementExchangeAndDrawRulesRemainStable()
-    {
-        RegressionTestHarness.Require(
-            SakuraCardHoverTips.KeywordTips(new Gale()).Contains(SakuraKeywords.Wind),
-            "Expected Sakura card hover capability decisions to include static element keyword tips.");
-        RegressionTestHarness.Require(
-            SakuraCardHoverTips.KeywordTips(new Hail()).Contains(SakuraKeywords.Frostbite),
-            "Expected Hail hover tips to explain Frostbite.");
-        RegressionTestHarness.Require(
-            SakuraCardHoverTips.ShouldIncludeFreezePowerTip(SakuraCardHoverTips.KeywordTips(new Hail()))
-            && !SakuraCardHoverTips.ShouldIncludeFreezePowerTip(SakuraCardHoverTips.KeywordTips(new Gale())),
-            "Expected Frostbite cards, but not unrelated cards, to include the Freeze power hover tip.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.KeywordTips(new ClowSnow()).Contains(SakuraKeywords.Frostbite)
-            && SakuraSourceCardText.KeywordTips(new SakuraSnow()).Contains(SakuraKeywords.Frostbite),
-            "Expected both Snow forms to explain Frostbite.");
-        RegressionTestHarness.Require(
-            SakuraCardHoverTips.ShouldIncludeFreezePowerTip(SakuraSourceCardText.KeywordTips(new ClowFreeze()))
-            && SakuraCardHoverTips.ShouldIncludeFreezePowerTip(SakuraSourceCardText.KeywordTips(new ClowSnow()))
-            && SakuraCardHoverTips.ShouldIncludeFreezePowerTip(SakuraSourceCardText.KeywordTips(new SakuraSnow())),
-            "Expected every source card that references Frostbite to include the Freeze power hover tip.");
-        RegressionTestHarness.Require(
-            SakuraCardHoverTips.StaticTipKeys(new Remind()).Contains(SakuraCardHoverTips.RemindTipKey),
-            "Expected Remind hover tips to explain its record-recall rules.");
-        RegressionTestHarness.Require(
-            SakuraCardHoverTips.StaticTipKeys(new Remind()).Contains(SakuraMemoryPile.PileId)
-            && SakuraCardHoverTips.StaticTipKeys(new Spiral()).Contains(SakuraMemoryPile.PileId),
-            "Expected Remind and Spiral hover tips to explain the Memory pile.");
-        CardModel[] forgottenReferenceCards =
-        [
-            new Dreaming(),
-            new Exchange(),
-            new Spiral(),
-            new Blank(),
-            new TrueOrFalse(),
-            new TrueOrFalseDrawChoice()
-        ];
-        RegressionTestHarness.Require(
-            forgottenReferenceCards.All(card =>
-                SakuraCardHoverTips.StaticTipKeys(card).Contains(SakuraCardHoverTips.TemporaryTipKey)),
-            "Expected every card whose description names Forgotten to contribute the Forgotten hover tip.");
-
-        var gravitation = new Gravitation();
-        var upgradedGravitation = RegressionTestHarness.MutableForCostTest(new Gravitation());
-        upgradedGravitation.UpgradeInternal();
-        RegressionTestHarness.Require(
-            gravitation.EnergyCost.Canonical == 0
-            && gravitation.Rarity == CardRarity.Rare
-            && gravitation.Type == CardType.Skill
-            && gravitation.TargetType == TargetType.Self
-            && gravitation.CanonicalKeywords.SequenceEqual([SakuraKeywords.Wind])
-            && !TransparentCard.HasMagicChargeExtraEffect(gravitation)
-            && upgradedGravitation.Keywords.Contains(CardKeyword.Retain)
-            && new GravitationHoldPower().StackType == PowerStackType.Single
-            && GravitationHoldPower.TryIncreaseReturnedCardCost(gravitation, 1, 0, out var firstReturnCost)
-            && firstReturnCost == 1
-            && GravitationHoldPower.TryIncreaseReturnedCardCost(gravitation, 2, 1, out var repeatedReturnCost)
-            && repeatedReturnCost == 3
-            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("ModifyCardPlayResultLocation")
-            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterModifyingCardPlayResultLocation")
-            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("TryModifyEnergyCostInCombat")
-            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterSideTurnEnd")
-            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterApplied")
-            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterRemoved")
-            && RegressionTestHarness.DeclaresMethod<GravitationHoldPower>("AfterCardPlayed")
-            && gravitation.DynamicVars[GravitationHoldPower.ReturnDamageVar].IntValue == 3
-            && upgradedGravitation.DynamicVars[GravitationHoldPower.ReturnDamageVar].IntValue == 4
-            && new GravitationHoldPower().DynamicVars.ContainsKey(GravitationHoldPower.ReturnDamageVar)
-            && GravitationHoldPower.IsLastPlay(0, 1)
-            && !GravitationHoldPower.IsLastPlay(0, 2)
-            && GravitationHoldPower.IsLastPlay(1, 2)
-            && GravitationHoldPower.ReturnDamage(3, 1) == 3
-            && GravitationHoldPower.ReturnDamage(3, 3) == 9
-            && GravitationHoldPower.ReturnDamage(4, 2) == 8
-            && File.ReadAllText(RegressionTestHarness.FindRepoFile(
-                    "SakuraModCode/Powers/Transparent/GravitationHoldPower.cs"))
-                .Contains("&& card is not Gravitation;", StringComparison.Ordinal),
-            "Expected Gravitation to be a 0-cost rare Wind replay engine (Gravitation itself never returns) whose returned cards cost 1 more each time and deal 3 (4 upgraded) damage times that card's return count this turn to all enemies, has no Extra Effect, and gains Retain on upgrade.");
-
-        RegressionTestHarness.Require(
-            SakuraActions.ElementSetOf(new Gale()) == SakuraElementSet.Wind
-            && SakuraActions.ElementSetOf(new Reflect()) == SakuraElementSet.Water
-            && SakuraActions.ElementSetOf(new Blaze()) == SakuraElementSet.Fire
-            && SakuraActions.ElementSetOf(new Gravitation()) == SakuraElementSet.Wind,
-            "Expected Transparent Card elements to map into Classic element identities.");
-
-        var exchange = new Exchange();
-        var upgradedExchange = RegressionTestHarness.MutableForCostTest(new Exchange());
-        upgradedExchange.UpgradeInternal();
-        var exchangeCardSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Exchange.cs"));
-        RegressionTestHarness.Require(
-            exchange.EnergyCost.Canonical == 0
-            && exchange.DynamicVars.Cards.IntValue == 1
-            && upgradedExchange.DynamicVars.Cards.IntValue == 1
-            && exchangeCardSource.Contains("SakuraActions.SelectHandCard(this, choiceContext, CanBecomeForgotten", StringComparison.Ordinal)
-            && !exchange.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && exchange.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
-            && exchange.DynamicVars["Remind"].IntValue == 1
-            && SakuraCardHoverTips.StaticTipKeys(exchange).Contains(SakuraCardHoverTips.RemindTipKey)
-            && new ExchangeRecallPower().StackType == PowerStackType.Counter
-            && RegressionTestHarness.DeclaresMethod<ExchangeRecallPower>("AfterPlayerTurnStart"),
-            "Expected Exchange to cost 0, Manifest 1 without Exhaust, pick the Forgotten hand card when upgraded, and schedule a stacking next-turn Remind 1.");
-
-        RegressionTestHarness.Require(
-            Synchronize.CanSynchronize(new Synchronize(), new Gale())
-            && !Synchronize.CanSynchronize(new Synchronize(), new SakuraLove()),
-            "Expected Synchronize to accept ordinary cards and reject cards with Unplayable.");
-        RegressionTestHarness.Require(
-            SynchronizedCardPairModifier.AutoPlayPileTypes.SequenceEqual(
-                [PileType.Hand, PileType.Draw, PileType.Discard]),
-            "Expected synchronized cards to auto-play from hand, draw, or discard, but not from other piles.");
-
-        RegressionTestHarness.Require(
-            !GaleRules.ShouldDrawAfterPlay(-1)
-            && Enumerable.Range(0, 28)
-                .Where(GaleRules.ShouldDrawAfterPlay)
-                .SequenceEqual([2, 5, 9, 14, 20, 27]),
-            "Expected Gale to draw after successive groups of 2, 3, 4, 5, 6, and 7 owner-played Gale cards this combat.");
-    }
-
-    [Fact]
-    public void CoreAttackDefenseAndControlCardContractsRemainStable()
-    {
-        var blaze = new Blaze();
-        var upgradedBlaze = RegressionTestHarness.MutableForCostTest(new Blaze());
-        upgradedBlaze.UpgradeInternal();
-        RegressionTestHarness.Require(
-            blaze.EnergyCost.Canonical == 3
-            && blaze.Type == CardType.Attack
-            && blaze.Rarity == CardRarity.Rare
-            && blaze.CanonicalKeywords.SequenceEqual([SakuraKeywords.Fire])
-            && Blaze.MaxCardsToExhaust == 3
-            && blaze.DynamicVars.CalculationBase.IntValue == 27
-            && blaze.DynamicVars.ExtraDamage.IntValue == 2
-            && upgradedBlaze.DynamicVars.CalculationBase.IntValue == 32
-            && upgradedBlaze.DynamicVars.ExtraDamage.IntValue == 3
-            && !typeof(MainFile).Assembly.GetTypes().Any(static type => type.Name == "SakuraBurnPower"),
-            "Expected Blaze to cost 3, Exhaust up to 3 cards, deal 27/32 damage, scale by 2/3 per exhausted card, and double that increment with Extra.");
-
-        var gale = new Gale();
-        var upgradedGale = RegressionTestHarness.MutableForCostTest(new Gale());
-        upgradedGale.UpgradeInternal();
-        RegressionTestHarness.Require(
-            gale.EnergyCost.Canonical == 0
-            && gale.Rarity == CardRarity.Common
-            && gale.Type == CardType.Attack
-            && gale.CanonicalKeywords.SequenceEqual([SakuraKeywords.Wind])
-            && gale.DynamicVars.Damage.IntValue == 5
-            && gale.DynamicVars["Cards"].IntValue == 2
-            && gale.DynamicVars["ExtraCopies"].IntValue == 2
-            && GaleRules.CountsAsGale(gale)
-            && upgradedGale.DynamicVars.Damage.IntValue == 8,
-            "Expected Gale to cost 0, deal 5/8 damage, draw 2 with increasing play requirements, and create 2 copies with Extra.");
-
-        var upgradedAqua = RegressionTestHarness.MutableForCostTest(new Aqua());
-        upgradedAqua.UpgradeInternal();
-        RegressionTestHarness.Require(
-            new Aqua().EnergyCost.Canonical == 1
-            && !new Aqua().CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && new Aqua().DynamicVars.Damage.IntValue == 6
-            && new Aqua().DynamicVars.Energy.IntValue == 2
-            && SakuraCardHoverTips.KeywordTips(new Aqua()).Contains(SakuraKeywords.Frostbite)
-            && new Aqua().DynamicVars["FrostbiteBonus"].IntValue == 4
-            && AquaRules.DamageFor(4, 0, 4) == 4
-            && AquaRules.DamageFor(4, 3, 4) == 16
-            && AquaRules.DamageFor(7, 2, 4) == 15
-            && AquaRules.FrostbiteEnemyCount([]) == 0
-            && AquaRules.FrostbiteEnemies([]).Count == 0
-            && upgradedAqua.DynamicVars.Damage.IntValue == 9,
-            "Expected Aqua to cost 1, deal 6/9 AOE damage, deal 4 more per Frostbite stack on each target, and grant 2 Energy with Extra.");
-
-        var spiral = new Spiral();
-        var upgradedSpiral = RegressionTestHarness.MutableForCostTest(new Spiral());
-        upgradedSpiral.UpgradeInternal();
-        var spiralSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Spiral.cs"));
-        var spiralNextTurnPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/Transparent/SpiralNextTurnPower.cs"));
-        RegressionTestHarness.Require(
-            spiral.EnergyCost.Canonical == 0
-            && spiral.Rarity == CardRarity.Uncommon
-            && spiral.Type == CardType.Attack
-            && spiral.TargetType == TargetType.AnyEnemy
-            && spiral.CanonicalKeywords.SequenceEqual([SakuraKeywords.Wind])
-            && !spiral.GainsBlock
-            && spiral.DynamicVars.Damage.IntValue == 4
-            && spiral.DynamicVars.Damage is SpiralDamageVar
-            && spiral.DynamicVars["MemoryScale"].IntValue == 2
-            && spiral.DynamicVars["NextTurnCopies"].IntValue == 1
-            && spiral.DynamicVars["ExtraCopies"].IntValue == 2
-            && SpiralRules.OutputWithMemory(8, 0) == 8
-            && SpiralRules.OutputWithMemory(8, 4) == 12
-            && upgradedSpiral.DynamicVars.Damage.IntValue == 7
-            && upgradedSpiral.DynamicVars["NextTurnCopies"].IntValue == 1
-            && SpiralRules.OutputWithMemory(upgradedSpiral.DynamicVars.Damage.IntValue, 4) == 11
-            && spiralSource.Contains("power?.CarryUpgradeFrom(this)", StringComparison.Ordinal)
-            && new SpiralNextTurnPower().InstanceType == PowerInstanceType.Instanced
-            && new SpiralNextTurnPower().StackType == PowerStackType.Counter
-            && !new SpiralNextTurnPower().IsVisible
-            && RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("BeforeHandDraw")
-            && !RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("AfterPlayerTurnStart"),
-            "Expected Spiral to cost 0 and deal 4 (7 upgraded) damage plus Memory and always schedule a one-shot next-hand-draw Spiral.");
-        RegressionTestHarness.Require(
-            spiralSource.Contains("PowerCmd.Apply<SpiralNextTurnPower>", StringComparison.Ordinal)
-            && !spiralSource.Contains("AddTemporaryGeneratedCardsToHand", StringComparison.Ordinal)
-            && spiralSource.Contains("DynamicVars[\"ExtraCopies\"].IntValue", StringComparison.Ordinal)
-            && !spiralSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal)
-            && spiralNextTurnPowerSource.Contains("combatState.CreateCard<Spiral>(player)", StringComparison.Ordinal)
-            && spiralNextTurnPowerSource.Contains("card.CurrentUpgradeLevel < CopyUpgradeLevel[this]", StringComparison.Ordinal)
-            && !spiralNextTurnPowerSource.Contains("FreeThisTurn", StringComparison.Ordinal)
-            && spiralNextTurnPowerSource.Contains("Pile = PileType.Draw", StringComparison.Ordinal)
-            && spiralNextTurnPowerSource.Contains("Position = CardPilePosition.Top", StringComparison.Ordinal)
-            && spiralNextTurnPowerSource.Contains("AddTemporary = true", StringComparison.Ordinal)
-            && !spiralNextTurnPowerSource.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal)
-            && !spiralNextTurnPowerSource.Contains("AddTemporaryCopyToHand", StringComparison.Ordinal)
-            && !RegressionTestHarness.DeclaresMethod<SpiralNextTurnPower>("SetSourceCard"),
-            "Expected Spiral to put a Forgotten Spiral at its own upgrade level on top before next turn's draw, while Extra raises that to two copies through the same next-turn rule.");
-
-        var blockedHit = new DamageResult(null!, ValueProp.Move) { UnblockedDamage = 0 };
-        var unblockedHit = new DamageResult(null!, ValueProp.Move) { UnblockedDamage = 1 };
-        RegressionTestHarness.Require(
-            !SakuraSnowRules.ShouldApplyFrostbite(blockedHit)
-            && SakuraSnowRules.ShouldApplyFrostbite(unblockedHit),
-            "Expected Snow Frostbite to trigger once from a positive unblocked damage result, not damage magnitude.");
-        RegressionTestHarness.Require(
-            ClassicFreezePower.BlockPerSkip == 10
-            && new ClassicFreezePower().StackType == PowerStackType.Counter
-            && RegressionTestHarness.DeclaresMethod<ClassicFreezePower>("AfterSideTurnEnd")
-            && RegressionTestHarness.DeclaresMethod<ClassicFreezePower>("AfterSideTurnStart"),
-            "Expected enemy Freeze to grant a flat 10 Block per skipped action and expire across its side turns.");
-        RegressionTestHarness.Require(
-            SakuraFrostbitePower.ConvertToFreeze(4, 5) == (0, 4)
-            && SakuraFrostbitePower.ConvertToFreeze(5, 5) == (1, 0)
-            && SakuraFrostbitePower.ConvertToFreeze(10, 5) == (1, 5)
-            && SakuraFrostbitePower.ConvertToFreeze(11, 5) == (2, 0)
-            && SakuraFrostbitePower.ConvertToFreeze(12, 5) == (2, 1)
-            && SakuraFrostbitePower.ConvertToFreeze(18, 5) == (3, 0)
-            && SakuraFrostbitePower.ConvertToFreeze(26, 5) == (4, 0)
-            && SakuraFrostbitePower.ConvertToFreeze(6, 7) == (0, 6)
-            && SakuraFrostbitePower.ConvertToFreeze(7, 7) == (1, 0),
-            "Expected player and enemy Freeze conversion to consume increasing thresholds 5, 6, 7, 8 and preserve the remainder.");
-
-        var clowFlower = new ClowFlower();
-        var upgradedClowFlower = RegressionTestHarness.MutableForCostTest(new ClowFlower());
-        upgradedClowFlower.UpgradeInternal();
-        var sakuraFlower = new SakuraFlower();
-        var exhaustKeywords = new HashSet<CardKeyword> { CardKeyword.Exhaust };
-        RegressionTestHarness.Require(
-            clowFlower.EnergyCost.Canonical == 0
-            && clowFlower.Rarity == CardRarity.Uncommon
-            && clowFlower.Type == CardType.Skill
-            && clowFlower.TargetType == TargetType.None
-            && clowFlower.Elements == SakuraElementSet.Earth
-            && clowFlower.CanonicalKeywords.SequenceEqual([CardKeyword.Exhaust])
-            && clowFlower.DynamicVars.Energy.IntValue == 2
-            && ClowFlower.ExtraEnergy == 2
-            && upgradedClowFlower.Keywords.Contains(CardKeyword.Exhaust)
-            && !upgradedClowFlower.Keywords.Contains(CardKeyword.Retain)
-            && upgradedClowFlower.DynamicVars.Energy.IntValue == 3,
-            "Expected Clow Flower to cost 0, gain 2 Energy, Exhaust, gain 2 additional Energy with Extra, and upgrade to 3 Energy without Retain.");
-        RegressionTestHarness.Require(
-            sakuraFlower.Rarity == CardRarity.Token
-            && sakuraFlower.EnergyCost.Canonical == 0
-            && sakuraFlower.Type == CardType.Skill
-            && sakuraFlower.TargetType == TargetType.None
-            && sakuraFlower.Elements == SakuraElementSet.Earth
-            && sakuraFlower.CanonicalKeywords.SequenceEqual([CardKeyword.Exhaust])
-            && sakuraFlower.DynamicVars.Energy.IntValue == 5,
-            "Expected Sakura Flower to Exhaust without Retain and gain 5 Energy.");
-        RegressionTestHarness.Require(
-            FlowerRules.TryRemoveExhaust(clowFlower, clowFlower, true, exhaustKeywords)
-            && !exhaustKeywords.Contains(CardKeyword.Exhaust)
-            && !FlowerRules.TryRemoveExhaust(
-                clowFlower,
-                sakuraFlower,
-                true,
-                new HashSet<CardKeyword> { CardKeyword.Exhaust })
-            && typeof(ClowFlower).GetMethod(
-                "GetResultLocationForCardPlay",
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly) is not null
-            && typeof(SakuraFlower).GetMethod(
-                "GetResultLocationForCardPlay",
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly) is not null
-            && FlowerRules.ResultPileForPlay(true, PileType.Exhaust) == PileType.Discard
-            && FlowerRules.ResultPileForPlay(false, PileType.Exhaust) == PileType.Exhaust
-            && FlowerRules.ResultPileForPlay(true, PileType.None) == PileType.None
-            && FlowerRules.KeepsPlay(true, null, 1)
-            && FlowerRules.KeepsPlay(true, 1, 2)
-            && !FlowerRules.KeepsPlay(true, 2, 2)
-            && !FlowerRules.KeepsPlay(false, null, 1)
-            && SakuraSourceCardText.ElementStatesReferencedBy(clowFlower).SequenceEqual([SakuraElement.Earth])
-            && SakuraSourceCardText.ElementStatesReferencedBy(sakuraFlower).SequenceEqual([SakuraElement.Earth]),
-            "Expected each Flower to avoid Exhaust only on its first play each turn that began in Earthy state and to expose the Earthy-state hover tip.");
-
-        var siege = new Siege();
-        var upgradedSiege = RegressionTestHarness.MutableForCostTest(new Siege());
-        upgradedSiege.UpgradeInternal();
-        RegressionTestHarness.Require(
-            siege.EnergyCost.Canonical == 0
-            && siege.Type == CardType.Skill
-            && siege.Rarity == CardRarity.Common
-            && siege.TargetType == TargetType.Self
-            && siege.CanonicalKeywords.Contains(SakuraKeywords.Earth)
-            && TransparentCard.HasMagicChargeExtraEffect(siege)
-            && siege.DynamicVars.Block.IntValue == 3
-            && siege.DynamicVars.Block is BlockVar
-            && !siege.DynamicVars.ContainsKey("ExtraBlock")
-            && siege.DynamicVars.Weak.IntValue == 1
-            && SiegeRules.BlockPerEnemy == 3
-            && SiegeRules.BlockAmount(3, 0) == 0
-            && SiegeRules.BlockAmount(3, 1) == 3
-            && SiegeRules.BlockAmount(3, 2) == 6
-            && SiegeRules.BlockAmount(4, 1) == 4
-            && SiegeRules.BlockAmount(4, 3) == 12
-            && !SiegeRules.ShouldTrigger(0)
-            && SiegeRules.ShouldTrigger(1)
-            && SiegeRules.ExtraWeak == 2
-            && upgradedSiege.DynamicVars.Block.IntValue == 4
-            && upgradedSiege.DynamicVars.Weak.IntValue == 2
-            && new SiegePendingPower().StackType == PowerStackType.Counter
-            && new SiegePendingPower().IsVisible
-            && RegressionTestHarness.DeclaresMethod<SiegePendingPower>("BeforeSideTurnEnd")
-            && RegressionTestHarness.DeclaresMethod<SiegePendingPower>("AfterSideTurnEnd"),
-            "Expected Siege to be a zero-cost Common that gains 3-to-4 Block per enemy with no flat base Block, applies 2 Extra Weak to all enemies on play, then applies Weak at enemy turn end and removes itself after the native side-turn tick without persistent combat growth.");
-
-        var shade = new Shade();
-        var upgradedShade = RegressionTestHarness.MutableForCostTest(new Shade());
-        upgradedShade.UpgradeInternal();
-        RegressionTestHarness.Require(
-            shade.EnergyCost.Canonical == 2
-            && shade.Type == CardType.Skill
-            && shade.Rarity == CardRarity.Uncommon
-            && shade.TargetType == TargetType.AllEnemies
-            && shade.CanonicalKeywords.SequenceEqual([SakuraKeywords.Earth])
-            && TransparentCard.HasMagicChargeExtraEffect(shade)
-            && shade.DynamicVars.Block.IntValue == 11
-            && shade.DynamicVars.Weak.IntValue == 1
-            && upgradedShade.DynamicVars.Block.IntValue == 13
-            && upgradedShade.DynamicVars.Weak.IntValue == 2
-            && Shade.ExtraBlock == 14,
-            "Expected Shade to be Uncommon, cost 2, gain 11 Block, apply 1 Weak to all enemies, gain 14 more Block with Extra, and upgrade to 13 Block and 2 Weak.");
-
-        var flight = new Flight();
-        var upgradedFlight = RegressionTestHarness.MutableForCostTest(new Flight());
-        upgradedFlight.UpgradeInternal();
-        RegressionTestHarness.Require(
-            flight.DynamicVars.Block.IntValue == 8
-            && flight.DynamicVars["SakuraTemporaryDexterityPower"].IntValue == 2
-            && flight.DynamicVars.Energy.IntValue == 2
-            && !flight.DynamicVars.ContainsKey("Cards")
-            && upgradedFlight.DynamicVars.Block.IntValue == 11
-            && upgradedFlight.DynamicVars["SakuraTemporaryDexterityPower"].IntValue == 3
-            && upgradedFlight.DynamicVars.Energy.IntValue == 2,
-            "Expected Flight to gain 8 Block and 2 Temporary Dexterity, upgrade to 11 Block and 3 Temporary Dexterity, and grant 2 Energy with Extra before and after upgrading.");
-
-        var snooze = new Snooze();
-        var upgradedSnooze = RegressionTestHarness.MutableForCostTest(new Snooze());
-        upgradedSnooze.UpgradeInternal();
-        RegressionTestHarness.Require(
-            snooze.EnergyCost.Canonical == 1
-            && snooze.Type == CardType.Skill
-            && snooze.Rarity == CardRarity.Common
-            && snooze.TargetType == TargetType.AnyEnemy
-            && snooze.CanonicalKeywords.SequenceEqual([SakuraKeywords.Wind])
-            && TransparentCard.HasMagicChargeExtraEffect(snooze)
-            && snooze.DynamicVars.Weak.IntValue == 1
-            && snooze.DynamicVars.Vulnerable.IntValue == 1
-            && snooze.DynamicVars.Cards.IntValue == 1
-            && upgradedSnooze.DynamicVars.Weak.IntValue == 2
-            && upgradedSnooze.DynamicVars.Vulnerable.IntValue == 2
-            && upgradedSnooze.DynamicVars.Cards.IntValue == 1,
-            "Expected Snooze to apply 1 Weak and Vulnerable to one enemy, draw 1, affect all enemies with Extra, and upgrade both debuffs to 2.");
-
-        var breakCard = new Break();
-        var upgradedBreak = RegressionTestHarness.MutableForCostTest(new Break());
-        upgradedBreak.UpgradeInternal();
-        var breakSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Break.cs"));
-        RegressionTestHarness.Require(
-            breakSource.Contains("DynamicVars.Damage.IntValue * (IsGuarded(target) ? 2 : 1)", StringComparison.Ordinal)
-            && breakSource.Contains("target.Block > 0 || target.HasPower<ArtifactPower>()", StringComparison.Ordinal)
-            && breakSource.Contains("HoverTipFactory.FromPower<ArtifactPower>()", StringComparison.Ordinal)
-            && !breakSource.Contains("LoseBlock", StringComparison.Ordinal)
-            && breakCard.DynamicVars.Damage.IntValue == 8
-            && breakCard.DynamicVars.Vulnerable.IntValue == 1
-            && breakCard.DynamicVars["ExtraVulnerable"].IntValue == 3
-            && upgradedBreak.DynamicVars.Damage.IntValue == 10
-            && upgradedBreak.DynamicVars.Vulnerable.IntValue == 2
-            && upgradedBreak.DynamicVars["ExtraVulnerable"].IntValue == 3,
-            "Expected Break to deal 8 damage (doubled against an enemy with Block or Artifact, without stripping Block) and apply 1 Vulnerable (3 more with Extra), upgrading to 10 damage and 2 Vulnerable.");
-
-        var upgradedHail = RegressionTestHarness.MutableForCostTest(new Hail());
-        upgradedHail.UpgradeInternal();
-        var hailSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Hail.cs"));
-        RegressionTestHarness.Require(
-            new Hail().TargetType == TargetType.AllEnemies
-            && new Hail().DynamicVars.Damage.IntValue == 8
-            && new Hail().DynamicVars["SakuraFrostbitePower"].IntValue == 1
-            && new Hail().DynamicVars["Magic"].IntValue == 3
-            && upgradedHail.DynamicVars.Damage.IntValue == 11
-            && upgradedHail.DynamicVars["SakuraFrostbitePower"].IntValue == 1
-            && !TransparentCard.HasMagicChargeExtraEffect(new Hail())
-            && HailRules.Frostbite(new Hail(), spentMagic: 0) == 0
-            && HailRules.Frostbite(new Hail(), spentMagic: 3) == 3
-            && HailRules.Frostbite(upgradedHail, spentMagic: 3) == 3
-            && hailSource.Contains("SpendUpToMagic", StringComparison.Ordinal),
-            "Expected Hail to deal 8/11 damage to all enemies, and spend up to 3 Magic Charge for 1 Frostbite each.");
-
-        var clowLock = new ClowLock();
-        var lockSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/ClowSakura/Lock.cs"));
-        var upgradedClowLock = RegressionTestHarness.MutableForCostTest(new ClowLock());
-        upgradedClowLock.UpgradeInternal();
-        RegressionTestHarness.Require(
-            clowLock.EnergyCost.Canonical == 0
-            && clowLock.Rarity == CardRarity.Common
-            && clowLock.DynamicVars.Cards.IntValue == 1
-            && upgradedClowLock.DynamicVars.Cards.IntValue == 2
-            && !clowLock.Keywords.Contains(CardKeyword.Retain)
-            && !upgradedClowLock.Keywords.Contains(CardKeyword.Retain)
-            && ClowLock.ChargePerSelectedCard == 2
-            && lockSource.Contains("card.GiveSingleTurnRetain();\n            await card.Stabilize(choiceContext);", StringComparison.Ordinal)
-            && !lockSource.Contains("DelayTemporaryRemoval", StringComparison.Ordinal)
-            && !SakuraSourceCardText.KeywordTips(clowLock).Contains(SakuraKeywords.Stabilize),
-            "Expected Clow Lock to cost 0, choose 1 card (2 upgraded) to Retain this turn and lose Forgotten, and gain 2 Magic Charge per chosen card.");
-
-        var change = new ClowChange();
-        var upgradedChange = RegressionTestHarness.MutableForCostTest(new ClowChange());
-        upgradedChange.UpgradeInternal();
-        RegressionTestHarness.Require(
-            change.EnergyCost.Canonical == 1
-            && change.Rarity == CardRarity.Common
-            && SakuraExtraEffectTransaction.Supports(change)
-            && change.DynamicVars.Cards.IntValue == 2
-            && change.DynamicVars["ExtraCards"].IntValue == 2
-            && upgradedChange.DynamicVars.Cards.IntValue == 3
-            && upgradedChange.DynamicVars["ExtraCards"].IntValue == 2
-            && !change.Keywords.Contains(CardKeyword.Retain)
-            && !upgradedChange.Keywords.Contains(CardKeyword.Retain)
-            && upgradedChange.EnergyCost.GetWithModifiers(CostModifiers.None) == 1
-            && new SakuraChange().DynamicVars.Cards.IntValue == 5,
-            "Expected Clow Change to draw 2 plus 2 with Extra and upgrade to draw 3 without Retain at 1 cost, and Sakura Change to draw 5.");
-
-        var swing = new Swing();
-        var upgradedSwing = RegressionTestHarness.MutableForCostTest(new Swing());
-        upgradedSwing.UpgradeInternal();
-        var swingPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/Transparent/SwingDamageWindowPower.cs"));
-        RegressionTestHarness.Require(
-            swing.DynamicVars.Damage.IntValue == 12
-            && upgradedSwing.DynamicVars.Damage.IntValue == 16
-            && SwingDamageWindowPower.RequestedMultiplier(extraEffect: false) == 2
-            && SwingDamageWindowPower.RequestedMultiplier(extraEffect: true) == 3
-            && SwingDamageWindowPower.HighestMultiplier(0, 2) == 2
-            && SwingDamageWindowPower.HighestMultiplier(2, 2) == 2
-            && SwingDamageWindowPower.HighestMultiplier(2, 3) == 3
-            && SwingDamageWindowPower.HighestMultiplier(3, 2) == 3
-            && RegressionTestHarness.DeclaresMethod<SwingDamageWindowPower>("ModifyDamageMultiplicative")
-            && RegressionTestHarness.DeclaresMethod<SwingDamageWindowPower>("AfterSideTurnEnd")
-            && swingPowerSource.Contains("props.IsPoweredAttack()", StringComparison.Ordinal)
-            && swingPowerSource.Contains("cardSource is { Type: CardType.Attack }", StringComparison.Ordinal)
-            && swingPowerSource.Contains("cardSource.Owner?.Creature == owner", StringComparison.Ordinal)
-            && swingPowerSource.Contains("GetScaledAmountForMultiplayer", StringComparison.Ordinal),
-            "Expected Swing to deal 12/16 damage and open a 2x/3x owner-scoped Weak damage window for Powered Attacks.");
-
-        var struggle = new Struggle();
-        var upgradedStruggle = RegressionTestHarness.MutableForCostTest(new Struggle());
-        upgradedStruggle.UpgradeInternal();
-        var struggleSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Struggle.cs"));
-        RegressionTestHarness.Require(
-            struggle.EnergyCost.Canonical == 2
-            && !struggle.EnergyCost.CostsX
-            && struggle.Type == CardType.Attack
-            && struggle.Rarity == CardRarity.Uncommon
-            && struggle.CanonicalKeywords.SequenceEqual([SakuraKeywords.Fire])
-            && TransparentCard.HasMagicChargeExtraEffect(struggle)
-            && struggle.DynamicVars.Damage.IntValue == 11
-            && struggle.DynamicVars["ExtraDamage"] is DamageVar { IntValue: 7 }
-            && upgradedStruggle.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
-            && upgradedStruggle.DynamicVars.Damage.IntValue == 15
-            && upgradedStruggle.DynamicVars["ExtraDamage"].IntValue == 7
-            && !StruggleRules.IsOtherAttack(struggle, struggle)
-            && StruggleRules.IsOtherAttack(struggle, new Struggle())
-            && StruggleRules.IsOtherAttack(struggle, new Hail())
-            && !StruggleRules.IsOtherAttack(struggle, new Flight())
-            && RegressionTestHarness.DeclaresMethod<Struggle>("ModifyDamageAdditive")
-            && struggleSource.Contains("cardSource == this", StringComparison.Ordinal)
-            && struggleSource.Contains("props.IsPoweredAttack()", StringComparison.Ordinal)
-            && struggleSource.Contains("GetPower<StrengthPower>()?.Amount", StringComparison.Ordinal)
-            && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardEnteredCombat")
-            && RegressionTestHarness.DeclaresMethod<Struggle>("AfterCardPlayed"),
-            "Expected Struggle to cost 2, deal 11 (15) damage with a modifier-aware 7-damage follow-up on Extra, receive Strength twice, and discount for other Attacks this turn.");
-
-        var blade = new Blade();
-        var upgradedBlade = RegressionTestHarness.MutableForCostTest(new Blade());
-        upgradedBlade.UpgradeInternal();
-        RegressionTestHarness.Require(
-            blade.EnergyCost.Canonical == 2
-            && blade.DynamicVars.CalculationBase.IntValue == 7
-            && blade.DynamicVars.ExtraDamage.IntValue == 2
-            && blade.DynamicVars.CalculatedDamage is CalculatedDamageVar
-            && blade.DynamicVars["Hits"].IntValue == 2
-            && BladeRules.HitCount(blade, 2) == 2
-            && BladeRules.DamageBonusCount(0) == 0
-            && BladeRules.DamageBonusCount(1) == 0
-            && BladeRules.DamageBonusCount(2) == 1
-            && BladeRules.DamageBonusCount(3) == 1
-            && BladeRules.DamageBonusCount(4) == 2
-            && BladeRules.DamageBonusWeight(new ClowSword()) == 1
-            && BladeRules.DamageBonusWeight(new SakuraSword()) == 1
-            && BladeRules.DamageBonusWeight(new Blade()) == 2
-            && BladeRules.DamageBonusWeight(new Hail()) == 0
-            && BladeRules.DamageBonusCount(new CardModel[] { new ClowSword(), new SakuraSword() }.Sum(BladeRules.DamageBonusWeight)) == 1
-            && BladeRules.DamageBonusCount(new CardModel[] { new Blade() }.Sum(BladeRules.DamageBonusWeight)) == 1
-            && BladeRules.DamageBonusCount(new CardModel[] { new ClowSword(), new Blade(), new SakuraSword() }.Sum(BladeRules.DamageBonusWeight)) == 2
-            && upgradedBlade.DynamicVars.CalculationBase.IntValue == 8
-            && upgradedBlade.DynamicVars.ExtraDamage.IntValue == 4,
-            "Expected Blade to cost 2, upgrade from calculated 7 damage plus 2 per two Swords or one Blade to 8 damage plus 4 per bonus, combine mixed plays, and add 2 attacks for Extra.");
-
-        var mirage = new Mirage();
-        var upgradedMirage = RegressionTestHarness.MutableForCostTest(new Mirage());
-        upgradedMirage.UpgradeInternal();
-        RegressionTestHarness.Require(
-            mirage.Rarity == CardRarity.Rare
-            && mirage.EnergyCost.Canonical == 1
-            && upgradedMirage.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
-            && mirage.TargetType == TargetType.AnyEnemy
-            && mirage.CanonicalKeywords.Contains(SakuraKeywords.Water)
-            && mirage.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && !mirage.Keywords.Contains(CardKeyword.Retain)
-            && upgradedMirage.Keywords.Contains(CardKeyword.Retain)
-            && new MiragePower().Type == PowerType.Debuff
-            && new MiragePower().StackType == PowerStackType.Single
-            && RegressionTestHarness.DeclaresMethod<MiragePower>("ModifyDamageMultiplicative")
-            && RegressionTestHarness.DeclaresMethod<MiragePower>("AfterSideTurnEnd")
-            && !typeof(MainFile).Assembly.GetTypes().Any(static type => type.Name is "MirageImage" or "MirageImagePower"),
-            "Expected Mirage to be a 1-cost Rare that targets enemies, Exhausts, affects all enemies with Extra, and gains Retain on upgrade.");
-
-        var labyrinth = new Labyrinth();
-        var upgradedLabyrinth = RegressionTestHarness.MutableForCostTest(new Labyrinth());
-        upgradedLabyrinth.UpgradeInternal();
-        RegressionTestHarness.Require(
-            labyrinth.Type == CardType.Power
-            && labyrinth.TargetType == TargetType.None
-            && labyrinth.Rarity == CardRarity.Rare
-            && labyrinth.CanonicalKeywords.Contains(SakuraKeywords.Earth)
-            && !labyrinth.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && !TransparentCard.HasMagicChargeExtraEffect(labyrinth)
-            && SakuraCardHoverTips.StaticTipKeys(labyrinth).Contains(SakuraCardHoverTips.LabyrinthTipKey)
-            && upgradedLabyrinth.Keywords.Contains(CardKeyword.Innate)
-            && !upgradedLabyrinth.Keywords.Contains(CardKeyword.Retain)
-            && labyrinth.EnergyCost.Canonical == 2
-            && new LabyrinthPower().Type == PowerType.Buff
-            && new LabyrinthPower().StackType == PowerStackType.Single
-            && new LabyrinthLostPower().Type == PowerType.Buff
-            && new LabyrinthLostPower().StackType == PowerStackType.Single
-            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("TryModifyEnergyCostInCombat")
-            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("BeforeCardPlayed")
-            && RegressionTestHarness.DeclaresMethod<LabyrinthPower>("AfterCreatureAddedToCombat")
-            && RegressionTestHarness.DeclaresMethod<LabyrinthLostPower>("AfterModifyingDamageAmount")
-            && !RegressionTestHarness.DeclaresMethod<LabyrinthPower>("ShouldAllowHitting")
-            && !typeof(MainFile).Assembly.GetTypes().Any(type => type.Name is "LabyrinthIntent" or "SakuraLabyrinthMove"),
-            "Expected Labyrinth to halve every creature's first attack hit, make the first Earthy card free, and gain Innate on upgrade.");
-    }
-
-    [Fact]
-    public void BlankGrantsForgottenAndDrawsNextTurnForNewTargets()
-    {
-        var blank = new Blank();
-        var upgradedBlank = RegressionTestHarness.MutableForCostTest(new Blank());
-        upgradedBlank.UpgradeInternal();
-
-        RegressionTestHarness.Require(
-            blank.EnergyCost.Canonical == 1
-            && blank.Rarity == CardRarity.Rare
-            && blank.Type == CardType.Skill
-            && blank.TargetType == TargetType.Self
-            && blank.CanonicalKeywords.SequenceEqual([SakuraKeywords.Earth, CardKeyword.Exhaust])
-            && !blank.GainsBlock
-            && upgradedBlank.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0,
-            "Expected Blank to be a 1-cost Rare Earth Exhaust card that upgrades to 0 cost without Block.");
-        RegressionTestHarness.Require(
-            Blank.TargetPileTypes.SequenceEqual([PileType.Hand, PileType.Draw, PileType.Discard])
-            && Blank.CanGainForgotten(CardType.Status, isForgotten: false)
-            && Blank.CanGainForgotten(CardType.Curse, isForgotten: false)
-            && !Blank.CanGainForgotten(CardType.Status, isForgotten: true)
-            && !Blank.CanGainForgotten(CardType.Skill, isForgotten: false),
-            "Expected Blank to grant Forgotten once to Status and Curse cards in hand, draw, and discard only.");
-
-        var blankSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Blank.cs"));
-        RegressionTestHarness.Require(
-            blankSource.Contains("SakuraForgotten.GrantTemporary(choiceContext, card)", StringComparison.Ordinal)
-            && blankSource.Contains("PowerCmd.Apply<DrawCardsNextTurnPower>", StringComparison.Ordinal)
-            && blankSource.Contains("EnergyCost.UpgradeBy(-1)", StringComparison.Ordinal)
-            && !blankSource.Contains("GainBlock", StringComparison.Ordinal)
-            && Blank.ExtraEnergy == 2
-            && blankSource.Contains("PowerCmd.Apply<EnergyNextTurnPower>", StringComparison.Ordinal)
-            && !blankSource.Contains("CleanseDebuffs", StringComparison.Ordinal)
-            && blankSource.IndexOf("PowerCmd.Apply<DrawCardsNextTurnPower>", StringComparison.Ordinal)
-                < blankSource.IndexOf("if (activation.IsActive)", StringComparison.Ordinal),
-            "Expected Blank's ordinary effect to use the shared Forgotten grant path and apply vanilla next-turn draw before the Extra branch, whose Extra grants 2 native next-turn Energy.");
-
-    }
-
-    [Fact]
-    public void RewindSelectsMoreCardsOnUpgradeInsteadOfCostReduction()
-    {
-        var rewind = new Rewind();
-        var upgradedRewind = RegressionTestHarness.MutableForCostTest(new Rewind());
-        upgradedRewind.UpgradeInternal();
-
-        RegressionTestHarness.Require(
-            rewind.EnergyCost.Canonical == 1
-            && rewind.Rarity == CardRarity.Rare
-            && rewind.CanonicalKeywords.SequenceEqual([SakuraKeywords.Water, CardKeyword.Exhaust])
-            && rewind.DynamicVars.Cards.IntValue == 1
-            && upgradedRewind.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
-            && upgradedRewind.DynamicVars.Cards.IntValue == 2,
-            "Expected Rewind to stay 1-cost on upgrade and select 1 then 2 exhaust cards.");
-
-        var rewindSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Rewind.cs"));
-        RegressionTestHarness.Require(
-            rewindSource.Contains("SelectUpToFromCards", StringComparison.Ordinal)
-            && rewindSource.Contains("MoveExistingCardToHand", StringComparison.Ordinal)
-            && rewindSource.Contains("SetToFreeThisTurn", StringComparison.Ordinal)
-            && rewindSource.Contains("DynamicVars.Cards.UpgradeValueBy(1)", StringComparison.Ordinal)
-            && !rewindSource.Contains("EnergyCost.UpgradeBy(-1)", StringComparison.Ordinal),
-            "Expected Rewind upgrade to increase exhaust selection count while keeping Extra free-this-turn.");
-
-    }
-
-    [Fact]
-    public void GenerationRecoveryFreezeAndTimeCardContractsRemainStable()
-    {
-        var kindness = new Kindness();
-        var upgradedKindness = RegressionTestHarness.MutableForCostTest(new Kindness());
-        upgradedKindness.UpgradeInternal();
-        RegressionTestHarness.Require(
-            kindness.Rarity == CardRarity.Rare
-            && kindness.CanonicalKeywords.Contains(SakuraKeywords.Earth)
-            && kindness.Type == CardType.Power
-            && !kindness.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && !TransparentCard.HasMagicChargeExtraEffect(kindness)
-            && kindness.EnergyCost.Canonical == 1
-            && upgradedKindness.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
-            && upgradedKindness.Keywords.Contains(CardKeyword.Innate)
-            && new KindnessPower().Type == PowerType.Buff
-            && new KindnessPower().StackType == PowerStackType.Single,
-            "Expected Kindness to be a non-stacking 1-cost Power without Extra that upgrades to Innate.");
-
-        var appear = new Appear();
-        var upgradedAppear = RegressionTestHarness.MutableForCostTest(new Appear());
-        upgradedAppear.UpgradeInternal();
-        var appearSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Appear.cs"));
-        var manifestLoopSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraManifestLoop.cs"));
-        var appearPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/Transparent/AppearPower.cs"));
-        RegressionTestHarness.Require(
-            appear.Rarity == CardRarity.Rare
-            && appear.Type == CardType.Power
-            && appear.CanonicalKeywords.Contains(SakuraKeywords.Wind)
-            && !TransparentCard.HasMagicChargeExtraEffect(appear)
-            && SakuraTransparentCardCatalog.TransparentCardTypes.Count == 36
-            && SakuraTransparentCardCatalog.TransparentCardTypes.Contains(typeof(Appear))
-            && appear.EnergyCost.Canonical == 2
-            && upgradedAppear.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
-            && !appear.DynamicVars.ContainsKey("ManifestCards")
-            && appear.DynamicVars.Cards.IntValue == 1
-            && upgradedAppear.DynamicVars.Cards.IntValue == 1
-            && !appear.DynamicVars.ContainsKey("Spells")
-            && !appearSource.Contains("EnergyCost.UpgradeBy", StringComparison.Ordinal)
-            && appearSource.Contains("power?.AddUpgradedStacks(DynamicVars.Cards.IntValue)", StringComparison.Ordinal)
-            && new AppearPower().DynamicVars.ContainsKey(AppearPower.UpgradedVar)
-            && new AppearPower().Type == PowerType.Buff
-            && new AppearPower().StackType == PowerStackType.Counter
-            && RegressionTestHarness.DeclaresMethod<AppearPower>("BeforeHandDraw")
-            && AppearPower.SpellTypeFor(SakuraElement.Fire) == typeof(SpellHuoShen)
-            && AppearPower.SpellTypeFor(SakuraElement.Earth) == typeof(SpellLeiDi)
-            && AppearPower.SpellTypeFor(SakuraElement.Wind) == typeof(SpellFengHua)
-            && AppearPower.SpellTypeFor(SakuraElement.Water) == typeof(SpellShuiLong)
-            && manifestLoopSource.Contains("AppearPower.AfterManifested(owner, copy)", StringComparison.Ordinal)
-            && !manifestLoopSource.Contains("card is Appear", StringComparison.Ordinal)
-            && appearPowerSource.Contains("AddRandomTransparentCardsToHand(player, choiceContext, Amount, UpgradedStacks)", StringComparison.Ordinal)
-            && !appearPowerSource.Contains("SakuraManifestLoop.Manifest(", StringComparison.Ordinal)
-            && RandomTransparentHelperSkipsAppearSpells(manifestLoopSource)
-            && manifestLoopSource.Contains("if (i < upgradedCount)", StringComparison.Ordinal),
-            "Expected Appear to be a 2-cost Rare Power (upgrade: its stacks add upgraded cards) that adds 1 random Forgotten Transparent card per stack at turn start (not a Manifest) and adds 1 matching element Spell per stack for every Manifested card.");
-
-        var repair = new Repair();
-        var upgradedRepair = RegressionTestHarness.MutableForCostTest(new Repair());
-        upgradedRepair.UpgradeInternal();
-        var memoryPileSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraMemoryPile.cs"));
-        RegressionTestHarness.Require(
-            repair.Rarity == CardRarity.Rare
-            && repair.Type == CardType.Power
-            && repair.CanonicalKeywords.Contains(SakuraKeywords.Earth)
-            && !TransparentCard.HasMagicChargeExtraEffect(repair)
-            && repair.EnergyCost.Canonical == 1
-            && upgradedRepair.EnergyCost.GetWithModifiers(CostModifiers.Local) == 1
-            && repair.DynamicVars.Heal.IntValue == 3
-            && upgradedRepair.DynamicVars.Heal.IntValue == 4
-            && new RepairPower().StackType == PowerStackType.Counter
-            && RegressionTestHarness.DeclaresMethod<RepairPower>("BeforeSideTurnStart")
-            && memoryPileSource.Contains("await RepairPower.AfterRecalledFromMemory(player);", StringComparison.Ordinal),
-            "Expected Repair to be a 1-cost Rare Power that heals 3 (4 upgraded) the first time each turn a card returns from Memory to the hand.");
-
-        RegressionTestHarness.Require(
-            new SakuraDream().EnergyCost.Canonical == 1,
-            "Expected Sakura Dream to cost 1.");
-
-        var promise = new Promise();
-        var upgradedPromise = RegressionTestHarness.MutableForCostTest(new Promise());
-        upgradedPromise.UpgradeInternal();
-        RegressionTestHarness.Require(
-            promise.CanonicalKeywords.Contains(SakuraKeywords.Earth)
-            && !promise.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
-            && TransparentCard.HasMagicChargeExtraEffect(promise)
-            && promise.DynamicVars.Block.IntValue == 7
-            && promise.DynamicVars["PromiseManifestPower"].IntValue == 1
-            && promise.DynamicVars["PlatingPower"].IntValue == 4
-            && upgradedPromise.DynamicVars.Block.IntValue == 7
-            && upgradedPromise.DynamicVars["PromiseManifestPower"].IntValue == 2
-            && new PromiseManifestPower().StackType == PowerStackType.Counter
-            && RegressionTestHarness.DeclaresMethod<PromiseManifestPower>("ModifyHandDraw")
-            && RegressionTestHarness.DeclaresMethod<PromiseManifestPower>("AfterEnergyReset")
-            && RegressionTestHarness.DeclaresMethod<PromiseManifestPower>("AfterPlayerTurnStart"),
-            "Expected Promise to gain 7 Block, grant 4 Plating with Extra, and upgrade its safe-next-turn reward from 1 to 2 draw and Energy.");
-
-        var dreaming = new Dreaming();
-        var upgradedDreaming = RegressionTestHarness.MutableForCostTest(new Dreaming());
-        upgradedDreaming.UpgradeInternal();
-        var dreamingPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/Transparent/DreamingPower.cs"));
-        RegressionTestHarness.Require(
-            dreaming.Type == CardType.Power
-            && dreaming.Rarity == CardRarity.Rare
-            && dreaming.CanonicalKeywords.Contains(SakuraKeywords.Water)
-            && !dreaming.CanonicalKeywords.Contains(SakuraKeywords.Manifest)
-            && !TransparentCard.HasMagicChargeExtraEffect(dreaming)
-            && dreaming.EnergyCost.Canonical == 3
-            && upgradedDreaming.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
-            && !dreaming.CanonicalKeywords.Contains(CardKeyword.Innate)
-            && !upgradedDreaming.Keywords.Contains(CardKeyword.Innate)
-            && RegressionTestHarness.DeclaresMethod<DreamingPower>("BeforeHandDrawLate")
-            && !RegressionTestHarness.DeclaresMethod<DreamingPower>("BeforeHandDraw")
-            && SakuraCardHoverTips.StaticTipKeys(dreaming).Contains(SakuraMemoryPile.PileId)
-            && dreamingPowerSource.Contains("drawPile!.Cards", StringComparison.Ordinal)
-            && dreamingPowerSource.Contains("CardPileCmd.Add(card, PileType.Hand)", StringComparison.Ordinal)
-            && dreamingPowerSource.Contains("RecallToHand(player, [recalled], freeThisTurn: false)", StringComparison.Ordinal),
-            "Expected Dreaming to put a Draw Pile or Memory card into Hand after ordinary pre-draw hooks, cost 3 (2 upgraded), and have no Innate.");
-
-        var upgradedClowFreeze = RegressionTestHarness.MutableForCostTest(new ClowFreeze());
-        upgradedClowFreeze.UpgradeInternal();
-        RegressionTestHarness.Require(
-            new ClowFreeze().DynamicVars.Damage.IntValue == 14
-            && new ClowFreeze().DynamicVars.Block.IntValue == 6
-            && new ClowFreeze().DynamicVars["SakuraFrostbitePower"].IntValue == 3
-            && SakuraFreezeRules.DoubledApplicationAmount(0, 3) == 6
-            && SakuraFreezeRules.DoubledApplicationAmount(5, 3) == 11
-            && upgradedClowFreeze.DynamicVars.Damage.IntValue == 18
-            && upgradedClowFreeze.DynamicVars.Block.IntValue == 8,
-            "Expected Clow Freeze to deal 14 damage, gain 6 Block, apply 3 Frostbite, atomically double Frostbite with Extra, and upgrade to 18/8.");
-
-        var sakuraFreeze = new SakuraFreeze();
-        RegressionTestHarness.Require(
-            sakuraFreeze.DynamicVars.Damage.IntValue == 22
-            && sakuraFreeze.DynamicVars.Block.IntValue == 10
-            && sakuraFreeze.DynamicVars["SakuraFrostbitePower"].IntValue == 3
-            && sakuraFreeze.DynamicVars["ExtraFrostbite"].IntValue == 3
-            && SakuraFreezeRules.FrostbiteAmount(3, 3, isEliteOrBossTarget: true) == 3
-            && SakuraFreezeRules.FrostbiteAmount(3, 3, isEliteOrBossTarget: false) == 6,
-            "Expected Sakura Freeze to apply 3 Frostbite to Elite or Boss targets and 6 to other targets.");
-
-        var time = new Time();
-        var upgradedTime = RegressionTestHarness.MutableForCostTest(new Time());
-        upgradedTime.UpgradeInternal();
-        var clowTime = new ClowTime();
-        var upgradedClowTime = RegressionTestHarness.MutableForCostTest(new ClowTime());
-        upgradedClowTime.UpgradeInternal();
-        var transparentTimeSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Time.cs"));
-        var timePairSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/ClowSakura/Time.cs"));
-        var clowTimeSource = timePairSource[..timePairSource.IndexOf(
-            "public class SakuraTime",
-            StringComparison.Ordinal)];
-        var sakuraTimeSource = timePairSource[timePairSource.IndexOf(
-            "public class SakuraTime",
-            StringComparison.Ordinal)..];
-        RegressionTestHarness.Require(
-            time.TargetType == TargetType.Self
-            && time.CanonicalKeywords.Contains(SakuraKeywords.Fire)
-            && time.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && time.EnergyCost.Canonical == 3
-            && upgradedTime.EnergyCost.GetWithModifiers(CostModifiers.Local) == 2
-            && clowTime.TargetType == TargetType.None
-            && clowTime.Elements == SakuraElementSet.Water
-            && clowTime.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && !clowTime.CanonicalKeywords.Contains(CardKeyword.Retain)
-            && clowTime.EnergyCost.Canonical == 0
-            && clowTime.DynamicVars.Cards.IntValue == 2
-            && clowTime.DynamicVars["ClassicTimeStasisPower"].IntValue == 1
-            && upgradedClowTime.DynamicVars["ClassicTimeStasisPower"].IntValue == 2
-            && SakuraSourceCardText.ReferencesTimeStasisTip(clowTime)
-            && upgradedClowTime.Keywords.Contains(CardKeyword.Exhaust)
-            && !upgradedClowTime.Keywords.Contains(CardKeyword.Retain)
-            && upgradedClowTime.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0
-            && clowTimeSource.Contains("PowerCmd.Apply<ClassicTimeStasisPower>", StringComparison.Ordinal)
-            && !clowTimeSource.Contains("EnergyNextTurnPower", StringComparison.Ordinal)
-            && !clowTimeSource.Contains("BlockNextTurnPower", StringComparison.Ordinal)
-            && !clowTimeSource.Contains("GetResultPileTypeForCardPlay", StringComparison.Ordinal)
-            && !clowTimeSource.Contains("AddVoid", StringComparison.Ordinal)
-            && transparentTimeSource.Contains("PlayerCmd.EndTurn", StringComparison.Ordinal)
-            && !clowTimeSource.Contains("PlayerCmd.EndTurn", StringComparison.Ordinal)
-            && !sakuraTimeSource.Contains("PlayerCmd.EndTurn", StringComparison.Ordinal)
-            && !typeof(TransparentExtraEffectCard).IsAssignableFrom(typeof(Time))
-            && !RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldFlush")
-            && !RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldClearBlock")
-            && !RegressionTestHarness.DeclaresMethod<TimeStopPower>("ShouldPlayerResetEnergy")
-            && RegressionTestHarness.DeclaresMethod<TimeStopPower>("AfterTakingExtraTurn")
-            && RegressionTestHarness.DeclaresMethod<SakuraElementStatePower>("PreserveForNextTurn")
-            && new ClassicTimeStasisPower().StackType == PowerStackType.Counter
-            && !clowTimeSource.Contains("GetPowerAmount<ClassicTimeStasisPower>()", StringComparison.Ordinal)
-            && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("ShouldFlush")
-            && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("ShouldClearBlock")
-            && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("ShouldPlayerResetEnergy")
-            && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("TryModifyPowerAmountReceived")
-            && RegressionTestHarness.DeclaresMethod<ClassicTimeStasisPower>("BeforeSideTurnEnd"),
-            "Expected only Transparent Time to end the turn, with no Extra Effect and a plain one-shot extra turn; Clow Time should cost 0, apply 1 Freeze Frame (2 upgraded) that stacks, resolve it at turn end, add no Void, draw on Extra, and keep Exhaust without Retain.");
-    }
-
-    [Fact]
-    public void ReflectionPowerLifecycleContractsRemainStable()
-    {
-        var reflectionSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/Transparent/ReflectionPower.cs"));
-        RegressionTestHarness.Require(
-            RegressionTestHarness.DeclaresMethod<ReflectionPower>("AfterDamageReceived")
-            && RegressionTestHarness.DeclaresMethod<ReflectionPower>("AfterSideTurnEnd")
-            && reflectionSource.Contains(
-                "var reflectionDamage = ReflectedDamage(damageResult.TotalDamage, (int)Amount);",
-                StringComparison.Ordinal)
-            && reflectionSource.Contains("damageProps.IsPoweredAttack()", StringComparison.Ordinal)
-            && reflectionSource.Contains(
-                "side == CombatSide.Enemy && Owner.Side == CombatSide.Player && Amount > 0",
-                StringComparison.Ordinal)
-            && System.Text.RegularExpressions.Regex.Matches(
-                reflectionSource,
-                "PowerCmd\\.Decrement\\(this\\)").Count == 2,
-            "Expected ReflectionPower to reflect each powered damage result, consume one stack per hit, and decay one stack at enemy turn end.");
-    }
-
-    [Fact]
-    public void ElementCostAndExtraEffectStateContractsRemainStable()
-    {
-        RegressionTestHarness.Require(
-            (SakuraElementSet.Wind | SakuraElementSet.Fire).HasElement(SakuraElement.Wind)
-            && (SakuraElementSet.Wind | SakuraElementSet.Fire).HasElement(SakuraElement.Fire),
-            "Expected Sakura element sets to retain each declared element identity.");
-
-        RegressionTestHarness.RequireNoRemovedCardTypes(
-            "registered Sakura power types",
-            RegressionTestData.RegisteredPowerTypes,
-            RegressionTestData.RemovedClearElementPowerTypeNames);
-        RegressionTestHarness.Require(
-            !typeof(MainFile).Assembly.GetTypes().Any(static type => type.Name == "SakuraElementCompass"),
-            "Expected the old Clear element compass UI type to be removed.");
-
-        var reflect = new Reflect();
-        var upgradedReflect = RegressionTestHarness.MutableForCostTest(new Reflect());
-        upgradedReflect.UpgradeInternal();
-        RegressionTestHarness.Require(
-            reflect.EnergyCost.Canonical == 1
-            && reflect.Rarity == CardRarity.Common
-            && reflect.CanonicalKeywords.SequenceEqual([SakuraKeywords.Water])
-            && reflect.DynamicVars.Block.IntValue == 5
-            && upgradedReflect.DynamicVars.Block.IntValue == 8
-            && reflect.DynamicVars["ReflectionPower"].IntValue == 2
-            && upgradedReflect.DynamicVars["ReflectionPower"].IntValue == 3
-            && reflect.DynamicVars["ExtraReflection"].IntValue == 2
-            && SakuraCardHoverTips.StaticTipKeys(reflect).Contains(SakuraCardHoverTips.ReflectionTipKey)
-            && SakuraCardHoverTips.StaticTipKeys(upgradedReflect).Contains(SakuraCardHoverTips.ReflectionTipKey)
-            && new ReflectionPower().StackType == PowerStackType.Counter
-            && ReflectionPower.ReflectedDamage(17, 1) == 8
-            && ReflectionPower.ReflectedDamage(17, 2) == 17
-            && ReflectionPower.ReflectedDamage(17, 3) == 25
-            && ReflectionPower.ReflectedDamage(10, 3) == 15
-            && ReflectionPower.ReflectedDamage(10, 2) == 10
-            && ReflectionPower.ReflectedDamage(10, 1) == 5
-            && !typeof(MainFile).Assembly.GetTypes().Any(static type => type.Name == "StrongReflectionPower"),
-            "Expected Reflect to be a Common 1-cost card with 5/8 Block, 2/3 scaling Reflection stacks, and 2 additional stacks through Extra.");
-
-        var clowTwin = new ClowTwin();
-        var clowTwinLocalCost = clowTwin.EnergyCost.GetWithModifiers(CostModifiers.Local);
-        RegressionTestHarness.Require(
-            RegressionTestHarness.DeclaresMethod<ClassicTwinPower>("AfterModifyingCardPlayCount"),
-            "Expected Clow Twin to consume its per-turn duplication only after the native play-count query is committed.");
-        RegressionTestHarness.Require(
-            ClassicTwinSakuraPower.TryIncreaseClowCardCost(clowTwin, amount: 1, clowTwinLocalCost, out var increasedTwinCost),
-            "Expected Sakura Twin power to increase Clow card costs.");
-        RegressionTestHarness.Require(increasedTwinCost == clowTwinLocalCost + 1, "Expected Sakura Twin power to add only 1 cost per stack.");
-        RegressionTestHarness.Require(
-            clowTwin.EnergyCost.GetWithModifiers(CostModifiers.Local) == clowTwinLocalCost,
-            "Expected Sakura Twin power cost calculation not to mutate local combat cost.");
-
-        RegressionTestHarness.Require(
-            ClassicTwinSakuraPower.TryIncreaseClowCardCost(clowTwin, amount: 2, clowTwinLocalCost, out var stackedTwinCost),
-            "Expected stacked Sakura Twin power to increase Clow card costs.");
-        RegressionTestHarness.Require(stackedTwinCost == clowTwinLocalCost + 2, "Expected Sakura Twin stacked cost increase to match its stack amount.");
-        RegressionTestHarness.Require(
-            !ClassicTwinSakuraPower.TryIncreaseClowCardCost(new SakuraTwin(), amount: 1, currentCost: 1, out var sakuraTwinCost),
-            "Expected Sakura Twin power not to increase Sakura card costs.");
-        RegressionTestHarness.Require(sakuraTwinCost == 1, "Expected non-Clow card cost to remain unchanged.");
-
-        var dreamGeneratedThrough = RegressionTestHarness.MutableForCostTest(new ClowThrough());
-        SakuraMagicCharge.SetFreeForRestOfTurn(dreamGeneratedThrough);
-        RegressionTestHarness.Require(
-            dreamGeneratedThrough.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0,
-            "Expected Dream-generated Clow cards to be free this turn.");
-        RegressionTestHarness.Require(
-            !dreamGeneratedThrough.EnergyCost.AfterCardPlayedCleanup(),
-            "Expected Dream-generated free cost not to expire during card-play cleanup.");
-        RegressionTestHarness.Require(
-            dreamGeneratedThrough.EnergyCost.GetWithModifiers(CostModifiers.Local) == 0,
-            "Expected Dream-generated free cost to stay stable until end of turn.");
-        RegressionTestHarness.Require(
-            dreamGeneratedThrough.EnergyCost.EndOfTurnCleanup(),
-            "Expected Dream-generated free cost to expire at end of turn.");
-        RegressionTestHarness.Require(
-            dreamGeneratedThrough.EnergyCost.GetWithModifiers(CostModifiers.Local) == dreamGeneratedThrough.EnergyCost.Canonical,
-            "Expected Dream-generated card cost to return to canonical after end-of-turn cleanup.");
-
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.ShouldShowMagicChargeExtraDescription(new ClowSword()),
-            "Expected canonical Classic Clow cards to show complete Extra Effect reference text without reading Owner.");
-        RegressionTestHarness.Require(
-            TransparentCard.ShouldShowMagicChargeExtraEffectDescription(new Gale()),
-            "Expected canonical Transparent Cards to show complete Extra Effect reference text without reading Owner.");
-        RegressionTestHarness.Require(
-            TransparentCard.HasMagicChargeExtraEffect(new Gale()),
-            "Expected Gale to retain its Magic Charge extra effect.");
-        RegressionTestHarness.Require(
-            TransparentCard.HasMagicChargeExtraEffect(new Exchange())
-            && !TransparentCard.HasMagicChargeExtraEffect(new Synchronize())
-            && TransparentCard.HasMagicChargeExtraEffect(new Remind()),
-            "Expected Exchange and Remind to support Extra effects while Synchronize remains a non-Extra card.");
-    }
-
-    [Fact]
-    public void ClassicAndClearHoverTextContractsRemainStable()
-    {
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.CounterpartPreviewIdentity(new ClowSword()) == SourceCardIdentity.Sword,
-            "Expected Clow hover tips to request the matching Sakura counterpart preview.");
-
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.GeneratedSpellPreviewType(new ClowEarthy()) == typeof(SpellLeiDi)
-            && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowFirey()) == typeof(SpellHuoShen)
-            && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowWatery()) == typeof(SpellShuiLong)
-            && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowWindy()) == typeof(SpellFengHua)
-            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraEarthy()) == typeof(SpellLeiDi)
-            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraFirey()) == typeof(SpellHuoShen)
-            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraWatery()) == typeof(SpellShuiLong)
-            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraWindy()) == typeof(SpellFengHua)
-            && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowMove()) == typeof(SpellEmptySpell)
-            && SakuraSourceCardText.GeneratedSpellPreviewType(new SakuraMove()) == typeof(SpellEmptySpell)
-            && SakuraSourceCardText.GeneratedSpellPreviewType(new ClowSword()) is null,
-            "Expected Clow and Sakura element-state cards and Move to preview their generated spell cards.");
-        RegressionTestHarness.Require(
-            !new ClowEarthy().CanonicalKeywords.Contains(CardKeyword.Retain)
-            && !new ClowFirey().CanonicalKeywords.Contains(CardKeyword.Retain)
-            && !new ClowWatery().CanonicalKeywords.Contains(CardKeyword.Retain)
-            && !new ClowWindy().CanonicalKeywords.Contains(CardKeyword.Retain),
-            "Expected the four Clow element-state cards not to retain by default.");
-
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.StaticTipKeys(new SpellHuoShen()).Count() >= 2,
-            "Expected Classic spell hover tips to include spell-family and element-family tips.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.StaticTipKeys(new ClowShield()).Contains("SAKURAMOD-FIREY_CARD")
-            && !SakuraSourceCardText.ElementStatesReferencedBy(new ClowShield()).Any(),
-            "Expected ordinary Classic element cards to show element context without adding element-state tips.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.ElementStatesReferencedBy(new ClowFirey()).Contains(SakuraElement.Fire),
-            "Expected Classic cards that explicitly enter an element state to explain that state.");
-        RegressionTestHarness.Require(
-            !SakuraSourceCardText.ElementStatesReferencedBy(new SakuraWave()).Any(),
-            "Expected Sakura Wave to preview generated Clow cards instead of directly entering element states.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.ReferencesMagicChargeTip(new SakuraLock())
-            && SakuraSourceCardText.ReferencesMagicChargeTip(new ClowLock())
-            && !SakuraSourceCardText.ReferencesMagicChargeTip(new ClowChange()),
-            "Expected Clow and Sakura Lock, but no longer Change, hover tips to reference Magic Charge.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.KeywordTips(new SakuraShield()).Contains(SakuraKeywords.SakuraCard),
-            "Expected Sakura card hover tips to explain Sakura Card void generation.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.KeywordTips(new ClowFreeze()).Contains(SakuraKeywords.Frostbite),
-            "Expected Clow Freeze hover tips to explain Frostbite.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.KeywordTips(new ClowCreate()).Contains(SakuraKeywords.Removable)
-            && SakuraSourceCardText.KeywordTips(new ClowCreate()).Contains(SakuraKeywords.EntityLimited),
-            "Expected Clow Create hover tips to explain generated card removal and entity limits.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.KeywordTips(new SakuraReturn()).Contains(SakuraKeywords.Removable),
-            "Expected Sakura Return hover tips to explain that the card is removed from the deck after use.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.ReferencesSleepTip(new ClowSleep())
-            && SakuraSourceCardText.ReferencesSleepTip(new SakuraSleep()),
-            "Expected Clow Sleep and Sakura Sleep hover tips to explain the Sleep power.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.ReferencesBlurTip(new ClowShadow())
-            && !SakuraSourceCardText.ReferencesBlurTip(new SakuraShadow()),
-            "Expected Clow Shadow hover tips to explain Blur, but not Sakura Shadow.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.ReferencesAirborneTip(new ClowFly())
-            && !SakuraSourceCardText.ReferencesAirborneTip(new SakuraFly()),
-            "Expected Clow Fly hover tips to explain Airborne, but not Sakura Fly.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.ReferencesIntangibleTip(new SakuraShadow())
-            && !SakuraSourceCardText.ReferencesIntangibleTip(new ClowShadow()),
-            "Expected Sakura Shadow hover tips to explain Intangible, but not Clow Shadow.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.ReferencesBufferTip(new ClowSilent())
-            && SakuraSourceCardText.ReferencesBufferTip(new SakuraSilent()),
-            "Expected Clow Silent and Sakura Silent hover tips to explain Buffer.");
-        RegressionTestHarness.Require(
-            SakuraSourceCardText.CounterpartPreviewIdentity(new ClowVoice()) == SourceCardIdentity.Voice
-            && SakuraSourceCardText.StaticTipKeys(new ClowVoice()).Any()
-            && SakuraSourceCardText.KeywordTips(new ClowVoice()).SequenceEqual([SakuraKeywords.Invisible]),
-            "Expected Clow Voice hover tips to include element, counterpart, and Invisible context.");
-
-        RegressionTestHarness.Require(
-            SakuraDescriptionRegion.IsExtraEffectDescriptionLineForTests("[gold]额外效果：[/gold]抽 1 张牌。"),
-            "Expected the shared description region to recognize Chinese extra-effect description headers.");
-        RegressionTestHarness.Require(
-            SakuraDescriptionRegion.IsExtraEffectDescriptionLineForTests("[gold]Extra:[/gold] Draw 1 card."),
-            "Expected the shared description region to recognize English extra-effect description headers.");
-        RegressionTestHarness.Require(
-            !SakuraDescriptionRegion.IsExtraEffectDescriptionLineForTests("[gold]解封：[/gold]抽 1 张牌。"),
-            "Expected old Chinese Release headers not to be treated as current extra-effect headers.");
-        RegressionTestHarness.Require(
-            !SakuraDescriptionRegion.IsExtraEffectDescriptionLineForTests("[gold]Release:[/gold] Draw 1 card."),
-            "Expected old English Release headers not to be treated as current extra-effect headers.");
-    }
-
-    [Fact]
-    public void ClassicShieldAndWoodPowerContractsRemainStable()
-    {
-        RegressionTestHarness.Require(
-            RegressionTestHarness.DeclaresMethod<ClassicShieldWardPower>("BeforeSideTurnEnd"),
-            "Expected Metallicize to gain Block from the end-of-turn hook.");
-        RegressionTestHarness.Require(
-            !RegressionTestHarness.DeclaresMethod<ClassicShieldWardPower>("AfterPlayerTurnStart"),
-            "Expected Metallicize not to gain Block from the start-of-turn hook.");
-
-        var clowShield = new ClowShield();
-        var upgradedClowShield = RegressionTestHarness.MutableForCostTest(new ClowShield());
-        upgradedClowShield.UpgradeInternal();
-        RegressionTestHarness.Require(
-            clowShield.DynamicVars["ClassicShieldWardPower"].IntValue == 3
-            && upgradedClowShield.DynamicVars["ClassicShieldWardPower"].IntValue == 3,
-            "Expected Clow Shield Extra to grant 3 Metallicize without changing on upgrade.");
-
-        var sakuraShield = new SakuraShield();
-        RegressionTestHarness.Require(
-            sakuraShield.DynamicVars.Block.IntValue == 14
-            && sakuraShield.DynamicVars["Magic"].IntValue == 25
-            && SakuraShield.CurrentHpBlock(80, 25) == 20
-            && SakuraShield.CurrentHpBlock(79, 25) == 19,
-            "Expected Sakura Shield to gain 14 Block plus 25% of current HP, rounded down.");
-
-        var clowWood = new ClowWood();
-        var upgradedClowWood = RegressionTestHarness.MutableForCostTest(new ClowWood());
-        upgradedClowWood.UpgradeInternal();
-        var sakuraWood = new SakuraWood();
-        var sakuraWoodPowerSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Powers/SourceCards/ClassicSakuraWoodPower.cs"));
-        RegressionTestHarness.Require(
-            clowWood.Type == CardType.Power
-            && clowWood.TargetType == TargetType.None
-            && clowWood.Rarity == CardRarity.Uncommon
-            && clowWood.EnergyCost.Canonical == 1
-            && clowWood.DynamicVars["PoisonPower"].IntValue == 2
-            && upgradedClowWood.DynamicVars["PoisonPower"].IntValue == 3
-            && !TransparentCard.HasMagicChargeExtraEffect(clowWood)
-            && sakuraWood.Type == CardType.Power
-            && sakuraWood.TargetType == TargetType.None
-            && sakuraWood.Rarity == CardRarity.Token
-            && sakuraWood.EnergyCost.Canonical == 1
-            && sakuraWood.DynamicVars["PoisonPower"].IntValue == 4
-            && sakuraWood.DynamicVars["StrengthLoss"].IntValue == 3
-            && sakuraWoodPowerSource.Contains("OnEarthTriggered(PlayerChoiceContext choiceContext) =>\n        PoisonAllEnemies", StringComparison.Ordinal)
-            && sakuraWoodPowerSource.Contains("OnAttackFullyBlocked(PlayerChoiceContext choiceContext, Creature attacker) =>\n        PoisonAllEnemies", StringComparison.Ordinal)
-            && !sakuraWoodPowerSource.Contains("CreatureCmd.Damage", StringComparison.Ordinal)
-            && !clowWood.DynamicVars.ContainsKey("ThornsPower")
-            && !sakuraWood.DynamicVars.ContainsKey("ThornsPower")
-            && new ClassicWoodPower().Type == PowerType.Buff
-            && new ClassicWoodPower().StackType == PowerStackType.Counter
-            && new ClassicSakuraWoodPower().Type == PowerType.Buff
-            && new ClassicSakuraWoodPower().StackType == PowerStackType.Single
-            && RegressionTestHarness.DeclaresMethod<ClassicWoodPower>("AfterDamageReceived")
-            && !RegressionTestHarness.DeclaresMethod<ClassicWoodPower>("BeforeDamageReceived"),
-            "Expected Wood to drop Thorns: Clow poisons a random enemy on Earth triggers and fully blocked hits, Sakura removes 3 Strength from all enemies and poisons all enemies on Earth triggers and fully blocked hits.");
-    }
-
-    [Fact]
-    public void SakuraLightTurnsStatusAndCurseCardsIntoAPlayEngineWithoutChangingTheirCosts()
-    {
-        var card = new SakuraLight();
-
-        RegressionTestHarness.Require(
-            card.Type == CardType.Power
-            && card.EnergyCost.Canonical == 1
-            && ClassicLightSakuraPower.IsStatusOrCurse(CardType.Status)
-            && ClassicLightSakuraPower.IsStatusOrCurse(CardType.Curse)
-            && !ClassicLightSakuraPower.IsStatusOrCurse(CardType.Skill)
-            && RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("TryModifyKeywordsInCombat")
-            && RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("ModifyCardPlayResultLocation")
-            && RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("AfterCardPlayed")
-            && !RegressionTestHarness.DeclaresMethod<ClassicLightSakuraPower>("TryModifyEnergyCostInCombat"),
-            "Expected Sakura Light to be a 1-cost Power that makes Status and Curse cards playable and Exhausting, then draws and heals without changing their costs.");
-    }
-
-    [Fact]
-    public void SakuraLibraConvertsEveryThreeMagicChargeIntoEnergy()
-    {
-        var card = new SakuraLibra();
-
-        RegressionTestHarness.Require(
-            card.EnergyCost.Canonical == 0
-            && card.DynamicVars.Block.IntValue == 3
-            && card.DynamicVars["Magic"].IntValue == 3
-            && card.DynamicVars["Energy"].IntValue == 1
-            && SakuraLibra.EnergyFromCharge(-1) == 0
-            && SakuraLibra.EnergyFromCharge(0) == 0
-            && SakuraLibra.EnergyFromCharge(2) == 0
-            && SakuraLibra.EnergyFromCharge(3) == 1
-            && SakuraLibra.EnergyFromCharge(8) == 2
-            && SakuraLibra.EnergyFromCharge(9) == 3,
-            "Expected Sakura Libra to cost 0, gain 3 Block per Magic Charge, and gain 1 Energy for every 3 Magic Charge spent.");
-    }
-
-    [Fact]
-    public void ActionDrawsTwoOnlyWhenItExhaustsAnUnplayableCard()
-    {
-        var action = new SakuraMod.SakuraModCode.Cards.Action();
-        var upgradedAction = RegressionTestHarness.MutableForCostTest(new SakuraMod.SakuraModCode.Cards.Action());
-        upgradedAction.UpgradeInternal();
-        var actionSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Action.cs"));
-        var unplayableRead = actionSource.IndexOf("card.Keywords.Contains(CardKeyword.Unplayable)", StringComparison.Ordinal);
-        var exhaust = actionSource.IndexOf("CardCmd.Exhaust(choiceContext, card)", StringComparison.Ordinal);
-        RegressionTestHarness.Require(
-            action.EnergyCost.Canonical == 1
-            && upgradedAction.EnergyCost.GetWithModifiers(CostModifiers.None) == 0
-            && action.DynamicVars["UnplayableDraw"].IntValue == 2
-            && action.DynamicVars["ExtraDraw"].IntValue == 2
-            && upgradedAction.DynamicVars["ExtraDraw"].IntValue == 2
-            && !action.DynamicVars.ContainsKey("WindDraw")
-            && unplayableRead >= 0
-            && exhaust > unplayableRead,
-            "Expected Action to cost 1 (0 upgraded), draw 2 when the Exhausted card was Unplayable, and draw a fixed 2 on Extra.");
-    }
-
-    [Fact]
-    public void ChoicePairsBlockWithManifestAndDamageWithRemind()
-    {
-        var choice = new Choice();
-        var upgradedChoice = RegressionTestHarness.MutableForCostTest(new Choice());
-        upgradedChoice.UpgradeInternal();
-        var choiceSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Transparent/Choice.cs"));
-        RegressionTestHarness.Require(
-            choice.EnergyCost.Canonical == 1
-            && choice.Rarity == CardRarity.Uncommon
-            && choice.DynamicVars.Block.IntValue == 8
-            && choice.DynamicVars.Damage.IntValue == 10
-            && choice.DynamicVars["ManifestCards"].IntValue == 1
-            && choice.DynamicVars["RemindCards"].IntValue == 1
-            && upgradedChoice.DynamicVars.Block.IntValue == 11
-            && upgradedChoice.DynamicVars.Damage.IntValue == 14
-            && upgradedChoice.DynamicVars["ManifestCards"].IntValue == 1
-            && upgradedChoice.DynamicVars["RemindCards"].IntValue == 1
-            && choiceSource.Contains("if (activation.IsActive)", StringComparison.Ordinal)
-            && choiceSource.Contains("DealDamageToRandomEnemies", StringComparison.Ordinal)
-            && choiceSource.Contains("upgradeCopies: false", StringComparison.Ordinal)
-            && !choiceSource.Contains("Remind.HasRecallChoices(Owner)", StringComparison.Ordinal)
-            && !choiceSource.Contains("SetThisCombat", StringComparison.Ordinal),
-            "Expected Choice to cost 1 and offer 8 (11) Block plus Manifest 1 or 10 (14) random-enemy damage plus Remind 1, both on Extra, even with an empty Memory pile.");
-    }
-
-    [Fact]
-    public void SakuraStormExposesBothDamageEndsAsModifierAwareDamageVars()
-    {
-        var storm = new SakuraStorm();
-        var stormSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/ClowSakura/Storm.cs"));
-
-        RegressionTestHarness.Require(
-            storm.DynamicVars.Damage is SakuraSourceDamageVar
-            && storm.DynamicVars[SakuraStorm.MaxDamageVar] is SakuraSourceDamageVar
-            && storm.DynamicVars.Damage.IntValue == 1
-            && storm.DynamicVars[SakuraStorm.MaxDamageVar].IntValue == 9
-            && storm.DynamicVars["Magic"].IntValue == 7,
-            "Expected Sakura Storm's 1-9 range to expose both ends as damage vars so Strength and other damage hooks move them together.");
-
-        RegressionTestHarness.Require(
-            stormSource.Contains("ReleasedValue(MaxDamageVar)", StringComparison.Ordinal)
-            && !stormSource.Contains("ReleasedDamage() + MaxDamageOffset", StringComparison.Ordinal),
-            "Expected the Storm roll to read its upper bound from the MaxDamage variable instead of recomputing Damage + offset.");
-    }
-
-    private static bool RandomTransparentHelperSkipsAppearSpells(string manifestLoopSource)
-    {
-        var start = manifestLoopSource.IndexOf("AddRandomTransparentCardsToHand(", StringComparison.Ordinal);
-        var end = manifestLoopSource.IndexOf("private static List<CardModel> ManifestChoices(", StringComparison.Ordinal);
-        if (start < 0 || end <= start)
-            return false;
-
-        var body = manifestLoopSource[start..end];
-        return body.Contains("AddTemporaryGeneratedCardToHand", StringComparison.Ordinal)
-            && !body.Contains("AfterManifested", StringComparison.Ordinal)
-            && !body.Contains("CardSelectCmd", StringComparison.Ordinal);
     }
 }

@@ -48,12 +48,12 @@ public sealed class CommandDispatcherSuite
             StringComparison.Ordinal);
         foreach (var scenario in new[]
                  {
-                     "affliction-visual-layout",
                      "dark-selection-combat-reentry",
                      "exchange-four-pile-selection",
                      "generated-pile-memory",
                      "queen-bound-cleanup",
-                     "windy-bind-draw"
+                     "save-load-restoration",
+                     "spell-turn-transformation"
                  })
         {
             Assert.Contains(scenario, help, StringComparison.Ordinal);

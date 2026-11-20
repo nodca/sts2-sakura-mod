@@ -21,7 +21,7 @@ public sealed class TelemetryDeliverySuite
     };
 
     private static InstallTokenHttpTelemetryAdapter Adapter(Transport transport, ITelemetryQuarantineStore? quarantine = null) =>
-        new("https://example.test/batch", "legacy", "SakuraMod", new Tokens(), transport, quarantine ?? new MemoryQuarantine(), _ => { });
+        new("https://example.test/batch", "legacy", "SakuraMod", new Tokens(), transport, quarantine ?? new MemoryQuarantine(), _ => { }, (_, _) => Task.CompletedTask);
 
     [Fact]
     public async Task ExpiredEventIsPreservedWhileValidSiblingsUploadInOrder()

@@ -50,7 +50,8 @@ internal sealed class InstallTokenHttpTelemetryAdapter(
     IInstallTokenStore tokenStore,
     ITelemetryHttpTransport transport,
     ITelemetryQuarantineStore quarantine,
-    Action<string> reportDiagnostic) : ITelemetryAdapter
+    Action<string> reportDiagnostic,
+    Func<TimeSpan, CancellationToken, Task>? delay = null) : ITelemetryAdapter
 {
     internal const int MaxBatchBytes = 900_000;
     internal const int MaxBatchEvents = 500;
@@ -81,6 +82,7 @@ internal sealed class InstallTokenHttpTelemetryAdapter(
     private readonly ITelemetryHttpTransport _transport = transport ?? throw new ArgumentNullException(nameof(transport));
     private readonly ITelemetryQuarantineStore _quarantine = quarantine ?? throw new ArgumentNullException(nameof(quarantine));
     private readonly Action<string> _reportDiagnostic = reportDiagnostic ?? throw new ArgumentNullException(nameof(reportDiagnostic));
+    private readonly Func<TimeSpan, CancellationToken, Task> _delay = delay ?? Task.Delay;
     private long _batches, _events, _attempts, _retries, _succeeded, _failed, _quarantined;
 
     internal TelemetrySendStats Stats => new(
@@ -176,7 +178,7 @@ internal sealed class InstallTokenHttpTelemetryAdapter(
             if (attempt >= MaxAttempts || !IsTransient(result))
                 break;
             Interlocked.Increment(ref _retries);
-            await Task.Delay(RetryDelay(result, attempt), cancellationToken).ConfigureAwait(false);
+            await _delay(RetryDelay(result, attempt), cancellationToken).ConfigureAwait(false);
         }
 
         if (result.TransportError is null && result.StatusCode == 413)

@@ -160,7 +160,7 @@ internal static partial class GravitationHoldVisual
             return;
 
         state.Pulse();
-        state.FireTether(card, null);
+        state.FireTether(card);
     }
 
     internal static void NotifyRemoved(Creature creature)
@@ -169,19 +169,6 @@ internal static partial class GravitationHoldVisual
             return;
         if (States.TryGetValue(creature, out var state))
             state.FadeAndDispose();
-    }
-
-    internal static void PullFromPile(Creature creature, PileType pileType, CardModel card)
-    {
-        if (card is null || !TryGetState(creature, out var state))
-            return;
-
-        Vector2? pileCenter = NCombatRoom.Instance is { } room
-            && PileExchangeVfx.TryGetPileCenter(room, pileType, out var center)
-                ? center
-                : null;
-        state.Pulse();
-        state.FireTether(card, pileCenter);
     }
 
     private static bool TryBeginPresentation(
@@ -311,14 +298,14 @@ internal static partial class GravitationHoldVisual
                 .SetTrans(Tween.TransitionType.Sine);
         }
 
-        internal void FireTether(CardModel card, Vector2? fallbackStart)
+        internal void FireTether(CardModel card)
         {
             if (_disposed || !GodotObject.IsInstanceValid(_overlay) || !_overlay.IsInsideTree())
                 return;
             if (_tethers.Count >= MaxConcurrentTethers)
                 return;
 
-            var cardEnd = TryCardCenter(card) ?? fallbackStart;
+            var cardEnd = TryCardCenter(card);
             if (cardEnd is null)
                 return;
 

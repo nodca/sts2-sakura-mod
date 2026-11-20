@@ -27,6 +27,7 @@ public class GravitationHoldPower : SakuraPowerModel
     private readonly HashSet<CardModel> _pendingReturns = [];
     private readonly Dictionary<CardModel, int> _returnCounts = [];
     private readonly HashSet<CardModel> _pendingReturnDamage = [];
+    private readonly HashSet<CardModel> _leftHandForDiscard = [];
 
     internal const string ReturnDamageVar = "ReturnDamage";
 
@@ -45,10 +46,8 @@ public class GravitationHoldPower : SakuraPowerModel
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Single;
 
-    // Gravitation never returns itself: its copies only add base damage, so the
-    // per-return multiplier cannot compound with a self-replaying field.
     internal bool CanReturnPlayedCard(CardModel card) =>
-        Amount > 0 && card.Owner?.Creature == Owner && !card.EnergyCost.CostsX && card is not Gravitation;
+        Amount > 0 && card.Owner?.Creature == Owner && !card.EnergyCost.CostsX;
 
     public override Task AfterApplied(Creature? applier, CardModel? cardSource)
     {
@@ -119,6 +118,39 @@ public class GravitationHoldPower : SakuraPowerModel
         return true;
     }
 
+    // Discard follows native Sly: only CardCmd.Discard counts (AfterCardDiscarded), never the
+    // end-of-turn hand flush, and only for cards that left the Hand (not Sakura Arrow's Draw Pile).
+    public override Task AfterCardChangedPiles(CardModel card, PileType oldPileType, AbstractModel? clonedBy)
+    {
+        // Only the latest move counts: a hand-to-discard move that was not a discard (Clow Change's
+        // swap, the end-of-turn flush) is forgotten once the card moves again, e.g. shuffled into
+        // the Draw Pile and later discarded from there by Sakura Arrow.
+        if (oldPileType == PileType.Hand && card.Pile?.Type == PileType.Discard && CanReturnPlayedCard(card))
+            _leftHandForDiscard.Add(card);
+        else
+            _leftHandForDiscard.Remove(card);
+        return Task.CompletedTask;
+    }
+
+    // Sly cards are skipped: native Sly autoplays them, and they then return as played cards.
+    public override async Task AfterCardDiscarded(PlayerChoiceContext choiceContext, CardModel card)
+    {
+        if (!_leftHandForDiscard.Remove(card)
+            || card.IsSlyThisTurn
+            || !CanReturnPlayedCard(card)
+            || card.Pile?.Type != PileType.Discard)
+            return;
+
+        await CardPileCmd.Add(card, PileType.Hand);
+        if (card.Pile?.Type != PileType.Hand)
+            return;
+
+        _returnCounts[card] = _returnCounts.GetValueOrDefault(card) + 1;
+        card.InvokeEnergyCostChanged();
+        GravitationHoldVisual.NotifyReturned(Owner, card);
+        await DealReturnDamage(choiceContext);
+    }
+
     // The return is decided before the card resolves, so hit once after its last
     // play (Replay included), like Panache's Unpowered damage to all enemies.
     public override async Task AfterCardPlayed(PlayerChoiceContext choiceContext, CardPlay cardPlay)
@@ -126,7 +158,12 @@ public class GravitationHoldPower : SakuraPowerModel
         if (!IsLastPlay(cardPlay.PlayIndex, cardPlay.PlayCount) || !_pendingReturnDamage.Remove(cardPlay.Card))
             return;
 
-        var damage = ReturnDamage(DynamicVars[ReturnDamageVar].IntValue, _returnCounts.GetValueOrDefault(cardPlay.Card));
+        await DealReturnDamage(choiceContext);
+    }
+
+    private async Task DealReturnDamage(PlayerChoiceContext choiceContext)
+    {
+        var damage = DynamicVars[ReturnDamageVar].IntValue;
         if (damage <= 0 || CombatState is not { } combatState)
             return;
 
@@ -135,9 +172,6 @@ public class GravitationHoldPower : SakuraPowerModel
     }
 
     internal static bool IsLastPlay(int playIndex, int playCount) => playIndex >= playCount - 1;
-
-    // The n-th return of the same card this turn deals n times the base damage.
-    internal static int ReturnDamage(int baseDamage, int returnCount) => baseDamage * Math.Max(0, returnCount);
 
     public override async Task AfterSideTurnEnd(PlayerChoiceContext choiceContext, CombatSide side, IEnumerable<Creature> participants)
     {
@@ -153,6 +187,7 @@ public class GravitationHoldPower : SakuraPowerModel
         _pendingReturns.Clear();
         _returnCounts.Clear();
         _pendingReturnDamage.Clear();
+        _leftHandForDiscard.Clear();
         GravitationHoldVisual.NotifyRemoved(oldOwner);
         return Task.CompletedTask;
     }

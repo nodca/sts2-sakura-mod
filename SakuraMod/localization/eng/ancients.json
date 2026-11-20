@@ -36,7 +36,7 @@
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-0r.ancient": "[sine]...There is... ..almost no.. ..hatred in you....\n...What a... ..strange.. ..power....[/sine]",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-0r.ancient.sfx": "event:/sfx/npcs/neow/neow_curious",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-0r.next": "Explain",
-  "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-1r.char": "I don't want to hurt anyone... I just want every card and everyone to return where they belong.",
+  "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-1r.char": "I don't want to hurt anyone... I just want to find everyone and go home together.",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.2-0.ancient": "[sine]...Awake... ..again....\n...Slay... [red][jitter]the Architect[/jitter][/red]... ...so this.. ..may end....[/sine]",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.2-0.ancient.sfx": "event:/sfx/npcs/neow/neow_sleepy",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.2-0.next": "Respond",
