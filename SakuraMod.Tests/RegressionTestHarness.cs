@@ -33,20 +33,6 @@ internal static class RegressionTestHarness
         throw new InvalidOperationException(message);
     }
 
-    public static void RequireFloatSequence(
-        IReadOnlyList<float> actual,
-        IReadOnlyList<float> expected,
-        string message)
-    {
-        Require(actual.Count == expected.Count, message);
-        for (var index = 0; index < actual.Count; index++)
-        {
-            Require(
-                Math.Abs(actual[index] - expected[index]) < 0.001f,
-                $"{message} Expected {expected[index]} at {index}, got {actual[index]}.");
-        }
-    }
-
     public static bool DeclaresMethod<T>(string methodName) =>
         typeof(T).GetMethod(
             methodName,
@@ -160,58 +146,9 @@ internal static class RegressionTestHarness
         }
     }
 
-    public static void RequireClassicFullFaceAssetsExist(IEnumerable<Type> cardTypes)
-    {
-        foreach (var type in cardTypes)
-        {
-            var card = Activator.CreateInstance(type) as SakuraSourceCard
-                ?? throw new InvalidOperationException($"Expected {type.Name} to be a Classic Sakura card.");
-            if (!SakuraCardVisualFamilies.UsesClassicLayout(card))
-                continue;
-
-            var familyDirectory = ClassicCardVisualAssets.FullFaceFamilyDirectory(card);
-            var fileName = ClassicCardVisualAssets.ArtStem(type).NormalClassicArtStem();
-            var relativePath = Path.Join("SakuraMod/images/cards/classic/full_faces", familyDirectory, fileName);
-            var path = FindRepoFile(relativePath);
-            Require(File.Exists($"{path}.import"), $"Expected {relativePath}.import to exist.");
-        }
-    }
-
-    public static void RequireClassicEnergyCounterScene(string relativePath)
-    {
-        var scene = File.ReadAllText(FindRepoFile(relativePath));
-        Require(
-            scene.Contains("[node name=\"Layers\" type=\"Control\" parent=\".\"]", StringComparison.Ordinal)
-            && scene.Contains("[node name=\"RotationLayers\" type=\"Control\" parent=\"Layers\"]", StringComparison.Ordinal)
-            && scene.Contains("[node name=\"Label\" type=\"Label\" parent=\".\"]", StringComparison.Ordinal),
-            "Expected the Classic Sakura energy counter to expose the native Layers, RotationLayers, and Label nodes.");
-        var layer1Index = scene.IndexOf("[node name=\"Layer1\"", StringComparison.Ordinal);
-        var layer2Index = scene.IndexOf("[node name=\"Layer2\"", StringComparison.Ordinal);
-        var layer3Index = scene.IndexOf("[node name=\"Layer3\"", StringComparison.Ordinal);
-        Require(
-            layer1Index >= 0
-            && layer1Index < layer2Index
-            && layer2Index < layer3Index
-            && System.Text.RegularExpressions.Regex.Matches(
-                scene,
-                "\\[node name=\\\"Layer[0-9]+\\\" type=\\\"TextureRect\\\"").Count == 3
-            && scene.Contains("[node name=\"Layer1\" type=\"TextureRect\" parent=\"Layers\"]", StringComparison.Ordinal)
-            && scene.Contains("[node name=\"Layer2\" type=\"TextureRect\" parent=\"Layers/RotationLayers\"]", StringComparison.Ordinal)
-            && scene.Contains("[node name=\"Layer3\" type=\"TextureRect\" parent=\"Layers/RotationLayers\"]", StringComparison.Ordinal),
-            "Expected exactly three ordered texture layers in the Classic Sakura energy counter.");
-        Require(
-            scene.Contains("sakura_combat_energy_counter_badge.png", StringComparison.Ordinal)
-            && scene.Contains("empty_energy_counter_layer.png", StringComparison.Ordinal),
-            "Expected the Classic Sakura energy counter to use the badge and transparent rotating-layer resources.");
-    }
-
     public static string FindRepoFile(string relativePath) =>
         FindRepoPath(relativePath, File.Exists, static path =>
             new FileNotFoundException($"Could not find {path} from {AppContext.BaseDirectory}."));
-
-    public static string FindRepoDirectory(string relativePath) =>
-        FindRepoPath(relativePath, Directory.Exists, static path =>
-            new DirectoryNotFoundException($"Could not find {path} from {AppContext.BaseDirectory}."));
 
     private static string FindRepoPath(
         string relativePath,

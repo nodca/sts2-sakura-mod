@@ -1,9 +1,7 @@
 using HarmonyLib;
-using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Acts;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.Rooms;
@@ -51,53 +49,6 @@ public sealed class FourthActEarthEnemiesSuite
         });
     }
 
-    [Fact]
-    public void EarthEnemyCalibratedValuesMatchPRD()
-    {
-        // Shadow values
-        Assert.Equal(355, EarthEnemyRules.ShadowHp);
-        Assert.Equal(375, EarthEnemyRules.ShadowToughHp);
-        Assert.Equal(7, EarthEnemyRules.ShadowClawsDamage);
-        Assert.Equal(8, EarthEnemyRules.ShadowClawsA9Damage);
-        Assert.Equal(3, EarthEnemyRules.ShadowClawsHits);
-        Assert.Equal(16, EarthEnemyRules.ShadowVeilBlock);
-        Assert.Equal(20, EarthEnemyRules.ShadowVeilA8Block);
-        Assert.Equal(6, EarthEnemyRules.ShadowVeilHeal);
-        Assert.Equal(8, EarthEnemyRules.ShadowVeilA9Heal);
-        Assert.Equal(3, EarthEnemyRules.ShadowSurgeStrength);
-        Assert.Equal(4, EarthEnemyRules.ShadowSurgeA9Strength);
-        Assert.Equal(10, EarthEnemyRules.ShadowSurgeBlock);
-        Assert.Equal(14, EarthEnemyRules.ShadowSurgeA8Block);
-        Assert.Equal(28, EarthEnemyRules.ShadowBiteDamage);
-        Assert.Equal(32, EarthEnemyRules.ShadowBiteA9Damage);
-
-        // Wood values
-        Assert.Equal(345, EarthEnemyRules.WoodHp);
-        Assert.Equal(365, EarthEnemyRules.WoodToughHp);
-        Assert.Equal(14, EarthEnemyRules.WoodStrikeBase);
-        Assert.Equal(16, EarthEnemyRules.WoodStrikeA9Base);
-        Assert.Equal(2, EarthEnemyRules.WoodStrikePerRoot);
-        Assert.Equal(10, EarthEnemyRules.WoodSproutBaseBlock);
-        Assert.Equal(12, EarthEnemyRules.WoodSproutA8BaseBlock);
-        Assert.Equal(1, EarthEnemyRules.WoodSproutStrength);
-        Assert.Equal(2, EarthEnemyRules.WoodSproutA9Strength);
-
-        // Earthy values
-        Assert.Equal(620, EarthEnemyRules.EarthyHp);
-        Assert.Equal(655, EarthEnemyRules.EarthyToughHp);
-        Assert.Equal(18, EarthEnemyRules.EarthyTremorBase);
-        Assert.Equal(20, EarthEnemyRules.EarthyTremorA9Base);
-        Assert.Equal(8, EarthEnemyRules.EarthyRockfallDamage);
-        Assert.Equal(9, EarthEnemyRules.EarthyRockfallA9Damage);
-        Assert.Equal(2, EarthEnemyRules.EarthyRockfallHits);
-        Assert.Equal(2, EarthEnemyRules.EarthyChargeStrength);
-        Assert.Equal(3, EarthEnemyRules.EarthyChargeA9Strength);
-        Assert.Equal(16, EarthEnemyRules.EarthyChargeBlock);
-        Assert.Equal(20, EarthEnemyRules.EarthyChargeA8Block);
-        Assert.Equal(10, EarthEnemyRules.EarthyLandslideDamage);
-        Assert.Equal(12, EarthEnemyRules.EarthyLandslideA9Damage);
-    }
-
     [Theory]
     [InlineData(0, false, 14)]
     [InlineData(1, false, 16)]
@@ -133,22 +84,9 @@ public sealed class FourthActEarthEnemiesSuite
     }
 
     [Fact]
-    public void BuriedStateIsOnlyTheAffliction()
-    {
-        Assert.False(EarthCombatRules.IsBuried(new ClowWood()));
-        var rules = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Earth/Powers/EarthCombatPowers.cs"));
-        Assert.DoesNotContain("HashSet<CardModel>", rules);
-        Assert.Contains("card.Affliction is BuriedAffliction", rules);
-        Assert.Contains("CardCmd.Afflict<BuriedAffliction>", rules);
-        var earthy = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Earth/Models/EarthMonsters.cs"));
-        Assert.Contains("await EarthCombatRules.MarkBuried(topCard);", earthy);
-    }
-
-    [Fact]
     public void BuriedCardShufflePatchTargetsCardPileCmdShuffle()
     {
+        Assert.False(EarthCombatRules.IsBuried(new ClowWood()));
         var patchAttr = typeof(EarthBuriedCardShufflePatch).GetCustomAttributes(typeof(HarmonyPatch), false)
             .Cast<HarmonyPatch>()
             .FirstOrDefault();

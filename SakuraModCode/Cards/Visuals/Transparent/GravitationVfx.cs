@@ -1,5 +1,4 @@
 using Godot;
-using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
@@ -8,9 +7,8 @@ using MegaCrit.Sts2.Core.Nodes.Rooms;
 namespace SakuraMod.SakuraModCode.Cards;
 
 /// <summary>
-/// Gravitation's on-play session: Clear wand prelude, then cues that open the
-/// persistent well and overlay pile-pull tendrils. The Hold visual outlives this
-/// session.
+/// Gravitation's on-play session: Clear wand prelude, then a cue that opens the
+/// persistent well. The Hold visual outlives this session.
 /// </summary>
 internal sealed class GravitationVfx : CelVfxSession
 {
@@ -50,12 +48,6 @@ internal sealed class GravitationVfx : CelVfxSession
     {
         internal void OpenWell() =>
             scope.Invoke("open well", static session => session.OpenWell());
-
-        internal void PullFromPile(PileType pileType, CardModel card)
-        {
-            ArgumentNullException.ThrowIfNull(card);
-            scope.Invoke("pull from pile", session => session.PullFromPile(pileType, card));
-        }
     }
 
     private static GravitationVfx? TryCreate(Creature caster)
@@ -87,7 +79,4 @@ internal sealed class GravitationVfx : CelVfxSession
     }
 
     private void OpenWell() => GravitationHoldVisual.Open(_caster);
-
-    private void PullFromPile(PileType pileType, CardModel card) =>
-        GravitationHoldVisual.PullFromPile(_caster, pileType, card);
 }

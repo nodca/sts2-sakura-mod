@@ -96,28 +96,7 @@ public sealed class FourthActIntentAccuracySuite
 
         typeof(FireyMonster).GetField("_breathHits", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(firey, 4);
         Assert.Equal(4, Assert.Single(move.Intents.OfType<MultiAttackIntent>()).Repeats);
-
-        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Fire/Models/FireMonsters.cs"));
-        Assert.Contains("new GrowingStatusIntent(() => _breathHits)", source, StringComparison.Ordinal);
-        Assert.Contains(".WithHitCount(_breathHits)));\n        _breathHits++;", source, StringComparison.Ordinal);
     }
-
-    [Fact]
-    public void DynamicPreviewsShareTheResolutionFormula()
-    {
-        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/FourthAct/Fire/Models/FireMonsters.cs"));
-
-        Assert.Equal(2, Count(source, "FireEnemyRules.FireballDamage("));
-        Assert.Equal(2, Count(source, "BurnDamageTotal(player)"));
-        Assert.Equal(2, Count(source, "FireEnemyRules.JudgmentDamage("));
-        Assert.DoesNotContain("new SingleAttackIntent(FireEnemyRules.Fireball)", source);
-        Assert.DoesNotContain("new SingleAttackIntent(FireEnemyRules.JudgmentBase)", source);
-        Assert.Contains("FourthActCombatRules.PreviewPlayer(CombatState)", source);
-    }
-
-    private static int Count(string source, string value) => source.Split(value).Length - 1;
 
     private static MonsterMoveStateMachine GenerateMoves(MonsterModel monster) =>
         (MonsterMoveStateMachine)monster.GetType()

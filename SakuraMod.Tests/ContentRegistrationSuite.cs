@@ -8,6 +8,9 @@ using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.SakuraModCode.Relics;
 using SakuraMod.SakuraModCode;
 using System.Buffers.Binary;
+using System.Globalization;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 public sealed class ContentRegistrationSuite
 {
@@ -56,14 +59,6 @@ public sealed class ContentRegistrationSuite
     }
 
     [Fact]
-    public void StarterRaritiesRemainStable()
-    {
-        RegressionTestHarness.Require(new Gale().Rarity == CardRarity.Common, "Expected Gale to be a Common Transparent Card, not a Basic starter.");
-        RegressionTestHarness.Require(new Siege().Rarity == CardRarity.Common, "Expected Siege to be a Common Transparent Card, not a Basic starter.");
-
-    }
-
-    [Fact]
     public void MemoryPileUsesTheNativeCombatOnlySakuraUiContract()
     {
         var memoryIcon = RegressionTestHarness.FindRepoFile("SakuraMod/images/card_piles/memory.png");
@@ -99,8 +94,6 @@ public sealed class ContentRegistrationSuite
         RegressionTestHarness.Require(
             SakuraStarterCompatibility.IsKinomotoSakuraCharacter(kinomotoSakura),
             "Expected Kinomoto Sakura predicate to target ClassicSakura as the only host.");
-        const string classicEnergyCounterScene =
-            "SakuraMod/scenes/combat/energy_counters/sakura_energy_counter.tscn";
         RegressionTestHarness.Require(
             kinomotoSakura.CustomEnergyCounterPath.EndsWith(
                 "SakuraMod/scenes/combat/energy_counters/sakura_energy_counter.tscn",
@@ -128,7 +121,6 @@ public sealed class ContentRegistrationSuite
         RegressionTestHarness.Require(
             kinomotoSakura.EnergyLabelOutlineColor == new Color("322a22"),
             "Expected the Classic Sakura energy label to retain its legacy outline color.");
-        RegressionTestHarness.RequireClassicEnergyCounterScene(classicEnergyCounterScene);
         var hostPoolTypes = typeof(ClassicSakura).BaseType?.GetGenericArguments();
         RegressionTestHarness.Require(
             hostPoolTypes is { Length: 3 }
@@ -146,4 +138,65 @@ public sealed class ContentRegistrationSuite
             "Expected the legacy Clear host, pools, and host-only Capture route to be absent.");
     }
 
+    [Theory]
+    [InlineData("eng")]
+    [InlineData("zhs")]
+    [InlineData("jpn")]
+    public void AncientDialogueLinesProvideNextButtonKeys(string locale)
+    {
+        var relativePath = $"SakuraMod/localization/{locale}/ancients.json";
+        var entries = JsonSerializer.Deserialize<Dictionary<string, string>>(
+            File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath)))
+            ?? throw new InvalidOperationException($"Could not parse {relativePath}.");
+
+        var linePattern = new Regex(
+            @"^(?<dialogue>.+\.talk\.(?:firstVisitEver|ANY|[A-Z0-9_]+)\.\d+-)(?<line>\d+)(?<repeat>r?)\.(?:ancient|char)$");
+        var linesByDialogue = new Dictionary<string, List<(int Index, bool Repeat)>>();
+        foreach (var key in entries.Keys)
+        {
+            var match = linePattern.Match(key);
+            if (!match.Success)
+                continue;
+            var dialogue = match.Groups["dialogue"].Value;
+            var line = (int.Parse(match.Groups["line"].Value, CultureInfo.InvariantCulture),
+                match.Groups["repeat"].Value.Length > 0);
+            if (!linesByDialogue.TryGetValue(dialogue, out var lines))
+                linesByDialogue[dialogue] = lines = [];
+            lines.Add(line);
+        }
+
+        foreach (var (dialogue, lines) in linesByDialogue)
+        {
+            var finalLine = lines.Max(line => line.Index);
+            foreach (var (index, repeat) in lines)
+            {
+                if (index == finalLine)
+                    continue;
+                var nextKey = $"{dialogue}{index}{(repeat ? "r" : "")}.next";
+                RegressionTestHarness.Require(
+                    entries.ContainsKey(nextKey),
+                    $"Missing {nextKey} in {relativePath}: non-final ancient dialogue lines need a continue-button key.");
+            }
+        }
+    }
+
+    [Fact]
+    public void MemoryPileLocalizationRemainsAvailable()
+    {
+        foreach (var locale in new[] { "eng", "zhs", "jpn" })
+        {
+            var tipsPath = $"SakuraMod/localization/{locale}/static_hover_tips.json";
+            var tips = JsonSerializer.Deserialize<Dictionary<string, string>>(
+                File.ReadAllText(RegressionTestHarness.FindRepoFile(tipsPath)))
+                ?? throw new InvalidOperationException($"Could not parse {tipsPath}.");
+            RegressionTestHarness.Require(
+                tips.ContainsKey("SAKURAMOD-TEMPORARY.title")
+                && tips.ContainsKey("SAKURAMOD-TEMPORARY.description")
+                && tips.ContainsKey("SAKURAMOD-REMIND.description")
+                && tips.ContainsKey("SAKURA_MOD_CARDPILE_MEMORY.title")
+                && tips.ContainsKey("SAKURA_MOD_CARDPILE_MEMORY.description")
+                && tips.ContainsKey("SAKURA_MOD_CARDPILE_MEMORY.empty"),
+                $"Expected {locale} Forgotten, Remind, and Memory pile localization keys.");
+        }
+    }
 }

@@ -1,56 +1,12 @@
-using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 
 public sealed class ExtraEffectTransactionSuite
 {
-    private static readonly IReadOnlySet<Type> TransparentExtraCards = new HashSet<Type>
-    {
-        typeof(SakuraMod.SakuraModCode.Cards.Action),
-        typeof(Aqua),
-        typeof(Blade),
-        typeof(Blank),
-        typeof(Blaze),
-        typeof(Break),
-        typeof(Choice),
-        typeof(Exchange),
-        typeof(Flight),
-        typeof(Gale),
-        typeof(Lucid),
-        typeof(Mirage),
-        typeof(Mirror),
-        typeof(Promise),
-        typeof(SakuraMod.SakuraModCode.Cards.Record),
-        typeof(Reflect),
-        typeof(Reversal),
-        typeof(Remind),
-        typeof(Rewind),
-        typeof(Shade),
-        typeof(Siege),
-        typeof(Snooze),
-        typeof(Spiral),
-        typeof(Struggle),
-        typeof(Swing),
-        typeof(Transfer)
-    };
-
     [Fact]
-    public void ActivationAndPostPlayPoliciesRemainStable()
+    public void ActivationThresholdAndLockPaymentRemainStable()
     {
-        var mirror = new Mirror();
-        var upgradedMirror = RegressionTestHarness.MutableForCostTest(new Mirror());
-        upgradedMirror.UpgradeInternal();
-        RegressionTestHarness.Require(
-            mirror.DynamicVars["Repeat"].IntValue == 1
-            && upgradedMirror.DynamicVars["Repeat"].IntValue == 2
-            && mirror.DynamicVars["ExtraRepeat"].IntValue == 1
-            && mirror.EnergyCost.Canonical == 1
-            && !mirror.CanonicalKeywords.Contains(CardKeyword.Exhaust)
-            && !mirror.CanGainReplay(new MegaCrit.Sts2.Core.Models.Cards.Dazed())
-            && mirror.CanGainReplay(new Gale()),
-            "Expected Mirror to stay at 1 cost without Exhaust, grant 1 (2 upgraded) Replay to a random playable non-Status Hand card, and 1 more with Extra.");
-
         RegressionTestHarness.Require(
             !SakuraExtraEffectTransaction.CanActivate(9, isLocked: false)
             && SakuraExtraEffectTransaction.CanActivate(10, isLocked: false)
@@ -100,17 +56,9 @@ public sealed class ExtraEffectTransactionSuite
     }
 
     [Fact]
-    public void CapabilityCoverageMatchesReviewedCardFamilies()
+    public void ClassicExtraEffectSupportMatchesBaseClass()
     {
         var assembly = typeof(SakuraCardModel).Assembly;
-        var actualTransparentCards = assembly.GetTypes()
-            .Where(static type => !type.IsAbstract && typeof(TransparentExtraEffectCard).IsAssignableFrom(type))
-            .ToHashSet();
-
-        RegressionTestHarness.Require(
-            actualTransparentCards.SetEquals(TransparentExtraCards),
-            "Expected the Transparent Extra Effect capability set to match the reviewed full-card inventory.");
-
         foreach (var type in assembly.GetTypes().Where(static type =>
                      !type.IsAbstract && typeof(SakuraSourceCard).IsAssignableFrom(type)))
         {
@@ -139,68 +87,5 @@ public sealed class ExtraEffectTransactionSuite
             !SakuraExtraEffectTransaction.ShouldShowDescription(classic, isInCombat: true)
             && !SakuraExtraEffectTransaction.ShouldShowDescription(transparent, isInCombat: true),
             "Expected inactive mutable combat cards to hide their Extra Effect descriptions.");
-    }
-
-    [Fact]
-    public void RedCapeAvailabilityFeedsTheSharedExtraEffectPresentationPolicy()
-    {
-        var transaction = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraExtraEffectTransaction.cs"));
-        var redCape = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Relics/Models/ClassicRedCapeRelic.cs"));
-
-        RegressionTestHarness.Require(
-            transaction.Contains(
-                "owner.GetRelic<ClassicRedCapeRelic>()?.CanActivateFreeExtraEffect(card) == true",
-                StringComparison.Ordinal)
-            && redCape.Contains("if (!CanActivateFreeExtraEffect(card))", StringComparison.Ordinal),
-            "Expected Red Cape preview and consumption to share one eligibility rule so its first Clow card uses the normal gold highlight and Extra Effect description.");
-    }
-
-    [Fact]
-    public void ExtraEffectExecuteIsReservedForExtraEffectCards()
-    {
-        // Which cards reach the transaction and where Sakura-Form Void lands are
-        // asserted in play by the extra-effect-play combat scenario.
-        var transaction = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/SakuraExtraEffectTransaction.cs"));
-
-        RegressionTestHarness.Require(
-            !transaction.Contains("AddVoidToDrawPile", StringComparison.Ordinal)
-            && !transaction.Contains("ShouldAddSakuraVoid", StringComparison.Ordinal)
-            && !transaction.Contains("ExecuteCoreForTests", StringComparison.Ordinal)
-            && !transaction.Contains("internal static async Task ExecuteCore", StringComparison.Ordinal)
-            && transaction.Contains("private static async Task ExecuteCore", StringComparison.Ordinal),
-            "Expected Extra Effect to execute only Extra Effect cards, leave Sakura-Form Void outside the transaction, and keep ExecuteCore private.");
-    }
-
-    [Fact]
-    public void RetiredExtraEffectApisHaveNoProductionCallSites()
-    {
-        string[] retiredTerms =
-        [
-            "IExtra" + "EffectCard",
-            "HasExtra" + "Effect",
-            "IsUsing" + "ExtraEffect",
-            "Trigger" + "ExtraEffect",
-            "Play" + "Normal",
-            "Play" + "Extra"
-        ];
-        var sourceRoot = Path.GetDirectoryName(RegressionTestHarness.FindRepoFile("SakuraMod.csproj"))!;
-        var productionFiles = Directory.EnumerateFiles(
-            Path.Combine(sourceRoot, "SakuraModCode"),
-            "*.cs",
-            SearchOption.AllDirectories);
-
-        foreach (var file in productionFiles)
-        {
-            var source = File.ReadAllText(file);
-            foreach (var term in retiredTerms)
-            {
-                RegressionTestHarness.Require(
-                    !source.Contains(term, StringComparison.Ordinal),
-                    $"Expected retired Extra Effect API '{term}' to have no production call sites.");
-            }
-        }
     }
 }

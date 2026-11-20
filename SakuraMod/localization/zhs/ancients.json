@@ -36,7 +36,7 @@
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-0r.ancient": "[sine]...你的心中... ..几乎没有... ..怨恨....\n...真是.. ..奇怪的... ..力量....[/sine]",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-0r.ancient.sfx": "event:/sfx/npcs/neow/neow_curious",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-0r.next": "解释",
-  "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-1r.char": "因为我呀，并不想伤害任何人……只希望所有卡牌和大家都能回到原本的位置。",
+  "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-1r.char": "因为我并不想伤害谁呀……只是想快点找到大家，一起回家。",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.2-0.ancient": "[sine]...又醒来... ..了吗....\n...杀死... [red][jitter]建筑师[/jitter][/red]... ...才能.. ..结束....[/sine]",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.2-0.ancient.sfx": "event:/sfx/npcs/neow/neow_sleepy",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.2-0.next": "回应",

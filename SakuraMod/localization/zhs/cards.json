@@ -50,7 +50,7 @@
   "SAKURA_MOD_CARD_DREAMING.title": "梦见",
   "SAKURA_MOD_CARD_DREAMING.description": "[gold]水[/gold]\n每回合抽牌前，从你的[gold]抽牌堆[/gold]或[gold]记忆区[/gold]中选择1张牌放入你的[gold]手牌[/gold]。若其来自[gold]抽牌堆[/gold]，其本回合可以免费打出并获得[red]遗忘[/red]。",
   "SAKURA_MOD_CARD_GRAVITATION.title": "引力",
-  "SAKURA_MOD_CARD_GRAVITATION.description": "[gold]风[/gold]\n本回合，你打出的牌（X费牌和[gold]引力[/gold]除外）不进入[gold]弃牌堆[/gold]，改为回到你的[gold]手牌[/gold]。每次回手，其耗能增加{energyPrefix:energyIcons(1)}，并对所有敌人造成{ReturnDamage:diff()}点伤害；同一张牌每多回手1次，伤害增加{ReturnDamage:diff()}。",
+  "SAKURA_MOD_CARD_GRAVITATION.description": "[gold]风[/gold]\n本回合，你打出或丢弃的牌（X费牌除外）不进入[gold]弃牌堆[/gold]，改为回到你的[gold]手牌[/gold]。每次回手，其耗能增加{energyPrefix:energyIcons(1)}，并对所有敌人造成{ReturnDamage:diff()}点伤害。",
   "SAKURA_MOD_CARD_MIRAGE.title": "幻影",
   "SAKURA_MOD_CARD_MIRAGE.description": "[gold]水[/gold]\n选择1名敌人。\n该敌人下回合造成的攻击伤害变为0。\n[gold]额外效果：[/gold]改为对所有敌人生效。",
   "SAKURA_MOD_CARD_RECORD.title": "记录",

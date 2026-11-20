@@ -39,7 +39,7 @@ public class Gravitation() : TransparentCard(0, CardType.Skill, CardRarity.Rare,
                 Owner.Creature,
                 this,
                 false);
-            // Every Gravitation stacks its base damage; Gravitation itself never returns.
+            // Every Gravitation stacks its damage; a later copy played into the field returns too.
             power?.AddReturnDamage(DynamicVars[GravitationHoldPower.ReturnDamageVar].IntValue);
             if (power is not null)
                 cues.OpenWell();

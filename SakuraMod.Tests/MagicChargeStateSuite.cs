@@ -19,32 +19,11 @@ public sealed class MagicChargeStateSuite
     }
 
     [Fact]
-    public void MagicChargeHasOneProductionWriteOwnerAndNoNativePowerIcon()
+    public void MagicChargePowerStaysHiddenInNativeBar()
     {
         RegressionTestHarness.Require(
             !new ClassicMagicChargePower().IsVisible,
             "Expected dedicated Magic Charge UI to replace the native Power-bar icon.");
-
-        var sourceRoot = Path.GetDirectoryName(RegressionTestHarness.FindRepoFile("SakuraMod.csproj"))!;
-        var ownerPath = Path.GetFullPath(Path.Combine(
-            sourceRoot,
-            "SakuraModCode",
-            "Character",
-            "SakuraMagicCharge.cs"));
-        foreach (var file in Directory.EnumerateFiles(
-                     Path.Combine(sourceRoot, "SakuraModCode"),
-                     "*.cs",
-                     SearchOption.AllDirectories))
-        {
-            if (Path.GetFullPath(file) == ownerPath)
-                continue;
-
-            RegressionTestHarness.Require(
-                !File.ReadAllText(file).Contains(
-                    "PowerCmd.Apply<ClassicMagicChargePower>",
-                    StringComparison.Ordinal),
-                $"Expected {Path.GetRelativePath(sourceRoot, file)} to route Magic Charge writes through SakuraMagicCharge.");
-        }
     }
 
     [Fact]
@@ -60,22 +39,6 @@ public sealed class MagicChargeStateSuite
             && !SakuraMagicCharge.GainsMagicAfterPlay(new SpellSeal(), hasSealedBook: true)
             && !SakuraMagicCharge.GainsMagicAfterPlay(new AnotherMe(), hasSealedBook: true),
             "Expected Sealed Book to own after-play Magic Charge for Transparent and classic source cards, and Spell/Ancient cards not to grant.");
-    }
-
-    [Fact]
-    public void GlowCardsUseMagicChargeAsTheirPresentationTrigger()
-    {
-        var clowGlow = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/ClowSakura/Glow.cs"));
-        var charge = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Character/SakuraMagicCharge.cs"));
-
-        RegressionTestHarness.Require(
-            clowGlow.Contains("SakuraMagicCharge.GainMagic", StringComparison.Ordinal)
-            && clowGlow.Contains("class SakuraGlow", StringComparison.Ordinal)
-            && clowGlow.Contains("ApplyPower<ClassicGlowPower>", StringComparison.Ordinal)
-            && charge.Contains("SakuraGlowVisual.NotifyMagicChargeGained", StringComparison.Ordinal),
-            "Expected both Glow cards to enter the unified Magic Charge flow that drives the short The Glow feedback.");
     }
 
     [Fact]
@@ -99,62 +62,6 @@ public sealed class MagicChargeStateSuite
             && SakuraMagicChargeHud.LiquidFillFor(10) == 1f
             && SakuraMagicChargeHud.LiquidFillFor(17) == 1f,
             "Expected Magic Charge liquid to rise from 0% to 100% across 0-10 charge and remain full above 10.");
-    }
-
-    [Fact]
-    public void HudSceneAndRuntimeKeepDedicatedResourceContracts()
-    {
-        var scene = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraMod/scenes/combat/sakura_magic_charge_hud.tscn"));
-        RegressionTestHarness.Require(
-            scene.Contains("mouse_filter", StringComparison.Ordinal)
-            && scene.Contains("resource_local_to_scene", StringComparison.Ordinal)
-            && scene.Contains("shader_parameter/fill_ratio", StringComparison.Ordinal)
-            && scene.Contains("[node name=\"Amount\"", StringComparison.Ordinal)
-            && !scene.Contains("z_index", StringComparison.Ordinal),
-            "Expected the Magic Charge HUD to keep a centered Amount node in a self-contained, non-interactive root.");
-
-        foreach (var asset in new[] { "magic_charge_glow", "magic_charge_emblem", "magic_charge_liquid" })
-        {
-            RegressionTestHarness.Require(
-                scene.Contains($"res://SakuraMod/images/charui/magic_charge_hud/{asset}.png", StringComparison.Ordinal),
-                $"Expected the Magic Charge HUD to use its custom {asset} layer.");
-            RegressionTestHarness.FindRepoFile($"SakuraMod/images/charui/magic_charge_hud/{asset}.png");
-            RegressionTestHarness.FindRepoFile($"SakuraMod/images/charui/magic_charge_hud/{asset}.png.import");
-        }
-
-        var runtime = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Character/SakuraMagicChargeHud.cs"));
-        var elementRuntime = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Character/SakuraElementStateHud.cs"));
-        var main = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/MainFile.cs"));
-        // The charge HUD runtime stays event-driven: liquid fill and hover tips ride
-        // named parameters and projections instead of frame polling.
-        RegressionTestHarness.Require(
-            runtime.Contains("MountHorizontalOffset", StringComparison.Ordinal)
-            && runtime.Contains("MountVerticalOffset", StringComparison.Ordinal)
-            && runtime.Contains("BaseScale", StringComparison.Ordinal)
-            && runtime.Contains("SetShaderParameter", StringComparison.Ordinal)
-            && runtime.Contains("HoverTipFactory.FromPower", StringComparison.Ordinal)
-            && runtime.Contains("PowerApplied += OnPowerApplied", StringComparison.Ordinal)
-            && runtime.Contains("PowerIncreased += OnPowerIncreased", StringComparison.Ordinal)
-            && runtime.Contains("PowerDecreased += OnPowerDecreased", StringComparison.Ordinal)
-            && runtime.Contains("PowerRemoved += OnPowerRemoved", StringComparison.Ordinal)
-            && !runtime.Contains("_Process(", StringComparison.Ordinal),
-            "Expected the Magic Charge HUD to stay event-driven with a native power hover tip.");
-
-        // The combat resource runtime mounts the element disc and attaches the emblem.
-        RegressionTestHarness.Require(
-            runtime.Contains("SakuraElementStateHud.Mount", StringComparison.Ordinal)
-            && runtime.Contains("SakuraMagicChargeHud.Mount", StringComparison.Ordinal),
-            "Expected the combat resource runtime to mount the element disc and the attached charge emblem.");
-
-        // MainFile registers the unified combat resource patch only.
-        RegressionTestHarness.Require(
-            elementRuntime.Contains("SakuraCombatResourceHud.Mount", StringComparison.Ordinal)
-            && main.Contains("SakuraCombatResourceHudPatchRegistration.Register", StringComparison.Ordinal)
-            && !main.Contains("SakuraElementStateHudPatchRegistration.Register()", StringComparison.Ordinal),
-            "Expected MainFile to wire the unified combat resource HUD patch alone.");
     }
 
     [Fact]

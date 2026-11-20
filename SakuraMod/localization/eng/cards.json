@@ -50,7 +50,7 @@
   "SAKURA_MOD_CARD_DREAMING.title": "Dreaming",
   "SAKURA_MOD_CARD_DREAMING.description": "[gold]Watery[/gold]\nAt the start of each turn, before you draw, put a card from your [gold]Draw Pile[/gold] or [gold]Memory[/gold] into your [gold]Hand[/gold]. If it came from your [gold]Draw Pile[/gold], it is free to play this turn and gains [red]Forgotten[/red].",
   "SAKURA_MOD_CARD_GRAVITATION.title": "Gravitation",
-  "SAKURA_MOD_CARD_GRAVITATION.description": "[gold]Windy[/gold]\nThis turn, cards you play (except X-cost cards and [gold]Gravitation[/gold]) return to your [gold]Hand[/gold] instead of your [gold]Discard Pile[/gold]. Each return costs {energyPrefix:energyIcons(1)} more and deals {ReturnDamage:diff()} damage to ALL enemies, +{ReturnDamage:diff()} for each earlier return of that card.",
+  "SAKURA_MOD_CARD_GRAVITATION.description": "[gold]Windy[/gold]\nThis turn, cards you play or discard (except X-cost cards) return to your [gold]Hand[/gold] instead of your [gold]Discard Pile[/gold]. Each return costs {energyPrefix:energyIcons(1)} more and deals {ReturnDamage:diff()} damage to ALL enemies.",
   "SAKURA_MOD_CARD_MIRAGE.title": "Mirage",
   "SAKURA_MOD_CARD_MIRAGE.description": "[gold]Watery[/gold]\nChoose 1 enemy.\nThat enemy deals 0 attack damage next turn.\n[gold]Extra:[/gold] Affect ALL enemies instead.",
   "SAKURA_MOD_CARD_RECORD.title": "Record",

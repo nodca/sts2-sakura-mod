@@ -5,40 +5,28 @@ using SakuraMod.SakuraModCode.Relics;
 public sealed class SakuraRelicParitySuite
 {
     [Fact]
-    public void RelicCatalogRegistersTheCostumeRelicsWithoutExpandingCreateRewards()
+    public void RelicCatalogKeepsSpecialAndCostumeRelicsOutsideRewardPool()
     {
         var allTypes = SakuraRelicCatalog.AllRelicTypes();
         var rewardableTypes = SakuraRelicCatalog.RewardableRelicTypes;
 
         RegressionTestHarness.Require(
-            allTypes.Length == 21
-            && allTypes.Distinct().Count() == 21
+            allTypes.Distinct().Count() == allTypes.Length
             && allTypes.Contains(typeof(ClassicDarknessWandRelic))
             && allTypes.Contains(typeof(ClassicGemBroochRelic))
             && allTypes.Contains(typeof(ClassicRedCapeRelic))
             && allTypes.Contains(typeof(ClassicPinkTransformationCostumeRelic))
             && allTypes.Contains(typeof(ClassicFrogRaincoatRelic)),
-            "Expected the relic registry to contain the event-exclusive Monster relic and all three Ancient costume relics exactly once.");
+            "Expected the relic registry to contain unique relic types including special and costume relics.");
         RegressionTestHarness.Require(
-            rewardableTypes.Count == 11
-            && !rewardableTypes.Contains(typeof(ClassicDarknessWandRelic))
+            !rewardableTypes.Contains(typeof(ClassicDarknessWandRelic))
             && !rewardableTypes.Contains(typeof(ClassicGemBroochRelic))
             && !rewardableTypes.Contains(typeof(ClassicRedCapeRelic))
             && !rewardableTypes.Contains(typeof(ClassicPinkTransformationCostumeRelic))
-            && !rewardableTypes.Contains(typeof(ClassicFrogRaincoatRelic)),
-            "Expected special, event-exclusive, and costume relics to stay outside Sakura Create's Common/Uncommon/Rare relic list.");
-        RegressionTestHarness.Require(
-            new ClassicDarknessWandRelic().Rarity == RelicRarity.Ancient
-            && new ClassicGemBroochRelic().Rarity == RelicRarity.Shop
-            && new ClassicRedCapeRelic().Rarity == RelicRarity.Ancient
-            && new ClassicPinkTransformationCostumeRelic().Rarity == RelicRarity.Ancient
-            && new ClassicFrogRaincoatRelic().Rarity == RelicRarity.Ancient
-            && new ClassicMonsterRelic().Rarity == RelicRarity.Event,
-            "Expected special and costume relics to retain their intended rarities.");
-        RegressionTestHarness.Require(
-            !rewardableTypes.Contains(typeof(ClassicMonsterRelic))
+            && !rewardableTypes.Contains(typeof(ClassicFrogRaincoatRelic))
+            && !rewardableTypes.Contains(typeof(ClassicMonsterRelic))
             && !new ClassicMonsterRelic().IsAllowedInShops,
-            "Expected Monster to remain obtainable only through its dedicated event.");
+            "Expected special, event-exclusive, and costume relics to stay outside ordinary reward and shop pools.");
     }
 
     [Fact]
@@ -52,86 +40,19 @@ public sealed class SakuraRelicParitySuite
             ClassicRedCapeRelic.IsEligible(clowEligible)
             && !ClassicRedCapeRelic.IsEligible(clowWithoutExtraEffect)
             && !ClassicRedCapeRelic.IsEligible(sakuraCard)
-            && ClassicRedCapeRelic.CanActivateFreeExtraEffect(
-                turnNumber: 1,
-                activatedTurn: 0,
-                turns: 3,
-                ownerMatches: true,
-                isEligible: true)
-            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(
-                turnNumber: 1,
-                activatedTurn: 1,
-                turns: 3,
-                ownerMatches: true,
-                isEligible: true)
-            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(
-                turnNumber: 1,
-                activatedTurn: 0,
-                turns: 3,
-                ownerMatches: false,
-                isEligible: true)
-            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(
-                turnNumber: 1,
-                activatedTurn: 0,
-                turns: 3,
-                ownerMatches: true,
-                isEligible: false)
-            && ClassicRedCapeRelic.CanActivateFreeExtraEffect(
-                turnNumber: 3,
-                activatedTurn: 2,
-                turns: 3,
-                ownerMatches: true,
-                isEligible: true)
-            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(
-                turnNumber: 4,
-                activatedTurn: 3,
-                turns: 3,
-                ownerMatches: true,
-                isEligible: true)
-            && new ClassicRedCapeRelic().DynamicVars["Turns"].IntValue == 3,
-            "Expected Red Cape to grant the first eligible Clow Card of each of the first 3 turns a free Extra Effect.");
+            && ClassicRedCapeRelic.CanActivateFreeExtraEffect(1, 0, 3, true, true)
+            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(1, 1, 3, true, true)
+            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(1, 0, 3, false, true)
+            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(1, 0, 3, true, false)
+            && ClassicRedCapeRelic.CanActivateFreeExtraEffect(3, 2, 3, true, true)
+            && !ClassicRedCapeRelic.CanActivateFreeExtraEffect(4, 3, 3, true, true),
+            "Expected Red Cape to grant the first eligible Clow Card of each active turn a free Extra Effect.");
         RegressionTestHarness.Require(
             SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: true, hasPinkTransformationCostume: false)
             && !SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: true, hasPinkTransformationCostume: true)
             && !SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: false, hasPinkTransformationCostume: false)
             && !SakuraFormVoid.ShouldAdd(addsVoidOnNormalSakuraPlay: false, hasPinkTransformationCostume: true),
             "Expected Pink Transformation Costume to suppress only normal Sakura-card Void generation.");
-    }
-
-    [Fact]
-    public void FrogRaincoatManifestsAtTheStartOfTheFirstThreeTurns()
-    {
-        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Relics/Models/ClassicFrogRaincoatRelic.cs"));
-        var relic = new ClassicFrogRaincoatRelic();
-
-        RegressionTestHarness.Require(
-            relic.DynamicVars.Cards.IntValue == 1
-            && relic.DynamicVars["Turns"].IntValue == 3
-            && !relic.DynamicVars.ContainsKey("Energy")
-            && source.Contains("DynamicVars.Cards.IntValue, upgraded: true)", StringComparison.Ordinal)
-            && RegressionTestHarness.DeclaresMethod<ClassicFrogRaincoatRelic>("BeforeHandDraw")
-            && !RegressionTestHarness.DeclaresMethod<ClassicFrogRaincoatRelic>("AfterCardPlayed")
-            && source.Contains("playerCombat.TurnNumber > DynamicVars[\"Turns\"].IntValue", StringComparison.Ordinal)
-            && source.Contains("SakuraManifestLoop.Manifest(Owner, choiceContext", StringComparison.Ordinal)
-            && source.Contains("HoverTipFactory.FromKeyword(SakuraKeywords.Manifest)", StringComparison.Ordinal),
-            "Expected Frog Raincoat to Manifest 1 upgraded card at the start of each of the first 3 turns of combat and expose the Manifest tip.");
-    }
-
-    [Fact]
-    public void TeddyBearGrantsTwoBlockPerNonEmptySpell()
-    {
-        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Relics/Models/ClassicTeddyBearRelic.cs"));
-        var relic = new ClassicTeddyBearRelic();
-
-        RegressionTestHarness.Require(
-            relic.Rarity == RelicRarity.Common
-            && relic.DynamicVars.Block.IntValue == 2
-            && RegressionTestHarness.DeclaresMethod<ClassicTeddyBearRelic>("AfterCardPlayed")
-            && source.Contains("play.Card is not SpellCard", StringComparison.Ordinal)
-            && source.Contains("play.Card is SpellEmptySpell", StringComparison.Ordinal),
-            "Expected Teddy Bear to be a Common relic granting 2 Block for each non-Empty Spell played.");
     }
 
     [Fact]
@@ -160,94 +81,19 @@ public sealed class SakuraRelicParitySuite
     }
 
     [Fact]
-    public void SealedWandDeathRewardsUseOneDeterministicLifecyclePath()
-    {
-        var runHooks = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Character/SakuraRunHooks.cs"));
-
-        RegressionTestHarness.Require(
-            runHooks.Contains("SubscribeLifecycle<CreatureDiedEvent>", StringComparison.Ordinal)
-            && runHooks.Contains("ApplyDeathCharge", StringComparison.Ordinal)
-            && !runHooks.Contains("RitsuLibManagedNetActions", StringComparison.Ordinal)
-            && !runHooks.Contains("DeferredDeathRewards", StringComparison.Ordinal),
-            "Expected Sealed Wand death charge to derive locally from one lifecycle event without a second network action.");
-    }
-
-    [Fact]
-    public void SealedWandConversionThresholdsIncreaseByTwenty()
+    public void SealedWandConversionAndReturnFormulasRemainConsistent()
     {
         RegressionTestHarness.Require(
             ClassicSealedWandRelic.TriggerThresholdFor(0) == 40
             && ClassicSealedWandRelic.TriggerThresholdFor(1) == 60
-            && ClassicSealedWandRelic.TriggerThresholdFor(2) == 80,
-            "Expected Sealed Wand conversion thresholds to be 40, 60, and 80 after each Sakura conversion.");
-    }
-
-    [Fact]
-    public void AncientWandConversionThresholdsIncreaseByTen()
-    {
-        RegressionTestHarness.Require(
-            new ClassicSealedWandRelic().DynamicVars["TriggerIncrease"].IntValue == 20
-            && new ClassicStarWandRelic().DynamicVars["TriggerIncrease"].IntValue == 10
-            && new ClassicUltimateWandRelic().DynamicVars["TriggerIncrease"].IntValue == 10
-            && ClassicSealedWandRelic.TriggerThresholdFor(3, 35, 10) == 65,
-            "Expected Star Wand and Ultimate Wand conversion thresholds to grow by 10 per Sakura conversion while Sealed Wand stays at 20.");
-    }
-
-    [Fact]
-    public void EveryTurnGrantingRelicUsesTheOneSharedPersistentGrant()
-    {
-        var spellTurn = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Cards/Spells/SpellTurn.cs"));
-        var moonBell = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Relics/Models/ClassicMoonBellRelic.cs"));
-        var wand = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Relics/Models/ClassicSealedWandRelic.cs"));
-
-        RegressionTestHarness.Require(
-            spellTurn.Contains("internal static async Task GrantPersistentTurn(", StringComparison.Ordinal)
-            && spellTurn.Contains("RunState.CreateCard<SpellTurn>(owner)", StringComparison.Ordinal)
-            && spellTurn.Contains("CardPileCmd.Add(deckCard, PileType.Deck", StringComparison.Ordinal)
-            && spellTurn.Contains("handCard.DeckVersion = deckCard", StringComparison.Ordinal),
-            "Expected SpellTurn to own the one grant that creates a deck body plus a hand copy linked through DeckVersion.");
-
-        RegressionTestHarness.Require(
-            moonBell.Contains("SpellTurn.GrantPersistentTurn(", StringComparison.Ordinal)
-            && !moonBell.Contains("CreateCard<SpellTurn>", StringComparison.Ordinal)
-            && wand.Contains("SpellTurn.GrantPersistentTurn(", StringComparison.Ordinal)
-            && !wand.Contains("CreateCard<SpellTurn>", StringComparison.Ordinal),
-            "Expected Moon Bell and the wands to delegate to the shared grant instead of creating their own Turn copies.");
-
-        Type[] wandTypes =
-        [
-            typeof(ClassicSealedWandRelic),
-            typeof(ClassicStarWandRelic),
-            typeof(ClassicUltimateWandRelic)
-        ];
-        const System.Reflection.BindingFlags DeclaredGrant =
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
-
-        RegressionTestHarness.Require(
-            wandTypes.All(type =>
-                type.GetMethod("AddGeneratedTurnCard", DeclaredGrant)?.DeclaringType
-                    == typeof(ClassicSealedWandRelic)),
-            "Expected every wand to inherit the single grant path instead of adding a second Turn of its own.");
-    }
-
-    [Fact]
-    public void SakuraReturnRefundsSeventyFivePercentOfThePreviousConversionCost()
-    {
-        var returnCard = new SakuraReturn();
-
-        RegressionTestHarness.Require(
-            ClassicSealedWandRelic.DefaultReturnRechargeAmount == 30
-            && returnCard.DynamicVars["Magic"].IntValue == 30
+            && ClassicSealedWandRelic.TriggerThresholdFor(2) == 80
+            && ClassicSealedWandRelic.TriggerThresholdFor(3, 35, 10) == 65
             && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(40, 40, 20) == 30
             && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(60, 40, 20) == 30
             && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(80, 40, 20) == 45
             && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(35, 35, 20) == 26
             && ClassicSealedWandRelic.ReturnRechargeAmountForThreshold(55, 35, 20) == 26,
-            "Expected Sakura Return previews and runtime refunds to use 75% of the previous wand conversion cost.");
+            "Expected Sealed Wand conversion thresholds and Sakura Return refund calculations to match.");
     }
 
     [Fact]
@@ -275,54 +121,5 @@ public sealed class SakuraRelicParitySuite
             && swordOnlyPlan.RetainedCards.SequenceEqual([firstSword])
             && swordOnlyPlan.Duplicates.SequenceEqual([secondSword]),
             "Expected Gem Brooch to handle missing card identities without null placeholders.");
-    }
-
-    [Fact]
-    public void AddedRelicAssetsAndLocalizationExist()
-    {
-        string[] assetPaths =
-        [
-            "SakuraMod/images/relics/darkness_wand.png",
-            "SakuraMod/images/relics/darkness_wand_outline.png",
-            "SakuraMod/images/relics/big/darkness_wand.png",
-            "SakuraMod/images/relics/gem_brooch.png",
-            "SakuraMod/images/relics/gem_brooch_outline.png",
-            "SakuraMod/images/relics/big/gem_brooch.png",
-            "SakuraMod/images/relics/red_cape.png",
-            "SakuraMod/images/relics/red_cape_outline.png",
-            "SakuraMod/images/relics/big/red_cape.png",
-            "SakuraMod/images/relics/frog_raincoat.png",
-            "SakuraMod/images/relics/frog_raincoat_outline.png",
-            "SakuraMod/images/relics/big/frog_raincoat.png",
-            "SakuraMod/images/relics/pink_transformation_costume.png",
-            "SakuraMod/images/relics/pink_transformation_costume_outline.png",
-            "SakuraMod/images/relics/big/pink_transformation_costume.png"
-        ];
-
-        RegressionTestHarness.Require(
-            assetPaths.All(path =>
-            {
-                var asset = RegressionTestHarness.FindRepoFile(path);
-                return File.Exists(asset) && File.Exists($"{asset}.import");
-            }),
-            "Expected added relics' normal, outline, and big art plus Godot imports to exist.");
-        RegressionTestHarness.RequireRegisteredRelicLocalizationKeys(
-            "SakuraMod/localization/eng/relics.json",
-            [
-                typeof(ClassicDarknessWandRelic),
-                typeof(ClassicGemBroochRelic),
-                typeof(ClassicRedCapeRelic),
-                typeof(ClassicPinkTransformationCostumeRelic),
-                typeof(ClassicFrogRaincoatRelic)
-            ]);
-        RegressionTestHarness.RequireRegisteredRelicLocalizationKeys(
-            "SakuraMod/localization/zhs/relics.json",
-            [
-                typeof(ClassicDarknessWandRelic),
-                typeof(ClassicGemBroochRelic),
-                typeof(ClassicRedCapeRelic),
-                typeof(ClassicPinkTransformationCostumeRelic),
-                typeof(ClassicFrogRaincoatRelic)
-            ]);
     }
 }

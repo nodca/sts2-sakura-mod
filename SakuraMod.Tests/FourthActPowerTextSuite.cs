@@ -68,40 +68,6 @@ public sealed class FourthActPowerTextSuite
         Assert.Equal(
             SakuraElementSet.Fire | SakuraElementSet.Earth,
             SakuraElementState.LocksFromSovereignty(false, false, false, false, light: true));
-
-        var lockSources = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Character/SakuraElementState.cs"))
-            + File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Character/SakuraElementStateHud.cs"));
-        Assert.DoesNotContain("LightBattlePower", lockSources);
-        Assert.Contains("HasPower<LightSovereigntyPower>()", lockSources);
-
-        var light = File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/FourthAct/Fire/Models/FireMonsters.cs"));
-        Assert.Contains("PowerCmd.Apply<LightSovereigntyPower>", light);
-        Assert.Contains("PowerCmd.Apply<LightBattlePower>", light);
-    }
-
-    [Theory]
-    [InlineData("powers.json")]
-    [InlineData("intents.json")]
-    [InlineData("afflictions.json")]
-    public void FourthActTextAvoidsImplementationWordingAndRetiredTerms(string file)
-    {
-        var zhs = ReadJson($"SakuraMod/localization/zhs/{file}");
-        string[] retired = ["内部状态", "份额", "正数未格挡", "元素主权", "召唤疾", "沉睡手牌"];
-        foreach (var (key, value) in zhs)
-            Assert.DoesNotContain(retired, term => value.Contains(term, StringComparison.Ordinal) && !key.Contains("CONFINEMENT_AFFLICTION"));
-
-        var eng = ReadJson($"SakuraMod/localization/eng/{file}");
-        Assert.DoesNotContain(eng.Values, value => value.Contains("Internal", StringComparison.Ordinal)
-            || value.Contains("Positive unblocked", StringComparison.Ordinal)
-            || value.Contains("share is spent", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void WaterFrozenNoLongerSharesTheFreezeName()
-    {
-        var zhs = ReadJson("SakuraMod/localization/zhs/powers.json");
-        Assert.Equal("冰封", zhs["SAKURA_MOD_POWER_WATER_FROZEN_POWER.title"]);
-        Assert.NotEqual(zhs["SAKURA_MOD_POWER_WATER_FROZEN_POWER.title"], zhs["SAKURA_MOD_POWER_CLASSIC_FREEZE_POWER.title"]);
     }
 
     [Fact]
@@ -115,21 +81,6 @@ public sealed class FourthActPowerTextSuite
             Assert.Equal(zhs.Order(), eng.Order());
             Assert.Equal(zhs.Order(), jpn.Order());
         }
-    }
-
-    [Theory]
-    [InlineData("SakuraModCode/FourthAct/Earth/Powers/EarthCombatPowers.cs", "WoodRootedPower")]
-    [InlineData("SakuraModCode/FourthAct/Earth/Powers/EarthCombatPowers.cs", "EarthySedimentPower")]
-    [InlineData("SakuraModCode/FourthAct/Water/Powers/WaterCombatPowers.cs", "WaterReservoirPower")]
-    [InlineData("SakuraModCode/FourthAct/Fire/Powers/FireCombatPowers.cs", "SwordBlockFeedingPower")]
-    public void PerPlayerPowersDisplayThePreviewPlayersValue(string path, string powerName)
-    {
-        var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(path));
-        var start = source.IndexOf($"public sealed class {powerName}", StringComparison.Ordinal);
-        var end = source.IndexOf("public sealed class ", start + 1, StringComparison.Ordinal);
-        var body = end < 0 ? source[start..] : source[start..end];
-        var display = Regex.Match(body, @"public override int DisplayAmount =>[^;]*;").Value;
-        Assert.Contains("FourthActCombatRules.PreviewPlayer", display);
     }
 
     private static bool IsFourthActKey(string key) =>

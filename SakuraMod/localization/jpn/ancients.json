@@ -36,7 +36,7 @@
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-0r.ancient": "[sine]……その心には……憎しみが……ほとんどない……\n……なんと……不思議な……力か……[/sine]",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-0r.ancient.sfx": "event:/sfx/npcs/neow/neow_curious",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-0r.next": "説明する",
-  "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-1r.char": "だって私、誰も傷つけたくないんです……すべてのカードもみんなも、元の場所に戻ってほしいだけだから。",
+  "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.1-1r.char": "だって私、誰も傷つけたくないんです……早くみんなを見つけて、一緒に帰りたいだけだから。",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.2-0.ancient": "[sine]……また目覚めた……のか……\n……[red][jitter]アーキテクト[/jitter][/red]を……倒さねば……終わらぬ……[/sine]",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.2-0.ancient.sfx": "event:/sfx/npcs/neow/neow_sleepy",
   "NEOW.talk.SAKURA_MOD_CHARACTER_CLASSIC_SAKURA.2-0.next": "応える",

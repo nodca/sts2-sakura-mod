@@ -33,7 +33,7 @@ public sealed class TelemetryInstallTokenSuite
         transport.Respond["batch"] = new TelemetryHttpResult(202, null, null);
         var store = new MemoryTokenStore();
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { }, (_, _) => Task.CompletedTask);
 
         var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
 
@@ -66,7 +66,7 @@ public sealed class TelemetryInstallTokenSuite
         transport.Respond["batch"] = new TelemetryHttpResult(202, null, null);
         var store = new MemoryTokenStore { Saved = ValidToken("11") };
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { }, (_, _) => Task.CompletedTask);
 
         await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
         await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
@@ -88,7 +88,7 @@ public sealed class TelemetryInstallTokenSuite
         transport.BatchStatuses.Enqueue(401);
         var store = new MemoryTokenStore { Saved = ValidToken("42") };
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { }, (_, _) => Task.CompletedTask);
 
         var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
 
@@ -120,7 +120,7 @@ public sealed class TelemetryInstallTokenSuite
         transport.Respond["batch"] = new TelemetryHttpResult(429, null, null);
         var store = new MemoryTokenStore { Saved = ValidToken("55") };
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { }, (_, _) => Task.CompletedTask);
 
         var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
 
@@ -234,7 +234,7 @@ public sealed class TelemetryInstallTokenSuite
         transport.Respond["install"] = new TelemetryHttpResult(429, null, null, TimeSpan.FromSeconds(1));
         var store = new MemoryTokenStore();
         var adapter = new InstallTokenHttpTelemetryAdapter(
-            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { });
+            "https://example.test/v1/ritsulib/batch", "legacy-cred", "SakuraMod", store, transport, new MemoryQuarantine(), _ => { }, (_, _) => Task.CompletedTask);
 
         var result = await adapter.SendAsync(Applicant, [SampleEnvelope()], TestContext.Current.CancellationToken);
 

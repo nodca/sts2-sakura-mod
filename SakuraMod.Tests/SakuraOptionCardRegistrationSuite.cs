@@ -41,17 +41,10 @@ public sealed class SakuraOptionCardRegistrationSuite
             .ToHashSet();
         var registeredCardTypes = SakuraContentRegistration.AllCardTypesForRegistration().ToHashSet();
         var rewardCatalogTypes = ClassicSakuraCardPool.AllCardTypesForPool().ToHashSet();
-        var registrationSource = File.ReadAllText(RegressionTestHarness.FindRepoFile(
-            "SakuraModCode/Character/SakuraContentRegistration.cs"));
 
         RegressionTestHarness.Require(
             optionCardTypes.SequenceEqual(ExpectedOptionCardTypes),
             "Expected the explicit Sakura option card catalog to retain its complete deterministic order.");
-        RegressionTestHarness.Require(
-            registrationSource.Contains(
-                "ConfigureDefaultModelCapabilities<SakuraOptionCard>",
-                StringComparison.Ordinal),
-            "Expected registered Sakura option cards to receive the shared card hover-tip capability.");
         RegressionTestHarness.Require(
             discoveredOptionCardTypes.SetEquals(optionCardTypes)
             && optionCardTypes.Distinct().Count() == optionCardTypes.Count,

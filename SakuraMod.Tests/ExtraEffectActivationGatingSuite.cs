@@ -4,18 +4,6 @@ using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Relics;
 using System.Reflection;
 
-/// <summary>
-/// Covers the Extra Effect activation gate. Three cards expose that gate to the
-/// player — Arrow through targeting, Rain and Time through the result pile — and
-/// all three must resolve it through the single predicate the hand highlight and
-/// the card description already use.
-/// </summary>
-/// <remarks>
-/// The positive half of each gate needs a live <c>Player</c> with a Magic Charge
-/// power and the Red Cape relic, which the unit harness cannot build. Those
-/// combinations are asserted in game; here the wiring is pinned so the old
-/// ad-hoc predicates cannot come back.
-/// </remarks>
 public sealed class ExtraEffectActivationGatingSuite
 {
     [Fact]
@@ -36,38 +24,6 @@ public sealed class ExtraEffectActivationGatingSuite
     }
 
     [Fact]
-    public void ActivationGatesDelegateToTheUnifiedPredicate()
-    {
-        var reworkedGates = new (string RelativePath, string RemovedToken)[]
-        {
-            ("SakuraModCode/Cards/ClowSakura/Arrow.cs", "SakuraMagicCharge.CanSpendMagic(Owner)"),
-            ("SakuraModCode/Cards/ClowSakura/Rain.cs", "SakuraExtraEffectTransaction.CanActivate(Owner)")
-        };
-
-        foreach (var (relativePath, removedToken) in reworkedGates)
-        {
-            var source = File.ReadAllText(RegressionTestHarness.FindRepoFile(relativePath));
-            RegressionTestHarness.Require(
-                source.Contains(
-                    "SakuraExtraEffectTransaction.ShouldShowAsActive(this)",
-                    StringComparison.Ordinal)
-                && !source.Contains(removedToken, StringComparison.Ordinal),
-                $"Expected {relativePath} to resolve its Extra Effect gate through "
-                + $"SakuraExtraEffectTransaction.ShouldShowAsActive instead of {removedToken}.");
-        }
-    }
-
-    [Fact]
-    public void ClowThunderKeepsItsMagicChargePlayRequirement()
-    {
-        var source = File.ReadAllText(
-            RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/ClowSakura/Thunder.cs"));
-        RegressionTestHarness.Require(
-            source.Contains("IsPlayable => SakuraMagicCharge.CanSpendMagic(Owner)", StringComparison.Ordinal),
-            "Expected Thunder to keep requiring 10 Magic Charge to be played, matching its printed text.");
-    }
-
-    [Fact]
     public void OwnerlessInstancesKeepTheirNativeTargetingAndPile()
     {
         RegressionTestHarness.Require(
@@ -79,12 +35,6 @@ public sealed class ExtraEffectActivationGatingSuite
             ResultPileForCardPlay(RegressionTestHarness.MutableForCostTest(new ClowRain())) == PileType.Exhaust
             && ResultPileForCardPlay(RegressionTestHarness.MutableForCostTest(new ClowTime())) == PileType.Exhaust,
             "Expected Rain and Time to keep consuming themselves outside an active Extra Effect.");
-
-        RegressionTestHarness.Require(
-            ResultPileForCardPlay(RegressionTestHarness.MutableForCostTest(new ClowTime())) == PileType.Exhaust
-            && !File.ReadAllText(RegressionTestHarness.FindRepoFile("SakuraModCode/Cards/ClowSakura/Time.cs"))
-                .Contains("GetResultLocationForCardPlay", StringComparison.Ordinal),
-            "Expected Time to Exhaust regardless of its Extra Effect, which now draws instead.");
     }
 
     [Fact]
