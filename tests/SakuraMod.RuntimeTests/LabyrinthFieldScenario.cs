@@ -14,6 +14,7 @@ using SakuraMod.SakuraModCode.Cards;
 using SakuraMod.SakuraModCode.Character;
 using SakuraMod.SakuraModCode.Powers;
 using SakuraMod.TestProtocol;
+using STS2RitsuLib.Combat.HandSize;
 
 namespace SakuraMod.RuntimeTests;
 
@@ -171,26 +172,66 @@ internal static class LabyrinthFieldScenario
         // Discard follows native Sly: a card discarded from the Hand returns and counts as a return;
         // a card discarded straight from the Draw Pile does not.
         var discarded = await CombatScenarioContext.AddGeneratedCardToHandAsync<DefendIronclad>(combat, player);
+        var discardedCost = discarded.EnergyCost.GetWithModifiers(CostModifiers.All);
         var durabilityBeforeDiscard = Durability();
         CardModel? fromDrawPile = null;
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
         {
+            // Every power receives the pile hooks, including instances owned by
+            // another creature. Give the other instance different damage to catch cross-talk.
+            var otherField = await PowerCmd.Apply<GravitationHoldPower>(choice, other, 1, other, null)
+                ?? throw new InvalidOperationException("Second Gravitation power was not applied.");
+            otherField.AddReturnDamage(11);
             await CardCmd.Discard(choice, discarded);
             fromDrawPile = combat.CreateCard<DefendIronclad>(player);
             await CardPileCmd.AddGeneratedCardToCombat(fromDrawPile, PileType.Draw, player, CardPilePosition.Top);
             await CardCmd.Discard(choice, fromDrawPile);
+            await PowerCmd.Remove(otherField);
         }));
-        assertions.True("discarded_hand_card_returns", discarded.Pile?.Type == PileType.Hand);
-        assertions.True("discard_return_hits_for_base", EachLost(durabilityBeforeDiscard, 3));
+        assertions.True("discarded_hand_card_returns_with_two_gravitation_powers", discarded.Pile?.Type == PileType.Hand);
+        assertions.True("discard_return_uses_owners_damage", EachLost(durabilityBeforeDiscard, 3));
+        assertions.Equal("removing_other_gravitation_keeps_return_cost",
+            discardedCost + 1, discarded.EnergyCost.GetWithModifiers(CostModifiers.All));
         assertions.True("draw_pile_discard_stays_in_discard", fromDrawPile?.Pile?.Type == PileType.Discard);
 
-        // Turn the return damage off and clear the looped card so later returns keep hand space.
         await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
         {
-            player.Creature.GetPower<GravitationHoldPower>()!.DynamicVars[GravitationHoldPower.ReturnDamageVar].BaseValue = 0;
             await CardCmd.Exhaust(choice, looped, skipVisuals: true);
             await CardCmd.Exhaust(choice, discarded, skipVisuals: true);
             await CardCmd.Exhaust(choice, gravitation, skipVisuals: true);
+        }));
+        var finesse = await CombatScenarioContext.AddGeneratedCardToHandAsync<Finesse>(combat, player);
+        var finesseCost = finesse.EnergyCost.GetWithModifiers(CostModifiers.All);
+        var fillers = new List<CardModel>();
+        var drawFiller = combat.CreateCard<DefendIronclad>(player);
+        var hand = player.PlayerCombatState.Hand;
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
+        {
+            await CardPileCmd.AddGeneratedCardToCombat(drawFiller, PileType.Draw, player, CardPilePosition.Top);
+            var vacancies = MaxHandSizeCalculator.Calculate(player) - hand.Cards.Count;
+            for (var i = 0; i < vacancies; i++)
+            {
+                var filler = combat.CreateCard<DefendIronclad>(player);
+                await CardPileCmd.AddGeneratedCardToCombat(filler, PileType.Hand, player);
+                fillers.Add(filler);
+            }
+        }));
+        assertions.True("finesse_starts_in_full_hand", finesse.Pile?.Type == PileType.Hand
+            && hand.Cards.Count == MaxHandSizeCalculator.Calculate(player));
+        var durabilityBeforeOverflow = Durability();
+        await CombatScenarioContext.PlayCardAsync(finesse);
+        assertions.True("finesse_draw_fills_hand", drawFiller.Pile?.Type == PileType.Hand);
+        assertions.True("full_hand_sends_played_card_to_discard", finesse.Pile?.Type == PileType.Discard);
+        assertions.True("failed_return_deals_no_damage", EachLost(durabilityBeforeOverflow, 0));
+        assertions.Equal("failed_return_does_not_raise_cost", finesseCost,
+            finesse.EnergyCost.GetWithModifiers(CostModifiers.All));
+
+        // Clear the hand and disable return damage for the remaining cost/interaction checks.
+        await CombatScenarioContext.EnqueueAndWaitAsync(new RuntimeFixtureAction(player, async choice =>
+        {
+            player.Creature.GetPower<GravitationHoldPower>()!.DynamicVars[GravitationHoldPower.ReturnDamageVar].BaseValue = 0;
+            foreach (var filler in fillers.Append(drawFiller))
+                await CardCmd.Exhaust(choice, filler, skipVisuals: true);
             await CreatureCmd.GainBlock(other, 100, ValueProp.Unpowered, null, false);
         }));
         var struggle = await CombatScenarioContext.AddGeneratedCardToHandAsync<Struggle>(combat, player);
