@@ -28,6 +28,8 @@ internal static class SakuraCardVfxAssets
         [.. ShadeGroundDragonVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> GalePaths =
         [.. GaleGustVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
+    private static readonly IReadOnlyList<string> SpiralPaths =
+        [.. SpiralCorridorVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> StormPaths =
         [.. StormCycloneVfx.AssetPaths, .. CelVfxSession.SharedAssetPaths];
     private static readonly IReadOnlyList<string> CloudRainPaths =
@@ -59,6 +61,7 @@ internal static class SakuraCardVfxAssets
         Remind => RemindPaths,
         Rewind => RewindPaths,
         Gale => GalePaths,
+        Spiral => SpiralPaths,
         Shade => ShadePaths,
         ClowCloud or SakuraCloud or ClowRain or SakuraRain => CloudRainPaths,
         ClowSnow or SakuraSnow => SnowPaths,

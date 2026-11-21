@@ -39,13 +39,26 @@ public class Spiral() : TransparentExtraEffectCard(0, CardType.Attack, CardRarit
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
         var target = RequiredTarget(play);
+        var memoryCount = SakuraMemoryPile.Count(Owner);
         var damage = SpiralRules.ScaledValue(this, DynamicVars.Damage);
-        await DealDamage(choiceContext, play, target, damage, hitVfx: SakuraNativeHitFx.Slash);
         // Extra only raises the copy count; both paths share the next-turn draw-top rule.
         var copies = activation.IsActive
             ? DynamicVars["ExtraCopies"].IntValue
             : DynamicVars["NextTurnCopies"].IntValue;
-        await ScheduleNextTurnCopies(choiceContext, copies);
+
+        await SpiralCorridorVfx.PlayOrResolveAsync(
+            this,
+            Owner.Creature,
+            target,
+            memoryCount,
+            async cues =>
+            {
+                cues.Impact();
+                await DealDamage(choiceContext, play, target, damage, hitVfx: cues.FallbackHitVfx);
+                await ScheduleNextTurnCopies(choiceContext, copies);
+                if (copies > 0)
+                    cues.ReturnToDrawPile(copies > 1);
+            });
     }
 
     private async Task ScheduleNextTurnCopies(PlayerChoiceContext choiceContext, int copies)
