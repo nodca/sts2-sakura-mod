@@ -41,10 +41,9 @@ public class ClowMove() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Unco
     protected override void OnUpgrade() => DynamicVars["Magic"].UpgradeValueBy(1);
 }
 
-public class SakuraMove() : SakuraFormCard(0, CardType.Skill, TargetType.None)
+public class SakuraMove() : SakuraFormCard(0, CardType.Power, TargetType.None)
 {
     public override SakuraElementSet Elements => SakuraElementSet.Fire;
-    public override IEnumerable<CardKeyword> CanonicalKeywords => [CardKeyword.Exhaust];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 2)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>

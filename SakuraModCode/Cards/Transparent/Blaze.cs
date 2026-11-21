@@ -26,7 +26,7 @@ public class Blaze() : TransparentExtraEffectCard(3, CardType.Attack, CardRarity
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Fire];
     protected override IEnumerable<DynamicVar> CanonicalVars =>
     [
-        new CalculationBaseVar(27),
+        new CalculationBaseVar(30),
         new ExtraDamageVar(2),
         new CalculatedDamageVar(ValueProp.Move).WithMultiplier(BlazeRules.ExhaustedCardMultiplier)
     ];
