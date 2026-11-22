@@ -339,7 +339,7 @@
   "SAKURA_MOD_CARD_CLOW_THUNDER.description": "[gold]地[/gold]\n只有拥有10点[gold]魔力充能[/gold]时才能打出。",
   "SAKURA_MOD_CARD_CLOW_THUNDER.extraDescription": "[gold]额外效果：[/gold]对随机敌人造成{Damage:diff()}点伤害{Magic:diff()}次。\n将1张[gold]虚空[/gold]加入你的[gold]弃牌堆[/gold]。",
   "SAKURA_MOD_CARD_SAKURA_THUNDER.title": "雷",
-  "SAKURA_MOD_CARD_SAKURA_THUNDER.description": "[gold]小樱牌[/gold] [gold]地[/gold]\n消耗所有{energyPrefix:energyIcons(1)}和[gold]魔力充能[/gold]。\n每消耗{energyPrefix:energyIcons(1)}或{Magic:diff()}点[gold]魔力充能[/gold]，对随机敌人造成{Damage:diff()}点伤害1次。",
+  "SAKURA_MOD_CARD_SAKURA_THUNDER.description": "[gold]小樱牌[/gold] [gold]地[/gold]\n消耗所有{energyPrefix:energyIcons(1)}和[gold]魔力充能[/gold]。\n对随机敌人造成{Damage:diff()}点伤害X次。每消耗{Magic:diff()}点[gold]魔力充能[/gold]，额外造成1次伤害。",
   "SAKURA_MOD_CARD_CLOW_TIME.title": "时",
   "SAKURA_MOD_CARD_CLOW_TIME.description": "[gold]水[/gold]\n获得{ClassicTimeStasisPower:diff()}层[gold]定格[/gold]。",
   "SAKURA_MOD_CARD_CLOW_TIME.extraDescription": "[gold]额外效果：[/gold]抽{Cards:diff()}张牌。",
