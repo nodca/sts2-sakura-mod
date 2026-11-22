@@ -55,6 +55,9 @@ public class TrueOrFalsePower : SakuraPowerModel
             return;
 
         var target = Owner.Player!.RunState.Rng.CombatTargets.NextItem(enemies);
+        if (target is null)
+            return;
+
         Flash();
         await CreatureCmd.Damage(choiceContext, target, Amount, SakuraPowerValueProps.Damage, Owner);
     }

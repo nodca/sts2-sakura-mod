@@ -49,7 +49,7 @@ public class SakuraThunder() : SakuraFormCard(0, CardType.Attack, TargetType.Non
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
     {
         var charge = await SakuraMagicCharge.SpendAllMagic(choiceContext, Owner);
-        var count = ((int)play.Resources.EnergySpent * ResourceDivisor + charge) / ResourceDivisor;
+        var count = ResolveEnergyXValue() + charge / ResourceDivisor;
         await DealDamageToRandomEnemies(
             choiceContext,
             play,

@@ -339,7 +339,7 @@
   "SAKURA_MOD_CARD_CLOW_THUNDER.description": "[gold]地[/gold]\n[gold]魔力チャージ[/gold]が10ある場合のみプレイできる。",
   "SAKURA_MOD_CARD_CLOW_THUNDER.extraDescription": "[gold]追加効果：[/gold]ランダムな敵に{Damage:diff()}ダメージを{Magic:diff()}回与える。\n[gold]虚無[/gold]1枚を[gold]捨て札[/gold]に加える。",
   "SAKURA_MOD_CARD_SAKURA_THUNDER.title": "サンダー",
-  "SAKURA_MOD_CARD_SAKURA_THUNDER.description": "[gold]さくらカード[/gold] [gold]地[/gold]\nすべての{energyPrefix:energyIcons(1)}と[gold]魔力チャージ[/gold]を消費する。\n消費した{energyPrefix:energyIcons(1)}1、または[gold]魔力チャージ[/gold]{Magic:diff()}につき、ランダムな敵に{Damage:diff()}ダメージを1回与える。",
+  "SAKURA_MOD_CARD_SAKURA_THUNDER.description": "[gold]さくらカード[/gold] [gold]地[/gold]\nすべての{energyPrefix:energyIcons(1)}と[gold]魔力チャージ[/gold]を消費する。\nランダムな敵に{Damage:diff()}ダメージをX回与える。消費した[gold]魔力チャージ[/gold]{Magic:diff()}につき、攻撃回数が1回増える。",
   "SAKURA_MOD_CARD_CLOW_TIME.title": "タイム",
   "SAKURA_MOD_CARD_CLOW_TIME.description": "[gold]水[/gold]\n[gold]静止[/gold]{ClassicTimeStasisPower:diff()}を得る。",
   "SAKURA_MOD_CARD_CLOW_TIME.extraDescription": "[gold]追加効果：[/gold]カードを{Cards:diff()}枚引く。",

@@ -25,7 +25,7 @@ using STS2RitsuLib.Utils;
 
 namespace SakuraMod.SakuraModCode.Cards;
 
-public class ClowShadow() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Common, TargetType.None)
+public class ClowShadow() : ClowExtraEffectCard(1, CardType.Skill, CardRarity.Uncommon, TargetType.None)
 {
     private const int ExtraBlur = 1;
 

@@ -339,7 +339,7 @@
   "SAKURA_MOD_CARD_CLOW_THUNDER.description": "[gold]Earthy[/gold]\nCan only be played with 10 [gold]Magic Charge[/gold].",
   "SAKURA_MOD_CARD_CLOW_THUNDER.extraDescription": "[gold]Extra:[/gold] Deal {Damage:diff()} damage to a random enemy {Magic:diff()} times.\nAdd a [gold]Void[/gold] into your [gold]Discard Pile[/gold].",
   "SAKURA_MOD_CARD_SAKURA_THUNDER.title": "Thunder",
-  "SAKURA_MOD_CARD_SAKURA_THUNDER.description": "[gold]Sakura Card[/gold] [gold]Earthy[/gold]\nSpend all {energyPrefix:energyIcons(1)} and [gold]Magic Charge[/gold].\nDeal {Damage:diff()} damage to a random enemy once per {energyPrefix:energyIcons(1)} and once per {Magic:diff()} [gold]Magic Charge[/gold] spent.",
+  "SAKURA_MOD_CARD_SAKURA_THUNDER.description": "[gold]Sakura Card[/gold] [gold]Earthy[/gold]\nSpend all {energyPrefix:energyIcons(1)} and [gold]Magic Charge[/gold].\nDeal {Damage:diff()} damage to a random enemy X times. Deal it an additional time for every {Magic:diff()} [gold]Magic Charge[/gold] spent.",
   "SAKURA_MOD_CARD_CLOW_TIME.title": "Time",
   "SAKURA_MOD_CARD_CLOW_TIME.description": "[gold]Watery[/gold]\nGain {ClassicTimeStasisPower:diff()} [gold]Freeze Frame[/gold].",
   "SAKURA_MOD_CARD_CLOW_TIME.extraDescription": "[gold]Extra:[/gold] Draw {Cards:diff()} cards.",
