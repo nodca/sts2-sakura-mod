@@ -73,6 +73,7 @@ public sealed class PublicIdentityCompatibilitySuite
                      "SakuraMod_ClassicSealedWandCharge",
                      "SakuraMod_ClassicMoonBellUsed",
                      "SakuraMod_ClassicTwinCardsDoubledThisTurn",
+                     "SakuraMod_ClassicTwinSakuraCardsDoubledThisTurn",
                      "SakuraMod_ClowCreateCostReductions",
                      "SakuraMod_RedCapeActivatedTurn",
                      "SakuraMod_RedCapeActivatedThisCombat",

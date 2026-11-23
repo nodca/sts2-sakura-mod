@@ -28,7 +28,7 @@ public class Kindness() : TransparentCard(1, CardType.Power, CardRarity.Rare, Ta
     internal override IEnumerable<CardKeyword> ReferencedKeywords =>
         [SakuraKeywords.Manifest, CardKeyword.Exhaust, CardKeyword.Ethereal];
     internal override IEnumerable<string> ReferencedStaticHoverTipKeys =>
-        [SakuraCardHoverTips.TemporaryTipKey];
+        [SakuraCardHoverTips.TemporaryTipKey, SakuraCardHoverTips.ReleaseTipKey];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {

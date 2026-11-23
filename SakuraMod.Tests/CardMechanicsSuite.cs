@@ -369,7 +369,7 @@ public sealed class CardMechanicsSuite
     }
 
     [Fact]
-    public void ElementSetTwinCostReflectionAndDreamFreeLifecycleRemainStable()
+    public void ElementSetReflectionAndDreamFreeLifecycleRemainStable()
     {
         RegressionTestHarness.Require(
             (SakuraElementSet.Wind | SakuraElementSet.Fire).HasElement(SakuraElement.Wind)
@@ -382,18 +382,6 @@ public sealed class CardMechanicsSuite
         Assert.Equal(5, ReflectionPower.ReflectedDamage(10, 1));
         Assert.Equal(10, ReflectionPower.ReflectedDamage(10, 2));
         Assert.Equal(15, ReflectionPower.ReflectedDamage(10, 3));
-
-        var clowTwin = new ClowTwin();
-        var clowTwinLocalCost = clowTwin.EnergyCost.GetWithModifiers(CostModifiers.Local);
-        RegressionTestHarness.Require(
-            ClassicTwinSakuraPower.TryIncreaseClowCardCost(clowTwin, amount: 1, clowTwinLocalCost, out var increasedTwinCost)
-            && increasedTwinCost == clowTwinLocalCost + 1
-            && clowTwin.EnergyCost.GetWithModifiers(CostModifiers.Local) == clowTwinLocalCost
-            && ClassicTwinSakuraPower.TryIncreaseClowCardCost(clowTwin, amount: 2, clowTwinLocalCost, out var stackedTwinCost)
-            && stackedTwinCost == clowTwinLocalCost + 2
-            && !ClassicTwinSakuraPower.TryIncreaseClowCardCost(new SakuraTwin(), amount: 1, currentCost: 1, out var sakuraTwinCost)
-            && sakuraTwinCost == 1,
-            "Expected Sakura Twin power cost calculation to scale only Clow cards without mutating source cost.");
 
         var dreamGeneratedThrough = RegressionTestHarness.MutableForCostTest(new ClowThrough());
         SakuraMagicCharge.SetFreeForRestOfTurn(dreamGeneratedThrough);

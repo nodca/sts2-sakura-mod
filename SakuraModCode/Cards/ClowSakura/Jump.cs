@@ -53,6 +53,9 @@ public class SakuraJump() : SakuraFormCard(1, CardType.Power, TargetType.None)
     public override SakuraElementSet Elements => SakuraElementSet.Wind;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Magic", 1)];
 
-    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play) =>
+    protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play)
+    {
+        await SakuraActions.CleanseDebuffs(Owner);
         await ApplyPower<ClassicJumpPower>(choiceContext, Owner.Creature, ReleasedMagic());
+    }
 }

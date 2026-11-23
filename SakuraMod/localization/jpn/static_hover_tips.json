@@ -1,8 +1,8 @@
 {
   "SAKURAMOD-TEMPORARY.title": "忘却",
-  "SAKURAMOD-TEMPORARY.description": "忘却を持つカードはターン終了時に記憶へ移動する（廃棄札にあるカードを除く）。",
+  "SAKURAMOD-TEMPORARY.description": "忘却を持つカードはターン終了時に[gold]記憶[/gold]へ移動する（廃棄札にあるカードを除く）。手札に戻るまで山札に混ぜ直されない。",
   "SAKURA_MOD_CARDPILE_MEMORY.title": "記憶",
-  "SAKURA_MOD_CARDPILE_MEMORY.description": "この戦闘中、忘却を持つカードはターン終了時にこの山へ移動する（廃棄札にあるカードを除く）。",
+  "SAKURA_MOD_CARDPILE_MEMORY.description": "この戦闘中、忘却を持つカードはターン終了時にこの山へ移動する（廃棄札にあるカードを除く）。戻る効果を受けるまで山札に混ぜ直されない。",
   "SAKURA_MOD_CARDPILE_MEMORY.empty": "記憶にカードはない。",
   "SAKURAMOD-REFLECTION.title": "反射",
   "SAKURAMOD-REFLECTION.description": "攻撃を受けたとき、1スタックごとにそのダメージの50%を攻撃者に与え、反射を1失う。\n敵のターン終了時、反射を1失う。",

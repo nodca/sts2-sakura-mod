@@ -120,6 +120,9 @@ internal static class SakuraSourceCardText
         if (card is ClowMaze)
             tips.Add(HoverTipFactory.FromCard<Dazed>());
 
+        if (ShouldIncludeVoidCardTip(card))
+            tips.Add(HoverTipFactory.FromCard<MegaCrit.Sts2.Core.Models.Cards.Void>());
+
         if (ReferencesSleepTip(card))
             tips.Add(HoverTipFactory.FromPower<ClassicSleepPower>());
 
@@ -137,6 +140,12 @@ internal static class SakuraSourceCardText
 
         if (ReferencesTimeStasisTip(card))
             tips.Add(HoverTipFactory.FromPower<ClassicTimeStasisPower>());
+
+        if (ReferencesTimeTip(card))
+            tips.Add(HoverTipFactory.FromPower<ClassicTimePower>());
+
+        if (ReferencesShieldWardTip(card))
+            tips.Add(HoverTipFactory.FromPower<ClassicShieldWardPower>());
 
         foreach (var key in StaticTipKeys(card))
             tips.Add(StaticTip(key));
@@ -182,7 +191,22 @@ internal static class SakuraSourceCardText
     internal static bool ReferencesTimeStasisTip(SakuraSourceCard card) =>
         card is ClowTime;
 
-    internal static IEnumerable<string> StaticTipKeys(SakuraSourceCard card)
+    internal static bool ReferencesTimeTip(SakuraSourceCard card) =>
+        card is SakuraTime;
+
+    internal static bool ReferencesShieldWardTip(SakuraSourceCard card) =>
+        card is ClowShield;
+
+    internal static bool ShouldIncludeVoidCardTip(SakuraSourceCard card) =>
+        card.ShowsSakuraCardVoidTip
+        || card is ClowReturn { IsUpgraded: false } or ClowThunder or ClowLight;
+
+    internal static IEnumerable<string> StaticTipKeys(SakuraSourceCard card) =>
+        SakuraCardHoverTips.ExpandDependentStaticTipKeys(
+            KeywordTips(card).Concat(card.CanonicalKeywords),
+            DirectStaticTipKeys(card));
+
+    private static IEnumerable<string> DirectStaticTipKeys(SakuraSourceCard card)
     {
         if (card.IsSpellCard)
             yield return SourceSpellTipKey;
@@ -203,7 +227,12 @@ internal static class SakuraSourceCardText
                 yield return SakuraCardHoverTips.MistDefenseTipKey;
                 break;
             case ClowLock:
+            case SakuraFight:
                 yield return SakuraCardHoverTips.TemporaryTipKey;
+                break;
+            case ClowThrough:
+            case SakuraThrough:
+                yield return SakuraMemoryPile.PileId;
                 break;
             case SpellRelease:
                 yield return SakuraCardHoverTips.ReleaseTipKey;
@@ -228,7 +257,7 @@ internal static class SakuraSourceCardText
         if (card is SpellTurn)
             yield return SakuraKeywords.Purge;
 
-        if (card.ShowsSakuraCardVoidTip)
+        if (card.ShowsSakuraCardVoidTip || card is SpellTurn or ClowNothing or SakuraDream)
             yield return SakuraKeywords.SakuraCard;
 
         if (card is { IsClowCard: true, Identity: SourceCardIdentity.Voice })

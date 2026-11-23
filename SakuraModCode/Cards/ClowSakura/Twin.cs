@@ -37,7 +37,7 @@ public class ClowTwin() : ClowCard(3, CardType.Power, CardRarity.Rare, TargetTyp
 
 public class SakuraTwin() : SakuraFormCard(1, CardType.Power, TargetType.None)
 {
-    private const int TwinAmount = 1;
+    private const int TwinAmount = 2;
 
     public override SakuraElementSet Elements => SakuraElementSet.Fire | SakuraElementSet.Water;
     protected override IEnumerable<DynamicVar> CanonicalVars => [new DynamicVar("Amount", TwinAmount)];
