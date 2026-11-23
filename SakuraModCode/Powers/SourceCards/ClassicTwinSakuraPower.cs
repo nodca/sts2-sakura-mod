@@ -29,86 +29,38 @@ namespace SakuraMod.SakuraModCode.Powers;
 
 public class ClassicTwinSakuraPower : SakuraPowerModel
 {
+    private static readonly SavedAttachedState<ClassicTwinSakuraPower, int> CardsDoubledThisTurn =
+        new("SakuraMod_ClassicTwinSakuraCardsDoubledThisTurn", () => 0);
+
     protected override string IconFileName => "twin_power_sakuracard.png";
     public override PowerType Type => PowerType.Buff;
     public override PowerStackType StackType => PowerStackType.Counter;
+    internal int CardsDoubledThisTurnCount => CardsDoubledThisTurn[this];
 
+    // Quota is read here and consumed only in the post-hook, matching ClassicTwinPower.
     public override int ModifyCardPlayCount(CardModel card, Creature? target, int playCount) =>
-        card.Owner?.Creature == Owner && IsClow(card) && !card.IsClone && !card.IsDupe
-            ? playCount + Math.Max(0, Amount)
-            : playCount;
+        CanDouble(card) ? playCount + 1 : playCount;
 
-    public override Task AfterApplied(Creature? applier, CardModel? cardSource)
+    public override Task AfterModifyingCardPlayCount(CardModel card)
     {
-        RefreshKnownClowCardCosts();
+        CardsDoubledThisTurn[this]++;
+        Flash();
         return Task.CompletedTask;
     }
 
-    public override Task AfterPowerAmountChanged(
-        PlayerChoiceContext choiceContext,
-        PowerModel power,
-        decimal amount,
-        Creature? applier,
-        CardModel? cardSource)
+    public override Task AfterPlayerTurnStart(PlayerChoiceContext choiceContext, Player player)
     {
-        if (power == this)
-            RefreshKnownClowCardCosts();
+        if (Owner.Player == player)
+            CardsDoubledThisTurn[this] = 0;
 
         return Task.CompletedTask;
     }
 
-    public override Task AfterCardGeneratedForCombat(CardModel card, Player? creator)
-    {
-        if (creator == Owner.Player)
-            RefreshCost(card);
-
-        return Task.CompletedTask;
-    }
-
-    public override bool TryModifyEnergyCostInCombat(CardModel card, decimal currentCost, out decimal newCost)
-    {
-        if (card.Owner?.Creature != Owner || Owner.GetPower<ClassicNothingPower>() is not null)
-        {
-            newCost = currentCost;
-            return false;
-        }
-
-        return TryIncreaseClowCardCost(card, Amount, currentCost, out newCost);
-    }
-
-    internal static bool TryIncreaseClowCardCost(CardModel card, int amount, decimal currentCost, out decimal newCost)
-    {
-        var costIncrease = Math.Max(0, amount);
-        if (!IsCostedClow(card, currentCost) || costIncrease <= 0)
-        {
-            newCost = currentCost;
-            return false;
-        }
-
-        newCost = currentCost + costIncrease;
-        return true;
-    }
-
-    private void RefreshKnownClowCardCosts()
-    {
-        if (Owner.Player is not { } player)
-            return;
-
-        foreach (var card in CardPile.GetCards(player, PileType.Hand, PileType.Draw, PileType.Discard, PileType.Exhaust))
-            RefreshCost(card);
-    }
-
-    private static void RefreshCost(CardModel card)
-    {
-        if (IsCostedClow(card, card.EnergyCost.GetWithModifiers(CostModifiers.Local)))
-            card.InvokeEnergyCostChanged();
-    }
-
-    private static bool IsCostedClow(CardModel card, decimal currentCost) =>
-        IsClow(card)
-        && !card.EnergyCost.CostsX
-        && currentCost >= 0;
-
-    private static bool IsClow(CardModel card) =>
-        card is SakuraSourceCard { IsClowCard: true };
+    private bool CanDouble(CardModel card) =>
+        Amount > 0
+        && CardsDoubledThisTurn[this] < Amount
+        && card.Owner?.Creature == Owner
+        && card is SakuraSourceCard { IsClowCard: true }
+        && !card.IsClone
+        && !card.IsDupe;
 }

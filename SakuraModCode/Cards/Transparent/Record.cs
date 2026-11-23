@@ -25,6 +25,7 @@ namespace SakuraMod.SakuraModCode.Cards;
 public class Record() : TransparentExtraEffectCard(2, CardType.Skill, CardRarity.Rare, TargetType.Self)
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water, CardKeyword.Exhaust];
+    internal override IEnumerable<string> ReferencedStaticHoverTipKeys => [SakuraCardHoverTips.TemporaryTipKey];
 
     protected override IEnumerable<DynamicVar> CanonicalVars => [];
 

@@ -419,7 +419,23 @@ internal static class SakuraCardHoverTips
             .Distinct();
 
     internal static IEnumerable<string> StaticTipKeys(CardModel card) =>
-        ReferencedStaticHoverTipKeys(card).Distinct();
+        ExpandDependentStaticTipKeys(
+            KeywordTips(card).Concat(card.CanonicalKeywords),
+            ReferencedStaticHoverTipKeys(card));
+
+    internal static IEnumerable<string> ExpandDependentStaticTipKeys(
+        IEnumerable<CardKeyword> keywordTips,
+        IEnumerable<string> staticTipKeys)
+    {
+        var keys = staticTipKeys.ToList();
+        if (keywordTips.Any(keyword => keyword == SakuraKeywords.Manifest || keyword == SakuraKeywords.Stabilize))
+            keys.Add(TemporaryTipKey);
+
+        if (keys.Any(key => key == RemindTipKey))
+            keys.Add(SakuraMemoryPile.PileId);
+
+        return keys.Distinct();
+    }
 
     internal static IEnumerable<IHoverTip> DependentPowerTips(IEnumerable<CardKeyword> keywordTips)
     {

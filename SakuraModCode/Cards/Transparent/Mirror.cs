@@ -26,6 +26,7 @@ public class Mirror() : TransparentExtraEffectCard(1, CardType.Skill, CardRarity
 {
     public override IEnumerable<CardKeyword> CanonicalKeywords => [SakuraKeywords.Water];
     protected override IEnumerable<DynamicVar> CanonicalVars => [new RepeatVar(1), new RepeatVar("ExtraRepeat", 1)];
+    protected override IEnumerable<IHoverTip> AdditionalHoverTips => [HoverTipFactory.Static(StaticHoverTip.ReplayStatic)];
 
     protected override async Task PlayCard(PlayerChoiceContext choiceContext, CardPlay play, SakuraExtraEffectActivation activation)
     {
