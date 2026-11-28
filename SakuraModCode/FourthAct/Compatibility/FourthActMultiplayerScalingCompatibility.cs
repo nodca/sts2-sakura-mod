@@ -26,7 +26,8 @@ internal static class FourthActMultiplayerScalingCompatibility
     internal static bool IsSupportedGameAssembly(Assembly assembly) =>
         assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
             .InformationalVersion is "0.1.0+16ac0fe3775f571e5f3b1c81e47d511024515730"
-                or "0.1.0+d09d48e516cfd24314c1781f662787904f894aa8";
+                or "0.1.0+d09d48e516cfd24314c1781f662787904f894aa8"
+                or "0.1.0+a7b9a9c09622442b9f0cb1a64310a7503b38efa4";
 }
 
 [HarmonyPatch(
